@@ -59,7 +59,7 @@
         <data name="entryValue" id="3" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="RemoveCacheEntry" id="5" semanticType="AddCacheEntry"
+    <sbe:message name="RemoveCacheEntry" id="5" semanticType="RemoveCacheEntry"
                  description="Remove an entry from a cache">
         <field name="cacheName" id="1" type="int64"/>
         <field name="key" id="2" type="int64"/>
