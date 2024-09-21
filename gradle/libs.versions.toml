@@ -1,0 +1,10 @@
+[versions]
+aeron = "1.46.2"
+
+[libraries]
+aeron = {module = "io.aeron:aeron-all", version.ref= "aeron"}
+
+[bundles]
+
+[plugins]
+shadow = {id ="com.github.johnrengelman.shadow", version = "8.1.1"}
