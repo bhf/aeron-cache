@@ -15,6 +15,8 @@
  */
 package com.bhf.aeroncache;
 
+import com.bhf.aeroncache.messages.CreateCacheEncoder;
+import com.bhf.aeroncache.messages.MessageHeaderEncoder;
 import com.bhf.aeroncache.services.BasicClusteredService;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.cluster.client.EgressListener;
@@ -161,18 +163,24 @@ public class ClusterClientApplication implements EgressListener
     // tag::publish[]
     private long sendBid(final AeronCluster aeronCluster, final long price)
     {
-        final long correlationId = nextCorrelationId++;
+        CreateCacheEncoder createEncoder = new CreateCacheEncoder();
+        MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
+        createEncoder.wrapAndApplyHeader(actionBidBuffer, 0, headerEncoder);
+        createEncoder.cacheName(System.currentTimeMillis());
+
+
+        /*final long correlationId = nextCorrelationId++;
         actionBidBuffer.putLong(BasicClusteredService.CORRELATION_ID_OFFSET, correlationId);            // <1>
         actionBidBuffer.putLong(BasicClusteredService.CUSTOMER_ID_OFFSET, customerId);
-        actionBidBuffer.putLong(BasicClusteredService.PRICE_OFFSET, price);
+        actionBidBuffer.putLong(BasicClusteredService.PRICE_OFFSET, price);*/
 
         idleStrategy.reset();
-        while (aeronCluster.offer(actionBidBuffer, 0, BasicClusteredService.BID_MESSAGE_LENGTH) < 0)    // <2>
+        while (aeronCluster.offer(actionBidBuffer, 0, createEncoder.encodedLength()+headerEncoder.encodedLength()) < 0)    // <2>
         {
             idleStrategy.idle(aeronCluster.pollEgress());                         // <3>
         }
 
-        return correlationId;
+        return 0;
     }
     // end::publish[]
 

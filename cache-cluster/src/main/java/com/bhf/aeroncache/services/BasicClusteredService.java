@@ -15,6 +15,9 @@
  */
 package com.bhf.aeroncache.services;
 
+import com.bhf.aeroncache.messages.CreateCacheDecoder;
+import com.bhf.aeroncache.messages.CreateCacheEncoder;
+import com.bhf.aeroncache.messages.MessageHeaderDecoder;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 import io.aeron.cluster.codecs.CloseReason;
@@ -85,13 +88,29 @@ public class BasicClusteredService implements ClusteredService
             final int offset,
             final int length,
             final Header header) {
-        final long correlationId = buffer.getLong(offset + CORRELATION_ID_OFFSET);                   // <1>
+
+        final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
+        headerDecoder.wrap(buffer, offset);
+        final int templateId = headerDecoder.templateId();
+
+        System.out.println("Got templateId="+templateId);
+
+        if(templateId== CreateCacheEncoder.TEMPLATE_ID){
+
+            System.out.println("Got create cache message");
+            CreateCacheDecoder decoder = new CreateCacheDecoder();
+            decoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+            long cacheName = decoder.cacheName();
+            System.out.println("Create on "+cacheName);
+        }
+
+        /*final long correlationId = buffer.getLong(offset + CORRELATION_ID_OFFSET);                   // <1>
         final long customerId = buffer.getLong(offset + CUSTOMER_ID_OFFSET);
         final long price = buffer.getLong(offset + PRICE_OFFSET);
 
-        final boolean bidSucceeded = auction.attemptBid(price, customerId);                          // <2>
+        final boolean bidSucceeded = auction.attemptBid(price, customerId);                          // <2>*/
 
-        if (null != session)                                                                         // <3>
+       /* if (null != session)                                                                         // <3>
         {
             System.out.println("Got session: " + session.responseChannel() + ":" + session.responseStreamId());
             egressMessageBuffer.putLong(CORRELATION_ID_OFFSET, correlationId);                       // <4>
@@ -104,7 +123,7 @@ public class BasicClusteredService implements ClusteredService
             {
                 idleStrategy.idle();                                                                 // <6>
             }
-        }
+        }*/
     }
     // end::message[]
 
