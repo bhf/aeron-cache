@@ -1,6 +1,7 @@
 /* Generated SBE (Simple Binary Encoding) message codec. */
 package com.bhf.aeroncache.messages;
 
+import org.agrona.MutableDirectBuffer;
 import org.agrona.DirectBuffer;
 
 
@@ -10,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class AddCacheEntryDecoder
 {
-    public static final int BLOCK_LENGTH = 20;
+    public static final int BLOCK_LENGTH = 8;
     public static final int TEMPLATE_ID = 4;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -135,7 +136,7 @@ public final class AddCacheEntryDecoder
 
     public static int cacheNameEncodingLength()
     {
-        return 4;
+        return 8;
     }
 
     public static String cacheNameMetaAttribute(final MetaAttribute metaAttribute)
@@ -148,13 +149,26 @@ public final class AddCacheEntryDecoder
         return "";
     }
 
-    private final VarStringEncodingDecoder cacheName = new VarStringEncodingDecoder();
-
-    public VarStringEncodingDecoder cacheName()
+    public static long cacheNameNullValue()
     {
-        cacheName.wrap(buffer, offset + 0);
-        return cacheName;
+        return -9223372036854775808L;
     }
+
+    public static long cacheNameMinValue()
+    {
+        return -9223372036854775807L;
+    }
+
+    public static long cacheNameMaxValue()
+    {
+        return 9223372036854775807L;
+    }
+
+    public long cacheName()
+    {
+        return buffer.getLong(offset + 0, java.nio.ByteOrder.LITTLE_ENDIAN);
+    }
+
 
     public static int keyId()
     {
@@ -166,14 +180,9 @@ public final class AddCacheEntryDecoder
         return 0;
     }
 
-    public static int keyEncodingOffset()
+    public static String keyCharacterEncoding()
     {
-        return 4;
-    }
-
-    public static int keyEncodingLength()
-    {
-        return 8;
+        return "UTF-8";
     }
 
     public static String keyMetaAttribute(final MetaAttribute metaAttribute)
@@ -186,48 +195,100 @@ public final class AddCacheEntryDecoder
         return "";
     }
 
-    public static long keyNullValue()
+    public static int keyHeaderLength()
     {
-        return -9223372036854775808L;
+        return 4;
     }
 
-    public static long keyMinValue()
+    public int keyLength()
     {
-        return -9223372036854775807L;
+        final int limit = parentMessage.limit();
+        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
     }
 
-    public static long keyMaxValue()
+    public int skipKey()
     {
-        return 9223372036854775807L;
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataOffset = limit + headerLength;
+        parentMessage.limit(dataOffset + dataLength);
+
+        return dataLength;
     }
 
-    public long key()
+    public int getKey(final MutableDirectBuffer dst, final int dstOffset, final int length)
     {
-        return buffer.getLong(offset + 4, java.nio.ByteOrder.LITTLE_ENDIAN);
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+        return bytesCopied;
     }
 
+    public int getKey(final byte[] dst, final int dstOffset, final int length)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
 
-    public static int valueId()
+        return bytesCopied;
+    }
+
+    public void wrapKey(final DirectBuffer wrapBuffer)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+        wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
+    }
+
+    public String key()
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+
+        if (0 == dataLength)
+        {
+            return "";
+        }
+
+        final byte[] tmp = new byte[dataLength];
+        buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
+
+        final String value;
+        try
+        {
+            value = new String(tmp, "UTF-8");
+        }
+        catch (final java.io.UnsupportedEncodingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+
+        return value;
+    }
+
+    public static int entryValueId()
     {
         return 3;
     }
 
-    public static int valueSinceVersion()
+    public static int entryValueSinceVersion()
     {
         return 0;
     }
 
-    public static int valueEncodingOffset()
-    {
-        return 12;
-    }
-
-    public static int valueEncodingLength()
-    {
-        return 8;
-    }
-
-    public static String valueMetaAttribute(final MetaAttribute metaAttribute)
+    public static String entryValueMetaAttribute(final MetaAttribute metaAttribute)
     {
         if (MetaAttribute.PRESENCE == metaAttribute)
         {
@@ -237,26 +298,60 @@ public final class AddCacheEntryDecoder
         return "";
     }
 
-    public static long valueNullValue()
+    public static int entryValueHeaderLength()
     {
-        return -9223372036854775808L;
+        return 4;
     }
 
-    public static long valueMinValue()
+    public int entryValueLength()
     {
-        return -9223372036854775807L;
+        final int limit = parentMessage.limit();
+        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
     }
 
-    public static long valueMaxValue()
+    public int skipEntryValue()
     {
-        return 9223372036854775807L;
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataOffset = limit + headerLength;
+        parentMessage.limit(dataOffset + dataLength);
+
+        return dataLength;
     }
 
-    public long value()
+    public int getEntryValue(final MutableDirectBuffer dst, final int dstOffset, final int length)
     {
-        return buffer.getLong(offset + 12, java.nio.ByteOrder.LITTLE_ENDIAN);
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+        return bytesCopied;
     }
 
+    public int getEntryValue(final byte[] dst, final int dstOffset, final int length)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+        return bytesCopied;
+    }
+
+    public void wrapEntryValue(final DirectBuffer wrapBuffer)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+        wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
+    }
 
     public String toString()
     {
@@ -300,21 +395,13 @@ public final class AddCacheEntryDecoder
         builder.append(BLOCK_LENGTH);
         builder.append("):");
         builder.append("cacheName=");
-        final VarStringEncodingDecoder cacheName = cacheName();
-        if (cacheName != null)
-        {
-            cacheName.appendTo(builder);
-        }
-        else
-        {
-            builder.append("null");
-        }
+        builder.append(cacheName());
         builder.append('|');
         builder.append("key=");
-        builder.append(key());
+        builder.append('\'').append(key()).append('\'');
         builder.append('|');
-        builder.append("value=");
-        builder.append(value());
+        builder.append("entryValue=");
+        builder.append(skipEntryValue()).append(" bytes of raw data");
 
         limit(originalLimit);
 

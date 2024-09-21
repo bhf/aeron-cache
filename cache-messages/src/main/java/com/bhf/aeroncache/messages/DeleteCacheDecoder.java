@@ -10,7 +10,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class DeleteCacheDecoder
 {
-    public static final int BLOCK_LENGTH = 4;
+    public static final int BLOCK_LENGTH = 8;
     public static final int TEMPLATE_ID = 2;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -135,7 +135,7 @@ public final class DeleteCacheDecoder
 
     public static int cacheNameEncodingLength()
     {
-        return 4;
+        return 8;
     }
 
     public static String cacheNameMetaAttribute(final MetaAttribute metaAttribute)
@@ -148,13 +148,26 @@ public final class DeleteCacheDecoder
         return "";
     }
 
-    private final VarStringEncodingDecoder cacheName = new VarStringEncodingDecoder();
-
-    public VarStringEncodingDecoder cacheName()
+    public static long cacheNameNullValue()
     {
-        cacheName.wrap(buffer, offset + 0);
-        return cacheName;
+        return -9223372036854775808L;
     }
+
+    public static long cacheNameMinValue()
+    {
+        return -9223372036854775807L;
+    }
+
+    public static long cacheNameMaxValue()
+    {
+        return 9223372036854775807L;
+    }
+
+    public long cacheName()
+    {
+        return buffer.getLong(offset + 0, java.nio.ByteOrder.LITTLE_ENDIAN);
+    }
+
 
     public String toString()
     {
@@ -198,15 +211,7 @@ public final class DeleteCacheDecoder
         builder.append(BLOCK_LENGTH);
         builder.append("):");
         builder.append("cacheName=");
-        final VarStringEncodingDecoder cacheName = cacheName();
-        if (cacheName != null)
-        {
-            cacheName.appendTo(builder);
-        }
-        else
-        {
-            builder.append("null");
-        }
+        builder.append(cacheName());
 
         limit(originalLimit);
 

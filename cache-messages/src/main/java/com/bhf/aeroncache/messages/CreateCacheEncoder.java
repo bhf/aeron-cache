@@ -10,7 +10,7 @@ import org.agrona.MutableDirectBuffer;
 @SuppressWarnings("all")
 public final class CreateCacheEncoder
 {
-    public static final int BLOCK_LENGTH = 4;
+    public static final int BLOCK_LENGTH = 8;
     public static final int TEMPLATE_ID = 1;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -120,7 +120,7 @@ public final class CreateCacheEncoder
 
     public static int cacheNameEncodingLength()
     {
-        return 4;
+        return 8;
     }
 
     public static String cacheNameMetaAttribute(final MetaAttribute metaAttribute)
@@ -133,13 +133,27 @@ public final class CreateCacheEncoder
         return "";
     }
 
-    private final VarStringEncodingEncoder cacheName = new VarStringEncodingEncoder();
-
-    public VarStringEncodingEncoder cacheName()
+    public static long cacheNameNullValue()
     {
-        cacheName.wrap(buffer, offset + 0);
-        return cacheName;
+        return -9223372036854775808L;
     }
+
+    public static long cacheNameMinValue()
+    {
+        return -9223372036854775807L;
+    }
+
+    public static long cacheNameMaxValue()
+    {
+        return 9223372036854775807L;
+    }
+
+    public CreateCacheEncoder cacheName(final long value)
+    {
+        buffer.putLong(offset + 0, value, java.nio.ByteOrder.LITTLE_ENDIAN);
+        return this;
+    }
+
 
     public String toString()
     {

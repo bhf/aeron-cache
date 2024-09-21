@@ -10,7 +10,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class RemoveCacheEntryDecoder
 {
-    public static final int BLOCK_LENGTH = 12;
+    public static final int BLOCK_LENGTH = 16;
     public static final int TEMPLATE_ID = 5;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -135,7 +135,7 @@ public final class RemoveCacheEntryDecoder
 
     public static int cacheNameEncodingLength()
     {
-        return 4;
+        return 8;
     }
 
     public static String cacheNameMetaAttribute(final MetaAttribute metaAttribute)
@@ -148,13 +148,26 @@ public final class RemoveCacheEntryDecoder
         return "";
     }
 
-    private final VarStringEncodingDecoder cacheName = new VarStringEncodingDecoder();
-
-    public VarStringEncodingDecoder cacheName()
+    public static long cacheNameNullValue()
     {
-        cacheName.wrap(buffer, offset + 0);
-        return cacheName;
+        return -9223372036854775808L;
     }
+
+    public static long cacheNameMinValue()
+    {
+        return -9223372036854775807L;
+    }
+
+    public static long cacheNameMaxValue()
+    {
+        return 9223372036854775807L;
+    }
+
+    public long cacheName()
+    {
+        return buffer.getLong(offset + 0, java.nio.ByteOrder.LITTLE_ENDIAN);
+    }
+
 
     public static int keyId()
     {
@@ -168,7 +181,7 @@ public final class RemoveCacheEntryDecoder
 
     public static int keyEncodingOffset()
     {
-        return 4;
+        return 8;
     }
 
     public static int keyEncodingLength()
@@ -203,7 +216,7 @@ public final class RemoveCacheEntryDecoder
 
     public long key()
     {
-        return buffer.getLong(offset + 4, java.nio.ByteOrder.LITTLE_ENDIAN);
+        return buffer.getLong(offset + 8, java.nio.ByteOrder.LITTLE_ENDIAN);
     }
 
 
@@ -249,15 +262,7 @@ public final class RemoveCacheEntryDecoder
         builder.append(BLOCK_LENGTH);
         builder.append("):");
         builder.append("cacheName=");
-        final VarStringEncodingDecoder cacheName = cacheName();
-        if (cacheName != null)
-        {
-            cacheName.appendTo(builder);
-        }
-        else
-        {
-            builder.append("null");
-        }
+        builder.append(cacheName());
         builder.append('|');
         builder.append("key=");
         builder.append(key());

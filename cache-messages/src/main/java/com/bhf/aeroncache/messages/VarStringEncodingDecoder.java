@@ -8,7 +8,7 @@ public final class VarStringEncodingDecoder
 {
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
-    public static final int ENCODED_LENGTH = 4;
+    public static final int ENCODED_LENGTH = -1;
     public static final java.nio.ByteOrder BYTE_ORDER = java.nio.ByteOrder.LITTLE_ENDIAN;
 
     private int offset;
@@ -93,7 +93,7 @@ public final class VarStringEncodingDecoder
 
     public static int varDataEncodingLength()
     {
-        return 0;
+        return -1;
     }
 
     public static int varDataSinceVersion()
