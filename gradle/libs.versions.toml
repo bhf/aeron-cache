@@ -1,12 +1,17 @@
 [versions]
 aeron = "1.46.2"
 sbetool = "1.33.0"
+lombok = "1.18.34"
+log4j = "2.24.0"
 
 [libraries]
+log4j-api = {module="org.apache.logging.log4j:log4j-api", version.ref = "log4j"}
+log4j-core = {module="org.apache.logging.log4j:log4j-core", version.ref = "log4j"}
 aeron = {module = "io.aeron:aeron-all", version.ref= "aeron"}
 sbetool = {module = "uk.co.real-logic:sbe-tool", version.ref= "sbetool"}
 
-[bundles]
-
 [plugins]
 sbegenerator = {id="com.github.vontikov.sbe-generator-plugin", version="0.0.9"}
+lombok = {id = "io.freefair.lombok", version ="8.10"}
+
+[bundles]

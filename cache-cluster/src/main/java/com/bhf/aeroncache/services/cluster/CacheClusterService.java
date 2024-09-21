@@ -1,7 +1,6 @@
 package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.messages.*;
-import com.bhf.aeroncache.models.CacheCreationResult;
 import com.bhf.aeroncache.services.cache.CacheManager;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
@@ -11,11 +10,14 @@ import io.aeron.cluster.service.Cluster;
 import io.aeron.cluster.service.ClusteredService;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
+import lombok.Builder;
+import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.MutableBoolean;
 import org.agrona.concurrent.IdleStrategy;
+
 
 /**
  * The cache cluster service provides access to a CacheManager via an
@@ -23,6 +25,8 @@ import org.agrona.concurrent.IdleStrategy;
  * delegates those to the implementation of the
  * {@link com.bhf.aeroncache.services.cache.CacheManager}.
  */
+@Log4j2
+@Builder
 public class CacheClusterService implements ClusteredService {
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
@@ -42,7 +46,6 @@ public class CacheClusterService implements ClusteredService {
     public void onStart(final Cluster cluster, final Image snapshotImage) {
         this.cluster = cluster;
         this.idleStrategy = cluster.idleStrategy();
-
         if (null != snapshotImage) {
             loadSnapshot(cluster, snapshotImage);
         }
@@ -95,6 +98,12 @@ public class CacheClusterService implements ClusteredService {
      * @param offset  Offset in the buffer at which the message is encoded.
      */
     private void handleAddCacheEntry(ClientSession session, DirectBuffer buffer, int offset) {
+        AddCacheEntryDecoder addCacheEntryDecoder = new AddCacheEntryDecoder();
+        addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheId = addCacheEntryDecoder.cacheName();
+        var key = addCacheEntryDecoder.key();
+        var value = addCacheEntryDecoder.entryValue();
+        var addCacheEntryResult = cacheManager.addCacheEntry(cacheId, key, value);
     }
 
     /**
@@ -105,8 +114,8 @@ public class CacheClusterService implements ClusteredService {
     private void handleCreateCache(ClientSession session, DirectBuffer buffer, int offset) {
         createCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         long cacheId = createCacheDecoder.cacheName();
-        System.out.println("Got create cache message for cache id " + cacheId);
-        CacheCreationResult result = cacheManager.createCache(cacheId);
+        log.info("Got create cache message for cache id " + cacheId);
+        var cacheCreationResult = cacheManager.createCache(cacheId);
         cacheCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheCreatedEncoder.cacheName(cacheId);
         sendMessage(session, egressBuffer, cacheCreatedEncoder.encodedLength() + headerEncoder.encodedLength());
@@ -131,7 +140,7 @@ public class CacheClusterService implements ClusteredService {
     public void onTakeSnapshot(final ExclusivePublication snapshotPublication) {
 
         /*idleStrategy.reset();
-        while (snapshotPublication.offer(snapshotBuffer, 0, SNAPSHOT_MESSAGE_LENGTH) < 0)            // <2>
+        while (snapshotPublication.offer(snapshotBuffer, 0, SNAPSHOT_MESSAGE_LENGTH) < 0)
         {
             idleStrategy.idle();
         }*/
@@ -173,7 +182,7 @@ public class CacheClusterService implements ClusteredService {
      * @param timestamp at which the session was opened.
      */
     public void onSessionOpen(final ClientSession session, final long timestamp) {
-        System.out.println("onSessionOpen(" + session + ")");
+        log.info("onSessionOpen(" + session + ")");
     }
 
     /**
@@ -182,7 +191,7 @@ public class CacheClusterService implements ClusteredService {
      * @param closeReason the session was closed.
      */
     public void onSessionClose(final ClientSession session, final long timestamp, final CloseReason closeReason) {
-        System.out.println("onSessionClose(" + session + ")");
+        log.info("onSessionClose(" + session + ")");
     }
 
     /**

@@ -18,11 +18,6 @@ sbeGenerator {
 group = "com.bhf"
 version = "1.0-SNAPSHOT"
 
-repositories {
-    mavenCentral()
-}
-
-
 
 dependencies {
     implementation(libs.sbetool)

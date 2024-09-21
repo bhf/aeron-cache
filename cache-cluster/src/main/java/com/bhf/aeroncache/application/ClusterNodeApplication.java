@@ -190,7 +190,7 @@ public class ClusterNodeApplication
             .aeronDirectoryName(aeronDirName)                                                            // <1>
             .archiveContext(aeronArchiveContext.clone())                                                 // <2>
             .clusterDir(new File(baseDir, "cluster"))
-            .clusteredService(new CacheClusterService())                                        // <3>
+            .clusteredService(CacheClusterService.builder().build())
             .errorHandler(errorHandler("Clustered Service"));
         // end::clustered_service[]
 
