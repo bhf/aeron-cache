@@ -288,6 +288,11 @@ public final class AddCacheEntryDecoder
         return 0;
     }
 
+    public static String entryValueCharacterEncoding()
+    {
+        return "UTF-8";
+    }
+
     public static String entryValueMetaAttribute(final MetaAttribute metaAttribute)
     {
         if (MetaAttribute.PRESENCE == metaAttribute)
@@ -353,6 +358,34 @@ public final class AddCacheEntryDecoder
         wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
     }
 
+    public String entryValue()
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+
+        if (0 == dataLength)
+        {
+            return "";
+        }
+
+        final byte[] tmp = new byte[dataLength];
+        buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
+
+        final String value;
+        try
+        {
+            value = new String(tmp, "UTF-8");
+        }
+        catch (final java.io.UnsupportedEncodingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+
+        return value;
+    }
+
     public String toString()
     {
         if (null == buffer)
@@ -401,7 +434,7 @@ public final class AddCacheEntryDecoder
         builder.append('\'').append(key()).append('\'');
         builder.append('|');
         builder.append("entryValue=");
-        builder.append(skipEntryValue()).append(" bytes of raw data");
+        builder.append('\'').append(entryValue()).append('\'');
 
         limit(originalLimit);
 

@@ -245,6 +245,11 @@ public final class AddCacheEntryEncoder
         return 3;
     }
 
+    public static String entryValueCharacterEncoding()
+    {
+        return "UTF-8";
+    }
+
     public static String entryValueMetaAttribute(final MetaAttribute metaAttribute)
     {
         if (MetaAttribute.PRESENCE == metaAttribute)
@@ -288,6 +293,33 @@ public final class AddCacheEntryEncoder
         parentMessage.limit(limit + headerLength + length);
         buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
         buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+        return this;
+    }
+
+    public AddCacheEntryEncoder entryValue(final String value)
+    {
+        final byte[] bytes;
+        try
+        {
+            bytes = null == value || value.isEmpty() ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes("UTF-8");
+        }
+        catch (final java.io.UnsupportedEncodingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+
+        final int length = bytes.length;
+        if (length > 1073741824)
+        {
+            throw new IllegalStateException("length > maxValue for type: " + length);
+        }
+
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        parentMessage.limit(limit + headerLength + length);
+        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putBytes(limit + headerLength, bytes, 0, length);
 
         return this;
     }

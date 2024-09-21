@@ -15,9 +15,7 @@
  */
 package com.bhf.aeroncache.services;
 
-import com.bhf.aeroncache.messages.CreateCacheDecoder;
-import com.bhf.aeroncache.messages.CreateCacheEncoder;
-import com.bhf.aeroncache.messages.MessageHeaderDecoder;
+import com.bhf.aeroncache.messages.*;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 import io.aeron.cluster.codecs.CloseReason;
@@ -70,6 +68,12 @@ public class BasicClusteredService implements ClusteredService
             decoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
             long cacheName = decoder.cacheName();
             System.out.println("Create on " + cacheName);
+
+            CacheCreatedEncoder cacheCreatedEncoder = new CacheCreatedEncoder();
+            MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
+            cacheCreatedEncoder.wrapAndApplyHeader(snapshotBuffer, 0, headerEncoder);
+            cacheCreatedEncoder.cacheName(cacheName);
+            sendMessage(session, snapshotBuffer, cacheCreatedEncoder.encodedLength()+headerEncoder.encodedLength());
         }
     }
 

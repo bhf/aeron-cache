@@ -5,18 +5,18 @@ import org.agrona.MutableDirectBuffer;
 
 
 /**
- * Remove an entry from a cache
+ * The ID of a created cache
  */
 @SuppressWarnings("all")
-public final class RemoveCacheEntryEncoder
+public final class CacheCreatedEncoder
 {
-    public static final int BLOCK_LENGTH = 16;
-    public static final int TEMPLATE_ID = 5;
+    public static final int BLOCK_LENGTH = 8;
+    public static final int TEMPLATE_ID = 6;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
     public static final java.nio.ByteOrder BYTE_ORDER = java.nio.ByteOrder.LITTLE_ENDIAN;
 
-    private final RemoveCacheEntryEncoder parentMessage = this;
+    private final CacheCreatedEncoder parentMessage = this;
     private MutableDirectBuffer buffer;
     private int initialOffset;
     private int offset;
@@ -44,7 +44,7 @@ public final class RemoveCacheEntryEncoder
 
     public String sbeSemanticType()
     {
-        return "RemoveCacheEntry";
+        return "CacheCreated";
     }
 
     public MutableDirectBuffer buffer()
@@ -62,7 +62,7 @@ public final class RemoveCacheEntryEncoder
         return offset;
     }
 
-    public RemoveCacheEntryEncoder wrap(final MutableDirectBuffer buffer, final int offset)
+    public CacheCreatedEncoder wrap(final MutableDirectBuffer buffer, final int offset)
     {
         if (buffer != this.buffer)
         {
@@ -75,7 +75,7 @@ public final class RemoveCacheEntryEncoder
         return this;
     }
 
-    public RemoveCacheEntryEncoder wrapAndApplyHeader(
+    public CacheCreatedEncoder wrapAndApplyHeader(
         final MutableDirectBuffer buffer, final int offset, final MessageHeaderEncoder headerEncoder)
     {
         headerEncoder
@@ -148,61 +148,9 @@ public final class RemoveCacheEntryEncoder
         return 9223372036854775807L;
     }
 
-    public RemoveCacheEntryEncoder cacheName(final long value)
+    public CacheCreatedEncoder cacheName(final long value)
     {
         buffer.putLong(offset + 0, value, java.nio.ByteOrder.LITTLE_ENDIAN);
-        return this;
-    }
-
-
-    public static int keyId()
-    {
-        return 2;
-    }
-
-    public static int keySinceVersion()
-    {
-        return 0;
-    }
-
-    public static int keyEncodingOffset()
-    {
-        return 8;
-    }
-
-    public static int keyEncodingLength()
-    {
-        return 8;
-    }
-
-    public static String keyMetaAttribute(final MetaAttribute metaAttribute)
-    {
-        if (MetaAttribute.PRESENCE == metaAttribute)
-        {
-            return "required";
-        }
-
-        return "";
-    }
-
-    public static long keyNullValue()
-    {
-        return -9223372036854775808L;
-    }
-
-    public static long keyMinValue()
-    {
-        return -9223372036854775807L;
-    }
-
-    public static long keyMaxValue()
-    {
-        return 9223372036854775807L;
-    }
-
-    public RemoveCacheEntryEncoder key(final long value)
-    {
-        buffer.putLong(offset + 8, value, java.nio.ByteOrder.LITTLE_ENDIAN);
         return this;
     }
 
@@ -224,7 +172,7 @@ public final class RemoveCacheEntryEncoder
             return builder;
         }
 
-        final RemoveCacheEntryDecoder decoder = new RemoveCacheEntryDecoder();
+        final CacheCreatedDecoder decoder = new CacheCreatedDecoder();
         decoder.wrap(buffer, initialOffset, BLOCK_LENGTH, SCHEMA_VERSION);
 
         return decoder.appendTo(builder);
