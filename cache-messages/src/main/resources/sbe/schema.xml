@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
+                   xmlns:xi="http://www.w3.org/2001/XInclude"
+                   package="com.bht.md.messages"
+                   id="1"
+                   version="0"
+                   semanticVersion="0.1"
+                   description="Market data messages designed for a variety of use cases"
+                   byteOrder="littleEndian">
+    <xi:include href="common-types.xml"/>
+    <types>
+        <type name="Symbol" primitiveType="uint8"/>
+        <type name="Timestamp" primitiveType="uint64" semanticType="UTCTimestamp"/>
+        <composite name="messageHeader" description="Message identifiers and length of message root">
+            <type name="blockLength" primitiveType="uint16"/>
+            <type name="templateId" primitiveType="uint16"/>
+            <type name="schemaId" primitiveType="uint16"/>
+            <type name="version" primitiveType="uint16"/>
+        </composite>
+        <composite name="IntQty32" semanticType="Qty">
+            <type name="mantissa" primitiveType="int32"/>
+            <type name="exponent" primitiveType="int8" presence="constant">0</type>
+        </composite>
+        <composite name="Decimal64">
+            <type name="mantissa" primitiveType="int64"/>
+            <type name="exponent" primitiveType="int8" presence="constant">7</type>
+        </composite>
+        <enum name="MarketStateIdentifier" encodingType="uint8" semanticType="int">
+            <validValue name="PRE_OPENING">0</validValue>
+            <validValue name="OPENING_MODE">1</validValue>
+            <validValue name="CONTINUOUS_TRADING_MODE">2</validValue>
+        </enum>
+        <set name="QuoteCondition" encodingType="uint8" semanticType="QuoteCondition">
+            <choice name="Implied">0</choice>
+            <choice name="Direct">1</choice>
+        </set>
+        <set name="QuoteSide" encodingType="uint8" semanticType="QuoteSide">
+            <choice name="Bid">0</choice>
+            <choice name="Ask">1</choice>
+        </set>
+        <composite name="SidedQuote">
+            <type name="price" primitiveType="int64"/>
+            <type name="qty" primitiveType="int64"/>
+            <ref name="side" type="QuoteSide"/>
+        </composite>
+        <composite name="BidQuote">
+            <type name="price" primitiveType="int64"/>
+            <type name="qty" primitiveType="int64"/>
+        </composite>
+        <composite name="AskQuote">
+            <type name="price" primitiveType="int64"/>
+            <type name="qty" primitiveType="int64"/>
+        </composite>
+        <composite name="SymbolSidedQuote">
+            <ref name="symb" type="Symbol"/>
+            <type name="price" primitiveType="int64"/>
+            <type name="qty" primitiveType="int64"/>
+            <ref name="side" type="QuoteSide"/>
+        </composite>
+        <composite name="SymbolBidQuote">
+            <ref name="symb" type="Symbol"/>
+            <type name="price" primitiveType="int64"/>
+            <type name="qty" primitiveType="int64"/>
+        </composite>
+        <composite name="SymbolAskQuote">
+            <ref name="symb" type="Symbol"/>
+            <type name="price" primitiveType="int64"/>
+            <type name="qty" primitiveType="int64"/>
+        </composite>
+        <composite name="groupSizeEncoding" description="Repeating group dimensions.">
+            <type name="blockLength" primitiveType="uint16"/>
+            <type name="numInGroup" primitiveType="uint16"/>
+        </composite>
+    </types>
+
+    <!--
+        Most market data activity occurs at the touch or close at the top
+    -->
+    <sbe:message name="SingleSidedQuote" id="1" semanticType="SingleSidedQuote" description="A single sided quote">
+        <field name="time" id="1" type="Timestamp"/>
+        <field name="symb" id="2" type="Symbol"/>
+        <field name="MarketState" id="3" type="MarketStateIdentifier" presence="optional"/>
+        <field name="QuoteCondition" id="4" type="QuoteCondition" presence="optional"/>
+        <field name="Quote" id="5" type="SidedQuote"/>
+    </sbe:message>
+
+    <sbe:message name="TwoSidedQuote" id="2" semanticType="TwoSidedQuote" description="A two sided quote, bid and ask">
+        <field name="time" id="1" type="Timestamp"/>
+        <field name="symb" id="2" type="Symbol"/>
+        <field name="MarketState" id="3" type="MarketStateIdentifier" presence="optional"/>
+        <field name="QuoteCondition" id="4" type="QuoteCondition" presence="optional"/>
+        <field name="BidQuote" id="5" type="BidQuote"/>
+        <field name="AskQuote" id="6" type="AskQuote"/>
+    </sbe:message>
+
+    <!--
+        Messages to support the updating of the average price at qty for a single instrument - either for a
+        single side of the book, or mixed updates
+    -->
+
+    <sbe:message name="MassBidsUpdate" id="3" semanticType="MassBidsUpdate"
+                 description="Mass update for the qtys at different prices on the bid side of the book for a single instrument">
+        <field name="time" id="1" type="Timestamp"/>
+        <field name="symb" id="2" type="Symbol"/>
+        <field name="MarketState" id="3" type="MarketStateIdentifier" presence="optional"/>
+        <field name="QuoteCondition" id="4" type="QuoteCondition" presence="optional"/>
+        <field name="QuoteCount" id="5" type="uint8"/>
+        <field name="QuotesRemaining" id="6" type="uint8"/>
+        <field name="BidQuote1" id="7" type="BidQuote" presence="optional"/>
+        <field name="BidQuote2" id="8" type="BidQuote" presence="optional"/>
+        <field name="BidQuote3" id="9" type="BidQuote" presence="optional"/>
+        <field name="BidQuote4" id="10" type="BidQuote" presence="optional"/>
+        <field name="BidQuote5" id="11" type="BidQuote" presence="optional"/>
+        <field name="BidQuote6" id="12" type="BidQuote" presence="optional"/>
+        <field name="BidQuote7" id="13" type="BidQuote" presence="optional"/>
+        <field name="BidQuote8" id="14" type="BidQuote" presence="optional"/>
+        <field name="BidQuote9" id="15" type="BidQuote" presence="optional"/>
+        <field name="BidQuote10" id="16" type="BidQuote" presence="optional"/>
+    </sbe:message>
+
+    <sbe:message name="MassAsksUpdate" id="4" semanticType="MassAsksUpdate"
+                 description="Mass update for the qtys at different prices on the ask side of the book for a single instrument">
+        <field name="time" id="1" type="Timestamp"/>
+        <field name="symb" id="2" type="Symbol"/>
+        <field name="MarketState" id="3" type="MarketStateIdentifier" presence="optional"/>
+        <field name="QuoteCondition" id="4" type="QuoteCondition" presence="optional"/>
+        <field name="QuoteCount" id="5" type="uint8"/>
+        <field name="QuotesRemaining" id="6" type="uint8"/>
+        <field name="AskQuote1" id="7" type="AskQuote" presence="optional"/>
+        <field name="AskQuote2" id="8" type="AskQuote" presence="optional"/>
+        <field name="AskQuote3" id="9" type="AskQuote" presence="optional"/>
+        <field name="AskQuote4" id="10" type="AskQuote" presence="optional"/>
+        <field name="AskQuote5" id="11" type="AskQuote" presence="optional"/>
+        <field name="AskQuote6" id="12" type="AskQuote" presence="optional"/>
+        <field name="AskQuote7" id="13" type="AskQuote" presence="optional"/>
+        <field name="AskQuote8" id="14" type="AskQuote" presence="optional"/>
+        <field name="AskQuote9" id="15" type="AskQuote" presence="optional"/>
+        <field name="AskQuote10" id="16" type="AskQuote" presence="optional"/>
+    </sbe:message>
+
+    <sbe:message name="MassSidedUpdate" id="5" semanticType="MassSidedUpdate"
+                 description="Mass update for the qtys at different prices on either side of the book for a single instrument">
+        <field name="time" id="1" type="Timestamp"/>
+        <field name="symb" id="2" type="Symbol"/>
+        <field name="MarketState" id="3" type="MarketStateIdentifier" presence="optional"/>
+        <field name="QuoteCondition" id="4" type="QuoteCondition" presence="optional"/>
+        <field name="QuoteCount" id="5" type="uint8"/>
+        <field name="QuotesRemaining" id="6" type="uint8"/>
+        <field name="SidedQuote1" id="7" type="SidedQuote" presence="optional"/>
+        <field name="SidedQuote2" id="8" type="SidedQuote" presence="optional"/>
+        <field name="SidedQuote3" id="9" type="SidedQuote" presence="optional"/>
+        <field name="SidedQuote4" id="10" type="SidedQuote" presence="optional"/>
+        <field name="SidedQuote5" id="11" type="SidedQuote" presence="optional"/>
+        <field name="SidedQuote6" id="12" type="SidedQuote" presence="optional"/>
+        <field name="SidedQuote7" id="13" type="SidedQuote" presence="optional"/>
+        <field name="SidedQuote8" id="14" type="SidedQuote" presence="optional"/>
+        <field name="SidedQuote9" id="15" type="SidedQuote" presence="optional"/>
+        <field name="SidedQuote10" id="16" type="SidedQuote" presence="optional"/>
+    </sbe:message>
+
+    <!--
+        Message for testing the performance of repeating groups vs explicit fields and
+        application protocol
+    -->
+    <sbe:message name="GroupedSidedUpdate" id="6" semanticType="GroupedSidedUpdate"
+                 description="Mass update for the qtys at different prices on either side of the book for a single instrument using repeating groups">
+        <field name="time" id="1" type="Timestamp"/>
+        <field name="symb" id="2" type="Symbol"/>
+        <field name="MarketState" id="3" type="MarketStateIdentifier" presence="optional"/>
+        <field name="QuoteCondition" id="4" type="QuoteCondition" presence="optional"/>
+        <field name="QuotesRemaining" id="5" type="uint8"/>
+        <group name="quoteGroup" id="6" dimensionType="groupSizeEncoding">
+            <field name="SidedQuote" id="7" type="SidedQuote"/>
+        </group>
+    </sbe:message>
+
+
+    <!--
+        Messages to support updates on multiple symbols, this could be different price levels of different
+        symbols or an update to the average price at qty for multiple instruments
+    -->
+    <sbe:message name="MultiSymbolMassBidsUpdate" id="7" semanticType="MultiSymbolMassBidsUpdate"
+                 description="MultiSymbolMass update for the qtys at different prices on the bid side of the book for multiple instrument">
+        <field name="time" id="1" type="Timestamp"/>
+        <field name="MarketState" id="3" type="MarketStateIdentifier" presence="optional"/>
+        <field name="QuoteCondition" id="4" type="QuoteCondition" presence="optional"/>
+        <field name="QuoteCount" id="5" type="uint8"/>
+        <field name="QuotesRemaining" id="6" type="uint8"/>
+        <field name="BidQuote1" id="7" type="SymbolBidQuote" presence="optional"/>
+        <field name="BidQuote2" id="8" type="SymbolBidQuote" presence="optional"/>
+        <field name="BidQuote3" id="9" type="SymbolBidQuote" presence="optional"/>
+        <field name="BidQuote4" id="10" type="SymbolBidQuote" presence="optional"/>
+        <field name="BidQuote5" id="11" type="SymbolBidQuote" presence="optional"/>
+        <field name="BidQuote6" id="12" type="SymbolBidQuote" presence="optional"/>
+        <field name="BidQuote7" id="13" type="SymbolBidQuote" presence="optional"/>
+        <field name="BidQuote8" id="14" type="SymbolBidQuote" presence="optional"/>
+        <field name="BidQuote9" id="15" type="SymbolBidQuote" presence="optional"/>
+        <field name="BidQuote10" id="16" type="SymbolBidQuote" presence="optional"/>
+    </sbe:message>
+
+    <sbe:message name="MultiSymbolMassAsksUpdate" id="8" semanticType="MultiSymbolMassAsksUpdate"
+                 description="MultiSymbolMass update for the qtys at different prices on the ask side of the book for multiple instrument">
+        <field name="time" id="1" type="Timestamp"/>
+        <field name="MarketState" id="3" type="MarketStateIdentifier" presence="optional"/>
+        <field name="QuoteCondition" id="4" type="QuoteCondition" presence="optional"/>
+        <field name="QuoteCount" id="5" type="uint8"/>
+        <field name="QuotesRemaining" id="6" type="uint8"/>
+        <field name="AskQuote1" id="7" type="SymbolAskQuote" presence="optional"/>
+        <field name="AskQuote2" id="8" type="SymbolAskQuote" presence="optional"/>
+        <field name="AskQuote3" id="9" type="SymbolAskQuote" presence="optional"/>
+        <field name="AskQuote4" id="10" type="SymbolAskQuote" presence="optional"/>
+        <field name="AskQuote5" id="11" type="SymbolAskQuote" presence="optional"/>
+        <field name="AskQuote6" id="12" type="SymbolAskQuote" presence="optional"/>
+        <field name="AskQuote7" id="13" type="SymbolAskQuote" presence="optional"/>
+        <field name="AskQuote8" id="14" type="SymbolAskQuote" presence="optional"/>
+        <field name="AskQuote9" id="15" type="SymbolAskQuote" presence="optional"/>
+        <field name="AskQuote10" id="16" type="SymbolAskQuote" presence="optional"/>
+    </sbe:message>
+
+    <sbe:message name="MultiSymbolMassSidedUpdate" id="9" semanticType="MultiSymbolMassSidedUpdate"
+                 description="MultiSymbolMass update for the qtys at different prices on either side of the
+                 book for multiple instrument">
+        <field name="time" id="1" type="Timestamp"/>
+        <field name="MarketState" id="3" type="MarketStateIdentifier" presence="optional"/>
+        <field name="QuoteCondition" id="4" type="QuoteCondition" presence="optional"/>
+        <field name="QuoteCount" id="5" type="uint8"/>
+        <field name="QuotesRemaining" id="6" type="uint8"/>
+        <field name="SidedQuote1" id="7" type="SymbolSidedQuote" presence="optional"/>
+        <field name="SidedQuote2" id="8" type="SymbolSidedQuote" presence="optional"/>
+        <field name="SidedQuote3" id="9" type="SymbolSidedQuote" presence="optional"/>
+        <field name="SidedQuote4" id="10" type="SymbolSidedQuote" presence="optional"/>
+        <field name="SidedQuote5" id="11" type="SymbolSidedQuote" presence="optional"/>
+        <field name="SidedQuote6" id="12" type="SymbolSidedQuote" presence="optional"/>
+        <field name="SidedQuote7" id="13" type="SymbolSidedQuote" presence="optional"/>
+        <field name="SidedQuote8" id="14" type="SymbolSidedQuote" presence="optional"/>
+        <field name="SidedQuote9" id="15" type="SymbolSidedQuote" presence="optional"/>
+        <field name="SidedQuote10" id="16" type="SymbolSidedQuote" presence="optional"/>
+    </sbe:message>
+
+    <!--
+           Message for testing the performance of repeating groups vs explicit fields and
+           application protocol
+       -->
+    <sbe:message name="MultiSymbolGroupedSidedUpdate" id="10" semanticType="GroupedSidedUpdate"
+                 description="Mass update for the qtys at different prices on either side of the book for a multiple instrument using repeating groups">
+        <field name="time" id="1" type="Timestamp"/>
+        <field name="MarketState" id="2" type="MarketStateIdentifier" presence="optional"/>
+        <field name="QuoteCondition" id="3" type="QuoteCondition" presence="optional"/>
+        <field name="QuotesRemaining" id="4" type="uint8"/>
+        <group name="quoteGroup" id="6" dimensionType="groupSizeEncoding">
+            <field name="SidedQuote" id="7" type="SymbolSidedQuote"/>
+        </group>
+    </sbe:message>
+
+    <!--
+       General market state message for a symbol or market
+   -->
+    <sbe:message name="MarketState" id="11" semanticType="MarketState" description="Update to the state of the market">
+        <field name="time" id="1" type="Timestamp"/>
+        <field name="symb" id="2" type="Symbol" presence="optional"/>
+        <field name="MarketID" id="3" type="uint32" presence="optional"/>
+        <field name="MarketState" id="4" type="MarketStateIdentifier" presence="optional"/>
+    </sbe:message>
+
+</sbe:messageSchema>

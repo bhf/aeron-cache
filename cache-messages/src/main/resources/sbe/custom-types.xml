@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<types>
+    <type name="ModelYear" primitiveType="uint16"/>
+    <type name="VehicleCode" primitiveType="char" length="6" characterEncoding="ASCII"/>
+    <type name="Ron" primitiveType="uint8" minValue="90" maxValue="110"/>
+    <type name="someNumbers" primitiveType="uint32" length="5"/>
+    <type name="Percentage" primitiveType="int8" minValue="0" maxValue="100"/>
+    <composite name="Booster">
+        <enum name="BoostType" encodingType="char">
+            <validValue name="TURBO">T</validValue>
+            <validValue name="SUPERCHARGER">S</validValue>
+            <validValue name="NITROUS">N</validValue>
+            <validValue name="KERS">K</validValue>
+        </enum>
+        <type name="horsePower" primitiveType="uint8"/>
+    </composite>
+    <composite name="Engine">
+        <type name="capacity" primitiveType="uint16"/>
+        <type name="numCylinders" primitiveType="uint8"/>
+        <type name="maxRpm" primitiveType="uint16" presence="constant">9000</type>
+        <type name="manufacturerCode" primitiveType="char" length="3"/>
+        <type name="fuel" primitiveType="char" presence="constant">Petrol</type>
+        <ref name="efficiency" type="Percentage"/>
+        <ref name="boosterEnabled" type="BooleanType"/>
+        <ref name="booster" type="Booster"/>
+    </composite>
+    <enum name="BooleanType" encodingType="uint8">
+        <validValue name="F">0</validValue>
+        <validValue name="T">1</validValue>
+    </enum>
+    <enum name="Model" encodingType="char">
+        <validValue name="A">A</validValue>
+        <validValue name="B">B</validValue>
+        <validValue name="C">C</validValue>
+    </enum>
+    <set name="OptionalExtras" encodingType="uint8">
+        <choice name="sunRoof">0</choice>
+        <choice name="sportsPack">1</choice>
+        <choice name="cruiseControl">2</choice>
+    </set>
+</types>

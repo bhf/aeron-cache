@@ -30,6 +30,7 @@ import org.agrona.concurrent.IdleStrategy;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.bhf.aeroncache.ClusterNodeApplication.calculatePort;
@@ -199,7 +200,7 @@ public class ClusterClientApplication implements EgressListener
 
     private void printOutput(final String message)
     {
-        System.out.println(message);
+        System.out.println("Client message {}"+message);
     }
 
     /**
@@ -209,7 +210,8 @@ public class ClusterClientApplication implements EgressListener
      */
     public static void main(final String[] args)
     {
-        final int customerId = 123;//Integer.parseInt(System.getProperty("aeron.cluster.tutorial.customerId"));       // <1>
+        Random rnd=new Random();
+        final int customerId = rnd.nextInt(10000000);//Integer.parseInt(System.getProperty("aeron.cluster.tutorial.customerId"));       // <1>
         final int numOfBids = 100;//Integer.parseInt(System.getProperty("aeron.cluster.tutorial.numOfBids"));         // <2>
         final int bidIntervalMs = 100;//Integer.parseInt(System.getProperty("aeron.cluster.tutorial.bidIntervalMs")); // <3>
 

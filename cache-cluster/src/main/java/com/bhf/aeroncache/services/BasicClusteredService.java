@@ -63,8 +63,7 @@ public class BasicClusteredService implements ClusteredService
      * {@inheritDoc}
      */
     // tag::start[]
-    public void onStart(final Cluster cluster, final Image snapshotImage)
-    {
+    public void onStart(final Cluster cluster, final Image snapshotImage) {
         this.cluster = cluster;                      // <1>
         this.idleStrategy = cluster.idleStrategy();  // <2>
 
@@ -80,13 +79,12 @@ public class BasicClusteredService implements ClusteredService
      */
     // tag::message[]
     public void onSessionMessage(
-        final ClientSession session,
-        final long timestamp,
-        final DirectBuffer buffer,
-        final int offset,
-        final int length,
-        final Header header)
-    {
+            final ClientSession session,
+            final long timestamp,
+            final DirectBuffer buffer,
+            final int offset,
+            final int length,
+            final Header header) {
         final long correlationId = buffer.getLong(offset + CORRELATION_ID_OFFSET);                   // <1>
         final long customerId = buffer.getLong(offset + CUSTOMER_ID_OFFSET);
         final long price = buffer.getLong(offset + PRICE_OFFSET);
@@ -95,10 +93,11 @@ public class BasicClusteredService implements ClusteredService
 
         if (null != session)                                                                         // <3>
         {
+            System.out.println("Got session: " + session.responseChannel() + ":" + session.responseStreamId());
             egressMessageBuffer.putLong(CORRELATION_ID_OFFSET, correlationId);                       // <4>
             egressMessageBuffer.putLong(CUSTOMER_ID_OFFSET, auction.getCurrentWinningCustomerId());
             egressMessageBuffer.putLong(PRICE_OFFSET, auction.getBestPrice());
-            egressMessageBuffer.putByte(BID_SUCCEEDED_OFFSET, bidSucceeded ? (byte)1 : (byte)0);
+            egressMessageBuffer.putByte(BID_SUCCEEDED_OFFSET, bidSucceeded ? (byte) 1 : (byte) 0);
 
             idleStrategy.reset();
             while (session.offer(egressMessageBuffer, 0, EGRESS_MESSAGE_LENGTH) < 0)                 // <5>
@@ -113,8 +112,7 @@ public class BasicClusteredService implements ClusteredService
      * {@inheritDoc}
      */
     // tag::takeSnapshot[]
-    public void onTakeSnapshot(final ExclusivePublication snapshotPublication)
-    {
+    public void onTakeSnapshot(final ExclusivePublication snapshotPublication) {
         snapshotBuffer.putLong(SNAPSHOT_CUSTOMER_ID_OFFSET, auction.getCurrentWinningCustomerId());  // <1>
         snapshotBuffer.putLong(SNAPSHOT_PRICE_OFFSET, auction.getBestPrice());
 
@@ -127,8 +125,7 @@ public class BasicClusteredService implements ClusteredService
     // end::takeSnapshot[]
 
     // tag::loadSnapshot[]
-    private void loadSnapshot(final Cluster cluster, final Image snapshotImage)
-    {
+    private void loadSnapshot(final Cluster cluster, final Image snapshotImage) {
         final MutableBoolean isAllDataLoaded = new MutableBoolean(false);
         final FragmentHandler fragmentHandler = (buffer, offset, length, header) ->         // <1>
         {
@@ -162,57 +159,46 @@ public class BasicClusteredService implements ClusteredService
     /**
      * {@inheritDoc}
      */
-    public void onRoleChange(final Cluster.Role newRole)
-    {
+    public void onRoleChange(final Cluster.Role newRole) {
     }
 
     /**
      * {@inheritDoc}
      */
-    public void onTerminate(final Cluster cluster)
-    {
+    public void onTerminate(final Cluster cluster) {
     }
 
     /**
      * {@inheritDoc}
      */
-    public void onSessionOpen(final ClientSession session, final long timestamp)
-    {
+    public void onSessionOpen(final ClientSession session, final long timestamp) {
         System.out.println("onSessionOpen(" + session + ")");
     }
 
     /**
      * {@inheritDoc}
      */
-    public void onSessionClose(final ClientSession session, final long timestamp, final CloseReason closeReason)
-    {
+    public void onSessionClose(final ClientSession session, final long timestamp, final CloseReason closeReason) {
         System.out.println("onSessionClose(" + session + ")");
     }
 
     /**
      * {@inheritDoc}
      */
-    public void onTimerEvent(final long correlationId, final long timestamp)
-    {
+    public void onTimerEvent(final long correlationId, final long timestamp) {
     }
 
-    static class Auction
-    {
+    static class Auction {
         private long bestPrice = 0;
         private long currentWinningCustomerId = -1;
 
-        void loadInitialState(final long price, final long customerId)
-        {
+        void loadInitialState(final long price, final long customerId) {
             bestPrice = price;
             currentWinningCustomerId = customerId;
         }
 
-        boolean attemptBid(final long price, final long customerId)
-        {
-            System.out.println("attemptBid(this=" + this + ", price=" + price + ",customerId=" + customerId + ")");
-
-            if (price <= bestPrice)
-            {
+        boolean attemptBid(final long price, final long customerId) {
+            if (price <= bestPrice) {
                 return false;
             }
 
@@ -222,32 +208,27 @@ public class BasicClusteredService implements ClusteredService
             return true;
         }
 
-        long getBestPrice()
-        {
+        long getBestPrice() {
             return bestPrice;
         }
 
-        long getCurrentWinningCustomerId()
-        {
+        long getCurrentWinningCustomerId() {
             return currentWinningCustomerId;
         }
 
         /**
          * {@inheritDoc}
          */
-        public boolean equals(final Object o)
-        {
-            if (this == o)
-            {
+        public boolean equals(final Object o) {
+            if (this == o) {
                 return true;
             }
 
-            if (o == null || getClass() != o.getClass())
-            {
+            if (o == null || getClass() != o.getClass()) {
                 return false;
             }
 
-            final Auction auction = (Auction)o;
+            final Auction auction = (Auction) o;
 
             return bestPrice == auction.bestPrice && currentWinningCustomerId == auction.currentWinningCustomerId;
         }
@@ -255,39 +236,34 @@ public class BasicClusteredService implements ClusteredService
         /**
          * {@inheritDoc}
          */
-        public int hashCode()
-        {
+        public int hashCode() {
             return Objects.hash(bestPrice, currentWinningCustomerId);
         }
 
         /**
          * {@inheritDoc}
          */
-        public String toString()
-        {
+        public String toString() {
             return "Auction{" +
-                "bestPrice=" + bestPrice +
-                ", currentWinningCustomerId=" + currentWinningCustomerId +
-                '}';
+                    "bestPrice=" + bestPrice +
+                    ", currentWinningCustomerId=" + currentWinningCustomerId +
+                    '}';
         }
     }
 
     /**
      * {@inheritDoc}
      */
-    public boolean equals(final Object o)
-    {
-        if (this == o)
-        {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
         }
 
-        if (o == null || getClass() != o.getClass())
-        {
+        if (o == null || getClass() != o.getClass()) {
             return false;
         }
 
-        final BasicClusteredService that = (BasicClusteredService)o;
+        final BasicClusteredService that = (BasicClusteredService) o;
 
         return auction.equals(that.auction);
     }
@@ -295,18 +271,16 @@ public class BasicClusteredService implements ClusteredService
     /**
      * {@inheritDoc}
      */
-    public int hashCode()
-    {
+    public int hashCode() {
         return Objects.hash(auction);
     }
 
     /**
      * {@inheritDoc}
      */
-    public String toString()
-    {
+    public String toString() {
         return "BasicAuctionClusteredService{" +
-            "auction=" + auction +
-            '}';
+                "auction=" + auction +
+                '}';
     }
 }

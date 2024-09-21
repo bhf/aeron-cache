@@ -16,5 +16,19 @@ public class ClusterLauncher {
                 ClusterNodeApplication.main(new String[]{String.valueOf(finalI)});
             });
         }
+
+       // launchClients(3);
+    }
+
+    private static void launchClients(int clientInstances) {
+        System.out.println("LAUNCHING CLIENTS");
+        var pool = Executors.newFixedThreadPool(clientInstances);
+
+        for (var i = 0; i < clientInstances; i++) {
+            int finalI = i;
+            pool.execute(() -> {
+                ClusterClientApplication.main(new String[]{String.valueOf(finalI)});
+            });
+        }
     }
 }

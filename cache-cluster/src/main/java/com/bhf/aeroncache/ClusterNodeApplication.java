@@ -15,6 +15,7 @@
  */
 package com.bhf.aeroncache;
 
+import com.bhf.aeroncache.services.BasicClusteredService;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.CommonContext;
 import io.aeron.archive.Archive;
@@ -190,7 +191,7 @@ public class ClusterNodeApplication
             .aeronDirectoryName(aeronDirName)                                                            // <1>
             .archiveContext(aeronArchiveContext.clone())                                                 // <2>
             .clusterDir(new File(baseDir, "cluster"))
-            .clusteredService(new BasicAuctionClusteredService())                                        // <3>
+            .clusteredService(new BasicClusteredService())                                        // <3>
             .errorHandler(errorHandler("Clustered Service"));
         // end::clustered_service[]
 

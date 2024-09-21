@@ -1,1 +1,7 @@
 cache-cluster/build/
+/node0/
+/node1/
+/node2/
+/.idea/
+/.gradle/
+/cache-messages/build/

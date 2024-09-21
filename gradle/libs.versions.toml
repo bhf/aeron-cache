@@ -1,10 +1,12 @@
 [versions]
 aeron = "1.46.2"
+sbetool = "1.33.0"
 
 [libraries]
 aeron = {module = "io.aeron:aeron-all", version.ref= "aeron"}
+sbetool = {module = "uk.co.real-logic:sbe-tool", version.ref= "sbetool"}
 
 [bundles]
 
 [plugins]
-shadow = {id ="com.github.johnrengelman.shadow", version = "8.1.1"}
+sbegenerator = {id="com.github.vontikov.sbe-generator-plugin", version="0.0.9"}
