@@ -1,4 +1,4 @@
-package com.bhf.aeroncache;
+package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.messages.*;
 import io.aeron.cluster.client.AeronCluster;
@@ -17,7 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.bhf.aeroncache.ClusterNodeApplication.calculatePort;
+import static com.bhf.aeroncache.application.ClusterNodeApplication.calculatePort;
 
 
 /**

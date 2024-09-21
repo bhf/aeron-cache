@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bhf.aeroncache;
+package com.bhf.aeroncache.application;
 
-import com.bhf.aeroncache.services.BasicClusteredService;
+import com.bhf.aeroncache.services.cluster.CacheClusterService;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.CommonContext;
 import io.aeron.archive.Archive;
@@ -27,7 +27,6 @@ import io.aeron.cluster.service.ClusteredServiceContainer;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.MinMulticastFlowControlSupplier;
 import io.aeron.driver.ThreadingMode;
-import io.aeron.samples.cluster.tutorial.BasicAuctionClusteredService;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.NoOpLock;
 import org.agrona.concurrent.ShutdownSignalBarrier;
@@ -191,7 +190,7 @@ public class ClusterNodeApplication
             .aeronDirectoryName(aeronDirName)                                                            // <1>
             .archiveContext(aeronArchiveContext.clone())                                                 // <2>
             .clusterDir(new File(baseDir, "cluster"))
-            .clusteredService(new BasicClusteredService())                                        // <3>
+            .clusteredService(new CacheClusterService())                                        // <3>
             .errorHandler(errorHandler("Clustered Service"));
         // end::clustered_service[]
 
