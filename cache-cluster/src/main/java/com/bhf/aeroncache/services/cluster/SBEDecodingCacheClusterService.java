@@ -1,10 +1,10 @@
 package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.messages.*;
-import com.bhf.aeroncache.models.AddCacheEntryResult;
-import com.bhf.aeroncache.models.CacheClearResult;
-import com.bhf.aeroncache.models.CacheCreationResult;
-import com.bhf.aeroncache.models.RemoveCacheEntryResult;
+import com.bhf.aeroncache.models.results.AddCacheEntryResult;
+import com.bhf.aeroncache.models.results.ClearCacheResult;
+import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.models.requests.AddCacheEntryRequestDetails;
 import com.bhf.aeroncache.models.requests.ClearCacheRequestDetails;
 import com.bhf.aeroncache.models.requests.CreateCacheRequestDetails;
@@ -90,8 +90,10 @@ class SBEDecodingCacheClusterService extends AbstractCacheClusterService<Long, S
     }
 
     @Override
-    protected void handlePostCreateCache(Long cacheId, CacheCreationResult cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset) {
-
+    protected void handlePostCreateCache(Long cacheId, CreateCacheResult cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset) {
+        cacheCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        cacheCreatedEncoder.cacheName(cacheId);
+        sendMessage(session, egressBuffer, cacheCreatedEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 
     @Override
@@ -105,7 +107,7 @@ class SBEDecodingCacheClusterService extends AbstractCacheClusterService<Long, S
     }
 
     @Override
-    protected void handlePostClearCache(Long cacheId, CacheClearResult clearCacheResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostClearCache(Long cacheId, ClearCacheResult clearCacheResult, ClientSession session, DirectBuffer buffer, int offset) {
 
     }
 }

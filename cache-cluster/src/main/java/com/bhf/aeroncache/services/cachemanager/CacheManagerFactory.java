@@ -1,6 +1,5 @@
 package com.bhf.aeroncache.services.cachemanager;
 
-import com.bhf.aeroncache.models.CacheClearResult;
 import com.bhf.aeroncache.services.cachemanager.impl.AbstractHashMapCacheManager;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;

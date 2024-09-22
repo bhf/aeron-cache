@@ -1,7 +1,8 @@
 package com.bhf.aeroncache.services.cache.impl;
 
-import com.bhf.aeroncache.models.AddCacheEntryResult;
-import com.bhf.aeroncache.models.RemoveCacheEntryResult;
+import com.bhf.aeroncache.models.results.AddCacheEntryResult;
+import com.bhf.aeroncache.models.results.ClearCacheResult;
+import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,5 +24,12 @@ public class HashMapCache<K,V> extends AbstractCache<K,V> {
         removeCacheEntryResult.clear();
         cache.remove(key);
         return removeCacheEntryResult;
+    }
+
+    @Override
+    public ClearCacheResult clearEntries() {
+        clearCacheResult.clear();
+        cache.clear();
+        return clearCacheResult;
     }
 }

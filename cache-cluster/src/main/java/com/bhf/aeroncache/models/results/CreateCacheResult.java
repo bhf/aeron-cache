@@ -1,5 +1,6 @@
-package com.bhf.aeroncache.models;
+package com.bhf.aeroncache.models.results;
 
+import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,7 +9,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class CacheCreationResult implements Reusable<CacheCreationResult>{
+public class CreateCacheResult implements Reusable<CreateCacheResult> {
 
     long timeCreated;
 
@@ -18,7 +19,7 @@ public class CacheCreationResult implements Reusable<CacheCreationResult>{
     }
 
     @Override
-    public void copyFrom(CacheCreationResult source) {
+    public void copyFrom(CreateCacheResult source) {
         this.timeCreated=source.getTimeCreated();
     }
 }

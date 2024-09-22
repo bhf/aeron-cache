@@ -1,12 +1,12 @@
 package com.bhf.aeroncache.services.cache;
 
-import com.bhf.aeroncache.models.AddCacheEntryResult;
-import com.bhf.aeroncache.models.CacheClearResult;
-import com.bhf.aeroncache.models.RemoveCacheEntryResult;
+import com.bhf.aeroncache.models.results.AddCacheEntryResult;
+import com.bhf.aeroncache.models.results.ClearCacheResult;
+import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 
 public interface Cache<K,V> {
 
     AddCacheEntryResult add(K key, V value);
     RemoveCacheEntryResult remove(K key);
-    CacheClearResult clearEntries();
+    ClearCacheResult clearEntries();
 }

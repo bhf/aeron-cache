@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cachemanager.impl;
 
-import com.bhf.aeroncache.models.CacheClearResult;
-import com.bhf.aeroncache.models.CacheCreationResult;
+import com.bhf.aeroncache.models.results.ClearCacheResult;
+import com.bhf.aeroncache.models.results.CreateCacheResult;
 import com.bhf.aeroncache.services.cache.Cache;
 
 import java.util.HashMap;
@@ -23,12 +23,12 @@ public abstract class AbstractHashMapCacheManager<I, K, V> extends AbstractCache
     }
 
     @Override
-    public CacheClearResult clearCache(I cacheId) {
+    public ClearCacheResult clearCache(I cacheId) {
         return getCache(cacheId).clearEntries();
     }
 
     @Override
-    public CacheCreationResult createCache(I cacheId) {
+    public CreateCacheResult createCache(I cacheId) {
         cacheCreationResult.clear();
         var cache = cacheFactory.getNewCache();
         caches.put(cacheId, cache);

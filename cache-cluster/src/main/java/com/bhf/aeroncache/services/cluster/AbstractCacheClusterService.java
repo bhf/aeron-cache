@@ -1,9 +1,9 @@
 package com.bhf.aeroncache.services.cluster;
 
-import com.bhf.aeroncache.models.AddCacheEntryResult;
-import com.bhf.aeroncache.models.CacheClearResult;
-import com.bhf.aeroncache.models.CacheCreationResult;
-import com.bhf.aeroncache.models.RemoveCacheEntryResult;
+import com.bhf.aeroncache.models.results.AddCacheEntryResult;
+import com.bhf.aeroncache.models.results.ClearCacheResult;
+import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.models.requests.AddCacheEntryRequestDetails;
 import com.bhf.aeroncache.models.requests.ClearCacheRequestDetails;
 import com.bhf.aeroncache.models.requests.CreateCacheRequestDetails;
@@ -128,10 +128,10 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
     protected abstract ClearCacheRequestDetails<I> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
     protected abstract RemoveCacheEntryRequestDetails<I,K> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
     protected abstract AddCacheEntryRequestDetails<I,K,V> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
-    protected abstract void handlePostCreateCache(I cacheId, CacheCreationResult cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostCreateCache(I cacheId, CreateCacheResult cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset);
     protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
     protected abstract void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
-    protected abstract void handlePostClearCache(I cacheId, CacheClearResult clearCacheResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostClearCache(I cacheId, ClearCacheResult clearCacheResult, ClientSession session, DirectBuffer buffer, int offset);
 
 
 

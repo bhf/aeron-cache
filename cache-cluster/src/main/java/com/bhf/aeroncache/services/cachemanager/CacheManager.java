@@ -1,13 +1,13 @@
 package com.bhf.aeroncache.services.cachemanager;
 
-import com.bhf.aeroncache.models.CacheClearResult;
-import com.bhf.aeroncache.models.CacheCreationResult;
+import com.bhf.aeroncache.models.results.ClearCacheResult;
+import com.bhf.aeroncache.models.results.CreateCacheResult;
 import com.bhf.aeroncache.services.cache.Cache;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 
 public interface CacheManager<I, K,V> {
-    CacheCreationResult createCache(I cacheId);
+    CreateCacheResult createCache(I cacheId);
 
     Cache<K,V> getCache(I cacheId);
 
@@ -15,5 +15,5 @@ public interface CacheManager<I, K,V> {
 
     void loadSnapshot(Image snapshotImage);
 
-    CacheClearResult clearCache(I cacheId);
+    ClearCacheResult clearCache(I cacheId);
 }
