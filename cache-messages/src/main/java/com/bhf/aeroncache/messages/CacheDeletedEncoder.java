@@ -2,22 +2,21 @@
 package com.bhf.aeroncache.messages;
 
 import org.agrona.MutableDirectBuffer;
-import org.agrona.DirectBuffer;
 
 
 /**
- * Remove an entry from a cache
+ * A cache has been deleted
  */
 @SuppressWarnings("all")
-public final class RemoveCacheEntryEncoder
+public final class CacheDeletedEncoder
 {
     public static final int BLOCK_LENGTH = 8;
-    public static final int TEMPLATE_ID = 5;
+    public static final int TEMPLATE_ID = 10;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
     public static final java.nio.ByteOrder BYTE_ORDER = java.nio.ByteOrder.LITTLE_ENDIAN;
 
-    private final RemoveCacheEntryEncoder parentMessage = this;
+    private final CacheDeletedEncoder parentMessage = this;
     private MutableDirectBuffer buffer;
     private int initialOffset;
     private int offset;
@@ -45,7 +44,7 @@ public final class RemoveCacheEntryEncoder
 
     public String sbeSemanticType()
     {
-        return "RemoveCacheEntry";
+        return "CacheDeleted";
     }
 
     public MutableDirectBuffer buffer()
@@ -63,7 +62,7 @@ public final class RemoveCacheEntryEncoder
         return offset;
     }
 
-    public RemoveCacheEntryEncoder wrap(final MutableDirectBuffer buffer, final int offset)
+    public CacheDeletedEncoder wrap(final MutableDirectBuffer buffer, final int offset)
     {
         if (buffer != this.buffer)
         {
@@ -76,7 +75,7 @@ public final class RemoveCacheEntryEncoder
         return this;
     }
 
-    public RemoveCacheEntryEncoder wrapAndApplyHeader(
+    public CacheDeletedEncoder wrapAndApplyHeader(
         final MutableDirectBuffer buffer, final int offset, final MessageHeaderEncoder headerEncoder)
     {
         headerEncoder
@@ -149,96 +148,12 @@ public final class RemoveCacheEntryEncoder
         return 9223372036854775807L;
     }
 
-    public RemoveCacheEntryEncoder cacheName(final long value)
+    public CacheDeletedEncoder cacheName(final long value)
     {
         buffer.putLong(offset + 0, value, java.nio.ByteOrder.LITTLE_ENDIAN);
         return this;
     }
 
-
-    public static int keyId()
-    {
-        return 2;
-    }
-
-    public static String keyCharacterEncoding()
-    {
-        return "UTF-8";
-    }
-
-    public static String keyMetaAttribute(final MetaAttribute metaAttribute)
-    {
-        if (MetaAttribute.PRESENCE == metaAttribute)
-        {
-            return "required";
-        }
-
-        return "";
-    }
-
-    public static int keyHeaderLength()
-    {
-        return 4;
-    }
-
-    public RemoveCacheEntryEncoder putKey(final DirectBuffer src, final int srcOffset, final int length)
-    {
-        if (length > 1073741824)
-        {
-            throw new IllegalStateException("length > maxValue for type: " + length);
-        }
-
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
-        buffer.putBytes(limit + headerLength, src, srcOffset, length);
-
-        return this;
-    }
-
-    public RemoveCacheEntryEncoder putKey(final byte[] src, final int srcOffset, final int length)
-    {
-        if (length > 1073741824)
-        {
-            throw new IllegalStateException("length > maxValue for type: " + length);
-        }
-
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
-        buffer.putBytes(limit + headerLength, src, srcOffset, length);
-
-        return this;
-    }
-
-    public RemoveCacheEntryEncoder key(final String value)
-    {
-        final byte[] bytes;
-        try
-        {
-            bytes = null == value || value.isEmpty() ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes("UTF-8");
-        }
-        catch (final java.io.UnsupportedEncodingException ex)
-        {
-            throw new RuntimeException(ex);
-        }
-
-        final int length = bytes.length;
-        if (length > 1073741824)
-        {
-            throw new IllegalStateException("length > maxValue for type: " + length);
-        }
-
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
-        buffer.putBytes(limit + headerLength, bytes, 0, length);
-
-        return this;
-    }
 
     public String toString()
     {
@@ -257,7 +172,7 @@ public final class RemoveCacheEntryEncoder
             return builder;
         }
 
-        final RemoveCacheEntryDecoder decoder = new RemoveCacheEntryDecoder();
+        final CacheDeletedDecoder decoder = new CacheDeletedDecoder();
         decoder.wrap(buffer, initialOffset, BLOCK_LENGTH, SCHEMA_VERSION);
 
         return decoder.appendTo(builder);

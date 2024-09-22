@@ -6,18 +6,18 @@ import org.agrona.DirectBuffer;
 
 
 /**
- * Remove an entry from a cache
+ * An entry has been removed from the cache
  */
 @SuppressWarnings("all")
-public final class RemoveCacheEntryEncoder
+public final class CacheEntryRemovedEncoder
 {
     public static final int BLOCK_LENGTH = 8;
-    public static final int TEMPLATE_ID = 5;
+    public static final int TEMPLATE_ID = 8;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
     public static final java.nio.ByteOrder BYTE_ORDER = java.nio.ByteOrder.LITTLE_ENDIAN;
 
-    private final RemoveCacheEntryEncoder parentMessage = this;
+    private final CacheEntryRemovedEncoder parentMessage = this;
     private MutableDirectBuffer buffer;
     private int initialOffset;
     private int offset;
@@ -45,7 +45,7 @@ public final class RemoveCacheEntryEncoder
 
     public String sbeSemanticType()
     {
-        return "RemoveCacheEntry";
+        return "CacheEntryRemoved";
     }
 
     public MutableDirectBuffer buffer()
@@ -63,7 +63,7 @@ public final class RemoveCacheEntryEncoder
         return offset;
     }
 
-    public RemoveCacheEntryEncoder wrap(final MutableDirectBuffer buffer, final int offset)
+    public CacheEntryRemovedEncoder wrap(final MutableDirectBuffer buffer, final int offset)
     {
         if (buffer != this.buffer)
         {
@@ -76,7 +76,7 @@ public final class RemoveCacheEntryEncoder
         return this;
     }
 
-    public RemoveCacheEntryEncoder wrapAndApplyHeader(
+    public CacheEntryRemovedEncoder wrapAndApplyHeader(
         final MutableDirectBuffer buffer, final int offset, final MessageHeaderEncoder headerEncoder)
     {
         headerEncoder
@@ -149,7 +149,7 @@ public final class RemoveCacheEntryEncoder
         return 9223372036854775807L;
     }
 
-    public RemoveCacheEntryEncoder cacheName(final long value)
+    public CacheEntryRemovedEncoder cacheName(final long value)
     {
         buffer.putLong(offset + 0, value, java.nio.ByteOrder.LITTLE_ENDIAN);
         return this;
@@ -181,7 +181,7 @@ public final class RemoveCacheEntryEncoder
         return 4;
     }
 
-    public RemoveCacheEntryEncoder putKey(final DirectBuffer src, final int srcOffset, final int length)
+    public CacheEntryRemovedEncoder putKey(final DirectBuffer src, final int srcOffset, final int length)
     {
         if (length > 1073741824)
         {
@@ -197,7 +197,7 @@ public final class RemoveCacheEntryEncoder
         return this;
     }
 
-    public RemoveCacheEntryEncoder putKey(final byte[] src, final int srcOffset, final int length)
+    public CacheEntryRemovedEncoder putKey(final byte[] src, final int srcOffset, final int length)
     {
         if (length > 1073741824)
         {
@@ -213,7 +213,7 @@ public final class RemoveCacheEntryEncoder
         return this;
     }
 
-    public RemoveCacheEntryEncoder key(final String value)
+    public CacheEntryRemovedEncoder key(final String value)
     {
         final byte[] bytes;
         try
@@ -257,7 +257,7 @@ public final class RemoveCacheEntryEncoder
             return builder;
         }
 
-        final RemoveCacheEntryDecoder decoder = new RemoveCacheEntryDecoder();
+        final CacheEntryRemovedDecoder decoder = new CacheEntryRemovedDecoder();
         decoder.wrap(buffer, initialOffset, BLOCK_LENGTH, SCHEMA_VERSION);
 
         return decoder.appendTo(builder);

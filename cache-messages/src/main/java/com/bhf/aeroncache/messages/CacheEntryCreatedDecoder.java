@@ -6,18 +6,18 @@ import org.agrona.DirectBuffer;
 
 
 /**
- * Remove an entry from a cache
+ * An entry has been added to the cache
  */
 @SuppressWarnings("all")
-public final class RemoveCacheEntryDecoder
+public final class CacheEntryCreatedDecoder
 {
     public static final int BLOCK_LENGTH = 8;
-    public static final int TEMPLATE_ID = 5;
+    public static final int TEMPLATE_ID = 7;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
     public static final java.nio.ByteOrder BYTE_ORDER = java.nio.ByteOrder.LITTLE_ENDIAN;
 
-    private final RemoveCacheEntryDecoder parentMessage = this;
+    private final CacheEntryCreatedDecoder parentMessage = this;
     private DirectBuffer buffer;
     private int initialOffset;
     private int offset;
@@ -47,7 +47,7 @@ public final class RemoveCacheEntryDecoder
 
     public String sbeSemanticType()
     {
-        return "RemoveCacheEntry";
+        return "CacheEntryCreated";
     }
 
     public DirectBuffer buffer()
@@ -65,7 +65,7 @@ public final class RemoveCacheEntryDecoder
         return offset;
     }
 
-    public RemoveCacheEntryDecoder wrap(
+    public CacheEntryCreatedDecoder wrap(
         final DirectBuffer buffer,
         final int offset,
         final int actingBlockLength,
@@ -84,7 +84,7 @@ public final class RemoveCacheEntryDecoder
         return this;
     }
 
-    public RemoveCacheEntryDecoder wrapAndApplyHeader(
+    public CacheEntryCreatedDecoder wrapAndApplyHeader(
         final DirectBuffer buffer,
         final int offset,
         final MessageHeaderDecoder headerDecoder)
@@ -285,7 +285,7 @@ public final class RemoveCacheEntryDecoder
             return "";
         }
 
-        final RemoveCacheEntryDecoder decoder = new RemoveCacheEntryDecoder();
+        final CacheEntryCreatedDecoder decoder = new CacheEntryCreatedDecoder();
         decoder.wrap(buffer, initialOffset, actingBlockLength, actingVersion);
 
         return decoder.appendTo(new StringBuilder()).toString();
@@ -300,7 +300,7 @@ public final class RemoveCacheEntryDecoder
 
         final int originalLimit = limit();
         limit(initialOffset + actingBlockLength);
-        builder.append("[RemoveCacheEntry](sbeTemplateId=");
+        builder.append("[CacheEntryCreated](sbeTemplateId=");
         builder.append(TEMPLATE_ID);
         builder.append("|sbeSchemaId=");
         builder.append(SCHEMA_ID);

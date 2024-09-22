@@ -1,23 +1,22 @@
 /* Generated SBE (Simple Binary Encoding) message codec. */
 package com.bhf.aeroncache.messages;
 
-import org.agrona.MutableDirectBuffer;
 import org.agrona.DirectBuffer;
 
 
 /**
- * Remove an entry from a cache
+ * A cache has been cleared
  */
 @SuppressWarnings("all")
-public final class RemoveCacheEntryDecoder
+public final class CacheClearedDecoder
 {
     public static final int BLOCK_LENGTH = 8;
-    public static final int TEMPLATE_ID = 5;
+    public static final int TEMPLATE_ID = 9;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
     public static final java.nio.ByteOrder BYTE_ORDER = java.nio.ByteOrder.LITTLE_ENDIAN;
 
-    private final RemoveCacheEntryDecoder parentMessage = this;
+    private final CacheClearedDecoder parentMessage = this;
     private DirectBuffer buffer;
     private int initialOffset;
     private int offset;
@@ -47,7 +46,7 @@ public final class RemoveCacheEntryDecoder
 
     public String sbeSemanticType()
     {
-        return "RemoveCacheEntry";
+        return "CacheCleared";
     }
 
     public DirectBuffer buffer()
@@ -65,7 +64,7 @@ public final class RemoveCacheEntryDecoder
         return offset;
     }
 
-    public RemoveCacheEntryDecoder wrap(
+    public CacheClearedDecoder wrap(
         final DirectBuffer buffer,
         final int offset,
         final int actingBlockLength,
@@ -84,7 +83,7 @@ public final class RemoveCacheEntryDecoder
         return this;
     }
 
-    public RemoveCacheEntryDecoder wrapAndApplyHeader(
+    public CacheClearedDecoder wrapAndApplyHeader(
         final DirectBuffer buffer,
         final int offset,
         final MessageHeaderDecoder headerDecoder)
@@ -170,114 +169,6 @@ public final class RemoveCacheEntryDecoder
     }
 
 
-    public static int keyId()
-    {
-        return 2;
-    }
-
-    public static int keySinceVersion()
-    {
-        return 0;
-    }
-
-    public static String keyCharacterEncoding()
-    {
-        return "UTF-8";
-    }
-
-    public static String keyMetaAttribute(final MetaAttribute metaAttribute)
-    {
-        if (MetaAttribute.PRESENCE == metaAttribute)
-        {
-            return "required";
-        }
-
-        return "";
-    }
-
-    public static int keyHeaderLength()
-    {
-        return 4;
-    }
-
-    public int keyLength()
-    {
-        final int limit = parentMessage.limit();
-        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
-    }
-
-    public int skipKey()
-    {
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
-        final int dataOffset = limit + headerLength;
-        parentMessage.limit(dataOffset + dataLength);
-
-        return dataLength;
-    }
-
-    public int getKey(final MutableDirectBuffer dst, final int dstOffset, final int length)
-    {
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
-        final int bytesCopied = Math.min(length, dataLength);
-        parentMessage.limit(limit + headerLength + dataLength);
-        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
-
-        return bytesCopied;
-    }
-
-    public int getKey(final byte[] dst, final int dstOffset, final int length)
-    {
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
-        final int bytesCopied = Math.min(length, dataLength);
-        parentMessage.limit(limit + headerLength + dataLength);
-        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
-
-        return bytesCopied;
-    }
-
-    public void wrapKey(final DirectBuffer wrapBuffer)
-    {
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
-        parentMessage.limit(limit + headerLength + dataLength);
-        wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
-    }
-
-    public String key()
-    {
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
-        parentMessage.limit(limit + headerLength + dataLength);
-
-        if (0 == dataLength)
-        {
-            return "";
-        }
-
-        final byte[] tmp = new byte[dataLength];
-        buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
-
-        final String value;
-        try
-        {
-            value = new String(tmp, "UTF-8");
-        }
-        catch (final java.io.UnsupportedEncodingException ex)
-        {
-            throw new RuntimeException(ex);
-        }
-
-        return value;
-    }
-
     public String toString()
     {
         if (null == buffer)
@@ -285,7 +176,7 @@ public final class RemoveCacheEntryDecoder
             return "";
         }
 
-        final RemoveCacheEntryDecoder decoder = new RemoveCacheEntryDecoder();
+        final CacheClearedDecoder decoder = new CacheClearedDecoder();
         decoder.wrap(buffer, initialOffset, actingBlockLength, actingVersion);
 
         return decoder.appendTo(new StringBuilder()).toString();
@@ -300,7 +191,7 @@ public final class RemoveCacheEntryDecoder
 
         final int originalLimit = limit();
         limit(initialOffset + actingBlockLength);
-        builder.append("[RemoveCacheEntry](sbeTemplateId=");
+        builder.append("[CacheCleared](sbeTemplateId=");
         builder.append(TEMPLATE_ID);
         builder.append("|sbeSchemaId=");
         builder.append(SCHEMA_ID);
@@ -321,9 +212,6 @@ public final class RemoveCacheEntryDecoder
         builder.append("):");
         builder.append("cacheName=");
         builder.append(cacheName());
-        builder.append('|');
-        builder.append("key=");
-        builder.append('\'').append(key()).append('\'');
 
         limit(originalLimit);
 
