@@ -13,6 +13,7 @@ public class ClusterLauncher {
         for (var i = 0; i < clusterNodes; i++) {
             int finalI = i;
             pool.execute(() -> {
+                System.out.println("Launching cluster with node Id: "+finalI);
                 ClusterNodeApplication.main(new String[]{String.valueOf(finalI)});
             });
         }

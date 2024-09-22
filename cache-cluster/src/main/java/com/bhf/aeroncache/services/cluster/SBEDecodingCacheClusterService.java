@@ -1,28 +1,23 @@
 package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.messages.*;
-import com.bhf.aeroncache.models.results.AddCacheEntryResult;
-import com.bhf.aeroncache.models.results.ClearCacheResult;
-import com.bhf.aeroncache.models.results.CreateCacheResult;
-import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.models.requests.AddCacheEntryRequestDetails;
 import com.bhf.aeroncache.models.requests.ClearCacheRequestDetails;
 import com.bhf.aeroncache.models.requests.CreateCacheRequestDetails;
 import com.bhf.aeroncache.models.requests.RemoveCacheEntryRequestDetails;
-import com.bhf.aeroncache.services.cachemanager.CacheManager;
-import io.aeron.ExclusivePublication;
-import io.aeron.Image;
+import com.bhf.aeroncache.models.results.AddCacheEntryResult;
+import com.bhf.aeroncache.models.results.ClearCacheResult;
+import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import io.aeron.cluster.service.ClientSession;
-import io.aeron.cluster.service.Cluster;
 import io.aeron.logbuffer.Header;
+import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.IdleStrategy;
 
-import java.util.function.Consumer;
-
-class SBEDecodingCacheClusterService extends AbstractCacheClusterService<Long, String, String> {
+@Log4j2
+public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<Long, String, String> {
 
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
@@ -30,10 +25,6 @@ class SBEDecodingCacheClusterService extends AbstractCacheClusterService<Long, S
     private final CreateCacheDecoder createCacheDecoder = new CreateCacheDecoder();
     private final AddCacheEntryDecoder addCacheEntryDecoder = new AddCacheEntryDecoder();
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
-
-    SBEDecodingCacheClusterService(Cluster cluster, IdleStrategy idleStrategy, CacheManager<Long, String, String> cacheManager, Consumer<Image> imageConsumer, Consumer<ExclusivePublication> snapshotConsumer, String nodeId) {
-        super(cluster, idleStrategy, cacheManager, imageConsumer, snapshotConsumer, nodeId);
-    }
 
     /**
      * Process messages from cache clients.
@@ -61,6 +52,9 @@ class SBEDecodingCacheClusterService extends AbstractCacheClusterService<Long, S
     @Override
     protected CreateCacheRequestDetails<Long> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         createCacheRequestDetails.clear();
+        createCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        long cacheId = createCacheDecoder.cacheName();
+        createCacheRequestDetails.setCacheId(cacheId);
         return createCacheRequestDetails;
     }
 

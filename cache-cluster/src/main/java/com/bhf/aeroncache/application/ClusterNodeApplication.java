@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.services.cluster.CacheClusterService;
+import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.CommonContext;
 import io.aeron.archive.Archive;
@@ -152,7 +153,7 @@ public class ClusterNodeApplication {
                         .aeronDirectoryName(aeronDirName)
                         .archiveContext(aeronArchiveContext.clone())
                         .clusterDir(new File(baseDir, "cluster"))
-                        .clusteredService(CacheClusterService.builder().build())
+                        .clusteredService(new SBEDecodingCacheClusterService())
                         .errorHandler(errorHandler("Clustered Service"));
 
         try (
@@ -160,9 +161,9 @@ public class ClusterNodeApplication {
                         mediaDriverContext, archiveContext, consensusModuleContext);
                 ClusteredServiceContainer container = ClusteredServiceContainer.launch(
                         clusteredServiceContext)) {
-            log.info("[" + nodeId + "] Started Cluster Node on " + hostname + "...");
+            System.out.println("[" + nodeId + "] Started Cluster Node on " + hostname + "...");
             barrier.await();
-            log.info("[" + nodeId + "] Exiting");
+            System.out.println("[" + nodeId + "] Exiting");
         }
     }
 }

@@ -32,7 +32,6 @@ import java.util.function.Consumer;
  * {@link CacheManager}.
  */
 @Log4j2
-@Builder
 public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredService {
     private Cluster cluster;
     private IdleStrategy idleStrategy;
@@ -62,6 +61,7 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
      * @param snapshotImage from which the service can load its archived state which can be null when no snapshot.
      */
     public void onStart(final Cluster cluster, final Image snapshotImage) {
+        log.info("On start called on cluster service");
         this.cluster = cluster;
         this.idleStrategy = cluster.idleStrategy();
         if (null != snapshotImage) {
