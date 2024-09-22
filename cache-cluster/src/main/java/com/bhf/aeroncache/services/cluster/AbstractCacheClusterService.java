@@ -40,6 +40,10 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
     private CacheManager<I, K, V> cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer());
     private Consumer<Image> imageConsumer;
     private Consumer<ExclusivePublication> snapshotConsumer;
+    final CreateCacheRequestDetails<I> createCacheRequestDetails = new CreateCacheRequestDetails<>();
+    final ClearCacheRequestDetails<I> clearCacheRequestDetails = new ClearCacheRequestDetails<>();
+    final RemoveCacheEntryRequestDetails<I, K> removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>();
+    final AddCacheEntryRequestDetails<I, K, V> addCacheEntryRequestDetails = new AddCacheEntryRequestDetails<>();
 
     private Consumer<Image> getImageConsumer() {
         return imageConsumer;

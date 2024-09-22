@@ -22,19 +22,16 @@ import org.agrona.concurrent.IdleStrategy;
 
 import java.util.function.Consumer;
 
-class SBEDecodingCacheClusterService<I,K,V> extends AbstractCacheClusterService<I,K,V>{
+class SBEDecodingCacheClusterService extends AbstractCacheClusterService<Long, String, String> {
 
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final CacheCreatedEncoder cacheCreatedEncoder = new CacheCreatedEncoder();
     private final CreateCacheDecoder createCacheDecoder = new CreateCacheDecoder();
+    private final AddCacheEntryDecoder addCacheEntryDecoder = new AddCacheEntryDecoder();
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
-    private final CreateCacheRequestDetails<I> createCacheRequestDetails=new CreateCacheRequestDetails<I>();
-    private final ClearCacheRequestDetails<I> clearCacheRequestDetails=new ClearCacheRequestDetails<I>();
-    private final RemoveCacheEntryRequestDetails<I, K> removeCacheEntryRequestDetails=new RemoveCacheEntryRequestDetails<>();
-    private final AddCacheEntryRequestDetails<I, K, V> addCacheEntryRequestDetails=new AddCacheEntryRequestDetails<>();
 
-    SBEDecodingCacheClusterService(Cluster cluster, IdleStrategy idleStrategy, CacheManager<I, K, V> cacheManager, Consumer<Image> imageConsumer, Consumer<ExclusivePublication> snapshotConsumer, String nodeId) {
+    SBEDecodingCacheClusterService(Cluster cluster, IdleStrategy idleStrategy, CacheManager<Long, String, String> cacheManager, Consumer<Image> imageConsumer, Consumer<ExclusivePublication> snapshotConsumer, String nodeId) {
         super(cluster, idleStrategy, cacheManager, imageConsumer, snapshotConsumer, nodeId);
     }
 
@@ -62,46 +59,53 @@ class SBEDecodingCacheClusterService<I,K,V> extends AbstractCacheClusterService<
     }
 
     @Override
-    protected CreateCacheRequestDetails<I> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+    protected CreateCacheRequestDetails<Long> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         createCacheRequestDetails.clear();
         return createCacheRequestDetails;
     }
 
     @Override
-    protected ClearCacheRequestDetails<I> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+    protected ClearCacheRequestDetails<Long> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         clearCacheRequestDetails.clear();
         return clearCacheRequestDetails;
     }
 
     @Override
-    protected RemoveCacheEntryRequestDetails<I, K> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+    protected RemoveCacheEntryRequestDetails<Long, String> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         removeCacheEntryRequestDetails.clear();
         return removeCacheEntryRequestDetails;
     }
 
     @Override
-    protected AddCacheEntryRequestDetails<I, K, V> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+    protected AddCacheEntryRequestDetails<Long, String, String> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         addCacheEntryRequestDetails.clear();
+        addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        long cacheId = addCacheEntryDecoder.cacheName();
+        var key = addCacheEntryDecoder.key();
+        var value = addCacheEntryDecoder.entryValue();
+        addCacheEntryRequestDetails.setCacheId(cacheId);
+        addCacheEntryRequestDetails.setKey(key);
+        addCacheEntryRequestDetails.setValue(value);
         return addCacheEntryRequestDetails;
     }
 
     @Override
-    protected void handlePostCreateCache(I cacheId, CacheCreationResult cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostCreateCache(Long cacheId, CacheCreationResult cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset) {
 
     }
 
     @Override
-    protected void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostAddCacheEntry(Long cacheId, String key, String value, AddCacheEntryResult addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
 
     }
 
     @Override
-    protected void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostRemoveCacheEntry(Long cacheId, String key, RemoveCacheEntryResult removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
 
     }
 
     @Override
-    protected void handlePostClearCache(I cacheId, CacheClearResult clearCacheResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostClearCache(Long cacheId, CacheClearResult clearCacheResult, ClientSession session, DirectBuffer buffer, int offset) {
 
     }
 }
