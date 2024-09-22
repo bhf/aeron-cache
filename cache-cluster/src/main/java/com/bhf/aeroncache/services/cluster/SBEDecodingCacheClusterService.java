@@ -1,14 +1,12 @@
 package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.messages.*;
-import com.bhf.aeroncache.models.requests.AddCacheEntryRequestDetails;
-import com.bhf.aeroncache.models.requests.ClearCacheRequestDetails;
-import com.bhf.aeroncache.models.requests.CreateCacheRequestDetails;
-import com.bhf.aeroncache.models.requests.RemoveCacheEntryRequestDetails;
+import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
+import com.bhf.aeroncache.services.cache.Cache;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.logbuffer.Header;
 import lombok.extern.log4j.Log4j2;
@@ -19,8 +17,6 @@ import org.agrona.MutableDirectBuffer;
 @Log4j2
 public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<Long, String, String> {
 
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final CacheCreatedEncoder cacheCreatedEncoder = new CacheCreatedEncoder();
     private final CreateCacheDecoder createCacheDecoder = new CreateCacheDecoder();
     private final ClearCacheDecoder clearCacheDecoder = new ClearCacheDecoder();
@@ -29,30 +25,10 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     private final CacheEntryCreatedEncoder entryCreatedEncoder = new CacheEntryCreatedEncoder();
     private final CacheEntryRemovedEncoder entryRemovedEncoder=new CacheEntryRemovedEncoder();
     private final CacheClearedEncoder cacheClearedEncoder=new CacheClearedEncoder();
+    private final DeleteCacheDecoder deleteCacheDecoder=new DeleteCacheDecoder();
+    private final CacheDeletedEncoder cacheDeletedEncoder=new CacheDeletedEncoder();
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
 
-    /**
-     * Process messages from cache clients.
-     *
-     * @param session   for the client which sent the message. This can be null if the client was a service.
-     * @param timestamp for when the message was received.
-     * @param buffer    containing the message.
-     * @param offset    in the buffer at which the message is encoded.
-     * @param length    of the encoded message.
-     * @param header    aeron header for the incoming message.
-     */
-    public void onSessionMessage(final ClientSession session, final long timestamp, final DirectBuffer buffer, final int offset, final int length, final Header header) {
-        headerDecoder.wrap(buffer, offset);
-        final int templateId = headerDecoder.templateId();
-
-        switch (templateId) {
-            case CreateCacheEncoder.TEMPLATE_ID -> handleCreateCache(session, buffer, offset);
-            case AddCacheEntryEncoder.TEMPLATE_ID -> handleAddCacheEntry(session, buffer, offset);
-            case RemoveCacheEntryEncoder.TEMPLATE_ID -> handleRemoveCacheEntry(session, buffer, offset);
-            case ClearCacheEncoder.TEMPLATE_ID -> handleClearCache(session, buffer, offset);
-            default -> throw new IllegalStateException("Unexpected value: " + templateId);
-        }
-    }
 
     @Override
     protected CreateCacheRequestDetails<Long> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
@@ -97,6 +73,15 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
+    protected DeleteCacheRequestDetails<Long> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+        deleteCacheRequestDetails.clear();
+        deleteCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        long cacheId = deleteCacheDecoder.cacheName();
+        deleteCacheRequestDetails.setCacheId(cacheId);
+        return deleteCacheRequestDetails;
+    }
+
+    @Override
     protected void handlePostCreateCache(Long cacheId, CreateCacheResult cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset) {
         cacheCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheCreatedEncoder.cacheName(cacheId);
@@ -124,5 +109,12 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         cacheClearedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheClearedEncoder.cacheName(cacheId);
         sendMessage(session, egressBuffer, cacheClearedEncoder.encodedLength() + headerEncoder.encodedLength());
+    }
+
+    @Override
+    protected void handlePostDeleteCache(Long cacheId, Cache<String, String> deleteCacheResult, ClientSession session, DirectBuffer buffer, int offset) {
+        cacheDeletedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        cacheDeletedEncoder.cacheName(cacheId);
+        sendMessage(session, egressBuffer, cacheDeletedEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 }

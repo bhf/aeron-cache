@@ -1,13 +1,16 @@
 package com.bhf.aeroncache.services.cluster;
 
-import com.bhf.aeroncache.models.results.AddCacheEntryResult;
-import com.bhf.aeroncache.models.results.ClearCacheResult;
-import com.bhf.aeroncache.models.results.CreateCacheResult;
-import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
+import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.models.requests.DeleteCacheRequestDetails;
 import com.bhf.aeroncache.models.requests.AddCacheEntryRequestDetails;
 import com.bhf.aeroncache.models.requests.ClearCacheRequestDetails;
 import com.bhf.aeroncache.models.requests.CreateCacheRequestDetails;
 import com.bhf.aeroncache.models.requests.RemoveCacheEntryRequestDetails;
+import com.bhf.aeroncache.models.results.AddCacheEntryResult;
+import com.bhf.aeroncache.models.results.ClearCacheResult;
+import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
+import com.bhf.aeroncache.services.cache.Cache;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import io.aeron.ExclusivePublication;
@@ -16,7 +19,7 @@ import io.aeron.cluster.codecs.CloseReason;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.cluster.service.Cluster;
 import io.aeron.cluster.service.ClusteredService;
-import lombok.Builder;
+import io.aeron.logbuffer.Header;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
@@ -33,16 +36,20 @@ import java.util.function.Consumer;
  */
 @Log4j2
 public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredService {
+
+    final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
+    final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private Cluster cluster;
     private IdleStrategy idleStrategy;
     private final CacheManagerFactory<I, K, V> cacheManagerFactory = new CacheManagerFactory<>();
-    private CacheManager<I, K, V> cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer());
+    private final CacheManager<I, K, V> cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer());
     private Consumer<Image> imageConsumer;
     private Consumer<ExclusivePublication> snapshotConsumer;
     final CreateCacheRequestDetails<I> createCacheRequestDetails = new CreateCacheRequestDetails<>();
     final ClearCacheRequestDetails<I> clearCacheRequestDetails = new ClearCacheRequestDetails<>();
     final RemoveCacheEntryRequestDetails<I, K> removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>();
     final AddCacheEntryRequestDetails<I, K, V> addCacheEntryRequestDetails = new AddCacheEntryRequestDetails<>();
+    final DeleteCacheRequestDetails<I> deleteCacheRequestDetails = new DeleteCacheRequestDetails<>();
 
     private Consumer<Image> getImageConsumer() {
         return imageConsumer;
@@ -53,6 +60,31 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
     }
 
     private String nodeId;
+
+    /**
+     * Process messages from cache clients.
+     *
+     * @param session   for the client which sent the message. This can be null if the client was a service.
+     * @param timestamp for when the message was received.
+     * @param buffer    containing the message.
+     * @param offset    in the buffer at which the message is encoded.
+     * @param length    of the encoded message.
+     * @param header    aeron header for the incoming message.
+     */
+    public void onSessionMessage(final ClientSession session, final long timestamp, final DirectBuffer buffer, final int offset, final int length, final Header header) {
+        headerDecoder.wrap(buffer, offset);
+        final int templateId = headerDecoder.templateId();
+
+        switch (templateId) {
+            case CreateCacheEncoder.TEMPLATE_ID -> handleCreateCache(session, buffer, offset);
+            case AddCacheEntryEncoder.TEMPLATE_ID -> handleAddCacheEntry(session, buffer, offset);
+            case RemoveCacheEntryEncoder.TEMPLATE_ID -> handleRemoveCacheEntry(session, buffer, offset);
+            case ClearCacheEncoder.TEMPLATE_ID -> handleClearCache(session, buffer, offset);
+            case DeleteCacheEncoder.TEMPLATE_ID -> handleDeleteCache(session, buffer, offset);
+            default -> throw new IllegalStateException("Unexpected value: " + templateId);
+        }
+    }
+
 
     /**
      * Cluster started.
@@ -68,6 +100,14 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
             loadSnapshot(cluster, snapshotImage);
         }
     }
+
+    void handleDeleteCache(ClientSession session, DirectBuffer buffer, int offset) {
+        var requestDetails = getDeleteCacheRequestDetails(session, buffer, offset);
+        I cacheId = requestDetails.getCacheId();
+        var deleteCacheResult = cacheManager.deleteCache(cacheId);
+        handlePostDeleteCache(cacheId, deleteCacheResult, session, buffer, offset);
+    }
+
 
     /**
      * Handle a cache clear request.
@@ -128,12 +168,12 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
     protected abstract ClearCacheRequestDetails<I> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
     protected abstract RemoveCacheEntryRequestDetails<I,K> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
     protected abstract AddCacheEntryRequestDetails<I,K,V> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract DeleteCacheRequestDetails<I> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
     protected abstract void handlePostCreateCache(I cacheId, CreateCacheResult cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset);
     protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
     protected abstract void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
     protected abstract void handlePostClearCache(I cacheId, ClearCacheResult clearCacheResult, ClientSession session, DirectBuffer buffer, int offset);
-
-
+    protected abstract void handlePostDeleteCache(I cacheId, Cache<K,V> deleteCacheResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
      * @param session   Session to send the message too.

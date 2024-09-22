@@ -16,4 +16,6 @@ public interface CacheManager<I, K,V> {
     void loadSnapshot(Image snapshotImage);
 
     ClearCacheResult clearCache(I cacheId);
+
+    Cache<K,V> deleteCache(I cacheId);
 }

@@ -34,6 +34,7 @@ public class CacheClusterService implements ClusteredService {
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final CacheCreatedEncoder cacheCreatedEncoder = new CacheCreatedEncoder();
     private final CreateCacheDecoder createCacheDecoder = new CreateCacheDecoder();
+    private final AddCacheEntryDecoder addCacheEntryDecoder = new AddCacheEntryDecoder();
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
     private Cluster cluster;
     private IdleStrategy idleStrategy;
@@ -105,6 +106,7 @@ public class CacheClusterService implements ClusteredService {
      * @param offset  Offset in the buffer at which the message is encoded.
      */
     private void handleRemoveCacheEntry(ClientSession session, DirectBuffer buffer, int offset) {
+        
     }
 
     /**
@@ -113,7 +115,6 @@ public class CacheClusterService implements ClusteredService {
      * @param offset  Offset in the buffer at which the message is encoded.
      */
     private void handleAddCacheEntry(ClientSession session, DirectBuffer buffer, int offset) {
-        AddCacheEntryDecoder addCacheEntryDecoder = new AddCacheEntryDecoder();
         addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         long cacheId = addCacheEntryDecoder.cacheName();
         var key = addCacheEntryDecoder.key();
