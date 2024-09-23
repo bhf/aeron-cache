@@ -31,7 +31,8 @@ import java.util.function.Consumer;
  * The cache cluster service provides access to a CacheManager via an
  * Aeron cluster interface. It processes the core messages of the cache and
  * delegates those to the implementation of the
- * {@link CacheManager}.
+ * {@link CacheManager}. This level of abstraction if not responsible for
+ * decoding of the actual messages.
  */
 @Log4j2
 public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredService {

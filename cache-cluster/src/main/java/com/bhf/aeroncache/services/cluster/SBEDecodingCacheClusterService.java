@@ -16,7 +16,9 @@ import org.agrona.MutableDirectBuffer;
 /**
  * Decode SBE messages representing cache actions. This implementation
  * indexes the cache via it's {@link java.lang.Long} identity, with
- * keys and values being represented by String objects.
+ * keys and values being represented by String objects. This level of
+ * abstraction is an implementation which does have responsibility for
+ * message decoding.
  */
 @Log4j2
 public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<Long, String, String> {
