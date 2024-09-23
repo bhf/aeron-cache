@@ -12,7 +12,7 @@ public class HashMapCache<K,V> extends AbstractCache<K,V> {
     Map<K,V> cache=new HashMap<>();
 
     @Override
-    public AddCacheEntryResult add(K key, V value) {
+    public AddCacheEntryResult<K> add(K key, V value) {
         addCacheEntryResult.clear();
         addCacheEntryResult.setEntryAdded(true);
         cache.put(key, value);
@@ -20,14 +20,14 @@ public class HashMapCache<K,V> extends AbstractCache<K,V> {
     }
 
     @Override
-    public RemoveCacheEntryResult remove(K key) {
+    public RemoveCacheEntryResult<K> remove(K key) {
         removeCacheEntryResult.clear();
         cache.remove(key);
         return removeCacheEntryResult;
     }
 
     @Override
-    public ClearCacheResult clearEntries() {
+    public ClearCacheResult<K> clearEntries() {
         clearCacheResult.clear();
         cache.clear();
         return clearCacheResult;

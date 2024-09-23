@@ -5,21 +5,29 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The result of a request to create a cache. Uses a flyweight pattern.
+ * The result of a request to create a cache.
+ *
+ * @param <I> The type the cache is indexed on.
  */
 @Getter
 @Setter
-public class CreateCacheResult implements Reusable<CreateCacheResult> {
+public class CreateCacheResult<I> implements Reusable<CreateCacheResult<I>> {
 
-    long timeCreated;
+    I cacheId;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void clear() {
-        timeCreated=0;
+        cacheId = null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void copyFrom(CreateCacheResult source) {
-        this.timeCreated=source.getTimeCreated();
+    public void copyFrom(CreateCacheResult<I> source) {
+        this.cacheId = source.cacheId;
     }
 }

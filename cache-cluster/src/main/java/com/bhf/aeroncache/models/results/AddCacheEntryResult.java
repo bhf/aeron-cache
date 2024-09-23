@@ -5,21 +5,32 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The result of a request to make an addition to a cache. Uses a flyweight pattern.
+ * The result of a request to make an addition to a cache.
+ *
+ * @param <K> The type of the key added.
  */
 @Getter
 @Setter
-public class AddCacheEntryResult implements Reusable<AddCacheEntryResult> {
+public class AddCacheEntryResult<K> implements Reusable<AddCacheEntryResult<K>> {
 
     boolean entryAdded;
+    K entryKey;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void clear() {
-
+        entryAdded=false;
+        entryKey=null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void copyFrom(AddCacheEntryResult source) {
-
+    public void copyFrom(AddCacheEntryResult<K> source) {
+        this.entryAdded = source.entryAdded;
+        this.entryKey=source.entryKey;
     }
 }

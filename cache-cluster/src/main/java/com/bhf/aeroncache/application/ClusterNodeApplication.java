@@ -1,6 +1,5 @@
 package com.bhf.aeroncache.application;
 
-import com.bhf.aeroncache.services.cluster.CacheClusterService;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.CommonContext;
@@ -26,7 +25,7 @@ import static java.lang.Integer.parseInt;
 
 /**
  * Launch a single node that runs the
- * {@link com.bhf.aeroncache.services.cluster.CacheClusterService}.
+ * {@link com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService}.
  */
 @Log4j2
 public class ClusterNodeApplication {

@@ -23,16 +23,26 @@ public abstract class AbstractHashMapCacheManager<I, K, V> extends AbstractCache
     }
 
     @Override
-    public ClearCacheResult clearCache(I cacheId) {
-        return getCache(cacheId).clearEntries();
+    public ClearCacheResult<I> clearCache(I cacheId) {
+        clearCacheResult.clear();
+        getCache(cacheId).clearEntries();
+        clearCacheResult.setCacheId(cacheId);
+        return clearCacheResult;
     }
 
     @Override
-    public CreateCacheResult createCache(I cacheId) {
+    public CreateCacheResult<I> createCache(I cacheId) {
         cacheCreationResult.clear();
         var cache = cacheFactory.getNewCache();
         caches.put(cacheId, cache);
-        cacheCreationResult.setTimeCreated(System.currentTimeMillis());
+        cacheCreationResult.setCacheId(cacheId);
         return cacheCreationResult;
+    }
+
+    @Override
+    public Cache<K, V> deleteCache(I cacheId) {
+        deleteCacheResult.clear();
+        deleteCacheResult.setCacheId(cacheId);
+        return caches.remove(cacheId);
     }
 }

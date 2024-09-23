@@ -27,7 +27,6 @@ import org.agrona.concurrent.IdleStrategy;
 
 import java.util.function.Consumer;
 
-
 /**
  * The cache cluster service provides access to a CacheManager via an
  * Aeron cluster interface. It processes the core messages of the cache and
@@ -85,7 +84,6 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
         }
     }
 
-
     /**
      * Cluster started.
      *
@@ -101,13 +99,19 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
         }
     }
 
+    /**
+     * Handle a delete cache message.
+     *
+     * @param session Session requesting the delete operation.
+     * @param buffer  Buffer containing the message.
+     * @param offset  Offset in the buffer at which the message is encoded.
+     */
     void handleDeleteCache(ClientSession session, DirectBuffer buffer, int offset) {
         var requestDetails = getDeleteCacheRequestDetails(session, buffer, offset);
         I cacheId = requestDetails.getCacheId();
         var deleteCacheResult = cacheManager.deleteCache(cacheId);
         handlePostDeleteCache(cacheId, deleteCacheResult, session, buffer, offset);
     }
-
 
     /**
      * Handle a cache clear request.
@@ -124,6 +128,8 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
     }
 
     /**
+     * Handle a request to remove a cache entry.
+     *
      * @param session Session requesting the remove cache operation.
      * @param buffer  Buffer containing the message.
      * @param offset  Offset in the buffer at which the message is encoded.
@@ -137,12 +143,14 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
     }
 
     /**
+     * Handle a request to add an entry to a cache.
+     *
      * @param session Session requesting the add entry operation.
      * @param buffer  Buffer containing the message.
      * @param offset  Offset in the buffer at which the message is encoded.
      */
     void handleAddCacheEntry(ClientSession session, DirectBuffer buffer, int offset) {
-        var requestDetails  = getAddCacheEntryRequestDetails(session, buffer, offset);
+        var requestDetails = getAddCacheEntryRequestDetails(session, buffer, offset);
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         V value = requestDetails.getValue();
@@ -150,8 +158,9 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
         handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, buffer, offset);
     }
 
-
     /**
+     * Handle a request to create a cache.
+     *
      * @param session Session requesting the create cache operation.
      * @param buffer  Buffer containing the message.
      * @param offset  Offset in the buffer at which the message is encoded.
@@ -165,15 +174,24 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
     }
 
     protected abstract CreateCacheRequestDetails<I> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+
     protected abstract ClearCacheRequestDetails<I> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
-    protected abstract RemoveCacheEntryRequestDetails<I,K> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
-    protected abstract AddCacheEntryRequestDetails<I,K,V> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+
+    protected abstract RemoveCacheEntryRequestDetails<I, K> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+
+    protected abstract AddCacheEntryRequestDetails<I, K, V> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+
     protected abstract DeleteCacheRequestDetails<I> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+
     protected abstract void handlePostCreateCache(I cacheId, CreateCacheResult cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset);
+
     protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
+
     protected abstract void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
+
     protected abstract void handlePostClearCache(I cacheId, ClearCacheResult clearCacheResult, ClientSession session, DirectBuffer buffer, int offset);
-    protected abstract void handlePostDeleteCache(I cacheId, Cache<K,V> deleteCacheResult, ClientSession session, DirectBuffer buffer, int offset);
+
+    protected abstract void handlePostDeleteCache(I cacheId, Cache<K, V> deleteCacheResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
      * @param session   Session to send the message too.
@@ -196,6 +214,8 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
     }
 
     /**
+     * Load the state from an Image.
+     *
      * @param cluster       The cluster from which we are loading the snapshot.
      * @param snapshotImage The snapshot image.
      */
@@ -240,5 +260,4 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
      */
     public void onTimerEvent(final long correlationId, final long timestamp) {
     }
-
 }

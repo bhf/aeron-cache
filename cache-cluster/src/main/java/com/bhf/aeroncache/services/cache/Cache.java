@@ -6,7 +6,24 @@ import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 
 public interface Cache<K,V> {
 
-    AddCacheEntryResult add(K key, V value);
-    RemoveCacheEntryResult remove(K key);
+    /**
+     * Add an entry to the cache.
+     * @param key The key of the entry to add.
+     * @param value The value of the entry to add.
+     * @return The result of adding the entry.
+     */
+    AddCacheEntryResult<K> add(K key, V value);
+
+    /**
+     * Remove an entry from the cache.
+     * @param key The key of the entry to remove.
+     * @return The removed entry.
+     */
+    RemoveCacheEntryResult<K> remove(K key);
+
+    /**
+     * Clear all entries from this cache.
+     * @return The result of clearing all entries.
+     */
     ClearCacheResult clearEntries();
 }
