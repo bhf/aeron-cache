@@ -93,4 +93,17 @@
         <field name="cacheId" id="1" type="CacheId"/>
     </sbe:message>
 
+    <sbe:message name="GetCacheEntry" id="11" semanticType="GetCacheEntry"
+                 description="Get a specific cache entry">
+        <field name="cacheId" id="1" type="CacheId"/>
+        <data name="key" id="2" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="CacheEntryResult" id="12" semanticType="CacheEntryResult"
+                 description="The result of requesting a cache entry">
+        <field name="cacheId" id="1" type="CacheId"/>
+        <data name="key" id="2" type="varStringEncoding"/>
+        <data name="value" id="3" type="varStringEncoding"/>
+    </sbe:message>
+
 </sbe:messageSchema>

@@ -17,5 +17,5 @@ public abstract class AbstractCacheManager<I, K, V> implements CacheManager<I, K
     final CreateCacheResult<I> cacheCreationResult=new CreateCacheResult<>();
     final ClearCacheResult<I> clearCacheResult=new ClearCacheResult<>();
     final DeleteCacheResult<I> deleteCacheResult=new DeleteCacheResult<>();
-    final CacheFactory<K,V> cacheFactory=new CacheFactory<>();
+    final CacheFactory<I,K,V> cacheFactory=new CacheFactory<>();
 }

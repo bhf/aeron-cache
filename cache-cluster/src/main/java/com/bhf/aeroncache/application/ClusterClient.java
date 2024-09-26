@@ -6,6 +6,7 @@ import io.aeron.cluster.client.AeronCluster;
 import io.aeron.cluster.client.EgressListener;
 import io.aeron.cluster.codecs.EventCode;
 import io.aeron.logbuffer.Header;
+import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
@@ -26,7 +27,9 @@ import java.util.function.Consumer;
 @Setter
 public class ClusterClient implements EgressListener {
     private final MutableDirectBuffer msgBuffer = new ExpandableArrayBuffer();
-    private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
+
+    @Getter
+    final IdleStrategy idleStrategy = new BackoffIdleStrategy();
 
     final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
@@ -36,7 +39,7 @@ public class ClusterClient implements EgressListener {
     final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
     final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
     final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
-    final AddCacheEntryDecoder addCacheEntryDecoder = new AddCacheEntryDecoder();
+    final CacheEntryCreatedDecoder addCacheEntryDecoder = new CacheEntryCreatedDecoder();
     final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
     final CacheClearedDecoder cacheClearedDecoder=new CacheClearedDecoder();
 
@@ -64,6 +67,8 @@ public class ClusterClient implements EgressListener {
             final Header header) {
         headerDecoder.wrap(buffer, offset);
         final int templateId = headerDecoder.templateId();
+
+        log.info("Got client side message with TID {}", templateId);
 
         switch (templateId) {
             case CacheCreatedDecoder.TEMPLATE_ID -> handleCacheCreated(buffer, offset);

@@ -9,16 +9,17 @@ import java.util.HashMap;
 /**
  * A cache manager which indexes cache instances based on a type I.
  * Uses a Java HashMap.
+ *
  * @param <I> The type of the id of the cache.
  * @param <K> The key type for the caches.
  * @param <V> The value type for the caches.
  */
-public abstract class AbstractHashMapCacheManager<I, K, V> extends AbstractCacheManager<I, K, V>{
+public abstract class AbstractHashMapCacheManager<I, K, V> extends AbstractCacheManager<I, K, V> {
 
-    private final HashMap<I, Cache<K,V>> caches=new HashMap<>();
+    private final HashMap<I, Cache<I, K, V>> caches = new HashMap<>();
 
     @Override
-    public Cache<K,V> getCache(I cacheId) {
+    public Cache<I, K, V> getCache(I cacheId) {
         return caches.get(cacheId);
     }
 
@@ -40,7 +41,7 @@ public abstract class AbstractHashMapCacheManager<I, K, V> extends AbstractCache
     }
 
     @Override
-    public Cache<K, V> deleteCache(I cacheId) {
+    public Cache<I, K, V> deleteCache(I cacheId) {
         deleteCacheResult.clear();
         deleteCacheResult.setCacheId(cacheId);
         return caches.remove(cacheId);

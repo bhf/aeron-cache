@@ -48,7 +48,7 @@ public class ClusterClientApplication implements EgressListener {
             System.out.println("Got cache created message");
             CacheCreatedDecoder decoder = new CacheCreatedDecoder();
             decoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-            long cacheName = decoder.cacheName();
+            long cacheName = decoder.cacheId();
             System.out.println("Created cache " + cacheName);
         }
 
@@ -111,7 +111,7 @@ public class ClusterClientApplication implements EgressListener {
         CreateCacheEncoder createEncoder = new CreateCacheEncoder();
         MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
         createEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder);
-        createEncoder.cacheName(System.currentTimeMillis());
+        createEncoder.cacheId(System.currentTimeMillis());
 
         idleStrategy.reset();
         while (aeronCluster.offer(msgBuffer, 0, createEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
