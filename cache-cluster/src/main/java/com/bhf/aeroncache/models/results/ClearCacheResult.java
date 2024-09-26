@@ -7,7 +7,7 @@ import lombok.Setter;
 /**
  * The result of a request to clear a cache.
  *
- * @param <I> The type the cache is indexed on.
+ * @param <I> The type of the cache ID.
  */
 @Getter
 @Setter
@@ -20,7 +20,7 @@ public class ClearCacheResult<I> implements Reusable<ClearCacheResult<I>> {
      */
     @Override
     public void clear() {
-        this.cacheId=null;
+        this.cacheId = null;
     }
 
     /**
@@ -28,6 +28,6 @@ public class ClearCacheResult<I> implements Reusable<ClearCacheResult<I>> {
      */
     @Override
     public void copyFrom(ClearCacheResult<I> source) {
-        this.cacheId=source.cacheId;
+        this.cacheId = source.cacheId;
     }
 }

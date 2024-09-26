@@ -4,6 +4,11 @@ import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * The result of a request to delete a cache.
+ *
+ * @param <I> The type of the cache ID.
+ */
 @Getter
 @Setter
 public class DeleteCacheResult<I> implements Reusable<DeleteCacheResult<I>> {
@@ -12,11 +17,11 @@ public class DeleteCacheResult<I> implements Reusable<DeleteCacheResult<I>> {
 
     @Override
     public void clear() {
-        cacheId=null;
+        cacheId = null;
     }
 
     @Override
     public void copyFrom(DeleteCacheResult<I> source) {
-        this.cacheId=source.cacheId;
+        this.cacheId = source.cacheId;
     }
 }

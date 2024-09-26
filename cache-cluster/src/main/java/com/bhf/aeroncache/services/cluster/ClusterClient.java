@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.application;
+package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
@@ -41,13 +41,13 @@ public class ClusterClient implements EgressListener {
     final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
     final CacheEntryCreatedDecoder addCacheEntryDecoder = new CacheEntryCreatedDecoder();
     final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
-    final CacheClearedDecoder cacheClearedDecoder=new CacheClearedDecoder();
+    final CacheClearedDecoder cacheClearedDecoder = new CacheClearedDecoder();
 
     final CreateCacheResult<Long> createCacheResult = new CreateCacheResult<>();
     final AddCacheEntryResult<Long, String> addCacheEntryResult = new AddCacheEntryResult<>();
     final ClearCacheResult<Long> clearCacheResult = new ClearCacheResult<>();
     final DeleteCacheResult<Long> deleteCacheResult = new DeleteCacheResult<>();
-    final RemoveCacheEntryResult<Long,String> removeCacheEntryResult = new RemoveCacheEntryResult<>();
+    final RemoveCacheEntryResult<Long, String> removeCacheEntryResult = new RemoveCacheEntryResult<>();
 
     Consumer<CreateCacheResult<Long>> createCacheConsumer;
     Consumer<AddCacheEntryResult<Long, String>> addCacheEntryConsumer;
@@ -152,7 +152,7 @@ public class ClusterClient implements EgressListener {
      * @param offset THe offset at which to start decoding.
      */
     private void handleCacheDeleted(DirectBuffer buffer, int offset) {
-        CacheDeletedDecoder cacheDeletedDecoder=new CacheDeletedDecoder();
+        CacheDeletedDecoder cacheDeletedDecoder = new CacheDeletedDecoder();
         cacheDeletedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheDeletedDecoder.cacheId();
         log.debug("Got cache deleted on cache {}", cacheId);

@@ -2,6 +2,7 @@ package com.bhf.aeroncache.models;
 
 /**
  * Interface for reusable objects.
+ *
  * @param <T> The type of the Reusable.
  */
 public interface Reusable<T> {

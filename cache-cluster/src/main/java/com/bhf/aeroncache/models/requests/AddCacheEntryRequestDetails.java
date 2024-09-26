@@ -6,13 +6,14 @@ import lombok.Setter;
 
 /**
  * Decoded version of a request to add a cache entry.
+ *
  * @param <I> The type the caches are indexed on.
  * @param <K> The type the entries of the caches are indexed on.
  * @param <V> The type of the values held in individual caches.
  */
 @Getter
 @Setter
-public class AddCacheEntryRequestDetails<I,K,V> implements Reusable<AddCacheEntryRequestDetails<I,K,V>> {
+public class AddCacheEntryRequestDetails<I, K, V> implements Reusable<AddCacheEntryRequestDetails<I, K, V>> {
 
     I cacheId;
     K key;
@@ -23,9 +24,9 @@ public class AddCacheEntryRequestDetails<I,K,V> implements Reusable<AddCacheEntr
      */
     @Override
     public void clear() {
-        cacheId=null;
-        key=null;
-        value=null;
+        cacheId = null;
+        key = null;
+        value = null;
     }
 
     /**
@@ -33,9 +34,8 @@ public class AddCacheEntryRequestDetails<I,K,V> implements Reusable<AddCacheEntr
      */
     @Override
     public void copyFrom(AddCacheEntryRequestDetails<I, K, V> source) {
-        this.cacheId=source.getCacheId();
-        this.key=source.getKey();
-        this.value=source.value;
+        this.cacheId = source.getCacheId();
+        this.key = source.getKey();
+        this.value = source.value;
     }
-
 }

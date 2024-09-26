@@ -7,12 +7,19 @@ import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import java.util.HashMap;
 import java.util.Map;
 
-public class HashMapCache<I,K,V> extends AbstractCache<I,K,V> {
+/**
+ * A cache implementation backed by an on heap {@link HashMap}.
+ *
+ * @param <I> The type the cache is indexed on.
+ * @param <K> The type of the key.
+ * @param <V> The type of the value.
+ */
+public class HashMapCache<I, K, V> extends AbstractCache<I, K, V> {
 
-    Map<K,V> cache=new HashMap<>();
+    Map<K, V> cache = new HashMap<>();
 
     @Override
-    public AddCacheEntryResult<I,K> add(K key, V value) {
+    public AddCacheEntryResult<I, K> add(K key, V value) {
         addCacheEntryResult.clear();
         addCacheEntryResult.setEntryAdded(true);
         cache.put(key, value);
@@ -20,7 +27,7 @@ public class HashMapCache<I,K,V> extends AbstractCache<I,K,V> {
     }
 
     @Override
-    public RemoveCacheEntryResult<I,K> remove(K key) {
+    public RemoveCacheEntryResult<I, K> remove(K key) {
         removeCacheEntryResult.clear();
         cache.remove(key);
         return removeCacheEntryResult;

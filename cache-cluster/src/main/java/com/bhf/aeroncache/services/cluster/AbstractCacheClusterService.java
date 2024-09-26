@@ -186,13 +186,13 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
 
     protected abstract void handlePostCreateCache(I cacheId, CreateCacheResult<I> cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset);
 
-    protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult<I,K> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
 
-    protected abstract void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I,K> removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
 
     protected abstract void handlePostClearCache(I cacheId, ClearCacheResult<I> clearCacheResult, ClientSession session, DirectBuffer buffer, int offset);
 
-    protected abstract void handlePostDeleteCache(I cacheId, Cache<I,K, V> deleteCacheResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostDeleteCache(I cacheId, Cache<I, K, V> deleteCacheResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
      * @param session   Session to send the message too.

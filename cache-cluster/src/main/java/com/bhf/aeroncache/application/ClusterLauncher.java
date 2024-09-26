@@ -13,23 +13,10 @@ public class ClusterLauncher {
         for (var i = 0; i < clusterNodes; i++) {
             int finalI = i;
             pool.execute(() -> {
-                System.out.println("Launching cluster with node Id: "+finalI);
+                System.out.println("Launching cluster with node Id: " + finalI);
                 ClusterNodeApplication.main(new String[]{String.valueOf(finalI)});
             });
         }
-
-       // launchClients(3);
     }
 
-    private static void launchClients(int clientInstances) {
-        System.out.println("LAUNCHING CLIENTS");
-        var pool = Executors.newFixedThreadPool(clientInstances);
-
-        for (var i = 0; i < clientInstances; i++) {
-            int finalI = i;
-            pool.execute(() -> {
-                ClusterClientApplication.main(new String[]{String.valueOf(finalI)});
-            });
-        }
-    }
 }

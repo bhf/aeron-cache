@@ -129,11 +129,12 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
 
     /**
      * After the cache is created, send out a CacheCreated SBE message.
-     * @param cacheId The ID of the cache created.
+     *
+     * @param cacheId             The ID of the cache created.
      * @param cacheCreationResult The result from the request to create the cache.
-     * @param session The client session.
-     * @param buffer  The buffer from which the creation request was decoded.
-     * @param offset  The offset from within the buffer to decode the original request from.
+     * @param session             The client session.
+     * @param buffer              The buffer from which the creation request was decoded.
+     * @param offset              The offset from within the buffer to decode the original request from.
      */
     @Override
     protected void handlePostCreateCache(Long cacheId, CreateCacheResult<Long> cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset) {
@@ -144,14 +145,15 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
 
     /**
      * After an entry is added to a cache, send out a EntryCreated SBE message.
-     * @param cacheId The ID of the cache in which the entry was created.
+     *
+     * @param cacheId             The ID of the cache in which the entry was created.
      * @param addCacheEntryResult The result from the request to add an entry.
-     * @param session The client session.
-     * @param buffer  The buffer from which the entry creation request was created.
-     * @param offset  The offset from within the buffer to decode the original request from.
+     * @param session             The client session.
+     * @param buffer              The buffer from which the entry creation request was created.
+     * @param offset              The offset from within the buffer to decode the original request from.
      */
     @Override
-    protected void handlePostAddCacheEntry(Long cacheId, String key, String value, AddCacheEntryResult<Long,String> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostAddCacheEntry(Long cacheId, String key, String value, AddCacheEntryResult<Long, String> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
         entryCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         entryCreatedEncoder.cacheId(cacheId);
         entryCreatedEncoder.key(key);
@@ -160,14 +162,15 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
 
     /**
      * After an entry is removed from the cache, send out a EntryRemoved SBE message.
-     * @param cacheId The ID of the cache in which the entry was removed.
+     *
+     * @param cacheId                The ID of the cache in which the entry was removed.
      * @param removeCacheEntryResult The result from the request to remove an entry.
-     * @param session The client session.
-     * @param buffer  The buffer from which the entry removal request was created.
-     * @param offset  The offset from within the buffer to decode the original request from.
+     * @param session                The client session.
+     * @param buffer                 The buffer from which the entry removal request was created.
+     * @param offset                 The offset from within the buffer to decode the original request from.
      */
     @Override
-    protected void handlePostRemoveCacheEntry(Long cacheId, String key, RemoveCacheEntryResult<Long,String> removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostRemoveCacheEntry(Long cacheId, String key, RemoveCacheEntryResult<Long, String> removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
         entryRemovedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         entryRemovedEncoder.cacheId(cacheId);
         entryRemovedEncoder.key(key);
@@ -176,11 +179,12 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
 
     /**
      * After a cache is cleared, send out a CacheCleared SBE message.
-     * @param cacheId The ID of the cache in which the entry was removed.
+     *
+     * @param cacheId          The ID of the cache in which the entry was removed.
      * @param clearCacheResult The result from the request to clear a cache.
-     * @param session The client session.
-     * @param buffer  The buffer from which the clear request was created.
-     * @param offset  The offset from within the buffer to decode the original request from.
+     * @param session          The client session.
+     * @param buffer           The buffer from which the clear request was created.
+     * @param offset           The offset from within the buffer to decode the original request from.
      */
     @Override
     protected void handlePostClearCache(Long cacheId, ClearCacheResult<Long> clearCacheResult, ClientSession session, DirectBuffer buffer, int offset) {
@@ -191,11 +195,12 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
 
     /**
      * After a cache is deleted, send out a CacheDeleted SBE message.
-     * @param cacheId The ID of the cache which was deleted.
+     *
+     * @param cacheId           The ID of the cache which was deleted.
      * @param deleteCacheResult The deleted cache.
-     * @param session The client session.
-     * @param buffer  The buffer from which the delete request was created.
-     * @param offset  The offset from within the buffer to decode the original request from.
+     * @param session           The client session.
+     * @param buffer            The buffer from which the delete request was created.
+     * @param offset            The offset from within the buffer to decode the original request from.
      */
     @Override
     protected void handlePostDeleteCache(Long cacheId, Cache<Long, String, String> deleteCacheResult, ClientSession session, DirectBuffer buffer, int offset) {

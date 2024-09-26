@@ -7,11 +7,12 @@ import lombok.Setter;
 /**
  * The result of a request to remove a cache entry.
  *
+ * @param <I> The type of the cache ID.
  * @param <K> The type of the key for the entry that has been removed.
  */
 @Getter
 @Setter
-public class RemoveCacheEntryResult<I,K> implements Reusable<RemoveCacheEntryResult<I,K>> {
+public class RemoveCacheEntryResult<I, K> implements Reusable<RemoveCacheEntryResult<I, K>> {
 
     I cacheId;
     K key;
@@ -21,16 +22,16 @@ public class RemoveCacheEntryResult<I,K> implements Reusable<RemoveCacheEntryRes
      */
     @Override
     public void clear() {
-        key=null;
-        cacheId=null;
+        key = null;
+        cacheId = null;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void copyFrom(RemoveCacheEntryResult<I,K> source) {
-        this.key=source.key;
-        this.cacheId=source.cacheId;
+    public void copyFrom(RemoveCacheEntryResult<I, K> source) {
+        this.key = source.key;
+        this.cacheId = source.cacheId;
     }
 }
