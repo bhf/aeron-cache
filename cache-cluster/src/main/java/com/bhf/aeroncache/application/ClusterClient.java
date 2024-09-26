@@ -19,7 +19,7 @@ import java.util.function.Consumer;
 
 /**
  * Client for connecting to the cluster and executing actions
- * against the cache. Results of actions are handled by a Consumer for
+ * against the cache. Results of actions are handled by a {@link Consumer} for
  * each type of result.
  */
 @Log4j2
@@ -36,16 +36,21 @@ public class ClusterClient implements EgressListener {
     final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
     final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
     final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
-    final AddCacheEntryDecoder addCacheEntryDecoder=new AddCacheEntryDecoder();
+    final AddCacheEntryDecoder addCacheEntryDecoder = new AddCacheEntryDecoder();
+    final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
+    final CacheClearedDecoder cacheClearedDecoder=new CacheClearedDecoder();
+
+    final CreateCacheResult<Long> createCacheResult = new CreateCacheResult<>();
+    final AddCacheEntryResult<Long, String> addCacheEntryResult = new AddCacheEntryResult<>();
+    final ClearCacheResult<Long> clearCacheResult = new ClearCacheResult<>();
+    final DeleteCacheResult<Long> deleteCacheResult = new DeleteCacheResult<>();
+    final RemoveCacheEntryResult<Long,String> removeCacheEntryResult = new RemoveCacheEntryResult<>();
 
     Consumer<CreateCacheResult<Long>> createCacheConsumer;
-    Consumer<AddCacheEntryResult<String>> addCacheEntryConsumer;
+    Consumer<AddCacheEntryResult<Long, String>> addCacheEntryConsumer;
     Consumer<ClearCacheResult<Long>> clearCacheConsumer;
     Consumer<DeleteCacheResult<Long>> deleteCacheConsumer;
-    Consumer<RemoveCacheEntryResult<String>> removeCacheEntryConsumer;
-
-    CreateCacheResult<Long> createCacheResult = new CreateCacheResult<>();
-    AddCacheEntryResult<String> addCacheEntryResult = new AddCacheEntryResult<>();
+    Consumer<RemoveCacheEntryResult<Long, String>> removeCacheEntryConsumer;
 
     /**
      * {@inheritDoc}
@@ -66,18 +71,19 @@ public class ClusterClient implements EgressListener {
             case CacheClearedDecoder.TEMPLATE_ID -> handleCacheCleared(buffer, offset);
             case CacheDeletedDecoder.TEMPLATE_ID -> handleCacheDeleted(buffer, offset);
             case CacheEntryRemovedDecoder.TEMPLATE_ID -> handleCacheEntryRemoved(buffer, offset);
-            default -> log.info("Got unknown message with TID {}", templateId);
+            default -> log.warn("Got unknown message with TID {}", templateId);
         }
     }
 
     /**
      * Handle a cache created event by decoding it and delegating the result to the consumer.
+     *
      * @param buffer The buffer to decode from.
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheCreated(DirectBuffer buffer, int offset) {
         cacheCreatedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        long cacheId = cacheCreatedDecoder.cacheName();
+        var cacheId = cacheCreatedDecoder.cacheId();
         log.info("Created cache " + cacheId);
         createCacheResult.clear();
         createCacheResult.setCacheId(cacheId);
@@ -86,29 +92,68 @@ public class ClusterClient implements EgressListener {
 
     /**
      * Handle a cache entry being created by decoding it and delegating the result to the consumer.
+     *
      * @param buffer The buffer to decode from.
      * @param offset THe offset at which to start decoding.
      */
     private void handleCacheEntryCreated(DirectBuffer buffer, int offset) {
         addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        long cacheId = addCacheEntryDecoder.cacheName();
+        var cacheId = addCacheEntryDecoder.cacheId();
         String key = addCacheEntryDecoder.key();
         log.debug("Got cache entry created message for cache {}, key {}", cacheId, key);
         addCacheEntryResult.clear();
         addCacheEntryResult.setEntryAdded(true);
         addCacheEntryResult.setEntryKey(key);
+        addCacheEntryResult.setCacheID(cacheId);
         addCacheEntryConsumer.accept(addCacheEntryResult);
-
-        // TODO Add cache id to entry created SBE
     }
 
+    /**
+     * Handle a cache entry being removed by decoding it and delegating the result to the consumer.
+     *
+     * @param buffer The buffer to decode from.
+     * @param offset THe offset at which to start decoding.
+     */
     private void handleCacheEntryRemoved(DirectBuffer buffer, int offset) {
+        cacheEntryRemovedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheId = cacheEntryRemovedDecoder.cacheId();
+        var key = cacheEntryRemovedDecoder.key();
+        log.debug("Got cache entry removed for cache {}, key {}", cacheId, key);
+        removeCacheEntryResult.clear();
+        removeCacheEntryResult.setKey(key);
+        removeCacheEntryResult.setCacheId(cacheId);
+        removeCacheEntryConsumer.accept(removeCacheEntryResult);
     }
 
+    /**
+     * Handle a cache being cleared by decoding it and delegating the result to the consumer.
+     *
+     * @param buffer The buffer to decode from.
+     * @param offset THe offset at which to start decoding.
+     */
     private void handleCacheCleared(DirectBuffer buffer, int offset) {
+        cacheClearedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheId = cacheClearedDecoder.cacheId();
+        log.debug("Got cache cleared on cache {}", cacheId);
+        clearCacheResult.clear();
+        clearCacheResult.setCacheId(cacheId);
+        clearCacheConsumer.accept(clearCacheResult);
     }
 
+    /**
+     * Handle a cache being deleted by decoding it and delegating the result to the consumer.
+     *
+     * @param buffer The buffer to decode from.
+     * @param offset THe offset at which to start decoding.
+     */
     private void handleCacheDeleted(DirectBuffer buffer, int offset) {
+        CacheDeletedDecoder cacheDeletedDecoder=new CacheDeletedDecoder();
+        cacheDeletedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheId = cacheDeletedDecoder.cacheId();
+        log.debug("Got cache deleted on cache {}", cacheId);
+        deleteCacheResult.clear();
+        deleteCacheResult.setCacheId(cacheId);
+        deleteCacheConsumer.accept(deleteCacheResult);
     }
 
     /**
@@ -119,7 +164,7 @@ public class ClusterClient implements EgressListener {
      */
     public void sendCreateCache(AeronCluster cluster, long cacheId) {
         createCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheName(cacheId);
+                .cacheId(cacheId);
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, createCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
@@ -136,7 +181,7 @@ public class ClusterClient implements EgressListener {
      */
     public void sendAddCacheEntry(AeronCluster cluster, long cacheID, String key, String value) {
         addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheName(cacheID).key(key).entryValue(value);
+                .cacheId(cacheID).key(key).entryValue(value);
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, addCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
@@ -151,7 +196,7 @@ public class ClusterClient implements EgressListener {
      */
     public void sendClearCache(AeronCluster cluster, long cacheId) {
         clearCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheName(cacheId);
+                .cacheId(cacheId);
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, clearCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
@@ -166,7 +211,7 @@ public class ClusterClient implements EgressListener {
      */
     public void sendDeleteCache(AeronCluster cluster, long cacheId) {
         deleteCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheName(cacheId);
+                .cacheId(cacheId);
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, deleteCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
@@ -182,7 +227,7 @@ public class ClusterClient implements EgressListener {
      */
     public void removeCacheEntry(AeronCluster cluster, long cacheId, String key) {
         removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheName(cacheId).key(key);
+                .cacheId(cacheId).key(key);
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, removeCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
