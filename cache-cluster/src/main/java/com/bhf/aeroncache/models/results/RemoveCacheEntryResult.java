@@ -1,14 +1,19 @@
 package com.bhf.aeroncache.models.results;
 
 import com.bhf.aeroncache.models.Reusable;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * The result of a request to remove a cache entry.
  *
  * @param <K> The type of the key for the entry that has been removed.
  */
-public class RemoveCacheEntryResult<K> implements Reusable<RemoveCacheEntryResult<K>> {
+@Getter
+@Setter
+public class RemoveCacheEntryResult<I,K> implements Reusable<RemoveCacheEntryResult<I,K>> {
 
+    I cacheId;
     K key;
 
     /**
@@ -17,13 +22,15 @@ public class RemoveCacheEntryResult<K> implements Reusable<RemoveCacheEntryResul
     @Override
     public void clear() {
         key=null;
+        cacheId=null;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void copyFrom(RemoveCacheEntryResult<K> source) {
+    public void copyFrom(RemoveCacheEntryResult<I,K> source) {
         this.key=source.key;
+        this.cacheId=source.cacheId;
     }
 }

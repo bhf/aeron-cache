@@ -103,27 +103,27 @@ public final class ClearCacheEncoder
         this.limit = limit;
     }
 
-    public static int cacheNameId()
+    public static int cacheIdId()
     {
         return 1;
     }
 
-    public static int cacheNameSinceVersion()
+    public static int cacheIdSinceVersion()
     {
         return 0;
     }
 
-    public static int cacheNameEncodingOffset()
+    public static int cacheIdEncodingOffset()
     {
         return 0;
     }
 
-    public static int cacheNameEncodingLength()
+    public static int cacheIdEncodingLength()
     {
         return 8;
     }
 
-    public static String cacheNameMetaAttribute(final MetaAttribute metaAttribute)
+    public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
     {
         if (MetaAttribute.PRESENCE == metaAttribute)
         {
@@ -133,22 +133,22 @@ public final class ClearCacheEncoder
         return "";
     }
 
-    public static long cacheNameNullValue()
+    public static long cacheIdNullValue()
     {
         return -9223372036854775808L;
     }
 
-    public static long cacheNameMinValue()
+    public static long cacheIdMinValue()
     {
         return -9223372036854775807L;
     }
 
-    public static long cacheNameMaxValue()
+    public static long cacheIdMaxValue()
     {
         return 9223372036854775807L;
     }
 
-    public ClearCacheEncoder cacheName(final long value)
+    public ClearCacheEncoder cacheId(final long value)
     {
         buffer.putLong(offset + 0, value, java.nio.ByteOrder.LITTLE_ENDIAN);
         return this;

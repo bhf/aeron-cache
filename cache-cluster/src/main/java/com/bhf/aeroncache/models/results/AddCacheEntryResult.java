@@ -11,8 +11,9 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class AddCacheEntryResult<K> implements Reusable<AddCacheEntryResult<K>> {
+public class AddCacheEntryResult<I, K> implements Reusable<AddCacheEntryResult<I, K>> {
 
+    I cacheID;
     boolean entryAdded;
     K entryKey;
 
@@ -29,7 +30,7 @@ public class AddCacheEntryResult<K> implements Reusable<AddCacheEntryResult<K>> 
      * {@inheritDoc}
      */
     @Override
-    public void copyFrom(AddCacheEntryResult<K> source) {
+    public void copyFrom(AddCacheEntryResult<I, K> source) {
         this.entryAdded = source.entryAdded;
         this.entryKey=source.entryKey;
     }
