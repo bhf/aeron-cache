@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cache.impl;
 
+import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
@@ -15,4 +16,5 @@ public abstract class AbstractCache<I, K, V> implements Cache<I, K, V> {
     final AddCacheEntryResult<I, K> addCacheEntryResult = new AddCacheEntryResult<>();
     final RemoveCacheEntryResult<I, K> removeCacheEntryResult = new RemoveCacheEntryResult<>();
     final ClearCacheResult<I> clearCacheResult = new ClearCacheResult<>();
+    final GetCacheEntryResult<I, K, V> getCacheEntryResult = new GetCacheEntryResult<>();
 }

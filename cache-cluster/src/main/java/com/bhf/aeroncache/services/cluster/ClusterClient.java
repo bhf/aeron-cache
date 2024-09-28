@@ -35,7 +35,9 @@ public class ClusterClient implements EgressListener {
     final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
     final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     final CacheCreatedDecoder cacheCreatedDecoder = new CacheCreatedDecoder();
+    final CacheEntryResultDecoder getCacheEntryDecoder = new CacheEntryResultDecoder();
     final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
+    final GetCacheEntryEncoder getCacheEntryEncoder = new GetCacheEntryEncoder();
     final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
     final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
     final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
@@ -48,12 +50,14 @@ public class ClusterClient implements EgressListener {
     final ClearCacheResult<Long> clearCacheResult = new ClearCacheResult<>();
     final DeleteCacheResult<Long> deleteCacheResult = new DeleteCacheResult<>();
     final RemoveCacheEntryResult<Long, String> removeCacheEntryResult = new RemoveCacheEntryResult<>();
+    final GetCacheEntryResult<Long, String, String> getCacheEntryResult = new GetCacheEntryResult<>();
 
     Consumer<CreateCacheResult<Long>> createCacheConsumer;
     Consumer<AddCacheEntryResult<Long, String>> addCacheEntryConsumer;
     Consumer<ClearCacheResult<Long>> clearCacheConsumer;
     Consumer<DeleteCacheResult<Long>> deleteCacheConsumer;
     Consumer<RemoveCacheEntryResult<Long, String>> removeCacheEntryConsumer;
+    Consumer<GetCacheEntryResult<Long, String, String>> getCacheEntryConsumer;
 
     /**
      * {@inheritDoc}
@@ -73,11 +77,30 @@ public class ClusterClient implements EgressListener {
         switch (templateId) {
             case CacheCreatedDecoder.TEMPLATE_ID -> handleCacheCreated(buffer, offset);
             case CacheEntryCreatedDecoder.TEMPLATE_ID -> handleCacheEntryCreated(buffer, offset);
+            case CacheEntryResultDecoder.TEMPLATE_ID -> handleCacheEntryResult(buffer, offset);
             case CacheClearedDecoder.TEMPLATE_ID -> handleCacheCleared(buffer, offset);
             case CacheDeletedDecoder.TEMPLATE_ID -> handleCacheDeleted(buffer, offset);
             case CacheEntryRemovedDecoder.TEMPLATE_ID -> handleCacheEntryRemoved(buffer, offset);
             default -> log.warn("Got unknown message with TID {}", templateId);
         }
+    }
+
+    /**
+     * Handle the result of getting a cache entry.
+     *
+     * @param buffer The buffer to decode from.
+     * @param offset The offset at which to start decoding.
+     */
+    private void handleCacheEntryResult(DirectBuffer buffer, int offset) {
+        getCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheID = getCacheEntryDecoder.cacheId();
+        var key = getCacheEntryDecoder.key();
+        var value = getCacheEntryDecoder.value();
+        log.info("Got cache entry result from cache {} with key {}, value {}", cacheID, key, value);
+        getCacheEntryResult.setCacheId(cacheID);
+        getCacheEntryResult.setEntryKey(key);
+        getCacheEntryResult.setEntryValue(value);
+        getCacheEntryConsumer.accept(getCacheEntryResult);
     }
 
     /**
@@ -180,15 +203,31 @@ public class ClusterClient implements EgressListener {
      * Send a message to add a cache entry.
      *
      * @param cluster The Aeron Cluster instance to use.
-     * @param cacheID The ID of the cache we're adding too.
+     * @param cacheId The ID of the cache we're adding too.
      * @param key     The key to use.
      * @param value   The value to use.
      */
-    public void sendAddCacheEntry(AeronCluster cluster, long cacheID, String key, String value) {
+    public void sendAddCacheEntry(AeronCluster cluster, long cacheId, String key, String value) {
         addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheID).key(key).entryValue(value);
+                .cacheId(cacheId).key(key).entryValue(value);
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, addCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
+            idleStrategy.idle(cluster.pollEgress());
+        }
+    }
+
+    /**
+     * Send a message to get a cache entry.
+     *
+     * @param cluster The Aeron Cluster instance to use.
+     * @param cacheId The ID of the cache we're adding too.
+     * @param key     The key to use.
+     */
+    public void sendGetCacheEntry(AeronCluster cluster, long cacheId, String key) {
+        getCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId).key(key);
+        idleStrategy.reset();
+        while (cluster.offer(msgBuffer, 0, getCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
     }
@@ -268,5 +307,6 @@ public class ClusterClient implements EgressListener {
                         "cluster session ID {}, ingress endpoints {}", leaderMemberId, leadershipTermId,
                 clusterSessionId, ingressEndpoints);
     }
+
 
 }
