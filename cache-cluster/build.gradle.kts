@@ -1,5 +1,6 @@
 plugins {
     application
+    alias(libs.plugins.jmh)
 }
 
 dependencies {
@@ -7,11 +8,17 @@ dependencies {
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
     implementation(project(":cache-messages"))
-    testImplementation(platform("org.junit:junit-bom:5.9.1"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.0")
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit)
+    testImplementation(libs.junit.params)
 }
 
 tasks.test {
     useJUnitPlatform()
+}
+
+jmh {
+    warmupIterations = 1
+    iterations = 1
+    fork = 1
 }

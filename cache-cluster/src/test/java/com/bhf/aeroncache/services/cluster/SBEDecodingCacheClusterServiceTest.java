@@ -51,10 +51,9 @@ class SBEDecodingCacheClusterServiceTest {
         long ts=System.currentTimeMillis();
         createCacheEncoder.wrapAndApplyHeader(requestBuffer, 0, headerEncoder)
                 .cacheId(cacheId);
-        int offset=0;
         int length=createCacheEncoder.encodedLength() + headerEncoder.encodedLength();
-        sut.onSessionMessage(session, ts, requestBuffer, offset, length, header);
-        cacheCreatedDecoder.wrapAndApplyHeader(responseBuffer, offset, headerDecoder);
+        sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
+        cacheCreatedDecoder.wrapAndApplyHeader(responseBuffer, 0, headerDecoder);
         var cacheIdCreated = cacheCreatedDecoder.cacheId();
         assertEquals(cacheId, cacheIdCreated);
     }
