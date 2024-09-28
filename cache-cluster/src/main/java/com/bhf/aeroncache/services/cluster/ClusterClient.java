@@ -29,35 +29,35 @@ public class ClusterClient implements EgressListener {
     private final MutableDirectBuffer msgBuffer = new ExpandableArrayBuffer();
 
     @Getter
-    final IdleStrategy idleStrategy = new BackoffIdleStrategy();
+    private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
 
-    final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
-    final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    final CacheCreatedDecoder cacheCreatedDecoder = new CacheCreatedDecoder();
-    final CacheEntryResultDecoder getCacheEntryDecoder = new CacheEntryResultDecoder();
-    final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
-    final GetCacheEntryEncoder getCacheEntryEncoder = new GetCacheEntryEncoder();
-    final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
-    final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
-    final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
-    final CacheEntryCreatedDecoder addCacheEntryDecoder = new CacheEntryCreatedDecoder();
-    final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
-    final CacheClearedDecoder cacheClearedDecoder = new CacheClearedDecoder();
+    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
+    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
+    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
+    private final CacheCreatedDecoder cacheCreatedDecoder = new CacheCreatedDecoder();
+    private final CacheEntryResultDecoder getCacheEntryDecoder = new CacheEntryResultDecoder();
+    private final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
+    private final GetCacheEntryEncoder getCacheEntryEncoder = new GetCacheEntryEncoder();
+    private final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
+    private final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
+    private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
+    private final CacheEntryCreatedDecoder addCacheEntryDecoder = new CacheEntryCreatedDecoder();
+    private final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
+    private final CacheClearedDecoder cacheClearedDecoder = new CacheClearedDecoder();
 
-    final CreateCacheResult<Long> createCacheResult = new CreateCacheResult<>();
-    final AddCacheEntryResult<Long, String> addCacheEntryResult = new AddCacheEntryResult<>();
-    final ClearCacheResult<Long> clearCacheResult = new ClearCacheResult<>();
-    final DeleteCacheResult<Long> deleteCacheResult = new DeleteCacheResult<>();
-    final RemoveCacheEntryResult<Long, String> removeCacheEntryResult = new RemoveCacheEntryResult<>();
-    final GetCacheEntryResult<Long, String, String> getCacheEntryResult = new GetCacheEntryResult<>();
+    private final CreateCacheResult<Long> createCacheResult = new CreateCacheResult<>();
+    private final AddCacheEntryResult<Long, String> addCacheEntryResult = new AddCacheEntryResult<>();
+    private final ClearCacheResult<Long> clearCacheResult = new ClearCacheResult<>();
+    private final DeleteCacheResult<Long> deleteCacheResult = new DeleteCacheResult<>();
+    private final RemoveCacheEntryResult<Long, String> removeCacheEntryResult = new RemoveCacheEntryResult<>();
+    private final GetCacheEntryResult<Long, String, String> getCacheEntryResult = new GetCacheEntryResult<>();
 
-    Consumer<CreateCacheResult<Long>> createCacheConsumer;
-    Consumer<AddCacheEntryResult<Long, String>> addCacheEntryConsumer;
-    Consumer<ClearCacheResult<Long>> clearCacheConsumer;
-    Consumer<DeleteCacheResult<Long>> deleteCacheConsumer;
-    Consumer<RemoveCacheEntryResult<Long, String>> removeCacheEntryConsumer;
-    Consumer<GetCacheEntryResult<Long, String, String>> getCacheEntryConsumer;
+    private Consumer<CreateCacheResult<Long>> createCacheConsumer;
+    private Consumer<AddCacheEntryResult<Long, String>> addCacheEntryConsumer;
+    private Consumer<ClearCacheResult<Long>> clearCacheConsumer;
+    private Consumer<DeleteCacheResult<Long>> deleteCacheConsumer;
+    private Consumer<RemoveCacheEntryResult<Long, String>> removeCacheEntryConsumer;
+    private Consumer<GetCacheEntryResult<Long, String, String>> getCacheEntryConsumer;
 
     /**
      * {@inheritDoc}
@@ -307,6 +307,5 @@ public class ClusterClient implements EgressListener {
                         "cluster session ID {}, ingress endpoints {}", leaderMemberId, leadershipTermId,
                 clusterSessionId, ingressEndpoints);
     }
-
 
 }
