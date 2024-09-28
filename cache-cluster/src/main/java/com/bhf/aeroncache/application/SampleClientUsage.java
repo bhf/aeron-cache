@@ -56,6 +56,10 @@ public class SampleClientUsage {
         client.setDeleteCacheConsumer(c -> {
             System.out.println("Got cache deleted consumer callback on cache " + c.getCacheId());
         });
+
+        client.setGetCacheEntryConsumer(c -> {
+            System.out.println("Got cache entry consumer callback on cache " + c.getCacheId() + ", key: " + c.getEntryKey() + ", value: " + c.getEntryValue());
+        });
     }
 
     /**
@@ -73,6 +77,10 @@ public class SampleClientUsage {
 
         System.out.println("Sending request to add cache entry on cache " + cacheId);
         client.sendAddCacheEntry(cluster, cacheId, "key1", "{msgType: \"D\"}");
+        waitForResult(client, cluster, 1000);
+
+        System.out.println("Sending request to get cache entry on cache " + cacheId);
+        client.sendGetCacheEntry(cluster, cacheId, "key1");
         waitForResult(client, cluster, 1000);
 
         System.out.println("Sending request to clear cache on cache " + cacheId);

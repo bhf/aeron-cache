@@ -2,10 +2,7 @@ package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.requests.*;
-import com.bhf.aeroncache.models.results.AddCacheEntryResult;
-import com.bhf.aeroncache.models.results.ClearCacheResult;
-import com.bhf.aeroncache.models.results.CreateCacheResult;
-import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
+import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.Cache;
 import io.aeron.cluster.service.ClientSession;
 import lombok.extern.log4j.Log4j2;
@@ -28,7 +25,9 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     private final ClearCacheDecoder clearCacheDecoder = new ClearCacheDecoder();
     private final RemoveCacheEntryDecoder removeCacheEntryDecoder = new RemoveCacheEntryDecoder();
     private final AddCacheEntryDecoder addCacheEntryDecoder = new AddCacheEntryDecoder();
+    private final GetCacheEntryDecoder getCacheEntryDecoder = new GetCacheEntryDecoder();
     private final CacheEntryCreatedEncoder entryCreatedEncoder = new CacheEntryCreatedEncoder();
+    private final CacheEntryResultEncoder cacheEntryResultEncoder = new CacheEntryResultEncoder();
     private final CacheEntryRemovedEncoder entryRemovedEncoder = new CacheEntryRemovedEncoder();
     private final CacheClearedEncoder cacheClearedEncoder = new CacheClearedEncoder();
     private final DeleteCacheDecoder deleteCacheDecoder = new DeleteCacheDecoder();
@@ -111,6 +110,25 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     /**
+     * Decode the GetCacheEntry message into a request details flyweight.
+     *
+     * @param session The client session.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset from within the buffer to decode from.
+     * @return The GetCacheEntryRequestDetails flyweight.
+     */
+    @Override
+    protected GetCacheEntryRequestDetails<Long, String> getCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+        getCacheEntryRequestDetails.clear();
+        getCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheId = getCacheEntryDecoder.cacheId();
+        var key = getCacheEntryDecoder.key();
+        getCacheEntryRequestDetails.setKey(key);
+        getCacheEntryRequestDetails.setCacheId(cacheId);
+        return getCacheEntryRequestDetails;
+    }
+
+    /**
      * Decode the DeleteCache message into a request details flyweight.
      *
      * @param session The client session.
@@ -155,9 +173,27 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     @Override
     protected void handlePostAddCacheEntry(Long cacheId, String key, String value, AddCacheEntryResult<Long, String> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
         entryCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
-        entryCreatedEncoder.cacheId(cacheId);
-        entryCreatedEncoder.key(key);
+        entryCreatedEncoder.cacheId(cacheId)
+                .key(key);
         sendMessage(session, egressBuffer, entryCreatedEncoder.encodedLength() + headerEncoder.encodedLength());
+    }
+
+    /**
+     * Get an entry from the cache, send out a CacheEntry SBE message.
+     *
+     * @param cacheId             The ID of the cache we need to get the entry from.
+     * @param getCacheEntryResult The result from the request to add an entry.
+     * @param session             The client session.
+     * @param buffer              The buffer from which the entry creation request was created.
+     * @param offset              The offset from within the buffer to decode the original request from.
+     */
+    @Override
+    protected void handlePostGetCacheEntry(Long cacheId, String key, GetCacheEntryResult<Long, String, String> getCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
+        cacheEntryResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        cacheEntryResultEncoder.cacheId(cacheId)
+                .key(getCacheEntryResult.getEntryKey())
+                .value(getCacheEntryResult.getEntryValue());
+        sendMessage(session, egressBuffer, cacheEntryResultEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 
     /**
@@ -172,8 +208,8 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     @Override
     protected void handlePostRemoveCacheEntry(Long cacheId, String key, RemoveCacheEntryResult<Long, String> removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
         entryRemovedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
-        entryRemovedEncoder.cacheId(cacheId);
-        entryRemovedEncoder.key(key);
+        entryRemovedEncoder.cacheId(cacheId)
+                .key(key);
         sendMessage(session, egressBuffer, entryRemovedEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 
