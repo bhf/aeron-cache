@@ -83,6 +83,14 @@ public class SampleClientUsage {
         client.sendGetCacheEntry(cluster, cacheId, "key1");
         waitForResult(client, cluster, 1000);
 
+        System.out.println("Sending request to remove cache entry on cache " + cacheId+" with key: key1");
+        client.removeCacheEntry(cluster, cacheId, "key1");
+        waitForResult(client, cluster, 1000);
+
+        System.out.println("Sending request to get cache entry on cache " + cacheId);
+        client.sendGetCacheEntry(cluster, cacheId, "key1");
+        waitForResult(client, cluster, 1000);
+
         System.out.println("Sending request to clear cache on cache " + cacheId);
         client.sendClearCache(cluster, cacheId);
         waitForResult(client, cluster, 1000);
