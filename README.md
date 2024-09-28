@@ -9,11 +9,11 @@ A clustered cache built using Aeron Cluster and inspired by Infinispan and Flink
 
 ## Future Work
 
-* SBE schema serialization and loading on cache
+* Cache keys and values to be SBE encoded
 * Cluster side queries via serializable consumers
 * Annotation processor
 * JPMS integration
 * Off heap cache implementation
 * Activation and passivation strategies
-
+* Custom key entropy source
 
