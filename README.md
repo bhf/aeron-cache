@@ -25,8 +25,11 @@ Inspired by Infinispan and Flink.
 
 ### Overview
 
+#### Message Flow Overview
+
 ![img_1.png](docs/images/msgFlow.png)
 
+#### Cluster Service Workflow
 
 ![img.png](docs/images/cluster-flow.png)
 
