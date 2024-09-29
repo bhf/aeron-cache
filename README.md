@@ -28,6 +28,7 @@ Inspired by Infinispan and Flink.
 ![img_1.png](docs/images/msgFlow.png)
 
 
+![img.png](docs/images/cluster-flow.png)
 
 ## Future Work
 
@@ -35,6 +36,7 @@ Inspired by Infinispan and Flink.
 * Cluster side queries via serializable consumers
 * Annotation processor
 * JPMS integration
+* Startup and periodic snapshot handling 
 * Off heap cache implementation
 * Activation and passivation strategies
 * Custom key entropy source
