@@ -59,6 +59,36 @@ public class ClusterClient implements EgressListener {
     private Consumer<RemoveCacheEntryResult<Long, String>> removeCacheEntryConsumer;
     private Consumer<GetCacheEntryResult<Long, String, String>> getCacheEntryConsumer;
 
+    public ClusterClient onCreateCache(Consumer<CreateCacheResult<Long>> c){
+        createCacheConsumer=c;
+        return this;
+    }
+
+    public ClusterClient onAddCacheEntry(Consumer<AddCacheEntryResult<Long, String>> c){
+        addCacheEntryConsumer=c;
+        return this;
+    }
+
+    public ClusterClient onClearCache(Consumer<ClearCacheResult<Long>> c){
+        clearCacheConsumer=c;
+        return this;
+    }
+
+    public ClusterClient onDeleteCache(Consumer<DeleteCacheResult<Long>> c){
+        deleteCacheConsumer=c;
+        return this;
+    }
+
+    public ClusterClient onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<Long, String>> c){
+        removeCacheEntryConsumer=c;
+        return this;
+    }
+
+    public ClusterClient onGetCacheEntry(Consumer<GetCacheEntryResult<Long, String, String>> c){
+        getCacheEntryConsumer=c;
+        return this;
+    }
+
     /**
      * {@inheritDoc}
      */

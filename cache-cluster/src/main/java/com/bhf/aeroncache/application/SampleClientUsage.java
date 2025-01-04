@@ -37,29 +37,13 @@ public class SampleClientUsage {
     }
 
     private static void addConsumers(ClusterClient client) {
-        client.setCreateCacheConsumer(c -> {
-            System.out.println("Got consumer callback on cache created with id " + c.getCacheId());
-        });
-
-        client.setAddCacheEntryConsumer(c -> {
-            System.out.println("Got cache entry created consumer callback on cache " + c.getCacheID() + " on key " + c.getEntryKey());
-        });
-
-        client.setRemoveCacheEntryConsumer(c -> {
-            System.out.println("Got cache entry removed consumer callback on cache " + c.getCacheId() + " on key " + c.getKey());
-        });
-
-        client.setClearCacheConsumer(c -> {
-            System.out.println("Got cache cleared consumer callback on cache " + c.getCacheId());
-        });
-
-        client.setDeleteCacheConsumer(c -> {
-            System.out.println("Got cache deleted consumer callback on cache " + c.getCacheId());
-        });
-
-        client.setGetCacheEntryConsumer(c -> {
-            System.out.println("Got cache entry consumer callback on cache " + c.getCacheId() + ", key: " + c.getEntryKey() + ", value: " + c.getEntryValue());
-        });
+        client
+                .onCreateCache(c -> System.out.println("Cache created with id " + c.getCacheId()))
+                .onAddCacheEntry(c -> System.out.println("Cache entry created cache " + c.getCacheID()))
+                .onRemoveCacheEntry(c -> System.out.println("Cache entry removed on cache " + c.getCacheId()))
+                .onClearCache(c -> System.out.println("Cache cleared on cache " + c.getCacheId()))
+                .onDeleteCache(c -> System.out.println("Cache deleted on cache " + c.getCacheId()))
+                .onGetCacheEntry(c -> System.out.println("Cache entry GET on cache " + c.getCacheId()));
     }
 
     /**
@@ -83,7 +67,7 @@ public class SampleClientUsage {
         client.sendGetCacheEntry(cluster, cacheId, "key1");
         waitForResult(client, cluster, 1000);
 
-        System.out.println("Sending request to remove cache entry on cache " + cacheId+" with key: key1");
+        System.out.println("Sending request to remove cache entry on cache " + cacheId + " with key: key1");
         client.removeCacheEntry(cluster, cacheId, "key1");
         waitForResult(client, cluster, 1000);
 

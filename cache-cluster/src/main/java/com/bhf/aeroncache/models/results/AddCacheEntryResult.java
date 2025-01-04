@@ -25,6 +25,7 @@ public class AddCacheEntryResult<I, K> implements Reusable<AddCacheEntryResult<I
     public void clear() {
         entryAdded = false;
         entryKey = null;
+        cacheID = null;
     }
 
     /**
@@ -34,5 +35,6 @@ public class AddCacheEntryResult<I, K> implements Reusable<AddCacheEntryResult<I
     public void copyFrom(AddCacheEntryResult<I, K> source) {
         this.entryAdded = source.entryAdded;
         this.entryKey = source.entryKey;
+        this.cacheID = source.cacheID;
     }
 }
