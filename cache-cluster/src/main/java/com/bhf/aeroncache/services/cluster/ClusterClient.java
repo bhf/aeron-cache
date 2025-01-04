@@ -62,6 +62,7 @@ public class ClusterClient implements EgressListener {
     /**
      * {@inheritDoc}
      */
+    @Override
     public void onMessage(
             final long clusterSessionId,
             final long timestamp,
@@ -281,6 +282,7 @@ public class ClusterClient implements EgressListener {
     /**
      * {@inheritDoc}
      */
+    @Override
     public void onSessionEvent(
             final long correlationId,
             final long clusterSessionId,
@@ -298,6 +300,7 @@ public class ClusterClient implements EgressListener {
     /**
      * {@inheritDoc}
      */
+    @Override
     public void onNewLeader(
             final long clusterSessionId,
             final long leadershipTermId,
