@@ -28,18 +28,18 @@ class SBEDecodingCacheClusterServiceTest {
     private SBEDecodingCacheClusterService sut;
     private MutableDirectBuffer responseBuffer;
     private MutableDirectBuffer requestBuffer;
-    private final Header header= new Header(0,0);
+    private final Header header = new Header(0, 0);
     private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final CacheCreatedDecoder cacheCreatedDecoder=new CacheCreatedDecoder();
+    private final CacheCreatedDecoder cacheCreatedDecoder = new CacheCreatedDecoder();
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
 
 
     @BeforeEach
-    void setup(){
-        sut=new SBEDecodingCacheClusterService();
+    void setup() {
+        sut = new SBEDecodingCacheClusterService();
         responseBuffer = new ExpandableArrayBuffer();
-        requestBuffer =new ExpandableArrayBuffer();
+        requestBuffer = new ExpandableArrayBuffer();
     }
 
     /**
@@ -48,13 +48,13 @@ class SBEDecodingCacheClusterServiceTest {
     @ParameterizedTest
     @DisplayName("Should return correct ID of cache created")
     @ValueSource(longs = {0, MAX_SBE_LONG, MIN_SBE_LONG})
-    void testCreateCacheMessage(long cacheId){
+    void testCreateCacheMessage(long cacheId) {
         // Arrange
-        ClientSession session=getMockedSession();
-        long ts=System.currentTimeMillis();
+        ClientSession session = getMockedSession();
+        long ts = System.currentTimeMillis();
         createCacheEncoder.wrapAndApplyHeader(requestBuffer, 0, headerEncoder)
                 .cacheId(cacheId);
-        int length=createCacheEncoder.encodedLength() + headerEncoder.encodedLength();
+        int length = createCacheEncoder.encodedLength() + headerEncoder.encodedLength();
 
         // Act
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
@@ -68,6 +68,7 @@ class SBEDecodingCacheClusterServiceTest {
     /**
      * The mocked session copies response data over to the member
      * response buffer {@link SBEDecodingCacheClusterServiceTest#responseBuffer}.
+     *
      * @return The mocked client session.
      */
     private ClientSession getMockedSession() {
