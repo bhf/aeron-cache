@@ -12,6 +12,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -45,16 +46,22 @@ class SBEDecodingCacheClusterServiceTest {
      * Test creating a cache.
      */
     @ParameterizedTest
+    @DisplayName("Should return correct ID of cache created")
     @ValueSource(longs = {0, MAX_SBE_LONG, MIN_SBE_LONG})
     void testCreateCacheMessage(long cacheId){
+        // Arrange
         ClientSession session=getMockedSession();
         long ts=System.currentTimeMillis();
         createCacheEncoder.wrapAndApplyHeader(requestBuffer, 0, headerEncoder)
                 .cacheId(cacheId);
         int length=createCacheEncoder.encodedLength() + headerEncoder.encodedLength();
+
+        // Act
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
         cacheCreatedDecoder.wrapAndApplyHeader(responseBuffer, 0, headerDecoder);
         var cacheIdCreated = cacheCreatedDecoder.cacheId();
+
+        // Assert
         assertEquals(cacheId, cacheIdCreated);
     }
 
