@@ -4,15 +4,29 @@ services:
     container_name: aeron-cache-cluster
     build:
       context: cache-cluster
-      dockerfile: ./cache-cluster/Dockerfile
+      dockerfile: ./Dockerfile
     shm_size: '512m'
-    ipc: shareable
-    ports:
-      - 40456:40456/udp
+    networks:
+      internal_bus:
+        ipv4_address: 172.16.202.2
   cache-client:
+    shm_size: '512m'
     build:
       context: cache-client
-      dockerfile: ./cache-client/Dockerfile
-    ipc: container:aeron-cache-cluster
+      dockerfile: ./Dockerfile
     depends_on:
       - cache-cluster
+    networks:
+      internal_bus:
+        ipv4_address: 172.16.202.3
+networks:
+  internal_bus:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: 'true'
+      com.docker.network.driver.mtu: 9000
+      com.docker.network.enable_ipv6: 'false'
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.16.202.0/24"
