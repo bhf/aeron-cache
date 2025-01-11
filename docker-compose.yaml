@@ -1,0 +1,18 @@
+version: '3.5'
+services:
+  cache-cluster:
+    container_name: aeron-cache-cluster
+    build:
+      context: cache-cluster
+      dockerfile: ./cache-cluster/Dockerfile
+    shm_size: '512m'
+    ipc: shareable
+    ports:
+      - 40456:40456/udp
+  cache-client:
+    build:
+      context: cache-client
+      dockerfile: ./cache-client/Dockerfile
+    ipc: container:aeron-cache-cluster
+    depends_on:
+      - cache-cluster
