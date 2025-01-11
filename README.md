@@ -2,14 +2,29 @@
 
 # Aeron Cache
 
-A clustered cache built using Aeron Cluster. 
-Inspired by Infinispan and Flink.
+A clustered cache built using Aeron Cluster for RAFT.
 
 ## How To Run
 
 ### Application
 1. Run ClusterLauncher to spin up a 3 node cluster.
 2. Run SampleClientUsage.
+
+### Docker (wip)
+
+Cache cluster example:
+```
+cd cache-cluster
+docker build --tag 'aeron-cache'
+docker run 'aeron-cache'
+```
+
+Sample cache client usage:
+```
+cd cache-client
+docker build --tag 'aeron-client'
+docker run 'aeron-client'
+```
 
 ### JUnit Tests
 
@@ -38,7 +53,6 @@ Inspired by Infinispan and Flink.
 * Cache keys and values to be SBE encoded/decoded
 * Cluster side queries via serializable consumers
 * Annotation processor
-* JPMS integration
 * Startup and periodic snapshot handling 
 * Off heap cache implementation
 * Activation and passivation strategies
