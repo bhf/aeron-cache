@@ -20,6 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test cases for the {@link SBEDecodingCacheClusterService}.
+ *
+ * Uses a Detroit style due to Mockito exceptions.
  */
 class SBEDecodingCacheClusterServiceTest {
 
