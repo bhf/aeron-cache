@@ -8,6 +8,7 @@ sbegenerator = "0.0.9"
 lombokplugin = "8.10"
 jmhplugin = "0.7.2"
 mockito = "2.1.0"
+shadow = "7.1.2"
 
 [libraries]
 log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
@@ -23,5 +24,6 @@ mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 sbegenerator = { id = "com.github.vontikov.sbe-generator-plugin", version.ref = "sbegenerator" }
 lombok = { id = "io.freefair.lombok", version.ref = "lombokplugin" }
 jmh = { id = "me.champeau.jmh", version.ref = "jmhplugin" }
+shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
 
 [bundles]

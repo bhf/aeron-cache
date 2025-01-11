@@ -3,6 +3,7 @@ version = "1.0-SNAPSHOT"
 
 plugins{
     alias(libs.plugins.lombok)
+    application
 }
 
 allprojects {

@@ -8,7 +8,6 @@ import io.aeron.cluster.codecs.EventCode;
 import io.aeron.logbuffer.Header;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
@@ -23,7 +22,6 @@ import java.util.function.Consumer;
  * against the cache. Results of actions are handled by a {@link Consumer} for
  * each type of result.
  */
-@Log4j2
 @Setter
 public class ClusterClient implements EgressListener {
     private final MutableDirectBuffer msgBuffer = new ExpandableArrayBuffer();
@@ -59,33 +57,33 @@ public class ClusterClient implements EgressListener {
     private Consumer<RemoveCacheEntryResult<Long, String>> removeCacheEntryConsumer;
     private Consumer<GetCacheEntryResult<Long, String, String>> getCacheEntryConsumer;
 
-    public ClusterClient onCreateCache(Consumer<CreateCacheResult<Long>> c){
-        createCacheConsumer=c;
+    public ClusterClient onCreateCache(Consumer<CreateCacheResult<Long>> c) {
+        createCacheConsumer = c;
         return this;
     }
 
-    public ClusterClient onAddCacheEntry(Consumer<AddCacheEntryResult<Long, String>> c){
-        addCacheEntryConsumer=c;
+    public ClusterClient onAddCacheEntry(Consumer<AddCacheEntryResult<Long, String>> c) {
+        addCacheEntryConsumer = c;
         return this;
     }
 
-    public ClusterClient onClearCache(Consumer<ClearCacheResult<Long>> c){
-        clearCacheConsumer=c;
+    public ClusterClient onClearCache(Consumer<ClearCacheResult<Long>> c) {
+        clearCacheConsumer = c;
         return this;
     }
 
-    public ClusterClient onDeleteCache(Consumer<DeleteCacheResult<Long>> c){
-        deleteCacheConsumer=c;
+    public ClusterClient onDeleteCache(Consumer<DeleteCacheResult<Long>> c) {
+        deleteCacheConsumer = c;
         return this;
     }
 
-    public ClusterClient onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<Long, String>> c){
-        removeCacheEntryConsumer=c;
+    public ClusterClient onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<Long, String>> c) {
+        removeCacheEntryConsumer = c;
         return this;
     }
 
-    public ClusterClient onGetCacheEntry(Consumer<GetCacheEntryResult<Long, String, String>> c){
-        getCacheEntryConsumer=c;
+    public ClusterClient onGetCacheEntry(Consumer<GetCacheEntryResult<Long, String, String>> c) {
+        getCacheEntryConsumer = c;
         return this;
     }
 
@@ -103,7 +101,7 @@ public class ClusterClient implements EgressListener {
         headerDecoder.wrap(buffer, offset);
         final int templateId = headerDecoder.templateId();
 
-        log.info("Got client side message with TID {}", templateId);
+        System.out.println("Got client side message with TID " + templateId);
 
         switch (templateId) {
             case CacheCreatedDecoder.TEMPLATE_ID -> handleCacheCreated(buffer, offset);
@@ -112,7 +110,7 @@ public class ClusterClient implements EgressListener {
             case CacheClearedDecoder.TEMPLATE_ID -> handleCacheCleared(buffer, offset);
             case CacheDeletedDecoder.TEMPLATE_ID -> handleCacheDeleted(buffer, offset);
             case CacheEntryRemovedDecoder.TEMPLATE_ID -> handleCacheEntryRemoved(buffer, offset);
-            default -> log.warn("Got unknown message with TID {}", templateId);
+            default -> System.out.println("Got unknown message with TID " + templateId);
         }
     }
 
@@ -127,7 +125,7 @@ public class ClusterClient implements EgressListener {
         var cacheID = getCacheEntryDecoder.cacheId();
         var key = getCacheEntryDecoder.key();
         var value = getCacheEntryDecoder.value();
-        log.info("Got cache entry result from cache {} with key {}, value {}", cacheID, key, value);
+        System.out.println("Got cache entry result from cache " + cacheID + " with key " + key + ", value " + value);
         getCacheEntryResult.setCacheId(cacheID);
         getCacheEntryResult.setEntryKey(key);
         getCacheEntryResult.setEntryValue(value);
@@ -143,7 +141,7 @@ public class ClusterClient implements EgressListener {
     private void handleCacheCreated(DirectBuffer buffer, int offset) {
         cacheCreatedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheCreatedDecoder.cacheId();
-        log.info("Created cache " + cacheId);
+        System.out.println("Created cache " + cacheId);
         createCacheResult.clear();
         createCacheResult.setCacheId(cacheId);
         createCacheConsumer.accept(createCacheResult);
@@ -159,7 +157,7 @@ public class ClusterClient implements EgressListener {
         addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = addCacheEntryDecoder.cacheId();
         String key = addCacheEntryDecoder.key();
-        log.debug("Got cache entry created message for cache {}, key {}", cacheId, key);
+        System.out.println("Got cache entry created message for cache " + cacheId + ", key " + key);
         addCacheEntryResult.clear();
         addCacheEntryResult.setEntryAdded(true);
         addCacheEntryResult.setEntryKey(key);
@@ -177,7 +175,7 @@ public class ClusterClient implements EgressListener {
         cacheEntryRemovedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheEntryRemovedDecoder.cacheId();
         var key = cacheEntryRemovedDecoder.key();
-        log.debug("Got cache entry removed for cache {}, key {}", cacheId, key);
+        System.out.println("Got cache entry removed for cache " + cacheId + ", key " + key);
         removeCacheEntryResult.clear();
         removeCacheEntryResult.setKey(key);
         removeCacheEntryResult.setCacheId(cacheId);
@@ -193,7 +191,7 @@ public class ClusterClient implements EgressListener {
     private void handleCacheCleared(DirectBuffer buffer, int offset) {
         cacheClearedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheClearedDecoder.cacheId();
-        log.debug("Got cache cleared on cache {}", cacheId);
+        System.out.println("Got cache cleared on cache " + cacheId);
         clearCacheResult.clear();
         clearCacheResult.setCacheId(cacheId);
         clearCacheConsumer.accept(clearCacheResult);
@@ -209,7 +207,7 @@ public class ClusterClient implements EgressListener {
         CacheDeletedDecoder cacheDeletedDecoder = new CacheDeletedDecoder();
         cacheDeletedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheDeletedDecoder.cacheId();
-        log.debug("Got cache deleted on cache {}", cacheId);
+        System.out.println("Got cache deleted on cache " + cacheId);
         deleteCacheResult.clear();
         deleteCacheResult.setCacheId(cacheId);
         deleteCacheConsumer.accept(deleteCacheResult);
@@ -320,11 +318,9 @@ public class ClusterClient implements EgressListener {
             final int leaderMemberId,
             final EventCode code,
             final String detail) {
-        log.debug(
-                "Got session event with correlationId {}, cluster session ID {}," +
-                        " leader term ID {}, leader member ID {}, event code {}, details {}",
-                correlationId, clusterSessionId, leadershipTermId, leaderMemberId,
-                code, detail);
+        System.out.println(
+                "Got session event with correlationId " + correlationId + ", cluster session ID " + clusterSessionId +
+                        " leader term ID " + leadershipTermId + ", leader member ID " + leaderMemberId + ", event code " + code + ", details " + detail);
     }
 
     /**
@@ -336,9 +332,8 @@ public class ClusterClient implements EgressListener {
             final long leadershipTermId,
             final int leaderMemberId,
             final String ingressEndpoints) {
-        log.debug("Got new cluster leader, leaderID {}, leader term Id {}, " +
-                        "cluster session ID {}, ingress endpoints {}", leaderMemberId, leadershipTermId,
-                clusterSessionId, ingressEndpoints);
+        System.out.println("Got new cluster leader, leaderID " + leaderMemberId + ", leader term Id " + leadershipTermId + ", " +
+                "cluster session ID " + clusterSessionId + ", ingress endpoints " + ingressEndpoints);
     }
 
 }

@@ -1,7 +1,10 @@
 plugins {
     application
     alias(libs.plugins.jmh)
+    alias(libs.plugins.shadow)
 }
+
+project.setProperty("mainClassName", "com.bhf.aeroncache.application.ClusterLauncher")
 
 dependencies {
     implementation(libs.aeron)
