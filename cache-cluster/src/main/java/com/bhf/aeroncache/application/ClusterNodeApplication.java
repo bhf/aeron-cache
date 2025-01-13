@@ -101,11 +101,12 @@ public class ClusterNodeApplication {
      * @param args passed to the process.
      */
     public static void main(final String[] args) {
-        final int nodeId = parseInt(args[0]);
-        final String[] hostnames = System.getProperty(
-                "aeron.cache.hostnames", "localhost,localhost,localhost").split(",");
-        final String hostname = hostnames[nodeId];
+        final int nodeId = parseInt(System.getenv("CLUSTER_NODE"));
+        final String[] hostnames = System.getenv("CLUSTER_ADDRESSES").split(",");
 
+        System.out.println("HOSTNAMES: "+Arrays.toString(hostnames)+", NODEID: "+nodeId);
+
+        final String hostname = hostnames[nodeId];
         final File baseDir = new File(System.getProperty("user.dir"), "node" + nodeId);
         final String aeronDirName = CommonContext.getAeronDirectoryName() + "-" + nodeId + "-driver";
 

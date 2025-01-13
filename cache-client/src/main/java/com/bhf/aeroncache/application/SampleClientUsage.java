@@ -119,8 +119,11 @@ public class SampleClientUsage {
     }
 
     public static void main(String[] args) {
-        final String[] hostnames = System.getProperty(
-                "aeron.cache.hostnames", "localhost,localhost,localhost").split(",");
+        final String[] hostnames = System.getenv(
+                "CLUSTER_ADDRESSES").split(",");
+        final String egressIP = System.getenv("EGRESS_IP");
+        System.out.println("HOSTNAMES: "+Arrays.toString(hostnames));
+        System.out.println("EGRESS_IP: "+egressIP);
         final var ingressEndpoints = ingressEndpoints(Arrays.asList(hostnames));
 
         final var client = new ClusterClient();
@@ -134,7 +137,7 @@ public class SampleClientUsage {
                 AeronCluster aeronCluster = AeronCluster.connect(
                         new AeronCluster.Context()
                                 .egressListener(client)
-                                .egressChannel("aeron:udp?endpoint=localhost:0")
+                                .egressChannel("aeron:udp?endpoint="+egressIP+":0")
                                 .aeronDirectoryName(mediaDriver.aeronDirectoryName())
                                 .ingressChannel("aeron:udp")
                                 .ingressEndpoints(ingressEndpoints))) {

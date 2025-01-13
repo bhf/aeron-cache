@@ -1,24 +1,56 @@
-version: '3.5'
+version: '3.8'
 services:
-  cache-cluster:
-    container_name: aeron-cache-cluster
+  node0:
     build:
       context: cache-cluster
-      dockerfile: ./Dockerfile
-    shm_size: '512m'
+    hostname: cluster0
+    shm_size: '1gb'
     networks:
       internal_bus:
         ipv4_address: 172.16.202.2
+    environment:
+      - CLUSTER_ADDRESSES=172.16.202.2,172.16.202.3,172.16.202.4
+      - CLUSTER_NODE=0
+      - CLUSTER_PORT_BASE=9000
+  node1:
+    build:
+      context: cache-cluster
+    hostname: cluster1
+    shm_size: '1gb'
+    networks:
+      internal_bus:
+        ipv4_address: 172.16.202.3
+    environment:
+      - CLUSTER_ADDRESSES=172.16.202.2,172.16.202.3,172.16.202.4
+      - CLUSTER_NODE=1
+      - CLUSTER_PORT_BASE=9000
+  node2:
+    build:
+      context: cache-cluster
+    hostname: cluster2
+    shm_size: '1gb'
+    networks:
+      internal_bus:
+        ipv4_address: 172.16.202.4
+    environment:
+      - CLUSTER_ADDRESSES=172.16.202.2,172.16.202.3,172.16.202.4
+      - CLUSTER_NODE=2
+      - CLUSTER_PORT_BASE=9000
   cache-client:
-    shm_size: '512m'
+    shm_size: '1gb'
     build:
       context: cache-client
       dockerfile: ./Dockerfile
     depends_on:
-      - cache-cluster
+      - node0
+      - node1
+      - node2
     networks:
       internal_bus:
-        ipv4_address: 172.16.202.3
+        ipv4_address: 172.16.202.5
+    environment:
+      - CLUSTER_ADDRESSES=172.16.202.2,172.16.202.3,172.16.202.4
+      - EGRESS_IP=172.16.202.5
 networks:
   internal_bus:
     driver: bridge
