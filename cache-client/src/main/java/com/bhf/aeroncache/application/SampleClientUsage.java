@@ -4,7 +4,6 @@ import com.bhf.aeroncache.services.cluster.ClusterClient;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
-import org.agrona.concurrent.IdleStrategy;
 
 import java.util.Arrays;
 import java.util.List;
@@ -57,70 +56,29 @@ public class SampleClientUsage {
         var cacheId = System.currentTimeMillis();
 
         System.out.println("Sending request to create cache " + cacheId);
-        client.sendCreateCache(cluster, cacheId);
-        waitForResult(client, cluster);
+        client.sendCreateCacheSync(cluster, cacheId);
 
         System.out.println("Sending request to add cache entry on cache " + cacheId);
-        client.sendAddCacheEntry(cluster, cacheId, "key1", "{msgType: \"D\"}");
-        waitForResult(client, cluster);
+        client.addCacheEntrySync(cluster, cacheId, "key1", "{msgType: \"D\"}");
 
         System.out.println("Sending request to get cache entry on cache " + cacheId);
-        client.sendGetCacheEntry(cluster, cacheId, "key1");
-        waitForResult(client, cluster);
+        client.getCacheEntrySync(cluster, cacheId, "key1");
 
         System.out.println("Sending request to remove cache entry on cache " + cacheId + " with key: key1");
-        client.removeCacheEntry(cluster, cacheId, "key1");
-        waitForResult(client, cluster);
+        client.removeCacheEntrySync(cluster, cacheId, "key1");
 
         System.out.println("Sending request to get cache entry on cache " + cacheId);
-        client.sendGetCacheEntry(cluster, cacheId, "key1");
-        waitForResult(client, cluster);
+        client.getCacheEntrySync(cluster, cacheId, "key1");
 
         System.out.println("Sending request to clear cache on cache " + cacheId);
-        client.sendClearCache(cluster, cacheId);
-        waitForResult(client, cluster);
+        client.clearCacheSync(cluster, cacheId);
 
         System.out.println("Sending request to delete cache on cache " + cacheId);
-        client.sendDeleteCache(cluster, cacheId);
-        waitForResult(client, cluster);
-    }
-
-    /**
-     * Wait for results back from the cluster.
-     *
-     * @param client  The cluster client egress listener.
-     * @param cluster The Aeron Cluster.
-     */
-    private static void waitForResult(ClusterClient client, AeronCluster cluster) {
-        pollEgressUntilMessage(client.getIdleStrategy(), cluster);
-    }
-
-    /**
-     * Poll the egress of the cluster.
-     *
-     * @param cluster The cluster to poll.
-     * @return Number of fragments processed.
-     */
-    static int pollEgress(AeronCluster cluster) {
-        return null == cluster ? 0 : cluster.pollEgress();
-    }
-
-    /**
-     * Keep polling the egress till we get a message.
-     *
-     * @param idleStrategy The idle strategy to use.
-     * @param cluster      The cluster to poll.
-     */
-    static void pollEgressUntilMessage(IdleStrategy idleStrategy, AeronCluster cluster) {
-        idleStrategy.reset();
-        while (pollEgress(cluster) <= 0) {
-            idleStrategy.idle();
-        }
+        client.deleteCacheSync(cluster, cacheId);
     }
 
     public static void main(String[] args) {
-        final String[] hostnames = System.getenv(
-                "CLUSTER_ADDRESSES").split(",");
+        final String[] hostnames = System.getenv("CLUSTER_ADDRESSES").split(",");
         final String egressIP = System.getenv("EGRESS_IP");
         System.out.println("HOSTNAMES: "+Arrays.toString(hostnames));
         System.out.println("EGRESS_IP: "+egressIP);
