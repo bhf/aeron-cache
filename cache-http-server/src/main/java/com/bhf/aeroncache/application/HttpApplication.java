@@ -6,15 +6,19 @@ import com.bhf.aeroncache.services.cluster.ClusterClient;
 import io.aeron.cluster.client.AeronCluster;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import io.javalin.util.function.ThrowingRunnable;
 
 public class HttpApplication {
 
     private static final int PORT = 7070;
     private static final String API_PREFIX = "/api/v1/cache/";
 
+    private static ClusterClient client;
+    private static AeronCluster cluster;
+
     public static void main(String[] args) {
-        var client = new ClusterClient();
-        AeronCluster cluster = buildClusterConnection();
+        client = new ClusterClient();
+        cluster = buildClusterConnection();
         var app = startHTTPServer(client, cluster);
     }
 
@@ -75,10 +79,12 @@ public class HttpApplication {
      */
     private static void handleCreateCacheRequest(Context ctx) {
         var request = ctx.bodyAsClass(CreateCacheRequest.class);
-        //client.sendCreateCacheSync(cluster, request.cacheId);
-        var now = System.currentTimeMillis();
-        CreateCacheResponse response = new CreateCacheResponse(now);
-        ctx.json(response);
+        ctx.async(() -> {
+            client.sendCreateCacheSync(cluster, request.cacheId());
+            var now = System.currentTimeMillis();
+            CreateCacheResponse response = new CreateCacheResponse(now);
+            ctx.json(response);
+        });
     }
 
     /**
