@@ -2,8 +2,8 @@ package com.bhf.aeroncache.models;
 
 /**
  * The response from creating a cache.
- * @param timeStamp
+ * @param cacheId
  */
-public record CreateCacheResponse(long timeStamp) {
+public record CreateCacheResponse(long cacheId) {
 
 }

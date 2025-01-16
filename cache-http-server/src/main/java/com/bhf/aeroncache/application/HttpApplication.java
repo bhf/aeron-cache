@@ -2,15 +2,18 @@ package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.models.CreateCacheRequest;
 import com.bhf.aeroncache.models.CreateCacheResponse;
+import com.bhf.aeroncache.models.DeleteCacheResponse;
 import com.bhf.aeroncache.services.cluster.ClusterClient;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
 
+@Log4j2
 public class HttpApplication {
 
     private static final int PORT = 7070;
@@ -75,6 +78,14 @@ public class HttpApplication {
      * @param context The context.
      */
     private static void handleDeleteCacheRequest(Context context) {
+        var cacheId = context.pathParam("cacheId");
+        log.info("Got delete cache request for cacheId {}", cacheId);
+        client.deleteCacheSync(cluster, Long.parseLong(cacheId), c->{
+            var deletedCacheId = c.getCacheId();
+            log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
+            DeleteCacheResponse response = new DeleteCacheResponse(deletedCacheId);
+            context.json(response);
+        });
     }
 
     /**
@@ -108,8 +119,10 @@ public class HttpApplication {
      */
     private static void handleCreateCacheRequest(Context ctx) {
         var request = ctx.bodyAsClass(CreateCacheRequest.class);
+        log.info("Got create cache request on cacheId {}", request.cacheId());
         client.sendCreateCacheSync(cluster, request.cacheId(), c -> {
             var cacheId = c.getCacheId();
+            log.info("Got create cache response from cluster on cacheId {}", cacheId);
             CreateCacheResponse response = new CreateCacheResponse(cacheId);
             ctx.json(response);
         });

@@ -365,6 +365,19 @@ public class ClusterClient implements EgressListener {
     }
 
     /**
+     * Send a message to delete a cache synchronously.
+     *
+     * @param cluster The Aeron Cluster instance to use.
+     * @param cacheId The ID of the cache we're deleting.
+     */
+    public void deleteCacheSync(AeronCluster cluster, long cacheId, Consumer<DeleteCacheResult<Long>> consumer) {
+        setDeleteCacheConsumer(consumer);
+        deleteCacheAsync(cluster, cacheId);
+        waitForResult(cluster);
+        setDeleteCacheConsumer(null);
+    }
+
+    /**
      * Send a message to remove a cache entry.
      *
      * @param cluster The Aeron Cluster instance to use.
