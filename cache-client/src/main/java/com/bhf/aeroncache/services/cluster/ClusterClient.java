@@ -242,6 +242,19 @@ public class ClusterClient implements EgressListener {
     }
 
     /**
+     * Synchronously send a message to create a cache instance.
+     *
+     * @param cluster The Aeron Cluster instance to use.
+     * @param cacheId The ID of the cache to create.
+     */
+    public void sendCreateCacheSync(AeronCluster cluster, long cacheId, Consumer<CreateCacheResult<Long>> consumer) {
+        setCreateCacheConsumer(consumer);
+        sendCreateCacheAsync(cluster, cacheId);
+        waitForResult(cluster);
+        setCreateCacheConsumer(null);
+    }
+
+    /**
      * Send a message to add a cache entry.
      *
      * @param cluster The Aeron Cluster instance to use.
