@@ -27,7 +27,7 @@ public class HttpApplication {
         final String egressIP = "localhost";
         final var ingressEndpoints = ingressEndpoints(List.of("localhost", "localhost", "localhost"));
         cluster = buildClusterConnection(egressIP, ingressEndpoints);
-        var app = startHTTPServer(client, cluster);
+        var app = startHTTPServer();
     }
 
     /**
@@ -57,11 +57,9 @@ public class HttpApplication {
     /**
      * Start up a HTTP server for REST requests.
      *
-     * @param client  The {@link ClusterClient} instance.
-     * @param cluster The {@link AeronCluster} instance.
      * @return The wired up Javalin instance.
      */
-    private static Javalin startHTTPServer(ClusterClient client, AeronCluster cluster) {
+    private static Javalin startHTTPServer() {
         return Javalin.create(/*config*/)
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
                 .post(API_PREFIX + "<cacheId>", HttpApplication::handlePutItemRequest)
