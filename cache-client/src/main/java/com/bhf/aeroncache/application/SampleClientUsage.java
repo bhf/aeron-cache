@@ -100,7 +100,15 @@ public class SampleClientUsage {
                                 .ingressChannel("aeron:udp")
                                 .ingressEndpoints(ingressEndpoints))) {
 
-            sendMessagesToCache(client, aeronCluster);
+            while (true) {
+                sendMessagesToCache(client, aeronCluster);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
         }
     }
 }

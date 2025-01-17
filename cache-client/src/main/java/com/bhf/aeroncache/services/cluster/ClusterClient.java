@@ -228,6 +228,7 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, createCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
+        cluster.sendKeepAlive();
     }
 
     /**
@@ -269,6 +270,7 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, addCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
+        cluster.sendKeepAlive();
     }
 
     /**
@@ -298,6 +300,7 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, getCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
+        cluster.sendKeepAlive();
     }
 
     /**
@@ -325,6 +328,7 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, clearCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
+        cluster.sendKeepAlive();
     }
 
     /**
@@ -351,6 +355,7 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, deleteCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
+        cluster.sendKeepAlive();
     }
 
     /**
@@ -391,6 +396,7 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, removeCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
+        cluster.sendKeepAlive();
     }
 
     /**
@@ -441,6 +447,7 @@ public class ClusterClient implements EgressListener {
      */
     private void waitForResult(AeronCluster cluster) {
         pollEgressUntilMessage(this.getIdleStrategy(), cluster);
+        cluster.sendKeepAlive();
     }
 
     /**
