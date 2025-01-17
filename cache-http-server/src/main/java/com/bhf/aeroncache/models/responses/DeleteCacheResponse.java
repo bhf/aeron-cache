@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.models;
+package com.bhf.aeroncache.models.responses;
 
 /**
  * The response from deleting a cache.

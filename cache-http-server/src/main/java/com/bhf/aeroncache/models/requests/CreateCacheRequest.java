@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.models;
+package com.bhf.aeroncache.models.requests;
 
 /**
  * A request to create a cache.

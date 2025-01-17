@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.models;
+package com.bhf.aeroncache.models.requests;
 
 /**
  * A request to put an item into the cache.

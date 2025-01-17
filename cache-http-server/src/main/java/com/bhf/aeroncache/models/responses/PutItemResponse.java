@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.models;
+package com.bhf.aeroncache.models.responses;
 
 /**
  * Response from putting an item into a cache.
