@@ -4,26 +4,19 @@
 
 A clustered cache built using Aeron Cluster for RAFT.
 
-### cache-client
-An Aeron cluster based client for the cache.
+__cache-client__ - An Aeron cluster based client for the cache.
 
-### cache-cluster
-The core cache cluster service.
+__cache-cluster__ - The core cache cluster service.
 
-### cache-common
-Common entities and classes used across all modules.
+__cache-common__ - Common entities and classes used across all modules.
 
-### cache-http-server
-A basic REST interface around the cache-client using Javalin.
+__cache-http-server__ - A basic REST interface around the cache-client using Javalin.
 
-### cache-messages
-Core SBE messages used by the cache.
+__cache-messages__ - Core SBE messages used by the cache.
 
-### cache-ui (coming soon)
-A UI that uses the REST API provided by cache-http-server
+__cache-ui (coming soon)__ - A UI that uses the REST API provided by cache-http-server
 
-### cache-cli (coming soon)
-A Rust based CLI.
+__cache-cli (coming soon)__ - A Rust based CLI.
 
 ## How To Run
 
