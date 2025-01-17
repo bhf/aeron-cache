@@ -1,8 +1,6 @@
 package com.bhf.aeroncache.application;
 
-import com.bhf.aeroncache.models.CreateCacheRequest;
-import com.bhf.aeroncache.models.CreateCacheResponse;
-import com.bhf.aeroncache.models.DeleteCacheResponse;
+import com.bhf.aeroncache.models.*;
 import com.bhf.aeroncache.services.cluster.ClusterClient;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
@@ -12,6 +10,8 @@ import io.javalin.http.Context;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Log4j2
 public class HttpApplication {
@@ -21,7 +21,6 @@ public class HttpApplication {
     private static final int PORT_BASE = 9000;
     private static final int PORTS_PER_NODE = 100;
     static final int CLIENT_FACING_PORT_OFFSET = 2;
-
     private static ClusterClient client;
     private static AeronCluster cluster;
 
@@ -31,6 +30,15 @@ public class HttpApplication {
         final var ingressEndpoints = ingressEndpoints(List.of("localhost", "localhost", "localhost"));
         cluster = buildClusterConnection(egressIP, ingressEndpoints);
         var app = startHTTPServer();
+        setupKeepAlive();
+    }
+
+    /**
+     * Send keep alive messages - check if this is the idiomatic way
+     * to keep the session from timing out.
+     */
+    private static void setupKeepAlive() {
+        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> ClusterClient.handleKeepAlive(cluster), 200,200, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -107,9 +115,18 @@ public class HttpApplication {
     /**
      * Handle a request to add an item to a cache.
      *
-     * @param context The context.
+     * @param ctx The context.
      */
-    private static void handlePutItemRequest(Context context) {
+    private static void handlePutItemRequest(Context ctx) {
+        var request = ctx.bodyAsClass(PutItemRequest.class);
+        log.info("Got put item request on cacheId {}, key {}, value {}",
+                request.cacheId(), request.key(), request.value());
+        client.addCacheEntrySync(cluster, request.cacheId(), request.key(), request.value(), c -> {
+            var cacheId = c.getCacheID();
+            log.info("Got put item response from cluster on cacheId {}", cacheId);
+            PutItemResponse response = new PutItemResponse(cacheId, request.key());
+            ctx.json(response);
+        });
     }
 
     /**
@@ -126,7 +143,6 @@ public class HttpApplication {
             CreateCacheResponse response = new CreateCacheResponse(cacheId);
             ctx.json(response);
         });
-
     }
 
     /**

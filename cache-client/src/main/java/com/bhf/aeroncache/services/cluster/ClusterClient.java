@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 @Setter
 @Log4j2
 public class ClusterClient implements EgressListener {
+    private static final int KEEPALIVE_INTERVAL = 200;
     private final MutableDirectBuffer msgBuffer = new ExpandableArrayBuffer();
 
     @Getter
@@ -143,7 +144,7 @@ public class ClusterClient implements EgressListener {
     private void handleCacheCreated(DirectBuffer buffer, int offset) {
         cacheCreatedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheCreatedDecoder.cacheId();
-        log.info("Created cache {}",cacheId);
+        log.info("Created cache {}", cacheId);
         createCacheResult.clear();
         createCacheResult.setCacheId(cacheId);
         createCacheConsumer.accept(createCacheResult);
@@ -228,7 +229,19 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, createCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        cluster.sendKeepAlive();
+        handleKeepAlive(cluster);
+        log.info("Sent create cache request");
+    }
+
+    static long lastKeepAlive = 0;
+
+    public static void handleKeepAlive(AeronCluster cluster) {
+        long now = System.currentTimeMillis();
+
+        if (now > lastKeepAlive + KEEPALIVE_INTERVAL) {
+            cluster.sendKeepAlive();
+            lastKeepAlive = now;
+        }
     }
 
     /**
@@ -270,7 +283,7 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, addCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        cluster.sendKeepAlive();
+        handleKeepAlive(cluster);
     }
 
     /**
@@ -287,6 +300,22 @@ public class ClusterClient implements EgressListener {
     }
 
     /**
+     * Send a message to add a cache entry synchronously.
+     *
+     * @param cluster The Aeron Cluster instance to use.
+     * @param cacheId The ID of the cache we're adding too.
+     * @param key     The key to use.
+     * @param value   The value to use.
+     * @param c       The consumer that will handle the result.
+     */
+    public void addCacheEntrySync(AeronCluster cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<Long, String>> c) {
+        setAddCacheEntryConsumer(c);
+        addCacheEntryAsync(cluster, cacheId, key, value);
+        waitForResult(cluster);
+        setAddCacheEntryConsumer(null);
+    }
+
+    /**
      * Send a message to get a cache entry.
      *
      * @param cluster The Aeron Cluster instance to use.
@@ -300,7 +329,7 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, getCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        cluster.sendKeepAlive();
+        handleKeepAlive(cluster);
     }
 
     /**
@@ -328,7 +357,7 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, clearCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        cluster.sendKeepAlive();
+        handleKeepAlive(cluster);
     }
 
     /**
@@ -355,7 +384,7 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, deleteCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        cluster.sendKeepAlive();
+        handleKeepAlive(cluster);
     }
 
     /**
@@ -396,7 +425,7 @@ public class ClusterClient implements EgressListener {
         while (cluster.offer(msgBuffer, 0, removeCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        cluster.sendKeepAlive();
+        handleKeepAlive(cluster);
     }
 
     /**
@@ -447,7 +476,7 @@ public class ClusterClient implements EgressListener {
      */
     private void waitForResult(AeronCluster cluster) {
         pollEgressUntilMessage(this.getIdleStrategy(), cluster);
-        cluster.sendKeepAlive();
+        handleKeepAlive(cluster);
     }
 
     /**
@@ -470,6 +499,7 @@ public class ClusterClient implements EgressListener {
         idleStrategy.reset();
         while (pollEgress(cluster) <= 0) {
             idleStrategy.idle();
+            handleKeepAlive(cluster);
         }
     }
 
