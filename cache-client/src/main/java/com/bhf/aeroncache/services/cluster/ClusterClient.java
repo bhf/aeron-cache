@@ -263,8 +263,7 @@ public class ClusterClient implements EgressListener {
      */
     public void sendCreateCacheSync(AeronCluster cluster, long cacheId, Consumer<CreateCacheResult<Long>> consumer) {
         setCreateCacheConsumer(consumer);
-        sendCreateCacheAsync(cluster, cacheId);
-        waitForResult(cluster);
+        sendCreateCacheSync(cluster, cacheId);
         setCreateCacheConsumer(null);
     }
 
@@ -310,8 +309,7 @@ public class ClusterClient implements EgressListener {
      */
     public void addCacheEntrySync(AeronCluster cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<Long, String>> c) {
         setAddCacheEntryConsumer(c);
-        addCacheEntryAsync(cluster, cacheId, key, value);
-        waitForResult(cluster);
+        addCacheEntrySync(cluster, cacheId, key, value);
         setAddCacheEntryConsumer(null);
     }
 
@@ -330,6 +328,20 @@ public class ClusterClient implements EgressListener {
             idleStrategy.idle(cluster.pollEgress());
         }
         handleKeepAlive(cluster);
+    }
+
+    /**
+     * Send a message to get a cache entry synchronously.
+     *
+     * @param cluster The Aeron Cluster instance to use.
+     * @param cacheId The ID of the cache we're adding too.
+     * @param key     The key to use.
+     * @param c       The consumer to handle the result.
+     */
+    public void getCacheEntrySync(AeronCluster cluster, long cacheId, String key, Consumer<GetCacheEntryResult<Long, String, String>> c) {
+        setGetCacheEntryConsumer(c);
+        getCacheEntrySync(cluster, cacheId, key);
+        setGetCacheEntryConsumer(null);
     }
 
     /**
@@ -406,8 +418,7 @@ public class ClusterClient implements EgressListener {
      */
     public void deleteCacheSync(AeronCluster cluster, long cacheId, Consumer<DeleteCacheResult<Long>> consumer) {
         setDeleteCacheConsumer(consumer);
-        deleteCacheAsync(cluster, cacheId);
-        waitForResult(cluster);
+        deleteCacheSync(cluster, cacheId);
         setDeleteCacheConsumer(null);
     }
 

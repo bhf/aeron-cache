@@ -1,6 +1,12 @@
 package com.bhf.aeroncache.application;
 
-import com.bhf.aeroncache.models.*;
+import com.bhf.aeroncache.models.requests.CreateCacheRequest;
+import com.bhf.aeroncache.models.requests.GetItemRequest;
+import com.bhf.aeroncache.models.requests.PutItemRequest;
+import com.bhf.aeroncache.models.responses.CreateCacheResponse;
+import com.bhf.aeroncache.models.responses.DeleteCacheResponse;
+import com.bhf.aeroncache.models.responses.GetItemResponse;
+import com.bhf.aeroncache.models.responses.PutItemResponse;
 import com.bhf.aeroncache.services.cluster.ClusterClient;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
@@ -91,7 +97,7 @@ public class HttpApplication {
         client.deleteCacheSync(cluster, Long.parseLong(cacheId), c->{
             var deletedCacheId = c.getCacheId();
             log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
-            DeleteCacheResponse response = new DeleteCacheResponse(deletedCacheId);
+            var response = new DeleteCacheResponse(deletedCacheId);
             context.json(response);
         });
     }
@@ -107,9 +113,18 @@ public class HttpApplication {
     /**
      * Handle a request to get an item from a cache.
      *
-     * @param context The context.
+     * @param ctx The context.
      */
-    private static void handleGetItemRequest(Context context) {
+    private static void handleGetItemRequest(Context ctx) {
+        var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
+        var key = ctx.pathParam("key");
+        log.info("Got get item request on cacheId {}, key {}",
+                cacheId, key);
+        client.getCacheEntrySync(cluster, cacheId, key, c -> {
+            log.info("Got item from cluster on cacheId {}, key {}, value {}", c.getCacheId(), c.getEntryKey(), c.getEntryValue());
+            var response = new GetItemResponse(c.getCacheId(), c.getEntryKey(), c.getEntryValue());
+            ctx.json(response);
+        });
     }
 
     /**
@@ -124,7 +139,7 @@ public class HttpApplication {
         client.addCacheEntrySync(cluster, request.cacheId(), request.key(), request.value(), c -> {
             var cacheId = c.getCacheID();
             log.info("Got put item response from cluster on cacheId {}", cacheId);
-            PutItemResponse response = new PutItemResponse(cacheId, request.key());
+            var response = new PutItemResponse(cacheId, request.key());
             ctx.json(response);
         });
     }
@@ -140,7 +155,7 @@ public class HttpApplication {
         client.sendCreateCacheSync(cluster, request.cacheId(), c -> {
             var cacheId = c.getCacheId();
             log.info("Got create cache response from cluster on cacheId {}", cacheId);
-            CreateCacheResponse response = new CreateCacheResponse(cacheId);
+            var response = new CreateCacheResponse(cacheId);
             ctx.json(response);
         });
     }
