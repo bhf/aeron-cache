@@ -1,12 +1,8 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.models.requests.CreateCacheRequest;
-import com.bhf.aeroncache.models.requests.GetItemRequest;
 import com.bhf.aeroncache.models.requests.PutItemRequest;
-import com.bhf.aeroncache.models.responses.CreateCacheResponse;
-import com.bhf.aeroncache.models.responses.DeleteCacheResponse;
-import com.bhf.aeroncache.models.responses.GetItemResponse;
-import com.bhf.aeroncache.models.responses.PutItemResponse;
+import com.bhf.aeroncache.models.responses.*;
 import com.bhf.aeroncache.services.cluster.ClusterClient;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
@@ -80,9 +76,9 @@ public class HttpApplication {
         return Javalin.create(/*config*/)
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
                 .post(API_PREFIX + "<cacheId>", HttpApplication::handlePutItemRequest)
+                .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
                 .delete(API_PREFIX + "<cacheId>", HttpApplication::handleDeleteCacheRequest)
                 .get(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleGetItemRequest)
-                .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
                 .start(PORT);
     }
 
@@ -105,9 +101,18 @@ public class HttpApplication {
     /**
      * Handle a request to delete an item from a cache.
      *
-     * @param context The context.
+     * @param ctx The context.
      */
-    private static void handleDeleteItemRequest(Context context) {
+    private static void handleDeleteItemRequest(Context ctx) {
+        var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
+        var key = ctx.pathParam("key");
+        log.info("Got delete item request on cacheId {}, key {}",
+                cacheId, key);
+        client.removeCacheEntrySync(cluster, cacheId, key, c -> {
+            log.info("Got delete on item from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
+            var response = new DeleteItemResponse(c.getCacheId(), c.getKey());
+            ctx.json(response);
+        });
     }
 
     /**

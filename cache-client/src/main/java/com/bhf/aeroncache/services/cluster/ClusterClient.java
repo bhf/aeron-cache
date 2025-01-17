@@ -452,6 +452,20 @@ public class ClusterClient implements EgressListener {
     }
 
     /**
+     * Send a message to remove a cache entry synchronously.
+     *
+     * @param cluster The Aeron Cluster instance to use.
+     * @param cacheId The ID of the cache we're removing an entry from.
+     * @param key     The key of the entry we're removing.
+     * @param c       The consumer that will handle the result.
+     */
+    public void removeCacheEntrySync(AeronCluster cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<Long, String>> c) {
+        setRemoveCacheEntryConsumer(c);
+        removeCacheEntrySync(cluster, cacheId, key);
+        setRemoveCacheEntryConsumer(null);
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
