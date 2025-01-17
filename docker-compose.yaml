@@ -36,10 +36,10 @@ services:
       - CLUSTER_ADDRESSES=172.16.202.2,172.16.202.3,172.16.202.4
       - CLUSTER_NODE=2
       - CLUSTER_PORT_BASE=9000
-  cache-client:
+  cache-http-client:
     shm_size: '1gb'
     build:
-      context: cache-client
+      context: cache-http-server
       dockerfile: ./Dockerfile
     depends_on:
       - node0
