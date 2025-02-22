@@ -6,7 +6,7 @@ plugins {
 project.setProperty("mainClassName", "com.bhf.aeroncache.application.SampleClientUsage")
 
 dependencies {
-    implementation(project(":cache-messages"))
+    implementation(project(":cache-messages-sbe"))
     implementation(project(":cache-cluster"))
     implementation(libs.aeron)
     implementation(libs.log4j.api)

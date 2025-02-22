@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.models.requests;
+package com.bhf.aeroncache.http.requests;
 
 /**
  * A request to get an item from the cache.
