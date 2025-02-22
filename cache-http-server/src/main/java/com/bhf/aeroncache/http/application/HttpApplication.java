@@ -1,8 +1,8 @@
-package com.bhf.aeroncache.application;
+package com.bhf.aeroncache.http.application;
 
-import com.bhf.aeroncache.models.requests.CreateCacheRequest;
-import com.bhf.aeroncache.models.requests.PutItemRequest;
-import com.bhf.aeroncache.models.responses.*;
+import com.bhf.aeroncache.http.requests.CreateCacheRequest;
+import com.bhf.aeroncache.http.requests.PutItemRequest;
+import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.services.cluster.ClusterClient;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
