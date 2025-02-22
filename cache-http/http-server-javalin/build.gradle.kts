@@ -8,6 +8,7 @@ project.setProperty("mainClassName", "com.bhf.aeroncache.http.application.HttpAp
 dependencies {
     implementation(project(":cache-client"))
     implementation(project(":cache-common"))
+    implementation(project(":cache-messages-http"))
     implementation(libs.aeron)
     implementation(libs.javalin)
     implementation(libs.log4j.api)
