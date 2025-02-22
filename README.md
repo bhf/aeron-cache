@@ -8,15 +8,17 @@ __cache-client__ - An Aeron cluster based client for the cache.
 
 __cache-cluster__ - The core cache cluster service.
 
-__cache-common__ - Common entities and classes used across all modules.
+__cache-common__ - Common entities and classes used in cache implementations.
 
 __cache-http-server__ - A basic REST interface around the cache-client using Javalin.
 
-__cache-messages__ - Core SBE messages used by the cache.
+__cache-messages-sbe__ - Core SBE messages used by the cache.
+
+__cache-messages-http__ - Messages used by HTTP interfaces to the cache.
 
 __cache-ui (coming soon)__ - A UI that uses the REST API provided by cache-http-server
 
-__cache-cli (coming soon)__ - A Rust based CLI.
+__k8s (wip)__ - Helm charts and other K8s resources
 
 ## How To Run
 
