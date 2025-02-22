@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-project.setProperty("mainClassName", "com.bhf.aeroncache.application.HttpApplication")
+project.setProperty("mainClassName", "com.bhf.aeroncache.http.application.HttpApplication")
 
 dependencies {
     implementation(project(":cache-client"))
