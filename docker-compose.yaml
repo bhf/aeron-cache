@@ -39,7 +39,7 @@ services:
   cache-http-client:
     shm_size: '1gb'
     build:
-      context: cache-http-server
+      context: cache-http/http-server-javalin
       dockerfile: ./Dockerfile
     depends_on:
       - node0
