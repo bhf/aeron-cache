@@ -28,6 +28,33 @@ __k8s (wip)__ - Helm charts and other K8s resources
 kubectl run aeroncache-http --image=docker.io/library/aeroncache-http --port=7070 --image-pull-policy Never
 ```
 
+You can also see the k8s folders in each module.
+
+Example output for a working AeronCache Cluster node:
+
+```
+optimus@optimus-lab:~/Workspaces/aeron-cache/cache-cluster/k8s$ kubectl logs  aeroncache-cluster-0 -f
+Launching AeronCache Cluster Node
+CLUSTER_NODE=null
+CLUSTER_ADDRESSES=aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local
+CLUSTER_ADDRESSES=aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local
+POD_NAME=aeroncache-cluster-0
+Using pod name: aeroncache-cluster-0, nodeId: 0 cluster addresses: [aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local, aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local, aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local]
+This node's hostname:aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local
+user.dir=/tmp/node0
+AeronDirName=/dev/shm/aeron-root-0-driver
+Awaiting DNS Resolution
+Waiting 5 seconds for DNS to be registered...
+Resolved aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local/10.244.0.83
+Waiting 5 seconds for DNS to be registered...
+Resolved aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local/10.244.0.84
+Waiting 5 seconds for DNS to be registered...
+Resolved aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local/10.244.0.82
+Launching cluster node now...
+[0] Started Cluster Node on aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local...
+15:19:09.916 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - On start called on cluster service
+15:19:10.277 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Node null has new role of LEADER
+```
 
 ### Application
 1. Run ClusterLauncher to spin up a 3 node cluster.
