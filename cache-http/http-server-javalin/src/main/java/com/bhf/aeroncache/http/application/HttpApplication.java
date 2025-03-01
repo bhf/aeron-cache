@@ -27,12 +27,18 @@ public class HttpApplication {
     private static AeronCluster cluster;
 
     public static void main(String[] args) {
-        client = new ClusterClient();
-        final String egressIP = "localhost";
-        final var ingressEndpoints = ingressEndpoints(List.of("localhost", "localhost", "localhost"));
-        cluster = buildClusterConnection(egressIP, ingressEndpoints);
+
         var app = startHTTPServer();
-        setupKeepAlive();
+
+        try {
+            client = new ClusterClient();
+            final String egressIP = "localhost";
+            final var ingressEndpoints = ingressEndpoints(List.of("localhost", "localhost", "localhost"));
+            cluster = buildClusterConnection(egressIP, ingressEndpoints);
+            setupKeepAlive();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -171,6 +177,7 @@ public class HttpApplication {
      * @return An {@link AeronCluster} instance.
      */
     private static AeronCluster buildClusterConnection(String egressIP, String ingressEndpoints) {
+        System.out.println("Building cluster connection...");
         MediaDriver mediaDriver = MediaDriver.launchEmbedded(new MediaDriver.Context()
                 .threadingMode(ThreadingMode.SHARED)
                 .dirDeleteOnStart(true)

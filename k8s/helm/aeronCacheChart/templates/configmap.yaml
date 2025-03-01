@@ -4,4 +4,4 @@ metadata:
   name: helm-multi-env-configmap
   namespace: {{ .Values.namespace }}
 data:
-  {{ printf "environments/configmap.%s.yaml" .Values.namespace | .Files.Get | indent 2 }}
+  {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | indent 2 }}

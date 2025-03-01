@@ -22,6 +22,13 @@ __k8s (wip)__ - Helm charts and other K8s resources
 
 ## How To Run
 
+### K8s and MiniKube
+
+```bash
+kubectl run aeroncache-http --image=docker.io/library/aeroncache-http --port=7070 --image-pull-policy Never
+```
+
+
 ### Application
 1. Run ClusterLauncher to spin up a 3 node cluster.
 2. Run SampleClientUsage.

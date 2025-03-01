@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: aeroncache-http
+  name: aeroncache-http
+  namespace: default
+  resourceVersion: "25054"
+  uid: f4b5c4a1-8b37-464d-84d7-9cbdfd2f7415
+spec:
+  clusterIP: 10.106.206.100
+  clusterIPs:
+  - 10.106.206.100
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - port: 7070
+    protocol: TCP
+    targetPort: 7070
+  selector:
+    run: aeroncache-http
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

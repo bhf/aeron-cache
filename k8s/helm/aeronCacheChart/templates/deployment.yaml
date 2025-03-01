@@ -15,10 +15,10 @@ spec:
     metadata:
       {{- with .Values.podAnnotations }}
       annotations:
-        checksum/configmap: { { printf "environments/configmap.%s.yaml" .Values.namespace | .Files.Get | sha256sum } }
-        checksum/secrets: { { printf "environments/secrets.%s.yaml" .Values.namespace | .Files.Get | sha256sum } }
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      checksum/configmap: {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | sha256sum }}
+      checksum/secrets: {{ printf "environments/secrets.%s.yaml" .Values.env | .Files.Get | sha256sum }}
       labels:
         {{- include "aeronCacheChart.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
