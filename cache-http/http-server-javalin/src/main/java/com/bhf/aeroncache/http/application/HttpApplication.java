@@ -12,6 +12,10 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import lombok.extern.log4j.Log4j2;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -38,10 +42,10 @@ public class HttpApplication {
             var podName = System.getenv("POD_ADDRESS");
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
 
-            System.out.println("POD_ADDRESS="+podName);
-            System.out.println("CLUSTER_ADDRESSES="+allHosts);
+            System.out.println("POD_ADDRESS=" + podName);
+            System.out.println("CLUSTER_ADDRESSES=" + allHosts);
 
-            final String egressIP = podName;
+            final String egressIP = getThisHostName();
             var hostArray = List.of(allHosts.split(","));
             final var ingressEndpoints = ingressEndpoints(hostArray);
 
@@ -50,9 +54,6 @@ public class HttpApplication {
             for (int i = 0; i < hostArray.size(); i++) {
                 DNSUtils.awaitDnsResolution(hostArray, i);
             }
-
-            System.out.println("Awaiting DNS Resolution on own address of "+podName);
-            DNSUtils.awaitDnsResolution(List.of(podName), 0);
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
             cluster = buildClusterConnection(egressIP, ingressEndpoints);
@@ -67,7 +68,7 @@ public class HttpApplication {
      * to keep the session from timing out.
      */
     private static void setupKeepAlive() {
-        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> ClusterClient.handleKeepAlive(cluster), 200,200, TimeUnit.MILLISECONDS);
+        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> ClusterClient.handleKeepAlive(cluster), 200, 200, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -117,7 +118,7 @@ public class HttpApplication {
     private static void handleDeleteCacheRequest(Context context) {
         var cacheId = context.pathParam("cacheId");
         log.info("Got delete cache request for cacheId {}", cacheId);
-        client.deleteCacheSync(cluster, Long.parseLong(cacheId), c->{
+        client.deleteCacheSync(cluster, Long.parseLong(cacheId), c -> {
             var deletedCacheId = c.getCacheId();
             log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
             var response = new DeleteCacheResponse(deletedCacheId);
@@ -210,5 +211,29 @@ public class HttpApplication {
                         .aeronDirectoryName(mediaDriver.aeronDirectoryName())
                         .ingressChannel("aeron:udp")
                         .ingressEndpoints(ingressEndpoints));
+    }
+
+    public static String getThisHostName() {
+        try {
+            final Enumeration<NetworkInterface> interfaceEnumeration = NetworkInterface.getNetworkInterfaces();
+            while (interfaceEnumeration.hasMoreElements()) {
+                final var networkInterface = interfaceEnumeration.nextElement();
+
+                if (networkInterface.getName().startsWith("eth0")) {
+                    System.out.println("Found eth0 interface: " + networkInterface);
+                    final Enumeration<InetAddress> interfaceAddresses = networkInterface.getInetAddresses();
+                    while (interfaceAddresses.hasMoreElements()) {
+                        if (interfaceAddresses.nextElement() instanceof Inet4Address inet4Address) {
+                            var address = inet4Address.getHostAddress();
+                            System.out.println("Returning IP4 address: " + address);
+                            return address;
+                        }
+                    }
+                }
+            }
+        } catch (final Exception e) {
+            // ignore
+        }
+        return "localhost";
     }
 }
