@@ -8,6 +8,7 @@ project.setProperty("mainClassName", "com.bhf.aeroncache.application.SampleClien
 dependencies {
     implementation(project(":cache-messages-sbe"))
     implementation(project(":cache-cluster"))
+    implementation(project(":cache-common"))
     implementation(libs.aeron)
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
