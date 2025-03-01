@@ -4,6 +4,7 @@ import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.services.cluster.ClusterClient;
+import com.bhf.aeroncache.utils.DNSUtils;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
@@ -28,12 +29,32 @@ public class HttpApplication {
 
     public static void main(String[] args) {
 
+        System.out.println("Starting HTTP interface");
         var app = startHTTPServer();
 
         try {
+            System.out.println("Starting AeronCache Cluster Interface");
             client = new ClusterClient();
-            final String egressIP = "localhost";
-            final var ingressEndpoints = ingressEndpoints(List.of("localhost", "localhost", "localhost"));
+            var podName = System.getenv("POD_ADDRESS");
+            var allHosts = System.getenv("CLUSTER_ADDRESSES");
+
+            System.out.println("POD_ADDRESS="+podName);
+            System.out.println("CLUSTER_ADDRESSES="+allHosts);
+
+            final String egressIP = podName;
+            var hostArray = List.of(allHosts.split(","));
+            final var ingressEndpoints = ingressEndpoints(hostArray);
+
+            System.out.println("Awaiting DNS Resolution");
+
+            for (int i = 0; i < hostArray.size(); i++) {
+                DNSUtils.awaitDnsResolution(hostArray, i);
+            }
+
+            System.out.println("Awaiting DNS Resolution on own address of "+podName);
+            DNSUtils.awaitDnsResolution(List.of(podName), 0);
+
+            System.out.println("DNS Resolution Complete. Building cluster connection now.");
             cluster = buildClusterConnection(egressIP, ingressEndpoints);
             setupKeepAlive();
         } catch (Exception e) {
