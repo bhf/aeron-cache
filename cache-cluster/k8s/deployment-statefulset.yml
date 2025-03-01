@@ -36,7 +36,7 @@ spec:
             - name: DNS_DELAY
               value: "true"
             - name: CLUSTER_ADDRESSES
-              value: aeroncache-cluster-0.aeroncache-cluster.aeroncache-cluster.svc.cluster.local.,aeroncache-cluster-1.aeroncache-cluster.aeroncache-cluster.svc.cluster.local.,aeroncache-cluster-2.aeroncache-cluster.aeroncache-cluster.svc.cluster.local.
+              value: aeroncache-cluster-0.aeroncache-cluster.aeroncache-cluster.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.aeroncache-cluster.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.aeroncache-cluster.svc.cluster.local
             - name: POD_NAME
               valueFrom:
                 fieldRef:

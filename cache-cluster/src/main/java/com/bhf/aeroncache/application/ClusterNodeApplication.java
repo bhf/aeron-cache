@@ -25,7 +25,7 @@ import static java.lang.Integer.parseInt;
 
 /**
  * Launch a single node that runs the
- * {@link com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService}.
+ * {@link SBEDecodingCacheClusterService}.
  */
 @Log4j2
 public class ClusterNodeApplication {
@@ -101,14 +101,39 @@ public class ClusterNodeApplication {
      * @param args passed to the process.
      */
     public static void main(final String[] args) {
-        final int nodeId = parseInt(args[0]); //parseInt(System.getenv("CLUSTER_NODE"));
-        final String[] hostnames = {"localhost","localhost","localhost"}; //System.getenv("CLUSTER_ADDRESSES").split(",");
+        int nodeId = -1;
+        String[] hostnames = null;
 
-        System.out.println("HOSTNAMES: "+Arrays.toString(hostnames)+", NODEID: "+nodeId);
+        System.out.println("Launching AeronCache Cluster Node");
+
+        try {
+            var clusterNode = System.getenv("CLUSTER_NODE");
+            var allHosts = System.getenv("CLUSTER_ADDRESSES");
+            System.out.println("CLUSTER_NODE=" + clusterNode);
+            System.out.println("CLUSTER_ADDRESSES=" + allHosts);
+            nodeId = parseInt(clusterNode);
+            hostnames = allHosts.split(",");
+            System.out.println("Using cluster nodeId: " + clusterNode + ", cluster addresses: " + Arrays.toString(hostnames));
+        } catch (Exception e) {
+        }
+        try {
+            var allHosts = System.getenv("CLUSTER_ADDRESSES");
+            var podName = System.getenv("POD_NAME");
+            System.out.println("CLUSTER_ADDRESSES=" + allHosts);
+            System.out.println("POD_NAME=" + podName);
+            var podSplit = podName.split("-");
+            nodeId = parseInt(podSplit[podSplit.length - 1]);
+            hostnames = allHosts.split(",");
+            System.out.println("Using pod name: " + podName + ", nodeId: " + nodeId + " cluster addresses: " + Arrays.toString(hostnames));
+        } catch (Exception e) {
+        }
 
         final String hostname = hostnames[nodeId];
+        System.out.println("This node's hostname:" + hostname);
         final File baseDir = new File(System.getProperty("user.dir"), "node" + nodeId);
         final String aeronDirName = CommonContext.getAeronDirectoryName() + "-" + nodeId + "-driver";
+        System.out.println("user.dir=" + baseDir.getAbsolutePath());
+        System.out.println("AeronDirName=" + aeronDirName);
 
         final ShutdownSignalBarrier barrier = new ShutdownSignalBarrier();
 
@@ -155,6 +180,8 @@ public class ClusterNodeApplication {
                         .clusterDir(new File(baseDir, "cluster"))
                         .clusteredService(new SBEDecodingCacheClusterService())
                         .errorHandler(errorHandler("Clustered Service"));
+
+        System.out.println("Launching cluster node now...");
 
         try (
                 ClusteredMediaDriver clusteredMediaDriver = ClusteredMediaDriver.launch(
