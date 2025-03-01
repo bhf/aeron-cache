@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: aeroncache-cluster
+  namespace: default
+  labels:
+    app.kubernetes.io/name: aeroncache-cluster
+    app.kubernetes.io/instance: aeroncache-cluster
+spec:
+  replicas: 3
+  podManagementPolicy: Parallel
+  serviceName: aeroncache-cluster
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: aeroncache-cluster
+      app.kubernetes.io/instance: aeroncache-cluster
+  template:
+    metadata:
+      annotations:
+        {}
+      labels:
+        app.kubernetes.io/name: aeroncache-cluster
+        app.kubernetes.io/instance: aeroncache-cluster
+    spec:
+      serviceAccountName: aeroncache-cluster
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+          name: shm
+      containers:
+        - name: aeroncache-cluster
+          image: docker.io/library/aeroncache-cluster
+          imagePullPolicy: Never
+          env:
+            - name: DNS_DELAY
+              value: "true"
+            - name: CLUSTER_ADDRESSES
+              value: aeroncache-cluster-0.aeroncache-cluster.aeroncache-cluster.svc.cluster.local.,aeroncache-cluster-1.aeroncache-cluster.aeroncache-cluster.svc.cluster.local.,aeroncache-cluster-2.aeroncache-cluster.aeroncache-cluster.svc.cluster.local.
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: shm
