@@ -54,6 +54,7 @@ Launching cluster node now...
 [0] Started Cluster Node on aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local...
 15:19:09.916 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - On start called on cluster service
 15:19:10.277 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Node null has new role of LEADER
+16:38:56.656 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Client session open ClientSession{id=1, responseStreamId=102, responseChannel='aeron:udp?endpoint=10.244.0.95:58531', encodedPrincipal=[], responsePublication=Publication{originalRegistrationId=80, registrationId=81, isClosed=false, isConnected=true, initialTermId=-1868010605, termBufferLength=16777216, sessionId=-1584221432, streamId=102, channel='aeron:udp?endpoint=10.244.0.95:58531', position=96}, isClosing=false} on node null
 ```
 
 Example output for a working AeronCache HTTP adapter:
