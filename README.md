@@ -56,6 +56,45 @@ Launching cluster node now...
 15:19:10.277 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Node null has new role of LEADER
 ```
 
+Example output for a working AeronCache HTTP adapter:
+
+```
+Starting HTTP interface
+[main] INFO io.javalin.Javalin - Starting Javalin ...
+[main] INFO org.eclipse.jetty.server.Server - jetty-11.0.24; built: 2024-08-26T18:11:22.448Z; git: 5dfc59a691b748796f922208956bd1f2794bcd16; jvm 21+35-2513
+[main] INFO org.eclipse.jetty.server.session.DefaultSessionIdManager - Session workerName=node0
+[main] INFO org.eclipse.jetty.server.handler.ContextHandler - Started o.e.j.s.ServletContextHandler@4c51cf28{/,null,AVAILABLE}
+[main] INFO org.eclipse.jetty.server.AbstractConnector - Started ServerConnector@4e928fbf{HTTP/1.1, (http/1.1)}{0.0.0.0:7070}
+[main] INFO org.eclipse.jetty.server.Server - Started Server@404bbcbd{STARTING}[11.0.24,sto=0] @762ms
+[main] INFO io.javalin.Javalin - 
+       __                  ___           _____
+      / /___ __   ______ _/ (_)___      / ___/
+ __  / / __ `/ | / / __ `/ / / __ \    / __ \
+/ /_/ / /_/ /| |/ / /_/ / / / / / /   / /_/ /
+\____/\__,_/ |___/\__,_/_/_/_/ /_/    \____/
+
+       https://javalin.io/documentation
+
+[main] INFO io.javalin.Javalin - Javalin started in 161ms \o/
+[main] INFO io.javalin.Javalin - Listening on http://localhost:7070/
+Starting AeronCache Cluster Interface
+[main] INFO io.javalin.Javalin - You are running Javalin 6.4.0 (released December 17, 2024).
+POD_ADDRESS=127.0.0.1
+CLUSTER_ADDRESSES=aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local
+Found eth0 interface: name:eth0 (eth0)
+Returning IP4 address: 10.244.0.95
+Awaiting DNS Resolution
+Waiting 5 seconds for DNS to be registered...
+Resolved aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local/10.244.0.83
+Waiting 5 seconds for DNS to be registered...
+Resolved aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local/10.244.0.84
+Waiting 5 seconds for DNS to be registered...
+Resolved aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local/10.244.0.82
+DNS Resolution Complete. Building cluster connection now.
+Building cluster connection...
+16:42:16.429 [JettyServerThreadPool-36] INFO  com.bhf.aeroncache.http.application.HttpApplication - Got get item request on cacheId 321, key key
+```
+
 ### Application
 1. Run ClusterLauncher to spin up a 3 node cluster.
 2. Run SampleClientUsage.
