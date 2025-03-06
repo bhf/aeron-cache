@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aeroncache-http
+  labels:
+    app: aeroncache-http
+spec:
+  ports:
+    - port: 7070
+      name: aeroncache-http
+  clusterIP: None
+  selector:
+    app: aeroncache-http

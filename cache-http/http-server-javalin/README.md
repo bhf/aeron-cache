@@ -13,7 +13,7 @@ It needs to be exposed as a service.
 ```bash
 kubectl apply -f k8s/serviceaccount.yml
 kubectl apply -f k8s/deployment-singlepod.yml
-kubectl apply -f k8s/service.yml
+kubectl apply -f k8s/service-*.yml
 ```
 
 If you're using MiniKube then be sure to open a tunnel:
