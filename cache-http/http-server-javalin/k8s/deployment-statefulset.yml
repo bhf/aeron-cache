@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: aeroncache-http
+  namespace: default
+  labels:
+    app.kubernetes.io/name: aeroncache-http
+    app.kubernetes.io/instance: aeroncache-http
+spec:
+  replicas: 1
+  podManagementPolicy: Parallel
+  serviceName: aeroncache-http
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: aeroncache-http
+      app.kubernetes.io/instance: aeroncache-http
+  template:
+    metadata:
+      annotations:
+        {}
+      labels:
+        app.kubernetes.io/name: aeroncache-http
+        app.kubernetes.io/instance: aeroncache-http
+    spec:
+      serviceAccountName: aeroncache-http
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+          name: shm
+      containers:
+        - name: aeroncache-http
+          image: docker.io/library/aeroncache-http
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 7070
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: shm
+          env:
+            - name: DNS_DELAY
+              value: "true"
+            - name: CLUSTER_ADDRESSES
+              value: aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local
+            - name: POD_ADDRESS
+              value: 127.0.0.1

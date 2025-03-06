@@ -6,20 +6,13 @@ metadata:
   name: aeroncache-http
   namespace: default
 spec:
-  clusterIP: 10.106.206.100
-  clusterIPs:
-  - 10.106.206.100
-  internalTrafficPolicy: Cluster
-  ipFamilies:
-  - IPv4
-  ipFamilyPolicy: SingleStack
+  externalTrafficPolicy: Local
   ports:
   - port: 7070
+    nodePort: 30000
     protocol: TCP
     targetPort: 7070
   selector:
     run: aeroncache-http
   sessionAffinity: None
-  type: ClusterIP
-status:
-  loadBalancer: {}
+  type: NodePort
