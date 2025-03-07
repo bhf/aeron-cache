@@ -39,9 +39,8 @@ spec:
             - mountPath: /dev/shm
               name: shm
           env:
-            - name: DNS_DELAY
-              value: "true"
-            - name: CLUSTER_ADDRESSES
-              value: aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local
             - name: POD_ADDRESS
               value: 127.0.0.1
+          envFrom:
+            - configMapRef:
+                name: aeroncache-http-config

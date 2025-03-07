@@ -33,14 +33,13 @@ spec:
           image: docker.io/library/aeroncache-cluster
           imagePullPolicy: Never
           env:
-            - name: DNS_DELAY
-              value: "true"
-            - name: CLUSTER_ADDRESSES
-              value: aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local
             - name: POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+          envFrom:
+            - configMapRef:
+                name: aeroncache-cluster-config
           volumeMounts:
             - mountPath: /dev/shm
               name: shm
