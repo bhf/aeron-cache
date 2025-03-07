@@ -11,6 +11,7 @@ import io.aeron.driver.ThreadingMode;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import lombok.extern.log4j.Log4j2;
+import org.eclipse.jetty.http.HttpStatus;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -19,17 +20,24 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Log4j2
 public class HttpApplication {
 
     private static final int PORT = 7070;
     private static final String API_PREFIX = "/api/v1/cache/";
+
+    private static final String LIVENESS = "/liveness/";
+    private static final String READINESS = "/readiness/";
+
     private static final int PORT_BASE = 9000;
     private static final int PORTS_PER_NODE = 100;
     static final int CLIENT_FACING_PORT_OFFSET = 2;
     private static ClusterClient client;
     private static AeronCluster cluster;
+
+    private static AtomicBoolean clusterConnected = new AtomicBoolean(false);
 
     public static void main(String[] args) {
 
@@ -58,6 +66,7 @@ public class HttpApplication {
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
             cluster = buildClusterConnection(egressIP, ingressEndpoints);
             setupKeepAlive();
+            clusterConnected.set(true);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -107,7 +116,33 @@ public class HttpApplication {
                 .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
                 .delete(API_PREFIX + "<cacheId>", HttpApplication::handleDeleteCacheRequest)
                 .get(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleGetItemRequest)
+                .get(LIVENESS, HttpApplication::handleGetLiveness)
+                .get(READINESS, HttpApplication::handleGetReadiness)
                 .start(PORT);
+    }
+
+    /**
+     * Is the application ready to process requests.
+     * @param context The context.
+     */
+    private static void handleGetReadiness(Context context) {
+        if (clusterConnected.get()) {
+            context.status(HttpStatus.OK_200);
+        }
+        context.status(HttpStatus.SERVICE_UNAVAILABLE_503);
+        context.redirect("Ready");
+    }
+
+    /**
+     * Is the application live and running.
+     * @param context The context.
+     */
+    private static void handleGetLiveness(Context context) {
+        if (clusterConnected.get()) {
+            context.status(HttpStatus.OK_200);
+        }
+        context.status(HttpStatus.SERVICE_UNAVAILABLE_503);
+        context.redirect("Alive");
     }
 
     /**
