@@ -5,6 +5,7 @@ import com.bhf.aeroncache.services.cache.impl.HashMapCache;
 /**
  * A factory to return cache instances.
  *
+ * @param <I> The type on which this cache is indexed.
  * @param <K> The type of the key for cache entries which this factory will create.
  * @param <V> The type of the value for cache entries which this factory will create.
  */
