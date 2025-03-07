@@ -6,10 +6,12 @@ metadata:
     {{- include "aeronCacheChart.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
+  externalTrafficPolicy: Local
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: http
+      targetPort: {{ .Values.service.port }}
       protocol: TCP
       name: http
   selector:
-    {{- include "aeronCacheChart.selectorLabels" . | nindent 4 }}
+    statefulset.kubernetes.io/pod-name: {{ include "aeronCacheChart.fullname" . }}-0
+
