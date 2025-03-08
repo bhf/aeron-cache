@@ -1,8 +1,6 @@
 package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.messages.*;
-import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.services.cluster.ClusterClient;
 import com.bhf.aeroncache.services.cluster.ClusterRequestPublisher;
 import io.aeron.cluster.client.AeronCluster;
 import lombok.Getter;
@@ -12,8 +10,6 @@ import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
-
-import java.util.function.Consumer;
 
 /**
  * A basic message publisher with no duty cycle. Simply
@@ -36,11 +32,7 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     private final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
     private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
 
-    private final ClusterClient client;
-
-    public ClusterMessagePublisher(ClusterClient client) {
-        this.client = client;
-    }
+    static long lastKeepAlive = 0;
 
     @Override
     public void sendCreateCache(AeronCluster cluster, long cacheId) {
@@ -53,8 +45,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         handleKeepAlive(cluster);
         log.info("Sent create cache request");
     }
-
-    static long lastKeepAlive = 0;
 
     public static void handleKeepAlive(AeronCluster cluster) {
         long now = System.currentTimeMillis();
@@ -69,13 +59,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     public void sendCreateCacheBlocking(AeronCluster cluster, long cacheId) {
         sendCreateCache(cluster, cacheId);
         waitForResult(cluster);
-    }
-
-    @Override
-    public void sendCreateCacheBlocking(AeronCluster cluster, long cacheId, Consumer<CreateCacheResult<Long>> consumer) {
-        client.setCreateCacheConsumer(consumer);
-        sendCreateCacheBlocking(cluster, cacheId);
-        client.setCreateCacheConsumer(null);
     }
 
     @Override
@@ -96,13 +79,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     }
 
     @Override
-    public void addCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<Long, String>> c) {
-        client.setAddCacheEntryConsumer(c);
-        addCacheEntryBlocking(cluster, cacheId, key, value);
-        client.setAddCacheEntryConsumer(null);
-    }
-
-    @Override
     public void getCacheEntryNonBlocking(AeronCluster cluster, long cacheId, String key) {
         getCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).key(key);
@@ -111,13 +87,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
             idleStrategy.idle(cluster.pollEgress());
         }
         handleKeepAlive(cluster);
-    }
-
-    @Override
-    public void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<GetCacheEntryResult<Long, String, String>> c) {
-        client.setGetCacheEntryConsumer(c);
-        getCacheEntryBlocking(cluster, cacheId, key);
-        client.setGetCacheEntryConsumer(null);
     }
 
     @Override
@@ -161,13 +130,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     }
 
     @Override
-    public void deleteCacheBlocking(AeronCluster cluster, long cacheId, Consumer<DeleteCacheResult<Long>> consumer) {
-        client.setDeleteCacheConsumer(consumer);
-        deleteCacheBlocking(cluster, cacheId);
-        client.setDeleteCacheConsumer(null);
-    }
-
-    @Override
     public void removeCacheEntryNonBlocking(AeronCluster cluster, long cacheId, String key) {
         removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).key(key);
@@ -182,13 +144,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     public void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key) {
         removeCacheEntryNonBlocking(cluster, cacheId, key);
         waitForResult(cluster);
-    }
-
-    @Override
-    public void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<Long, String>> c) {
-        client.setRemoveCacheEntryConsumer(c);
-        removeCacheEntryBlocking(cluster, cacheId, key);
-        client.setRemoveCacheEntryConsumer(null);
     }
 
     /**

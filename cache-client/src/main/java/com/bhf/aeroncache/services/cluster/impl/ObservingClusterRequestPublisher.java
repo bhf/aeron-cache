@@ -1,6 +1,8 @@
 package com.bhf.aeroncache.services.cluster.impl;
 
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.services.cluster.ClusterRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterRequestPublisher;
 import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import io.aeron.cluster.client.AeronCluster;
@@ -19,7 +21,7 @@ import java.util.function.Consumer;
  * the consumer into an {@link IdentifiableConsumer} with an internally generated Id.
  */
 @RequiredArgsConstructor
-public class ClusterRequestObserver implements ClusterRequestPublisher {
+public class ObservingClusterRequestPublisher implements ClusterRequestPublisher, ClusterRequestConsumingPublisher {
 
     final ClusterMessagePublisher publisher;
     final List<IdentifiableConsumer<String, CreateCacheResult<Long>>> createCacheObservers = new CopyOnWriteArrayList<>();
@@ -27,6 +29,20 @@ public class ClusterRequestObserver implements ClusterRequestPublisher {
     final List<IdentifiableConsumer<String, GetCacheEntryResult<Long, String, String>>> getCacheEntryObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, DeleteCacheResult<Long>>> deleteCacheObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, RemoveCacheEntryResult<Long, String>>> removeCacheEntryObservers = new CopyOnWriteArrayList<>();
+
+    /**
+     * Remove the observer associated with the specific request Id.
+     * @param consumers The List of {@link IdentifiableConsumer} to check.
+     * @param requestId The Id of the request we are removing the consumer for.
+     */
+    private void removeObserver(List<IdentifiableConsumer<String, ? extends Reusable<?>>> consumers, String requestId) {
+        while (consumers.iterator().hasNext()) {
+            if (requestId.equals(consumers.iterator().next().getId())) {
+                consumers.iterator().remove();
+                break;
+            }
+        }
+    }
 
     @Override
     public void sendCreateCache(AeronCluster cluster, long cacheId) {

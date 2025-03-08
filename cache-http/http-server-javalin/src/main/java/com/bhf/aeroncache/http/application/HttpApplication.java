@@ -5,6 +5,7 @@ import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.services.cluster.ClusterClient;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
+import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.utils.DNSUtils;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
@@ -37,6 +38,7 @@ public class HttpApplication {
     static final int CLIENT_FACING_PORT_OFFSET = 2;
     private static ClusterClient client;
     private static ClusterMessagePublisher publisher;
+    private static ObservingClusterRequestPublisher observingPublisher;
     private static AeronCluster cluster;
 
     private static AtomicBoolean clusterConnected = new AtomicBoolean(false);
@@ -49,7 +51,7 @@ public class HttpApplication {
         try {
             System.out.println("Starting AeronCache Cluster Interface");
             client = new ClusterClient();
-            publisher = new ClusterMessagePublisher(client);
+            publisher = new ClusterMessagePublisher();
 
             var podName = System.getenv("POD_ADDRESS");
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
@@ -157,7 +159,7 @@ public class HttpApplication {
     private static void handleDeleteCacheRequest(Context context) {
         var cacheId = context.pathParam("cacheId");
         log.info("Got delete cache request for cacheId {}", cacheId);
-        publisher.deleteCacheBlocking(cluster, Long.parseLong(cacheId), c -> {
+        observingPublisher.deleteCacheBlocking(cluster, Long.parseLong(cacheId), c -> {
             var deletedCacheId = c.getCacheId();
             log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
             var response = new DeleteCacheResponse(deletedCacheId);
@@ -175,7 +177,7 @@ public class HttpApplication {
         var key = ctx.pathParam("key");
         log.info("Got delete item request on cacheId {}, key {}",
                 cacheId, key);
-        publisher.removeCacheEntryBlocking(cluster, cacheId, key, c -> {
+        observingPublisher.removeCacheEntryBlocking(cluster, cacheId, key, c -> {
             log.info("Got delete on item from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
             var response = new DeleteItemResponse(c.getCacheId(), c.getKey());
             ctx.json(response);
@@ -192,7 +194,7 @@ public class HttpApplication {
         var key = ctx.pathParam("key");
         log.info("Got get item request on cacheId {}, key {}",
                 cacheId, key);
-        publisher.getCacheEntryBlocking(cluster, cacheId, key, c -> {
+        observingPublisher.getCacheEntryBlocking(cluster, cacheId, key, c -> {
             log.info("Got item from cluster on cacheId {}, key {}, value {}", c.getCacheId(), c.getEntryKey(), c.getEntryValue());
             var response = new GetItemResponse(c.getCacheId(), c.getEntryKey(), c.getEntryValue());
             ctx.json(response);
@@ -208,7 +210,7 @@ public class HttpApplication {
         var request = ctx.bodyAsClass(PutItemRequest.class);
         log.info("Got put item request on cacheId {}, key {}, value {}",
                 request.cacheId(), request.key(), request.value());
-        publisher.addCacheEntryBlocking(cluster, request.cacheId(), request.key(), request.value(), c -> {
+        observingPublisher.addCacheEntryBlocking(cluster, request.cacheId(), request.key(), request.value(), c -> {
             var cacheId = c.getCacheID();
             log.info("Got put item response from cluster on cacheId {}", cacheId);
             var response = new PutItemResponse(cacheId, request.key());
@@ -224,7 +226,7 @@ public class HttpApplication {
     private static void handleCreateCacheRequest(Context ctx) {
         var request = ctx.bodyAsClass(CreateCacheRequest.class);
         log.info("Got create cache request on cacheId {}", request.cacheId());
-        publisher.sendCreateCacheBlocking(cluster, request.cacheId(), c -> {
+        observingPublisher.sendCreateCacheBlocking(cluster, request.cacheId(), c -> {
             var cacheId = c.getCacheId();
             log.info("Got create cache response from cluster on cacheId {}", cacheId);
             var response = new CreateCacheResponse(cacheId);

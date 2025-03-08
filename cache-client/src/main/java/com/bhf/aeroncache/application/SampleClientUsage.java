@@ -102,7 +102,7 @@ public class SampleClientUsage {
                                 .ingressChannel("aeron:udp")
                                 .ingressEndpoints(ingressEndpoints))) {
 
-            ClusterMessagePublisher publisher = new ClusterMessagePublisher(client);
+            ClusterMessagePublisher publisher = new ClusterMessagePublisher();
             while (true) {
                 sendMessagesToCache(client, aeronCluster, publisher);
                 try {
