@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.application;
 
-import com.bhf.aeroncache.services.cluster.ClusterClient;
-import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
+import com.bhf.aeroncache.services.cluster.AeronCacheListener;
+import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
@@ -37,8 +37,8 @@ public class SampleClientUsage {
         return sb.toString();
     }
 
-    static void addConsumers(ClusterClient client) {
-        client
+    static void addConsumers(AeronCacheListener client, ObservingClusterRequestPublisher observingPublisher) {
+        observingPublisher
                 .onCreateCache(c -> System.out.println("Cache created with id " + c.getCacheId()))
                 .onAddCacheEntry(c -> System.out.println("Cache entry created cache " + c.getCacheID()))
                 .onRemoveCacheEntry(c -> System.out.println("Cache entry removed on cache " + c.getCacheId()))
@@ -54,7 +54,7 @@ public class SampleClientUsage {
      * @param cluster   The Aeron Cluster.
      * @param publisher
      */
-    private static void sendMessagesToCache(ClusterClient client, AeronCluster cluster, ClusterMessagePublisher publisher) {
+    private static void sendMessagesToCache(AeronCacheListener client, AeronCluster cluster, ObservingClusterRequestPublisher publisher) {
         var cacheId = System.currentTimeMillis();
 
         System.out.println("Sending request to create cache " + cacheId);
@@ -82,12 +82,14 @@ public class SampleClientUsage {
     public static void main(String[] args) {
         final String[] hostnames = System.getenv("CLUSTER_ADDRESSES").split(",");
         final String egressIP = System.getenv("EGRESS_IP");
-        System.out.println("HOSTNAMES: "+Arrays.toString(hostnames));
-        System.out.println("EGRESS_IP: "+egressIP);
+        System.out.println("HOSTNAMES: " + Arrays.toString(hostnames));
+        System.out.println("EGRESS_IP: " + egressIP);
         final var ingressEndpoints = ingressEndpoints(Arrays.asList(hostnames));
 
-        final var client = new ClusterClient();
-        addConsumers(client);
+        final var client = new AeronCacheListener();
+        var observingPublisher = new ObservingClusterRequestPublisher();
+        client.setCacheResultsCallbacks(observingPublisher);
+        addConsumers(client, observingPublisher);
 
         try (
                 MediaDriver mediaDriver = MediaDriver.launchEmbedded(new MediaDriver.Context()
@@ -97,14 +99,13 @@ public class SampleClientUsage {
                 AeronCluster aeronCluster = AeronCluster.connect(
                         new AeronCluster.Context()
                                 .egressListener(client)
-                                .egressChannel("aeron:udp?endpoint="+egressIP+":0")
+                                .egressChannel("aeron:udp?endpoint=" + egressIP + ":0")
                                 .aeronDirectoryName(mediaDriver.aeronDirectoryName())
                                 .ingressChannel("aeron:udp")
                                 .ingressEndpoints(ingressEndpoints))) {
 
-            ClusterMessagePublisher publisher = new ClusterMessagePublisher(client);
             while (true) {
-                sendMessagesToCache(client, aeronCluster, publisher);
+                sendMessagesToCache(client, aeronCluster, observingPublisher);
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {

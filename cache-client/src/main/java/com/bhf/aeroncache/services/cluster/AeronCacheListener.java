@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import io.aeron.cluster.client.EgressListener;
 import io.aeron.cluster.codecs.EventCode;
 import io.aeron.logbuffer.Header;
@@ -22,7 +23,10 @@ import java.util.function.Consumer;
  */
 @Setter
 @Log4j2
-public class ClusterClient implements EgressListener {
+public class AeronCacheListener implements EgressListener {
+
+    @Setter
+    private ObservingClusterRequestPublisher cacheResultsCallbacks;
 
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
@@ -42,43 +46,6 @@ public class ClusterClient implements EgressListener {
     private final DeleteCacheResult<Long> deleteCacheResult = new DeleteCacheResult<>();
     private final RemoveCacheEntryResult<Long, String> removeCacheEntryResult = new RemoveCacheEntryResult<>();
     private final GetCacheEntryResult<Long, String, String> getCacheEntryResult = new GetCacheEntryResult<>();
-
-    private Consumer<CreateCacheResult<Long>> createCacheConsumer;
-    private Consumer<AddCacheEntryResult<Long, String>> addCacheEntryConsumer;
-    private Consumer<ClearCacheResult<Long>> clearCacheConsumer;
-    private Consumer<DeleteCacheResult<Long>> deleteCacheConsumer;
-    private Consumer<RemoveCacheEntryResult<Long, String>> removeCacheEntryConsumer;
-    private Consumer<GetCacheEntryResult<Long, String, String>> getCacheEntryConsumer;
-
-    public ClusterClient onCreateCache(Consumer<CreateCacheResult<Long>> c) {
-        createCacheConsumer = c;
-        return this;
-    }
-
-    public ClusterClient onAddCacheEntry(Consumer<AddCacheEntryResult<Long, String>> c) {
-        addCacheEntryConsumer = c;
-        return this;
-    }
-
-    public ClusterClient onClearCache(Consumer<ClearCacheResult<Long>> c) {
-        clearCacheConsumer = c;
-        return this;
-    }
-
-    public ClusterClient onDeleteCache(Consumer<DeleteCacheResult<Long>> c) {
-        deleteCacheConsumer = c;
-        return this;
-    }
-
-    public ClusterClient onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<Long, String>> c) {
-        removeCacheEntryConsumer = c;
-        return this;
-    }
-
-    public ClusterClient onGetCacheEntry(Consumer<GetCacheEntryResult<Long, String, String>> c) {
-        getCacheEntryConsumer = c;
-        return this;
-    }
 
     /**
      * {@inheritDoc}
@@ -122,7 +89,10 @@ public class ClusterClient implements EgressListener {
         getCacheEntryResult.setCacheId(cacheID);
         getCacheEntryResult.setEntryKey(key);
         getCacheEntryResult.setEntryValue(value);
-        getCacheEntryConsumer.accept(getCacheEntryResult);
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheEntryResult(getCacheEntryResult);
+        }
     }
 
     /**
@@ -137,7 +107,10 @@ public class ClusterClient implements EgressListener {
         log.info("Created cache {}", cacheId);
         createCacheResult.clear();
         createCacheResult.setCacheId(cacheId);
-        createCacheConsumer.accept(createCacheResult);
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheCreated(createCacheResult);
+        }
     }
 
     /**
@@ -155,7 +128,10 @@ public class ClusterClient implements EgressListener {
         addCacheEntryResult.setEntryAdded(true);
         addCacheEntryResult.setEntryKey(key);
         addCacheEntryResult.setCacheID(cacheId);
-        addCacheEntryConsumer.accept(addCacheEntryResult);
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheEntryCreated(addCacheEntryResult);
+        }
     }
 
     /**
@@ -172,7 +148,10 @@ public class ClusterClient implements EgressListener {
         removeCacheEntryResult.clear();
         removeCacheEntryResult.setKey(key);
         removeCacheEntryResult.setCacheId(cacheId);
-        removeCacheEntryConsumer.accept(removeCacheEntryResult);
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheEntryRemoved(removeCacheEntryResult);
+        }
     }
 
     /**
@@ -187,7 +166,10 @@ public class ClusterClient implements EgressListener {
         log.info("Got cache cleared on cache {}", cacheId);
         clearCacheResult.clear();
         clearCacheResult.setCacheId(cacheId);
-        clearCacheConsumer.accept(clearCacheResult);
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheCleared(clearCacheResult);
+        }
     }
 
     /**
@@ -202,7 +184,10 @@ public class ClusterClient implements EgressListener {
         log.info("Got cache deleted on cache {}", cacheId);
         deleteCacheResult.clear();
         deleteCacheResult.setCacheId(cacheId);
-        deleteCacheConsumer.accept(deleteCacheResult);
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheDeleted(deleteCacheResult);
+        }
     }
 
     /**

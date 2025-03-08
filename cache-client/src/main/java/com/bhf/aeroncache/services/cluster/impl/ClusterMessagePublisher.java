@@ -1,8 +1,6 @@
 package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.messages.*;
-import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.services.cluster.ClusterClient;
 import com.bhf.aeroncache.services.cluster.ClusterRequestPublisher;
 import io.aeron.cluster.client.AeronCluster;
 import lombok.Getter;
@@ -13,8 +11,6 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
 
-import java.util.function.Consumer;
-
 /**
  * A basic message publisher with no duty cycle. Simply
  * polls on the egress based on the method being called by the user.
@@ -22,48 +18,19 @@ import java.util.function.Consumer;
 @Setter
 @Log4j2
 public class ClusterMessagePublisher implements ClusterRequestPublisher {
-    private static final int KEEPALIVE_INTERVAL = 200;
+
     private final MutableDirectBuffer msgBuffer = new ExpandableArrayBuffer();
 
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
 
+    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
     private final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
     private final GetCacheEntryEncoder getCacheEntryEncoder = new GetCacheEntryEncoder();
     private final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
     private final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
     private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
-
-    private final ClusterClient client;
-
-    public ClusterMessagePublisher(ClusterClient client) {
-        this.client = client;
-    }
-
-    @Override
-    public void sendCreateCache(AeronCluster cluster, long cacheId) {
-        createCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId);
-        idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, createCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
-            idleStrategy.idle(cluster.pollEgress());
-        }
-        handleKeepAlive(cluster);
-        log.info("Sent create cache request");
-    }
-
-    static long lastKeepAlive = 0;
-
-    public static void handleKeepAlive(AeronCluster cluster) {
-        long now = System.currentTimeMillis();
-
-        if (now > lastKeepAlive + KEEPALIVE_INTERVAL) {
-            cluster.sendKeepAlive();
-            lastKeepAlive = now;
-        }
-    }
 
     @Override
     public void sendCreateCacheBlocking(AeronCluster cluster, long cacheId) {
@@ -72,123 +39,117 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     }
 
     @Override
-    public void sendCreateCacheBlocking(AeronCluster cluster, long cacheId, Consumer<CreateCacheResult<Long>> consumer) {
-        client.setCreateCacheConsumer(consumer);
-        sendCreateCacheBlocking(cluster, cacheId);
-        client.setCreateCacheConsumer(null);
+    public void sendCreateCache(AeronCluster cluster, long cacheId) {
+        createCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId);
+        publishCreateCache(cluster, createCacheEncoder, headerEncoder);
+        log.info("Sent create cache request");
     }
 
-    @Override
-    public void addCacheEntryNonBlocking(AeronCluster cluster, long cacheId, String key, String value) {
-        addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key).entryValue(value);
+    public void publishCreateCache(AeronCluster cluster, CreateCacheEncoder createCacheEncoder, MessageHeaderEncoder headerEncoder){
         idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, addCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
+        while (cluster.offer(msgBuffer, 0, createCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        handleKeepAlive(cluster);
     }
 
     @Override
     public void addCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, String value) {
-        addCacheEntryNonBlocking(cluster, cacheId, key, value);
+        addCacheEntry(cluster, cacheId, key, value);
         waitForResult(cluster);
     }
 
     @Override
-    public void addCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<Long, String>> c) {
-        client.setAddCacheEntryConsumer(c);
-        addCacheEntryBlocking(cluster, cacheId, key, value);
-        client.setAddCacheEntryConsumer(null);
+    public void addCacheEntry(AeronCluster cluster, long cacheId, String key, String value) {
+        addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId).key(key).entryValue(value);
+        publishAddCachEntry(cluster, addCacheEntryEncoder, headerEncoder);
     }
 
-    @Override
-    public void getCacheEntryNonBlocking(AeronCluster cluster, long cacheId, String key) {
-        getCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key);
+    void publishAddCachEntry(AeronCluster cluster, AddCacheEntryEncoder addCacheEntry, MessageHeaderEncoder header) {
         idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, getCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
+        while (cluster.offer(msgBuffer, 0, addCacheEntry.encodedLength() + header.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        handleKeepAlive(cluster);
-    }
-
-    @Override
-    public void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<GetCacheEntryResult<Long, String, String>> c) {
-        client.setGetCacheEntryConsumer(c);
-        getCacheEntryBlocking(cluster, cacheId, key);
-        client.setGetCacheEntryConsumer(null);
     }
 
     @Override
     public void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key) {
-        getCacheEntryNonBlocking(cluster, cacheId, key);
+        getCacheEntry(cluster, cacheId, key);
         waitForResult(cluster);
     }
 
     @Override
-    public void clearCacheNonBlocking(AeronCluster cluster, long cacheId) {
-        clearCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId);
+    public void getCacheEntry(AeronCluster cluster, long cacheId, String key) {
+        getCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId).key(key);
+        publishGetCacheEntry(cluster, getCacheEntryEncoder, headerEncoder);
+    }
+
+    void publishGetCacheEntry(AeronCluster cluster, GetCacheEntryEncoder getCacheEntry, MessageHeaderEncoder header) {
         idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, clearCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
+        while (cluster.offer(msgBuffer, 0, getCacheEntryEncoder.encodedLength() + header.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        handleKeepAlive(cluster);
     }
 
     @Override
     public void clearCacheBlocking(AeronCluster cluster, long cacheId) {
-        clearCacheNonBlocking(cluster, cacheId);
+        clearCache(cluster, cacheId);
         waitForResult(cluster);
     }
-
     @Override
-    public void deleteCacheNonBlocking(AeronCluster cluster, long cacheId) {
-        deleteCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+    public void clearCache(AeronCluster cluster, long cacheId) {
+        clearCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId);
+        publishClearCache(cluster, clearCacheEncoder, headerEncoder);
+    }
+
+    void publishClearCache(AeronCluster cluster, ClearCacheEncoder clearCache, MessageHeaderEncoder header) {
         idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, deleteCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
+        while (cluster.offer(msgBuffer, 0, clearCache.encodedLength() + header.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        handleKeepAlive(cluster);
     }
 
     @Override
     public void deleteCacheBlocking(AeronCluster cluster, long cacheId) {
-        deleteCacheNonBlocking(cluster, cacheId);
+        deleteCache(cluster, cacheId);
         waitForResult(cluster);
     }
 
     @Override
-    public void deleteCacheBlocking(AeronCluster cluster, long cacheId, Consumer<DeleteCacheResult<Long>> consumer) {
-        client.setDeleteCacheConsumer(consumer);
-        deleteCacheBlocking(cluster, cacheId);
-        client.setDeleteCacheConsumer(null);
+    public void deleteCache(AeronCluster cluster, long cacheId) {
+        deleteCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId);
+        publishDeleteCache(cluster, deleteCacheEncoder, headerEncoder);
     }
 
-    @Override
-    public void removeCacheEntryNonBlocking(AeronCluster cluster, long cacheId, String key) {
-        removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key);
+    void publishDeleteCache(AeronCluster cluster, DeleteCacheEncoder deleteCache, MessageHeaderEncoder header) {
         idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, removeCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
+        while (cluster.offer(msgBuffer, 0, deleteCache.encodedLength() + header.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        handleKeepAlive(cluster);
     }
 
     @Override
     public void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key) {
-        removeCacheEntryNonBlocking(cluster, cacheId, key);
+        removeCacheEntry(cluster, cacheId, key);
         waitForResult(cluster);
     }
 
     @Override
-    public void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<Long, String>> c) {
-        client.setRemoveCacheEntryConsumer(c);
-        removeCacheEntryBlocking(cluster, cacheId, key);
-        client.setRemoveCacheEntryConsumer(null);
+    public void removeCacheEntry(AeronCluster cluster, long cacheId, String key) {
+        removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId).key(key);
+        publishRemoveCacheEntry(cluster, removeCacheEntryEncoder, headerEncoder);
+    }
+
+    void publishRemoveCacheEntry(AeronCluster cluster, RemoveCacheEntryEncoder removeCacheEntry, MessageHeaderEncoder header) {
+        idleStrategy.reset();
+        while (cluster.offer(msgBuffer, 0, removeCacheEntry.encodedLength() + header.encodedLength()) < 0) {
+            idleStrategy.idle(cluster.pollEgress());
+        }
     }
 
     /**
@@ -198,7 +159,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
      */
     private void waitForResult(AeronCluster cluster) {
         pollEgressUntilMessage(this.getIdleStrategy(), cluster);
-        handleKeepAlive(cluster);
     }
 
     /**
@@ -221,7 +181,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         idleStrategy.reset();
         while (pollEgress(cluster) <= 0) {
             idleStrategy.idle();
-            handleKeepAlive(cluster);
         }
     }
 }
