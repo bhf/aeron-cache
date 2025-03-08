@@ -32,6 +32,43 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     final List<IdentifiableConsumer<String, ClearCacheResult<Long>>> clearCacheObservers = new CopyOnWriteArrayList<>();
 
 
+    private Consumer<CreateCacheResult<Long>> createCacheConsumer;
+    private Consumer<AddCacheEntryResult<Long, String>> addCacheEntryConsumer;
+    private Consumer<ClearCacheResult<Long>> clearCacheConsumer;
+    private Consumer<DeleteCacheResult<Long>> deleteCacheConsumer;
+    private Consumer<RemoveCacheEntryResult<Long, String>> removeCacheEntryConsumer;
+    private Consumer<GetCacheEntryResult<Long, String, String>> getCacheEntryConsumer;
+
+    public ObservingClusterRequestPublisher onCreateCache(Consumer<CreateCacheResult<Long>> c) {
+        createCacheConsumer = c;
+        return this;
+    }
+
+    public ObservingClusterRequestPublisher onAddCacheEntry(Consumer<AddCacheEntryResult<Long, String>> c) {
+        addCacheEntryConsumer = c;
+        return this;
+    }
+
+    public ObservingClusterRequestPublisher onClearCache(Consumer<ClearCacheResult<Long>> c) {
+        clearCacheConsumer = c;
+        return this;
+    }
+
+    public ObservingClusterRequestPublisher onDeleteCache(Consumer<DeleteCacheResult<Long>> c) {
+        deleteCacheConsumer = c;
+        return this;
+    }
+
+    public ObservingClusterRequestPublisher onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<Long, String>> c) {
+        removeCacheEntryConsumer = c;
+        return this;
+    }
+
+    public ObservingClusterRequestPublisher onGetCacheEntry(Consumer<GetCacheEntryResult<Long, String, String>> c) {
+        getCacheEntryConsumer = c;
+        return this;
+    }
+
     @Override
     public void sendCreateCache(AeronCluster cluster, long cacheId) {
         publisher.sendCreateCache(cluster, cacheId);
@@ -192,6 +229,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
                 getCacheEntryObservers.iterator().remove();
             }
         }
+
+        getCacheEntryConsumer.accept(getCacheEntryResult);
     }
 
     /**
@@ -209,6 +248,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
                 createCacheObservers.iterator().remove();
             }
         }
+
+        createCacheConsumer.accept(createCacheResult);
     }
 
     /**
@@ -226,6 +267,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
                 addCacheEntryObservers.iterator().remove();
             }
         }
+
+        addCacheEntryConsumer.accept(addCacheEntryResult);
     }
 
     /**
@@ -243,6 +286,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
                 removeCacheEntryObservers.iterator().remove();
             }
         }
+
+        removeCacheEntryConsumer.accept(removeCacheEntryResult);
     }
 
     /**
@@ -260,6 +305,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
                 clearCacheObservers.iterator().remove();
             }
         }
+
+        clearCacheConsumer.accept(clearCacheResult);
     }
 
     /**
@@ -277,5 +324,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
                 deleteCacheObservers.iterator().remove();
             }
         }
+
+        deleteCacheConsumer.accept(deleteCacheResult);
     }
 }
