@@ -50,8 +50,10 @@ public class HttpApplication {
 
         try {
             System.out.println("Starting AeronCache Cluster Interface");
-            client = new ClusterClient();
             publisher = new ClusterMessagePublisher();
+            observingPublisher = new ObservingClusterRequestPublisher(publisher);
+            client = new ClusterClient();
+            client.setObservingPublisher(observingPublisher);
 
             var podName = System.getenv("POD_ADDRESS");
             var allHosts = System.getenv("CLUSTER_ADDRESSES");

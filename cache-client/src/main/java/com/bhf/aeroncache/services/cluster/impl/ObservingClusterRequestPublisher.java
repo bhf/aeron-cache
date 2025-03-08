@@ -1,10 +1,9 @@
 package com.bhf.aeroncache.services.cluster.impl;
 
-import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cluster.ClusterRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterRequestPublisher;
-import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import io.aeron.cluster.client.AeronCluster;
 import lombok.RequiredArgsConstructor;
 
@@ -17,8 +16,9 @@ import java.util.function.Consumer;
  * A simple observer that delegates methods which don't pass in a {@link Consumer} directly
  * to the {@link ClusterMessagePublisher}.
  * <p>
- * Methods which accept a {@link Consumer} use a CoW observer style approach after wrapping
- * the consumer into an {@link IdentifiableConsumer} with an internally generated Id.
+ * Methods which accept a {@link Consumer} and are implementations of the {@link ClusterRequestConsumingPublisher}
+ * use a CoW observer style approach after wrapping the consumer into an
+ * {@link IdentifiableConsumer} with an internally generated Id.
  */
 @RequiredArgsConstructor
 public class ObservingClusterRequestPublisher implements ClusterRequestPublisher, ClusterRequestConsumingPublisher {
@@ -29,20 +29,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     final List<IdentifiableConsumer<String, GetCacheEntryResult<Long, String, String>>> getCacheEntryObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, DeleteCacheResult<Long>>> deleteCacheObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, RemoveCacheEntryResult<Long, String>>> removeCacheEntryObservers = new CopyOnWriteArrayList<>();
+    final List<IdentifiableConsumer<String, ClearCacheResult<Long>>> clearCacheObservers = new CopyOnWriteArrayList<>();
 
-    /**
-     * Remove the observer associated with the specific request Id.
-     * @param consumers The List of {@link IdentifiableConsumer} to check.
-     * @param requestId The Id of the request we are removing the consumer for.
-     */
-    private void removeObserver(List<IdentifiableConsumer<String, ? extends Reusable<?>>> consumers, String requestId) {
-        while (consumers.iterator().hasNext()) {
-            if (requestId.equals(consumers.iterator().next().getId())) {
-                consumers.iterator().remove();
-                break;
-            }
-        }
-    }
 
     @Override
     public void sendCreateCache(AeronCluster cluster, long cacheId) {
@@ -187,5 +175,107 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         });
 
         publisher.deleteCacheNonBlocking(cluster, cacheId);
+    }
+
+    /**
+     * Handle a message indicating the value of a get operation on a particular key
+     * and delegate it to any relevant consumer.
+     *
+     * @param getCacheEntryResult The result of getting something from the cache.
+     */
+    public void handleCacheEntryResult(GetCacheEntryResult<Long, String, String> getCacheEntryResult) {
+        var expectedId = getCacheEntryResult.getCacheId();
+        while (getCacheEntryObservers.iterator().hasNext()) {
+            var next = getCacheEntryObservers.iterator().next();
+            if (expectedId.equals(next.getId())) {
+                next.accept(getCacheEntryResult);
+                getCacheEntryObservers.iterator().remove();
+            }
+        }
+    }
+
+    /**
+     * Handle a message indicating a cache has been created and delegate it
+     * to any relevant consumer.
+     *
+     * @param createCacheResult The result of creating a cache.
+     */
+    public void handleCacheCreated(CreateCacheResult<Long> createCacheResult) {
+        var expectedId = createCacheResult.getCacheId();
+        while (createCacheObservers.iterator().hasNext()) {
+            var next = createCacheObservers.iterator().next();
+            if (expectedId.equals(next.getId())) {
+                next.accept(createCacheResult);
+                createCacheObservers.iterator().remove();
+            }
+        }
+    }
+
+    /**
+     * Handle a message indicating a cache entry has been created and delegate it
+     * to any relevant consumer.
+     *
+     * @param addCacheEntryResult The result of adding an entry to the cache.
+     */
+    public void handleCacheEntryCreated(AddCacheEntryResult<Long, String> addCacheEntryResult) {
+        var expectedId = addCacheEntryResult.getCacheID();
+        while (addCacheEntryObservers.iterator().hasNext()) {
+            var next = addCacheEntryObservers.iterator().next();
+            if (expectedId.equals(next.getId())) {
+                next.accept(addCacheEntryResult);
+                addCacheEntryObservers.iterator().remove();
+            }
+        }
+    }
+
+    /**
+     * Handle a message indicating a cache entry has been removed and delegate it
+     * to any relevant consumer.
+     *
+     * @param removeCacheEntryResult The result of a cache entry removal.
+     */
+    public void handleCacheEntryRemoved(RemoveCacheEntryResult<Long, String> removeCacheEntryResult) {
+        var expectedId = removeCacheEntryResult.getCacheId();
+        while (removeCacheEntryObservers.iterator().hasNext()) {
+            var next = removeCacheEntryObservers.iterator().next();
+            if (expectedId.equals(next.getId())) {
+                next.accept(removeCacheEntryResult);
+                removeCacheEntryObservers.iterator().remove();
+            }
+        }
+    }
+
+    /**
+     * Handle a message indicating a cache has been cleared and delegate it
+     * to any relevant consumer.
+     *
+     * @param clearCacheResult The result of clearing a cache.
+     */
+    public void handleCacheCleared(ClearCacheResult<Long> clearCacheResult) {
+        var expectedId = clearCacheResult.getCacheId();
+        while (clearCacheObservers.iterator().hasNext()) {
+            var next = clearCacheObservers.iterator().next();
+            if (expectedId.equals(next.getId())) {
+                next.accept(clearCacheResult);
+                clearCacheObservers.iterator().remove();
+            }
+        }
+    }
+
+    /**
+     * Handle a message indicating a cache has been deleted and delegate it
+     * to any relevant consumer.
+     *
+     * @param deleteCacheResult The result of deleting a cache.
+     */
+    public void handleCacheDeleted(DeleteCacheResult<Long> deleteCacheResult) {
+        var expectedId = deleteCacheResult.getCacheId();
+        while (deleteCacheObservers.iterator().hasNext()) {
+            var next = deleteCacheObservers.iterator().next();
+            if (expectedId.equals(next.getId())) {
+                next.accept(deleteCacheResult);
+                deleteCacheObservers.iterator().remove();
+            }
+        }
     }
 }
