@@ -95,8 +95,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void addCacheEntryNonBlocking(AeronCluster cluster, long cacheId, String key, String value) {
-        publisher.addCacheEntryNonBlocking(cluster, cacheId, key, value);
+    public void addCacheEntry(AeronCluster cluster, long cacheId, String key, String value) {
+        publisher.addCacheEntry(cluster, cacheId, key, value);
     }
 
     @Override
@@ -118,12 +118,12 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
-        publisher.addCacheEntryNonBlocking(cluster, cacheId, key, value);
+        publisher.addCacheEntry(cluster, cacheId, key, value);
     }
 
     @Override
-    public void getCacheEntryNonBlocking(AeronCluster cluster, long cacheId, String key) {
-        publisher.getCacheEntryNonBlocking(cluster, cacheId, key);
+    public void getCacheEntry(AeronCluster cluster, long cacheId, String key) {
+        publisher.getCacheEntry(cluster, cacheId, key);
     }
 
     @Override
@@ -140,7 +140,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
-        publisher.getCacheEntryNonBlocking(cluster, cacheId, key);
+        publisher.getCacheEntry(cluster, cacheId, key);
     }
 
     @Override
@@ -149,8 +149,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void clearCacheNonBlocking(AeronCluster cluster, long cacheId) {
-        publisher.clearCacheNonBlocking(cluster, cacheId);
+    public void clearCache(AeronCluster cluster, long cacheId) {
+        publisher.clearCache(cluster, cacheId);
     }
 
     @Override
@@ -159,8 +159,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void deleteCacheNonBlocking(AeronCluster cluster, long cacheId) {
-        publisher.deleteCacheNonBlocking(cluster, cacheId);
+    public void deleteCache(AeronCluster cluster, long cacheId) {
+        publisher.deleteCache(cluster, cacheId);
     }
 
     @Override
@@ -182,12 +182,12 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
-        publisher.deleteCacheNonBlocking(cluster, cacheId);
+        publisher.deleteCache(cluster, cacheId);
     }
 
     @Override
-    public void removeCacheEntryNonBlocking(AeronCluster cluster, long cacheId, String key) {
-        publisher.removeCacheEntryNonBlocking(cluster, cacheId, key);
+    public void removeCacheEntry(AeronCluster cluster, long cacheId, String key) {
+        publisher.removeCacheEntry(cluster, cacheId, key);
     }
 
     @Override
@@ -209,7 +209,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
-        publisher.deleteCacheNonBlocking(cluster, cacheId);
+        publisher.deleteCache(cluster, cacheId);
     }
 
     /**

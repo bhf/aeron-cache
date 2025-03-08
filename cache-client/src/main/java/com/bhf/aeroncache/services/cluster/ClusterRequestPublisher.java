@@ -1,9 +1,6 @@
 package com.bhf.aeroncache.services.cluster;
 
-import com.bhf.aeroncache.models.results.*;
 import io.aeron.cluster.client.AeronCluster;
-
-import java.util.function.Consumer;
 
 /**
  * Encapsulates requests we want to send to the AeronCache cluster.
@@ -34,7 +31,7 @@ public interface ClusterRequestPublisher {
      * @param key     The key to use.
      * @param value   The value to use.
      */
-    void addCacheEntryNonBlocking(AeronCluster cluster, long cacheId, String key, String value);
+    void addCacheEntry(AeronCluster cluster, long cacheId, String key, String value);
 
     /**
      * Send a message to add a cache entry and block
@@ -54,7 +51,7 @@ public interface ClusterRequestPublisher {
      * @param cacheId The ID of the cache we're adding too.
      * @param key     The key to use.
      */
-    void getCacheEntryNonBlocking(AeronCluster cluster, long cacheId, String key);
+    void getCacheEntry(AeronCluster cluster, long cacheId, String key);
 
     /**
      * Send a message to get a cache entry synchronously.
@@ -71,7 +68,7 @@ public interface ClusterRequestPublisher {
      * @param cluster The Aeron Cluster instance to use.
      * @param cacheId The ID of the cache we're clearing out.
      */
-    void clearCacheNonBlocking(AeronCluster cluster, long cacheId);
+    void clearCache(AeronCluster cluster, long cacheId);
 
     /**
      * Send a message to clear a cache. Blocks until it gets a response.
@@ -87,7 +84,7 @@ public interface ClusterRequestPublisher {
      * @param cluster The Aeron Cluster instance to use.
      * @param cacheId The ID of the cache we're deleting.
      */
-    void deleteCacheNonBlocking(AeronCluster cluster, long cacheId);
+    void deleteCache(AeronCluster cluster, long cacheId);
 
     /**
      * Send a message to delete a cache in a blocking manner.
@@ -104,7 +101,7 @@ public interface ClusterRequestPublisher {
      * @param cacheId The ID of the cache we're removing an entry from.
      * @param key     The key of the entry we're removing.
      */
-    void removeCacheEntryNonBlocking(AeronCluster cluster, long cacheId, String key);
+    void removeCacheEntry(AeronCluster cluster, long cacheId, String key);
 
     /**
      * Send a message to remove a cache entry in a blocking manner.
