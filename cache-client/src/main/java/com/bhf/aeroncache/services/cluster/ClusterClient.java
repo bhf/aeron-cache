@@ -26,25 +26,19 @@ import java.util.function.Consumer;
 @Setter
 @Log4j2
 public class ClusterClient implements EgressListener {
-    private static final int KEEPALIVE_INTERVAL = 200;
-    private final MutableDirectBuffer msgBuffer = new ExpandableArrayBuffer();
+
 
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
 
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
+
     private final CacheCreatedDecoder cacheCreatedDecoder = new CacheCreatedDecoder();
-    private final CacheEntryResultDecoder getCacheEntryDecoder = new CacheEntryResultDecoder();
-    private final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
-    private final GetCacheEntryEncoder getCacheEntryEncoder = new GetCacheEntryEncoder();
-    private final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
-    private final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
-    private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
     private final CacheEntryCreatedDecoder addCacheEntryDecoder = new CacheEntryCreatedDecoder();
-    private final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
+    private final CacheEntryResultDecoder getCacheEntryDecoder = new CacheEntryResultDecoder();
     private final CacheClearedDecoder cacheClearedDecoder = new CacheClearedDecoder();
+    private final CacheDeletedDecoder cacheDeletedDecoder = new CacheDeletedDecoder();
+    private final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
 
     private final CreateCacheResult<Long> createCacheResult = new CreateCacheResult<>();
     private final AddCacheEntryResult<Long, String> addCacheEntryResult = new AddCacheEntryResult<>();
@@ -207,262 +201,12 @@ public class ClusterClient implements EgressListener {
      * @param offset THe offset at which to start decoding.
      */
     private void handleCacheDeleted(DirectBuffer buffer, int offset) {
-        CacheDeletedDecoder cacheDeletedDecoder = new CacheDeletedDecoder();
         cacheDeletedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheDeletedDecoder.cacheId();
         log.info("Got cache deleted on cache {}", cacheId);
         deleteCacheResult.clear();
         deleteCacheResult.setCacheId(cacheId);
         deleteCacheConsumer.accept(deleteCacheResult);
-    }
-
-    /**
-     * Send a message to create a cache instance.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache to create.
-     */
-    public void sendCreateCacheAsync(AeronCluster cluster, long cacheId) {
-        createCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId);
-        idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, createCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
-            idleStrategy.idle(cluster.pollEgress());
-        }
-        handleKeepAlive(cluster);
-        log.info("Sent create cache request");
-    }
-
-    static long lastKeepAlive = 0;
-
-    public static void handleKeepAlive(AeronCluster cluster) {
-        long now = System.currentTimeMillis();
-
-        if (now > lastKeepAlive + KEEPALIVE_INTERVAL) {
-            cluster.sendKeepAlive();
-            lastKeepAlive = now;
-        }
-    }
-
-    /**
-     * Synchronously send a message to create a cache instance.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache to create.
-     */
-    public void sendCreateCacheSync(AeronCluster cluster, long cacheId) {
-        sendCreateCacheAsync(cluster, cacheId);
-        waitForResult(cluster);
-    }
-
-    /**
-     * Synchronously send a message to create a cache instance.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache to create.
-     */
-    public void sendCreateCacheSync(AeronCluster cluster, long cacheId, Consumer<CreateCacheResult<Long>> consumer) {
-        setCreateCacheConsumer(consumer);
-        sendCreateCacheSync(cluster, cacheId);
-        setCreateCacheConsumer(null);
-    }
-
-    /**
-     * Send a message to add a cache entry.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're adding too.
-     * @param key     The key to use.
-     * @param value   The value to use.
-     */
-    public void addCacheEntryAsync(AeronCluster cluster, long cacheId, String key, String value) {
-        addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key).entryValue(value);
-        idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, addCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
-            idleStrategy.idle(cluster.pollEgress());
-        }
-        handleKeepAlive(cluster);
-    }
-
-    /**
-     * Send a message to add a cache entry synchronously.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're adding too.
-     * @param key     The key to use.
-     * @param value   The value to use.
-     */
-    public void addCacheEntrySync(AeronCluster cluster, long cacheId, String key, String value) {
-        addCacheEntryAsync(cluster, cacheId, key, value);
-        waitForResult(cluster);
-    }
-
-    /**
-     * Send a message to add a cache entry synchronously.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're adding too.
-     * @param key     The key to use.
-     * @param value   The value to use.
-     * @param c       The consumer that will handle the result.
-     */
-    public void addCacheEntrySync(AeronCluster cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<Long, String>> c) {
-        setAddCacheEntryConsumer(c);
-        addCacheEntrySync(cluster, cacheId, key, value);
-        setAddCacheEntryConsumer(null);
-    }
-
-    /**
-     * Send a message to get a cache entry.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're adding too.
-     * @param key     The key to use.
-     */
-    public void getCacheEntryAsync(AeronCluster cluster, long cacheId, String key) {
-        getCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key);
-        idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, getCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
-            idleStrategy.idle(cluster.pollEgress());
-        }
-        handleKeepAlive(cluster);
-    }
-
-    /**
-     * Send a message to get a cache entry synchronously.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're adding too.
-     * @param key     The key to use.
-     * @param c       The consumer to handle the result.
-     */
-    public void getCacheEntrySync(AeronCluster cluster, long cacheId, String key, Consumer<GetCacheEntryResult<Long, String, String>> c) {
-        setGetCacheEntryConsumer(c);
-        getCacheEntrySync(cluster, cacheId, key);
-        setGetCacheEntryConsumer(null);
-    }
-
-    /**
-     * Send a message to get a cache entry synchronously.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're adding too.
-     * @param key     The key to use.
-     */
-    public void getCacheEntrySync(AeronCluster cluster, long cacheId, String key) {
-        getCacheEntryAsync(cluster, cacheId, key);
-        waitForResult(cluster);
-    }
-
-    /**
-     * Send a message to clear a cache.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're clearing out.
-     */
-    public void clearCacheAsync(AeronCluster cluster, long cacheId) {
-        clearCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId);
-        idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, clearCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
-            idleStrategy.idle(cluster.pollEgress());
-        }
-        handleKeepAlive(cluster);
-    }
-
-    /**
-     * Send a message to clear a cache synchronously.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're clearing out.
-     */
-    public void clearCacheSync(AeronCluster cluster, long cacheId) {
-        clearCacheAsync(cluster, cacheId);
-        waitForResult(cluster);
-    }
-
-    /**
-     * Send a message to delete a cache.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're deleting.
-     */
-    public void deleteCacheAsync(AeronCluster cluster, long cacheId) {
-        deleteCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId);
-        idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, deleteCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
-            idleStrategy.idle(cluster.pollEgress());
-        }
-        handleKeepAlive(cluster);
-    }
-
-    /**
-     * Send a message to delete a cache synchronously.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're deleting.
-     */
-    public void deleteCacheSync(AeronCluster cluster, long cacheId) {
-        deleteCacheAsync(cluster, cacheId);
-        waitForResult(cluster);
-    }
-
-    /**
-     * Send a message to delete a cache synchronously.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're deleting.
-     */
-    public void deleteCacheSync(AeronCluster cluster, long cacheId, Consumer<DeleteCacheResult<Long>> consumer) {
-        setDeleteCacheConsumer(consumer);
-        deleteCacheSync(cluster, cacheId);
-        setDeleteCacheConsumer(null);
-    }
-
-    /**
-     * Send a message to remove a cache entry.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're removing an entry from.
-     * @param key     The key of the entry we're removing.
-     */
-    public void removeCacheEntryAsync(AeronCluster cluster, long cacheId, String key) {
-        removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key);
-        idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, removeCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
-            idleStrategy.idle(cluster.pollEgress());
-        }
-        handleKeepAlive(cluster);
-    }
-
-    /**
-     * Send a message to remove a cache entry synchronously.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're removing an entry from.
-     * @param key     The key of the entry we're removing.
-     */
-    public void removeCacheEntrySync(AeronCluster cluster, long cacheId, String key) {
-        removeCacheEntryAsync(cluster, cacheId, key);
-        waitForResult(cluster);
-    }
-
-    /**
-     * Send a message to remove a cache entry synchronously.
-     *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're removing an entry from.
-     * @param key     The key of the entry we're removing.
-     * @param c       The consumer that will handle the result.
-     */
-    public void removeCacheEntrySync(AeronCluster cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<Long, String>> c) {
-        setRemoveCacheEntryConsumer(c);
-        removeCacheEntrySync(cluster, cacheId, key);
-        setRemoveCacheEntryConsumer(null);
     }
 
     /**
@@ -494,38 +238,6 @@ public class ClusterClient implements EgressListener {
                 "cluster session ID " + clusterSessionId + ", ingress endpoints " + ingressEndpoints);
     }
 
-    /**
-     * Wait for results back from the cluster.
-     *
-     * @param cluster The Aeron Cluster.
-     */
-    private void waitForResult(AeronCluster cluster) {
-        pollEgressUntilMessage(this.getIdleStrategy(), cluster);
-        handleKeepAlive(cluster);
-    }
 
-    /**
-     * Poll the egress of the cluster.
-     *
-     * @param cluster The cluster to poll.
-     * @return Number of fragments processed.
-     */
-    int pollEgress(AeronCluster cluster) {
-        return null == cluster ? 0 : cluster.pollEgress();
-    }
-
-    /**
-     * Keep polling the egress till we get a message.
-     *
-     * @param idleStrategy The idle strategy to use.
-     * @param cluster      The cluster to poll.
-     */
-    void pollEgressUntilMessage(IdleStrategy idleStrategy, AeronCluster cluster) {
-        idleStrategy.reset();
-        while (pollEgress(cluster) <= 0) {
-            idleStrategy.idle();
-            handleKeepAlive(cluster);
-        }
-    }
 
 }

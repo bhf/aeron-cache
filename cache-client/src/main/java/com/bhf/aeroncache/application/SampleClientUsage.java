@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.services.cluster.ClusterClient;
+import com.bhf.aeroncache.services.cluster.ClusterMessagePublisher;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
@@ -49,32 +50,33 @@ public class SampleClientUsage {
     /**
      * Send messages to the cache cluster.
      *
-     * @param client  The cluster client egress listener.
-     * @param cluster The Aeron Cluster.
+     * @param client    The cluster client egress listener.
+     * @param cluster   The Aeron Cluster.
+     * @param publisher
      */
-    private static void sendMessagesToCache(ClusterClient client, AeronCluster cluster) {
+    private static void sendMessagesToCache(ClusterClient client, AeronCluster cluster, ClusterMessagePublisher publisher) {
         var cacheId = System.currentTimeMillis();
 
         System.out.println("Sending request to create cache " + cacheId);
-        client.sendCreateCacheSync(cluster, cacheId);
+        publisher.sendCreateCacheBlocking(cluster, cacheId);
 
         System.out.println("Sending request to add cache entry on cache " + cacheId);
-        client.addCacheEntrySync(cluster, cacheId, "key1", "{msgType: \"D\"}");
+        publisher.addCacheEntryBlocking(cluster, cacheId, "key1", "{msgType: \"D\"}");
 
         System.out.println("Sending request to get cache entry on cache " + cacheId);
-        client.getCacheEntrySync(cluster, cacheId, "key1");
+        publisher.getCacheEntryBlocking(cluster, cacheId, "key1");
 
         System.out.println("Sending request to remove cache entry on cache " + cacheId + " with key: key1");
-        client.removeCacheEntrySync(cluster, cacheId, "key1");
+        publisher.removeCacheEntryBlocking(cluster, cacheId, "key1");
 
         System.out.println("Sending request to get cache entry on cache " + cacheId);
-        client.getCacheEntrySync(cluster, cacheId, "key1");
+        publisher.getCacheEntryBlocking(cluster, cacheId, "key1");
 
         System.out.println("Sending request to clear cache on cache " + cacheId);
-        client.clearCacheSync(cluster, cacheId);
+        publisher.clearCacheBlocking(cluster, cacheId);
 
         System.out.println("Sending request to delete cache on cache " + cacheId);
-        client.deleteCacheSync(cluster, cacheId);
+        publisher.deleteCacheBlocking(cluster, cacheId);
     }
 
     public static void main(String[] args) {
@@ -100,8 +102,9 @@ public class SampleClientUsage {
                                 .ingressChannel("aeron:udp")
                                 .ingressEndpoints(ingressEndpoints))) {
 
+            ClusterMessagePublisher publisher = new ClusterMessagePublisher(client);
             while (true) {
-                sendMessagesToCache(client, aeronCluster);
+                sendMessagesToCache(client, aeronCluster, publisher);
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
