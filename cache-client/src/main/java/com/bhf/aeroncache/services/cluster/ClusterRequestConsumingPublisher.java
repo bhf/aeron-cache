@@ -6,7 +6,7 @@ import io.aeron.cluster.client.AeronCluster;
 import java.util.function.Consumer;
 
 /**
- * An interface for consuming the results of an AeronCache cluster request.
+ * An interface for sending and consuming the results of an AeronCache cluster request via Consumers.
  */
 public interface ClusterRequestConsumingPublisher {
     /**

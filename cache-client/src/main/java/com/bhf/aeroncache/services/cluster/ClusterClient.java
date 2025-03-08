@@ -26,7 +26,7 @@ import java.util.function.Consumer;
 public class ClusterClient implements EgressListener {
 
     @Setter
-    private ObservingClusterRequestPublisher observingPublisher;
+    private ObservingClusterRequestPublisher cacheResultsCallbacks;
 
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
@@ -90,8 +90,8 @@ public class ClusterClient implements EgressListener {
         getCacheEntryResult.setEntryKey(key);
         getCacheEntryResult.setEntryValue(value);
 
-        if (observingPublisher != null) {
-            observingPublisher.handleCacheEntryResult(getCacheEntryResult);
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheEntryResult(getCacheEntryResult);
         }
     }
 
@@ -108,8 +108,8 @@ public class ClusterClient implements EgressListener {
         createCacheResult.clear();
         createCacheResult.setCacheId(cacheId);
 
-        if (observingPublisher != null) {
-            observingPublisher.handleCacheCreated(createCacheResult);
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheCreated(createCacheResult);
         }
     }
 
@@ -129,8 +129,8 @@ public class ClusterClient implements EgressListener {
         addCacheEntryResult.setEntryKey(key);
         addCacheEntryResult.setCacheID(cacheId);
 
-        if (observingPublisher != null) {
-            observingPublisher.handleCacheEntryCreated(addCacheEntryResult);
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheEntryCreated(addCacheEntryResult);
         }
     }
 
@@ -149,8 +149,8 @@ public class ClusterClient implements EgressListener {
         removeCacheEntryResult.setKey(key);
         removeCacheEntryResult.setCacheId(cacheId);
 
-        if (observingPublisher != null) {
-            observingPublisher.handleCacheEntryRemoved(removeCacheEntryResult);
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheEntryRemoved(removeCacheEntryResult);
         }
     }
 
@@ -167,8 +167,8 @@ public class ClusterClient implements EgressListener {
         clearCacheResult.clear();
         clearCacheResult.setCacheId(cacheId);
 
-        if (observingPublisher != null) {
-            observingPublisher.handleCacheCleared(clearCacheResult);
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheCleared(clearCacheResult);
         }
     }
 
@@ -185,8 +185,8 @@ public class ClusterClient implements EgressListener {
         deleteCacheResult.clear();
         deleteCacheResult.setCacheId(cacheId);
 
-        if (observingPublisher != null) {
-            observingPublisher.handleCacheDeleted(deleteCacheResult);
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheDeleted(deleteCacheResult);
         }
     }
 

@@ -53,7 +53,7 @@ public class HttpApplication {
             publisher = new ClusterMessagePublisher();
             observingPublisher = new ObservingClusterRequestPublisher(publisher);
             client = new ClusterClient();
-            client.setObservingPublisher(observingPublisher);
+            client.setCacheResultsCallbacks(observingPublisher);
 
             var podName = System.getenv("POD_ADDRESS");
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
@@ -138,7 +138,7 @@ public class HttpApplication {
             context.status(HttpStatus.OK_200);
         }
         context.status(HttpStatus.SERVICE_UNAVAILABLE_503);
-        context.redirect("Ready");
+        context.result("Ready");
     }
 
     /**
@@ -150,7 +150,7 @@ public class HttpApplication {
             context.status(HttpStatus.OK_200);
         }
         context.status(HttpStatus.SERVICE_UNAVAILABLE_503);
-        context.redirect("Alive");
+        context.result("Alive");
     }
 
     /**

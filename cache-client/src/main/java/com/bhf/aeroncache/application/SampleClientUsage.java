@@ -90,7 +90,7 @@ public class SampleClientUsage {
         final var client = new ClusterClient();
         var publisher = new ClusterMessagePublisher();
         var observingPublisher = new ObservingClusterRequestPublisher(publisher);
-        client.setObservingPublisher(observingPublisher);
+        client.setCacheResultsCallbacks(observingPublisher);
         addConsumers(client, observingPublisher);
 
         try (
