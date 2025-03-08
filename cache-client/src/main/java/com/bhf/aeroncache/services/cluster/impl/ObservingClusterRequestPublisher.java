@@ -5,7 +5,6 @@ import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cluster.ClusterRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterRequestPublisher;
 import io.aeron.cluster.client.AeronCluster;
-import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,16 +19,15 @@ import java.util.function.Consumer;
  * use a CoW observer style approach after wrapping the consumer into an
  * {@link IdentifiableConsumer} with an internally generated Id.
  */
-@RequiredArgsConstructor
 public class ObservingClusterRequestPublisher implements ClusterRequestPublisher, ClusterRequestConsumingPublisher {
 
-    final ClusterMessagePublisher publisher;
-    final List<IdentifiableConsumer<String, CreateCacheResult<Long>>> createCacheObservers = new CopyOnWriteArrayList<>();
-    final List<IdentifiableConsumer<String, AddCacheEntryResult<Long, String>>> addCacheEntryObservers = new CopyOnWriteArrayList<>();
-    final List<IdentifiableConsumer<String, GetCacheEntryResult<Long, String, String>>> getCacheEntryObservers = new CopyOnWriteArrayList<>();
-    final List<IdentifiableConsumer<String, DeleteCacheResult<Long>>> deleteCacheObservers = new CopyOnWriteArrayList<>();
-    final List<IdentifiableConsumer<String, RemoveCacheEntryResult<Long, String>>> removeCacheEntryObservers = new CopyOnWriteArrayList<>();
-    final List<IdentifiableConsumer<String, ClearCacheResult<Long>>> clearCacheObservers = new CopyOnWriteArrayList<>();
+    private final ClusterMessagePublisher publisher = new ClusterMessagePublisher();
+    private final List<IdentifiableConsumer<String, CreateCacheResult<Long>>> createCacheObservers = new CopyOnWriteArrayList<>();
+    private final List<IdentifiableConsumer<String, AddCacheEntryResult<Long, String>>> addCacheEntryObservers = new CopyOnWriteArrayList<>();
+    private final List<IdentifiableConsumer<String, GetCacheEntryResult<Long, String, String>>> getCacheEntryObservers = new CopyOnWriteArrayList<>();
+    private final List<IdentifiableConsumer<String, DeleteCacheResult<Long>>> deleteCacheObservers = new CopyOnWriteArrayList<>();
+    private final List<IdentifiableConsumer<String, RemoveCacheEntryResult<Long, String>>> removeCacheEntryObservers = new CopyOnWriteArrayList<>();
+    private final List<IdentifiableConsumer<String, ClearCacheResult<Long>>> clearCacheObservers = new CopyOnWriteArrayList<>();
 
 
     private Consumer<CreateCacheResult<Long>> createCacheConsumer;

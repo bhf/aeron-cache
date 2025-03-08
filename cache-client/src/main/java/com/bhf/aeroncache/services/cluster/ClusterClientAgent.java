@@ -4,7 +4,10 @@ import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import io.aeron.cluster.client.AeronCluster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.MessageHandler;
+import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 /**
  * An {@link Agent} implementation of an AeronCache Client that is run
@@ -14,8 +17,8 @@ import org.agrona.concurrent.Agent;
 @RequiredArgsConstructor
 public class ClusterClientAgent implements Agent {
 
-    final ClusterMessagePublisher clusterMessagePublisher;
     final AeronCluster cluster;
+    final ManyToOneRingBuffer rb;
     private final int KEEPALIVE_INTERVAL = 200;
     long lastKeepAlive = 0;
 
@@ -34,7 +37,20 @@ public class ClusterClientAgent implements Agent {
      */
     @Override
     public int doWork() throws Exception {
+        handleKeepAlive(cluster);
+
+        // process the ManyToOneRingbuffer and offer messages to the cluster
+        processInboundMessages(rb);
         return 0;
+    }
+
+    private void processInboundMessages(ManyToOneRingBuffer rb) {
+        rb.read(new MessageHandler() {
+            @Override
+            public void onMessage(final int msgTypeId, final MutableDirectBuffer buffer, final int index, final int length) {
+                cluster.offer(buffer, index, length);
+            }
+        });
     }
 
     private void handleKeepAlive(AeronCluster cluster) {

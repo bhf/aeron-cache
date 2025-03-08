@@ -23,7 +23,7 @@ import java.util.function.Consumer;
  */
 @Setter
 @Log4j2
-public class ClusterClient implements EgressListener {
+public class AeronCacheListener implements EgressListener {
 
     @Setter
     private ObservingClusterRequestPublisher cacheResultsCallbacks;

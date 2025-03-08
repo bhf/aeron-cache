@@ -3,7 +3,7 @@ package com.bhf.aeroncache.http.application;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
-import com.bhf.aeroncache.services.cluster.ClusterClient;
+import com.bhf.aeroncache.services.cluster.AeronCacheListener;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
@@ -16,7 +16,10 @@ import io.javalin.http.Context;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.AgentRunner;
+import org.agrona.concurrent.AtomicBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.YieldingIdleStrategy;
+import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.eclipse.jetty.http.HttpStatus;
 import org.jetbrains.annotations.NotNull;
@@ -38,8 +41,7 @@ public class HttpApplication {
     private static final int PORT_BASE = 9000;
     private static final int PORTS_PER_NODE = 100;
     static final int CLIENT_FACING_PORT_OFFSET = 2;
-    private static ClusterClient client;
-    private static ClusterMessagePublisher publisher;
+    private static AeronCacheListener client;
     private static ObservingClusterRequestPublisher observingPublisher;
     private static AeronCluster cluster;
     private static AtomicBoolean clusterConnected = new AtomicBoolean(false);
@@ -50,9 +52,8 @@ public class HttpApplication {
 
         try {
             System.out.println("Starting AeronCache Cluster Interface");
-            publisher = new ClusterMessagePublisher();
-            observingPublisher = new ObservingClusterRequestPublisher(publisher);
-            client = new ClusterClient();
+            observingPublisher = new ObservingClusterRequestPublisher();
+            client = new AeronCacheListener();
             client.setCacheResultsCallbacks(observingPublisher);
 
             var podName = System.getenv("POD_ADDRESS");
@@ -74,7 +75,8 @@ public class HttpApplication {
             cluster = buildClusterConnection(egressIP, ingressEndpoints);
 
             System.out.println("Building cluster agent");
-            ClusterClientAgent agent = new ClusterClientAgent(publisher, cluster);
+            ManyToOneRingBuffer rb = buildRingbuffer();
+            ClusterClientAgent agent = new ClusterClientAgent(cluster, rb);
             ErrorHandler errorHandler = getAgentRunnerErrorHandler();
             AtomicCounter errorCounter = getAgentErrorCounter();
             AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
@@ -83,6 +85,11 @@ public class HttpApplication {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static ManyToOneRingBuffer buildRingbuffer() {
+        AtomicBuffer buffer = new UnsafeBuffer();
+        return new ManyToOneRingBuffer(buffer);
     }
 
     private static AtomicCounter getAgentErrorCounter() {
