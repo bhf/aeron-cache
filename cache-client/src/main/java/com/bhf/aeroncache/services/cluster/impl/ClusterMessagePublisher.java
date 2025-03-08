@@ -18,13 +18,13 @@ import org.agrona.concurrent.IdleStrategy;
 @Setter
 @Log4j2
 public class ClusterMessagePublisher implements ClusterRequestPublisher {
-    private static final int KEEPALIVE_INTERVAL = 200;
+
     private final MutableDirectBuffer msgBuffer = new ExpandableArrayBuffer();
 
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
 
+    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
     private final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
     private final GetCacheEntryEncoder getCacheEntryEncoder = new GetCacheEntryEncoder();
@@ -32,7 +32,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     private final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
     private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
 
-    static long lastKeepAlive = 0;
 
     @Override
     public void sendCreateCache(AeronCluster cluster, long cacheId) {
@@ -42,17 +41,7 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         while (cluster.offer(msgBuffer, 0, createCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        handleKeepAlive(cluster);
         log.info("Sent create cache request");
-    }
-
-    public static void handleKeepAlive(AeronCluster cluster) {
-        long now = System.currentTimeMillis();
-
-        if (now > lastKeepAlive + KEEPALIVE_INTERVAL) {
-            cluster.sendKeepAlive();
-            lastKeepAlive = now;
-        }
     }
 
     @Override
@@ -69,7 +58,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         while (cluster.offer(msgBuffer, 0, addCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        handleKeepAlive(cluster);
     }
 
     @Override
@@ -86,7 +74,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         while (cluster.offer(msgBuffer, 0, getCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        handleKeepAlive(cluster);
     }
 
     @Override
@@ -103,7 +90,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         while (cluster.offer(msgBuffer, 0, clearCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        handleKeepAlive(cluster);
     }
 
     @Override
@@ -120,7 +106,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         while (cluster.offer(msgBuffer, 0, deleteCacheEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        handleKeepAlive(cluster);
     }
 
     @Override
@@ -137,7 +122,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         while (cluster.offer(msgBuffer, 0, removeCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
-        handleKeepAlive(cluster);
     }
 
     @Override
@@ -153,7 +137,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
      */
     private void waitForResult(AeronCluster cluster) {
         pollEgressUntilMessage(this.getIdleStrategy(), cluster);
-        handleKeepAlive(cluster);
     }
 
     /**
@@ -176,7 +159,6 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         idleStrategy.reset();
         while (pollEgress(cluster) <= 0) {
             idleStrategy.idle();
-            handleKeepAlive(cluster);
         }
     }
 }

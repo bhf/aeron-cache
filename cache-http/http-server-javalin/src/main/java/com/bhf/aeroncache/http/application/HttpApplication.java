@@ -4,6 +4,7 @@ import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.services.cluster.ClusterClient;
+import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.utils.DNSUtils;
@@ -13,15 +14,18 @@ import io.aeron.driver.ThreadingMode;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import lombok.extern.log4j.Log4j2;
+import org.agrona.ErrorHandler;
+import org.agrona.concurrent.AgentRunner;
+import org.agrona.concurrent.YieldingIdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import org.eclipse.jetty.http.HttpStatus;
+import org.jetbrains.annotations.NotNull;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Log4j2
@@ -29,10 +33,8 @@ public class HttpApplication {
 
     private static final int PORT = 7070;
     private static final String API_PREFIX = "/api/v1/cache/";
-
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
-
     private static final int PORT_BASE = 9000;
     private static final int PORTS_PER_NODE = 100;
     static final int CLIENT_FACING_PORT_OFFSET = 2;
@@ -40,11 +42,9 @@ public class HttpApplication {
     private static ClusterMessagePublisher publisher;
     private static ObservingClusterRequestPublisher observingPublisher;
     private static AeronCluster cluster;
-
     private static AtomicBoolean clusterConnected = new AtomicBoolean(false);
 
     public static void main(String[] args) {
-
         System.out.println("Starting HTTP interface");
         var app = startHTTPServer();
 
@@ -66,26 +66,33 @@ public class HttpApplication {
             final var ingressEndpoints = ingressEndpoints(hostArray);
 
             System.out.println("Awaiting DNS Resolution");
-
             for (int i = 0; i < hostArray.size(); i++) {
                 DNSUtils.awaitDnsResolution(hostArray, i);
             }
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
             cluster = buildClusterConnection(egressIP, ingressEndpoints);
-            setupKeepAlive();
+
+            System.out.println("Building cluster agent");
+            ClusterClientAgent agent = new ClusterClientAgent(publisher, cluster);
+            ErrorHandler errorHandler = getAgentRunnerErrorHandler();
+            AtomicCounter errorCounter = getAgentErrorCounter();
+            AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
             clusterConnected.set(true);
+            runner.run();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    /**
-     * Send keep alive messages - check if this is the idiomatic way
-     * to keep the session from timing out.
-     */
-    private static void setupKeepAlive() {
-        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> ClusterMessagePublisher.handleKeepAlive(cluster), 200, 200, TimeUnit.MILLISECONDS);
+    private static AtomicCounter getAgentErrorCounter() {
+        return cluster.context().aeron().addCounter(1, "AeronCacheAgent");
+    }
+
+    @NotNull
+    private static ErrorHandler getAgentRunnerErrorHandler() {
+        //return new RethrowingErrorHandler();
+        return cluster.context().errorHandler();
     }
 
     /**
@@ -131,6 +138,7 @@ public class HttpApplication {
 
     /**
      * Is the application ready to process requests.
+     *
      * @param context The context.
      */
     private static void handleGetReadiness(Context context) {
@@ -143,6 +151,7 @@ public class HttpApplication {
 
     /**
      * Is the application live and running.
+     *
      * @param context The context.
      */
     private static void handleGetLiveness(Context context) {
