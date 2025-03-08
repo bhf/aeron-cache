@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.services.cluster.ClusterClient;
-import com.bhf.aeroncache.services.cluster.ClusterMessagePublisher;
+import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;

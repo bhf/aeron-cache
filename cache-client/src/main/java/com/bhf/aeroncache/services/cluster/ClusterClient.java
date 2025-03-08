@@ -2,7 +2,6 @@ package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
-import io.aeron.cluster.client.AeronCluster;
 import io.aeron.cluster.client.EgressListener;
 import io.aeron.cluster.codecs.EventCode;
 import io.aeron.logbuffer.Header;
@@ -10,8 +9,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
-import org.agrona.ExpandableArrayBuffer;
-import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
 
@@ -26,7 +23,6 @@ import java.util.function.Consumer;
 @Setter
 @Log4j2
 public class ClusterClient implements EgressListener {
-
 
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
@@ -237,7 +233,5 @@ public class ClusterClient implements EgressListener {
         log.info("Got new cluster leader, leaderID " + leaderMemberId + ", leader term Id " + leadershipTermId + ", " +
                 "cluster session ID " + clusterSessionId + ", ingress endpoints " + ingressEndpoints);
     }
-
-
 
 }

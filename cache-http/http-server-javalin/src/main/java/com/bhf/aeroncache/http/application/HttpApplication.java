@@ -4,7 +4,7 @@ import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.services.cluster.ClusterClient;
-import com.bhf.aeroncache.services.cluster.ClusterMessagePublisher;
+import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.utils.DNSUtils;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
