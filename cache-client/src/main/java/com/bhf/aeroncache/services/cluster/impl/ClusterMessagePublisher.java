@@ -66,6 +66,12 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         publishAddCachEntry(cluster, addCacheEntryEncoder, headerEncoder);
     }
 
+    /**
+     * Publish the request to add a cache entry to the cluster.
+     * @param cluster The cluster to publish too.
+     * @param addCacheEntry The add cache entry message encoded.
+     * @param header The message header.
+     */
     void publishAddCachEntry(AeronCluster cluster, AddCacheEntryEncoder addCacheEntry, MessageHeaderEncoder header) {
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, addCacheEntry.encodedLength() + header.encodedLength()) < 0) {
@@ -86,6 +92,12 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         publishGetCacheEntry(cluster, getCacheEntryEncoder, headerEncoder);
     }
 
+    /**
+     * Publish a request to get an entry from the cluster.
+     * @param cluster The cluster to get from.
+     * @param getCacheEntry The encoded get entry request.
+     * @param header The message header.
+     */
     void publishGetCacheEntry(AeronCluster cluster, GetCacheEntryEncoder getCacheEntry, MessageHeaderEncoder header) {
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, getCacheEntryEncoder.encodedLength() + header.encodedLength()) < 0) {
@@ -105,6 +117,12 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         publishClearCache(cluster, clearCacheEncoder, headerEncoder);
     }
 
+    /**
+     * Publish a request to clear a cache.
+     * @param cluster The cluster on which the cache resides.
+     * @param clearCache The encoded request to clear a cache.
+     * @param header The message header.
+     */
     void publishClearCache(AeronCluster cluster, ClearCacheEncoder clearCache, MessageHeaderEncoder header) {
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, clearCache.encodedLength() + header.encodedLength()) < 0) {
@@ -125,6 +143,12 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         publishDeleteCache(cluster, deleteCacheEncoder, headerEncoder);
     }
 
+    /**
+     * Publish a request to delete an entire cache.
+     * @param cluster The cluster on which the cache resides.
+     * @param deleteCache The encoded request to delete a cache.
+     * @param header The message header.
+     */
     void publishDeleteCache(AeronCluster cluster, DeleteCacheEncoder deleteCache, MessageHeaderEncoder header) {
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, deleteCache.encodedLength() + header.encodedLength()) < 0) {
@@ -145,6 +169,12 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         publishRemoveCacheEntry(cluster, removeCacheEntryEncoder, headerEncoder);
     }
 
+    /**
+     * Publish a request to remove a cache entry.
+     * @param cluster The cluster on which the cache resides.
+     * @param removeCacheEntry The encoded request to remove a cache entry.
+     * @param header The message header.
+     */
     void publishRemoveCacheEntry(AeronCluster cluster, RemoveCacheEntryEncoder removeCacheEntry, MessageHeaderEncoder header) {
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, removeCacheEntry.encodedLength() + header.encodedLength()) < 0) {

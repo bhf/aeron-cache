@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.services.cluster.AeronCacheListener;
+import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
@@ -87,7 +88,7 @@ public class SampleClientUsage {
         final var ingressEndpoints = ingressEndpoints(Arrays.asList(hostnames));
 
         final var client = new AeronCacheListener();
-        var observingPublisher = new ObservingClusterRequestPublisher();
+        var observingPublisher = new ObservingClusterRequestPublisher(new ClusterMessagePublisher());
         client.setCacheResultsCallbacks(observingPublisher);
         addConsumers(client, observingPublisher);
 

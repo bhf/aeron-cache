@@ -1,13 +1,15 @@
 package com.bhf.aeroncache.services.cluster;
 
-import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import io.aeron.cluster.client.AeronCluster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.MessageHandler;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * An {@link Agent} implementation of an AeronCache Client that is run
@@ -19,6 +21,8 @@ public class ClusterClientAgent implements Agent {
 
     final AeronCluster cluster;
     final ManyToOneRingBuffer rb;
+    final IdleStrategy idleStrategy;
+    final AtomicBoolean isEnabled = new AtomicBoolean(true);
     private final int KEEPALIVE_INTERVAL = 200;
     long lastKeepAlive = 0;
 
@@ -37,10 +41,13 @@ public class ClusterClientAgent implements Agent {
      */
     @Override
     public int doWork() throws Exception {
-        handleKeepAlive(cluster);
+        while(isEnabled.get()){
+            handleKeepAlive(cluster);
+            processInboundMessages(rb);
+            cluster.pollEgress();
+            idleStrategy.idle();
+        }
 
-        // process the ManyToOneRingbuffer and offer messages to the cluster
-        processInboundMessages(rb);
         return 0;
     }
 

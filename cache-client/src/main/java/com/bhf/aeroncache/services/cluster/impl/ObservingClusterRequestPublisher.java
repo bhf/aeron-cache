@@ -5,6 +5,7 @@ import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cluster.ClusterRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterRequestPublisher;
 import io.aeron.cluster.client.AeronCluster;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,9 +20,10 @@ import java.util.function.Consumer;
  * use a CoW observer style approach after wrapping the consumer into an
  * {@link IdentifiableConsumer} with an internally generated Id.
  */
+@RequiredArgsConstructor
 public class ObservingClusterRequestPublisher implements ClusterRequestPublisher, ClusterRequestConsumingPublisher {
 
-    private final ClusterMessagePublisher publisher = new ClusterMessagePublisher();
+    private final ClusterMessagePublisher publisher;
     private final List<IdentifiableConsumer<String, CreateCacheResult<Long>>> createCacheObservers = new CopyOnWriteArrayList<>();
     private final List<IdentifiableConsumer<String, AddCacheEntryResult<Long, String>>> addCacheEntryObservers = new CopyOnWriteArrayList<>();
     private final List<IdentifiableConsumer<String, GetCacheEntryResult<Long, String, String>>> getCacheEntryObservers = new CopyOnWriteArrayList<>();

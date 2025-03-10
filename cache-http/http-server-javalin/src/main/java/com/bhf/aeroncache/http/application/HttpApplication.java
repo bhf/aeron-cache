@@ -5,6 +5,7 @@ import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.services.cluster.AeronCacheListener;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
+import com.bhf.aeroncache.services.cluster.impl.AgentRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.utils.DNSUtils;
@@ -15,11 +16,10 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.AgentRunner;
-import org.agrona.concurrent.AtomicBuffer;
-import org.agrona.concurrent.UnsafeBuffer;
-import org.agrona.concurrent.YieldingIdleStrategy;
+import org.agrona.ExpandableDirectByteBuffer;
+import org.agrona.concurrent.*;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
+import org.agrona.concurrent.ringbuffer.RingBufferDescriptor;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.eclipse.jetty.http.HttpStatus;
 import org.jetbrains.annotations.NotNull;
@@ -51,8 +51,9 @@ public class HttpApplication {
         var app = startHTTPServer();
 
         try {
+            ManyToOneRingBuffer rb = buildRingbuffer();
             System.out.println("Starting AeronCache Cluster Interface");
-            observingPublisher = new ObservingClusterRequestPublisher();
+            observingPublisher = new ObservingClusterRequestPublisher(new AgentRequestPublisher(rb));
             client = new AeronCacheListener();
             client.setCacheResultsCallbacks(observingPublisher);
 
@@ -75,20 +76,21 @@ public class HttpApplication {
             cluster = buildClusterConnection(egressIP, ingressEndpoints);
 
             System.out.println("Building cluster agent");
-            ManyToOneRingBuffer rb = buildRingbuffer();
-            ClusterClientAgent agent = new ClusterClientAgent(cluster, rb);
-            ErrorHandler errorHandler = getAgentRunnerErrorHandler();
-            AtomicCounter errorCounter = getAgentErrorCounter();
+            var idleStrategy = new BackoffIdleStrategy();
+            ClusterClientAgent agent = new ClusterClientAgent(cluster, rb, idleStrategy);
+            var errorHandler = getAgentRunnerErrorHandler();
+            var errorCounter = getAgentErrorCounter();
             AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
             clusterConnected.set(true);
-            runner.run();
+            AgentRunner.startOnThread(runner);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     private static ManyToOneRingBuffer buildRingbuffer() {
-        AtomicBuffer buffer = new UnsafeBuffer();
+        var bufferSize = 4096 + RingBufferDescriptor.TRAILER_LENGTH;
+        AtomicBuffer buffer = new UnsafeBuffer(new ExpandableDirectByteBuffer(bufferSize));
         return new ManyToOneRingBuffer(buffer);
     }
 

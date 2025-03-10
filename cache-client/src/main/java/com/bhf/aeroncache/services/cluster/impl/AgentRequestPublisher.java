@@ -21,26 +21,46 @@ public class AgentRequestPublisher extends ClusterMessagePublisher {
 
     @Override
     public void publishCreateCache(AeronCluster cluster, CreateCacheEncoder createCache, MessageHeaderEncoder header) {
-        rb.write(0, createCache.buffer(), 0, createCache.encodedLength()+header.encodedLength());
+        var msgLength = createCache.encodedLength() + header.encodedLength();
+        var index = rb.tryClaim(createCache.sbeTemplateId(), msgLength);
+        var destBuffer = rb.buffer();
+        destBuffer.putBytes(index, createCache.buffer(), 0, msgLength);
+        rb.commit(index);
     }
 
     @Override
     void publishGetCacheEntry(AeronCluster cluster, GetCacheEntryEncoder getCacheEntry, MessageHeaderEncoder header) {
-        rb.write(0, getCacheEntry.buffer(), 0, getCacheEntry.encodedLength()+header.encodedLength());
+        var msgLength = getCacheEntry.encodedLength() + header.encodedLength();
+        var index = rb.tryClaim(getCacheEntry.sbeTemplateId(), msgLength);
+        var destBuffer = rb.buffer();
+        destBuffer.putBytes(index, getCacheEntry.buffer(), 0, msgLength);
+        rb.commit(index);
     }
 
     @Override
     void publishClearCache(AeronCluster cluster, ClearCacheEncoder clearCache, MessageHeaderEncoder header) {
-        rb.write(0, clearCache.buffer(), 0, clearCache.encodedLength()+header.encodedLength());
+        var msgLength = clearCache.encodedLength() + header.encodedLength();
+        var index = rb.tryClaim(clearCache.sbeTemplateId(), msgLength);
+        var destBuffer = rb.buffer();
+        destBuffer.putBytes(index, clearCache.buffer(), 0, msgLength);
+        rb.commit(index);
     }
 
     @Override
     void publishDeleteCache(AeronCluster cluster, DeleteCacheEncoder deleteCache, MessageHeaderEncoder header) {
-        rb.write(0, deleteCache.buffer(), 0, deleteCache.encodedLength()+header.encodedLength());
+        var msgLength = deleteCache.encodedLength() + header.encodedLength();
+        var index = rb.tryClaim(deleteCache.sbeTemplateId(), msgLength);
+        var destBuffer = rb.buffer();
+        destBuffer.putBytes(index, deleteCache.buffer(), 0, msgLength);
+        rb.commit(index);
     }
 
     @Override
     void publishRemoveCacheEntry(AeronCluster cluster, RemoveCacheEntryEncoder removeCacheEntry, MessageHeaderEncoder header) {
-        rb.write(0, removeCacheEntry.buffer(), 0, removeCacheEntry.encodedLength()+header.encodedLength());
+        var msgLength = removeCacheEntry.encodedLength() + header.encodedLength();
+        var index = rb.tryClaim(removeCacheEntry.sbeTemplateId(), msgLength);
+        var destBuffer = rb.buffer();
+        destBuffer.putBytes(index, removeCacheEntry.buffer(), 0, msgLength);
+        rb.commit(index);
     }
 }
