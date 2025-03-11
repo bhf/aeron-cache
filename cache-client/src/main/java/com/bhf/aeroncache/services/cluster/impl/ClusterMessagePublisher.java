@@ -33,15 +33,15 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
 
     @Override
-    public void sendCreateCacheBlocking(AeronCluster cluster, long cacheId) {
-        sendCreateCache(cluster, cacheId);
+    public void sendCreateCacheBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        sendCreateCache(cluster, requestId, cacheId);
         waitForResult(cluster);
     }
 
     @Override
-    public void sendCreateCache(AeronCluster cluster, long cacheId) {
+    public void sendCreateCache(AeronCluster cluster, String requestId, long cacheId) {
         createCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId);
+                .cacheId(cacheId).requestId(requestId);
         publishCreateCache(cluster, createCacheEncoder, headerEncoder);
         log.info("Sent create cache request");
     }
@@ -54,15 +54,15 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     }
 
     @Override
-    public void addCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, String value) {
-        addCacheEntry(cluster, cacheId, key, value);
+    public void addCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key, String value) {
+        addCacheEntry(cluster, requestId, cacheId, key, value);
         waitForResult(cluster);
     }
 
     @Override
-    public void addCacheEntry(AeronCluster cluster, long cacheId, String key, String value) {
+    public void addCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key, String value) {
         addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key).entryValue(value);
+                .cacheId(cacheId).key(key).entryValue(value).requestId(requestId);
         publishAddCachEntry(cluster, addCacheEntryEncoder, headerEncoder);
     }
 
@@ -80,15 +80,15 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     }
 
     @Override
-    public void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key) {
-        getCacheEntry(cluster, cacheId, key);
+    public void getCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key) {
+        getCacheEntry(cluster, requestId, cacheId, key);
         waitForResult(cluster);
     }
 
     @Override
-    public void getCacheEntry(AeronCluster cluster, long cacheId, String key) {
+    public void getCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key) {
         getCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key);
+                .cacheId(cacheId).key(key).requestId(requestId);
         publishGetCacheEntry(cluster, getCacheEntryEncoder, headerEncoder);
     }
 
@@ -106,14 +106,14 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     }
 
     @Override
-    public void clearCacheBlocking(AeronCluster cluster, long cacheId) {
-        clearCache(cluster, cacheId);
+    public void clearCacheBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        clearCache(cluster, requestId, cacheId);
         waitForResult(cluster);
     }
     @Override
-    public void clearCache(AeronCluster cluster, long cacheId) {
+    public void clearCache(AeronCluster cluster, String requestId, long cacheId) {
         clearCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId);
+                .cacheId(cacheId).requestId(requestId);
         publishClearCache(cluster, clearCacheEncoder, headerEncoder);
     }
 
@@ -131,15 +131,15 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     }
 
     @Override
-    public void deleteCacheBlocking(AeronCluster cluster, long cacheId) {
-        deleteCache(cluster, cacheId);
+    public void deleteCacheBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        deleteCache(cluster, requestId, cacheId);
         waitForResult(cluster);
     }
 
     @Override
-    public void deleteCache(AeronCluster cluster, long cacheId) {
+    public void deleteCache(AeronCluster cluster, String requestId, long cacheId) {
         deleteCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId);
+                .cacheId(cacheId).requestId(requestId);
         publishDeleteCache(cluster, deleteCacheEncoder, headerEncoder);
     }
 
@@ -157,15 +157,15 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     }
 
     @Override
-    public void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key) {
-        removeCacheEntry(cluster, cacheId, key);
+    public void removeCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key) {
+        removeCacheEntry(cluster, requestId, cacheId, key);
         waitForResult(cluster);
     }
 
     @Override
-    public void removeCacheEntry(AeronCluster cluster, long cacheId, String key) {
+    public void removeCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key) {
         removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key);
+                .cacheId(cacheId).key(key).requestId(requestId);
         publishRemoveCacheEntry(cluster, removeCacheEntryEncoder, headerEncoder);
     }
 

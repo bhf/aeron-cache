@@ -9,6 +9,7 @@ import io.aeron.driver.ThreadingMode;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import static com.bhf.aeroncache.application.ClusterNodeApplication.calculatePort;
 
@@ -59,25 +60,25 @@ public class SampleClientUsage {
         var cacheId = System.currentTimeMillis();
 
         System.out.println("Sending request to create cache " + cacheId);
-        publisher.sendCreateCacheBlocking(cluster, cacheId);
+        publisher.sendCreateCacheBlocking(cluster, UUID.randomUUID().toString(), cacheId);
 
         System.out.println("Sending request to add cache entry on cache " + cacheId);
-        publisher.addCacheEntryBlocking(cluster, cacheId, "key1", "{msgType: \"D\"}");
+        publisher.addCacheEntryBlocking(cluster, UUID.randomUUID().toString(), cacheId, "key1", "{msgType: \"D\"}");
 
         System.out.println("Sending request to get cache entry on cache " + cacheId);
-        publisher.getCacheEntryBlocking(cluster, cacheId, "key1");
+        publisher.getCacheEntryBlocking(cluster, UUID.randomUUID().toString(), cacheId, "key1");
 
         System.out.println("Sending request to remove cache entry on cache " + cacheId + " with key: key1");
-        publisher.removeCacheEntryBlocking(cluster, cacheId, "key1");
+        publisher.removeCacheEntryBlocking(cluster, UUID.randomUUID().toString(), cacheId, "key1");
 
         System.out.println("Sending request to get cache entry on cache " + cacheId);
-        publisher.getCacheEntryBlocking(cluster, cacheId, "key1");
+        publisher.getCacheEntryBlocking(cluster, UUID.randomUUID().toString(), cacheId, "key1");
 
         System.out.println("Sending request to clear cache on cache " + cacheId);
-        publisher.clearCacheBlocking(cluster, cacheId);
+        publisher.clearCacheBlocking(cluster, UUID.randomUUID().toString(), cacheId);
 
         System.out.println("Sending request to delete cache on cache " + cacheId);
-        publisher.deleteCacheBlocking(cluster, cacheId);
+        publisher.deleteCacheBlocking(cluster, UUID.randomUUID().toString(), cacheId);
     }
 
     public static void main(String[] args) {

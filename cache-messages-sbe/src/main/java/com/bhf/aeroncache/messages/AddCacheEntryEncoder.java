@@ -156,9 +156,93 @@ public final class AddCacheEntryEncoder
     }
 
 
+    public static int requestIdId()
+    {
+        return 3;
+    }
+
+    public static String requestIdCharacterEncoding()
+    {
+        return "UTF-8";
+    }
+
+    public static String requestIdMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public static int requestIdHeaderLength()
+    {
+        return 4;
+    }
+
+    public AddCacheEntryEncoder putRequestId(final DirectBuffer src, final int srcOffset, final int length)
+    {
+        if (length > 1073741824)
+        {
+            throw new IllegalStateException("length > maxValue for type: " + length);
+        }
+
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        parentMessage.limit(limit + headerLength + length);
+        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+        return this;
+    }
+
+    public AddCacheEntryEncoder putRequestId(final byte[] src, final int srcOffset, final int length)
+    {
+        if (length > 1073741824)
+        {
+            throw new IllegalStateException("length > maxValue for type: " + length);
+        }
+
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        parentMessage.limit(limit + headerLength + length);
+        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+        return this;
+    }
+
+    public AddCacheEntryEncoder requestId(final String value)
+    {
+        final byte[] bytes;
+        try
+        {
+            bytes = null == value || value.isEmpty() ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes("UTF-8");
+        }
+        catch (final java.io.UnsupportedEncodingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+
+        final int length = bytes.length;
+        if (length > 1073741824)
+        {
+            throw new IllegalStateException("length > maxValue for type: " + length);
+        }
+
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        parentMessage.limit(limit + headerLength + length);
+        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putBytes(limit + headerLength, bytes, 0, length);
+
+        return this;
+    }
+
     public static int keyId()
     {
-        return 2;
+        return 4;
     }
 
     public static String keyCharacterEncoding()
@@ -242,7 +326,7 @@ public final class AddCacheEntryEncoder
 
     public static int entryValueId()
     {
-        return 3;
+        return 5;
     }
 
     public static String entryValueCharacterEncoding()

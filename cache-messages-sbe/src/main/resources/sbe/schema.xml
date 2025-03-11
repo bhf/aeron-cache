@@ -41,62 +41,73 @@
     <sbe:message name="CreateCache" id="1" semanticType="CreateCache"
                  description="Create a cache">
         <field name="cacheId" id="1" type="CacheId"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="DeleteCache" id="2" semanticType="DeleteCache"
                  description="Delete a cache">
         <field name="cacheId" id="1" type="CacheId"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="ClearCache" id="3" semanticType="ClearCache"
                  description="Clear a cache">
         <field name="cacheId" id="1" type="CacheId"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="AddCacheEntry" id="4" semanticType="AddCacheEntry"
                  description="Add an entry too a cache">
         <field name="cacheId" id="1" type="CacheId"/>
-        <data name="key" id="2" type="varStringEncoding"/>
-        <data name="entryValue" id="3" type="varStringEncoding"/>
+        <data name="requestId" id="3" type="varStringEncoding"/>
+        <data name="key" id="4" type="varStringEncoding"/>
+        <data name="entryValue" id="5" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="RemoveCacheEntry" id="5" semanticType="RemoveCacheEntry"
                  description="Remove an entry from a cache">
         <field name="cacheId" id="1" type="CacheId"/>
-        <data name="key" id="2" type="varStringEncoding"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
+        <data name="key" id="3" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="CacheCreated" id="6" semanticType="CacheCreated"
                  description="The ID of a created cache">
         <field name="cacheId" id="1" type="CacheId"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="CacheEntryCreated" id="7" semanticType="CacheEntryCreated"
                  description="An entry has been added to the cache">
         <field name="cacheId" id="1" type="CacheId"/>
         <data name="key" id="2" type="varStringEncoding"/>
+        <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="CacheEntryRemoved" id="8" semanticType="CacheEntryRemoved"
                  description="An entry has been removed from the cache">
         <field name="cacheId" id="1" type="CacheId"/>
         <data name="key" id="2" type="varStringEncoding"/>
+        <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="CacheCleared" id="9" semanticType="CacheCleared"
                  description="A cache has been cleared">
         <field name="cacheId" id="1" type="CacheId"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="CacheDeleted" id="10" semanticType="CacheDeleted"
                  description="A cache has been deleted">
         <field name="cacheId" id="1" type="CacheId"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="GetCacheEntry" id="11" semanticType="GetCacheEntry"
                  description="Get a specific cache entry">
         <field name="cacheId" id="1" type="CacheId"/>
         <data name="key" id="2" type="varStringEncoding"/>
+        <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="CacheEntryResult" id="12" semanticType="CacheEntryResult"
@@ -104,6 +115,7 @@
         <field name="cacheId" id="1" type="CacheId"/>
         <data name="key" id="2" type="varStringEncoding"/>
         <data name="value" id="3" type="varStringEncoding"/>
+        <data name="requestId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
 </sbe:messageSchema>

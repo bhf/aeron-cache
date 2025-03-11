@@ -70,21 +70,22 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void sendCreateCache(AeronCluster cluster, long cacheId) {
-        publisher.sendCreateCache(cluster, cacheId);
+    public void sendCreateCache(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.sendCreateCache(cluster, requestId, cacheId);
     }
 
     @Override
-    public void sendCreateCacheBlocking(AeronCluster cluster, long cacheId) {
-        publisher.sendCreateCacheBlocking(cluster, cacheId);
+    public void sendCreateCacheBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.sendCreateCacheBlocking(cluster, requestId, cacheId);
     }
 
     @Override
     public void sendCreateCacheBlocking(AeronCluster cluster, long cacheId, Consumer<CreateCacheResult<Long>> consumer) {
+        var requestId = UUID.randomUUID().toString();
         createCacheObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
-                return UUID.randomUUID().toString();
+                return requestId;
             }
 
             @Override
@@ -93,25 +94,26 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
-        publisher.sendCreateCache(cluster, cacheId);
+        publisher.sendCreateCache(cluster, requestId, cacheId);
     }
 
     @Override
-    public void addCacheEntry(AeronCluster cluster, long cacheId, String key, String value) {
-        publisher.addCacheEntry(cluster, cacheId, key, value);
+    public void addCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key, String value) {
+        publisher.addCacheEntry(cluster, requestId, cacheId, key, value);
     }
 
     @Override
-    public void addCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, String value) {
-        publisher.addCacheEntryBlocking(cluster, cacheId, key, value);
+    public void addCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key, String value) {
+        publisher.addCacheEntryBlocking(cluster, requestId, cacheId, key, value);
     }
 
     @Override
     public void addCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<Long, String>> consumer) {
+        var requestId = UUID.randomUUID().toString();
         addCacheEntryObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
-                return UUID.randomUUID().toString();
+                return requestId;
             }
 
             @Override
@@ -120,20 +122,21 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
-        publisher.addCacheEntry(cluster, cacheId, key, value);
+        publisher.addCacheEntry(cluster, requestId, cacheId, key, value);
     }
 
     @Override
-    public void getCacheEntry(AeronCluster cluster, long cacheId, String key) {
-        publisher.getCacheEntry(cluster, cacheId, key);
+    public void getCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key) {
+        publisher.getCacheEntry(cluster, requestId, cacheId, key);
     }
 
     @Override
     public void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<GetCacheEntryResult<Long, String, String>> consumer) {
+        var requestId = UUID.randomUUID().toString();
         getCacheEntryObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
-                return UUID.randomUUID().toString();
+                return requestId;
             }
 
             @Override
@@ -142,40 +145,41 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
-        publisher.getCacheEntry(cluster, cacheId, key);
+        publisher.getCacheEntry(cluster, requestId, cacheId, key);
     }
 
     @Override
-    public void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key) {
-        publisher.getCacheEntryBlocking(cluster, cacheId, key);
+    public void getCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key) {
+        publisher.getCacheEntryBlocking(cluster, requestId, cacheId, key);
     }
 
     @Override
-    public void clearCache(AeronCluster cluster, long cacheId) {
-        publisher.clearCache(cluster, cacheId);
+    public void clearCache(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.clearCache(cluster, requestId, cacheId);
     }
 
     @Override
-    public void clearCacheBlocking(AeronCluster cluster, long cacheId) {
-        publisher.clearCacheBlocking(cluster, cacheId);
+    public void clearCacheBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.clearCacheBlocking(cluster, requestId, cacheId);
     }
 
     @Override
-    public void deleteCache(AeronCluster cluster, long cacheId) {
-        publisher.deleteCache(cluster, cacheId);
+    public void deleteCache(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.deleteCache(cluster, requestId, cacheId);
     }
 
     @Override
-    public void deleteCacheBlocking(AeronCluster cluster, long cacheId) {
-        publisher.deleteCacheBlocking(cluster, cacheId);
+    public void deleteCacheBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.deleteCacheBlocking(cluster, requestId, cacheId);
     }
 
     @Override
     public void deleteCacheBlocking(AeronCluster cluster, long cacheId, Consumer<DeleteCacheResult<Long>> consumer) {
+        var requestId = UUID.randomUUID().toString();
         deleteCacheObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
-                return UUID.randomUUID().toString();
+                return requestId;
             }
 
             @Override
@@ -184,25 +188,26 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
-        publisher.deleteCache(cluster, cacheId);
+        publisher.deleteCache(cluster, requestId, cacheId);
     }
 
     @Override
-    public void removeCacheEntry(AeronCluster cluster, long cacheId, String key) {
-        publisher.removeCacheEntry(cluster, cacheId, key);
+    public void removeCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key) {
+        publisher.removeCacheEntry(cluster, requestId, cacheId, key);
     }
 
     @Override
-    public void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key) {
-        publisher.removeCacheEntryBlocking(cluster, cacheId, key);
+    public void removeCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key) {
+        publisher.removeCacheEntryBlocking(cluster, requestId, cacheId, key);
     }
 
     @Override
     public void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<Long, String>> consumer) {
+        var requestId = UUID.randomUUID().toString();
         removeCacheEntryObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
-                return UUID.randomUUID().toString();
+                return requestId;
             }
 
             @Override
@@ -211,7 +216,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
-        publisher.deleteCache(cluster, cacheId);
+        publisher.deleteCache(cluster, requestId, cacheId);
     }
 
     /**

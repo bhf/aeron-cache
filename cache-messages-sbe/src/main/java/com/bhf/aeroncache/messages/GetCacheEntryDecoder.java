@@ -278,6 +278,114 @@ public final class GetCacheEntryDecoder
         return value;
     }
 
+    public static int requestIdId()
+    {
+        return 3;
+    }
+
+    public static int requestIdSinceVersion()
+    {
+        return 0;
+    }
+
+    public static String requestIdCharacterEncoding()
+    {
+        return "UTF-8";
+    }
+
+    public static String requestIdMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public static int requestIdHeaderLength()
+    {
+        return 4;
+    }
+
+    public int requestIdLength()
+    {
+        final int limit = parentMessage.limit();
+        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+    }
+
+    public int skipRequestId()
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataOffset = limit + headerLength;
+        parentMessage.limit(dataOffset + dataLength);
+
+        return dataLength;
+    }
+
+    public int getRequestId(final MutableDirectBuffer dst, final int dstOffset, final int length)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+        return bytesCopied;
+    }
+
+    public int getRequestId(final byte[] dst, final int dstOffset, final int length)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+        return bytesCopied;
+    }
+
+    public void wrapRequestId(final DirectBuffer wrapBuffer)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+        wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
+    }
+
+    public String requestId()
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+
+        if (0 == dataLength)
+        {
+            return "";
+        }
+
+        final byte[] tmp = new byte[dataLength];
+        buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
+
+        final String value;
+        try
+        {
+            value = new String(tmp, "UTF-8");
+        }
+        catch (final java.io.UnsupportedEncodingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+
+        return value;
+    }
+
     public String toString()
     {
         if (null == buffer)
@@ -324,6 +432,9 @@ public final class GetCacheEntryDecoder
         builder.append('|');
         builder.append("key=");
         builder.append('\'').append(key()).append('\'');
+        builder.append('|');
+        builder.append("requestId=");
+        builder.append('\'').append(requestId()).append('\'');
 
         limit(originalLimit);
 
