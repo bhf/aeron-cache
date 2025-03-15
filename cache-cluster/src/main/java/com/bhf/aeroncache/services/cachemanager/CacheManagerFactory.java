@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cachemanager;
 
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cachemanager.impl.AbstractHashMapCacheManager;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
@@ -13,9 +14,9 @@ import java.util.function.Consumer;
  * @param <K> The type of the key for cache entries which this factory will create.
  * @param <V> The type of the value for cache entries which this factory will create.
  */
-public class CacheManagerFactory<I, K, V> {
+public class CacheManagerFactory<I extends Reusable, K extends Reusable, V extends Reusable> {
     public CacheManager<I, K, V> getCacheManager(Consumer<ExclusivePublication> takeSnapshotProcessor, Consumer<Image> loadSnapshotProcessor) {
-        return new AbstractHashMapCacheManager<>() {
+        return new AbstractHashMapCacheManager<I,K,V>() {
 
             @Override
             public void takeSnapshot(ExclusivePublication snapshotPublication) {

@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cachemanager.impl;
 
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
 import com.bhf.aeroncache.services.cache.Cache;
@@ -14,7 +15,7 @@ import java.util.HashMap;
  * @param <K> The key type for the caches.
  * @param <V> The value type for the caches.
  */
-public abstract class AbstractHashMapCacheManager<I, K, V> extends AbstractCacheManager<I, K, V> {
+public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCacheManager<I, K, V> {
 
     private final HashMap<I, Cache<I, K, V>> caches = new HashMap<>();
 
