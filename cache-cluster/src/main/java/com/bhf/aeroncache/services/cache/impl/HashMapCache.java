@@ -1,9 +1,10 @@
 package com.bhf.aeroncache.services.cache.impl;
 
-import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
+import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +16,7 @@ import java.util.Map;
  * @param <K> The type of the key.
  * @param <V> The type of the value.
  */
+@Log4j2
 public class HashMapCache<I, K, V> extends AbstractCache<I, K, V> {
 
     final Map<K, V> cache = new HashMap<>();
@@ -35,6 +37,9 @@ public class HashMapCache<I, K, V> extends AbstractCache<I, K, V> {
 
         if(cache.containsKey(key)){
             getCacheEntryResult.setEntryValue(cache.get(key));
+        }
+        else{
+            log.warn("Cant find key {}", key);
         }
 
         return getCacheEntryResult;

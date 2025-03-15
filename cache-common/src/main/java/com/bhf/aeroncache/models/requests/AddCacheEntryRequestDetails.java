@@ -3,6 +3,7 @@ package com.bhf.aeroncache.models.requests;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 /**
@@ -14,11 +15,12 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class AddCacheEntryRequestDetails<I, K, V> implements Reusable<AddCacheEntryRequestDetails<I, K, V>> {
+@RequiredArgsConstructor
+public class AddCacheEntryRequestDetails<I extends Reusable, K extends Reusable, V extends Reusable> implements Reusable<AddCacheEntryRequestDetails<I, K, V>> {
 
-    I cacheId;
-    K key;
-    V value;
+    final I cacheId;
+    final K key;
+    final V value;
     final RequestId requestId = new RequestId();
 
     public String getRequestId(){
@@ -34,9 +36,9 @@ public class AddCacheEntryRequestDetails<I, K, V> implements Reusable<AddCacheEn
      */
     @Override
     public void clear() {
-        cacheId = null;
-        key = null;
-        value = null;
+        cacheId.clear();
+        key.clear();
+        value.clear();
         this.requestId.clear();
     }
 
@@ -45,9 +47,9 @@ public class AddCacheEntryRequestDetails<I, K, V> implements Reusable<AddCacheEn
      */
     @Override
     public void copyFrom(AddCacheEntryRequestDetails<I, K, V> source) {
-        this.cacheId = source.getCacheId();
-        this.key = source.getKey();
-        this.value = source.value;
+        this.cacheId.copyFrom(source.getCacheId());
+        this.key.copyFrom(source.getKey());
+        this.value.copyFrom(source.value);
         this.requestId.copyFrom(source.requestId);
     }
 }

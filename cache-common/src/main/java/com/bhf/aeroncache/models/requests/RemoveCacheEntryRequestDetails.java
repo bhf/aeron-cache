@@ -3,6 +3,7 @@ package com.bhf.aeroncache.models.requests;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 /**
@@ -13,10 +14,11 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class RemoveCacheEntryRequestDetails<I, K> implements Reusable<RemoveCacheEntryRequestDetails<I, K>> {
+@RequiredArgsConstructor
+public class RemoveCacheEntryRequestDetails<I extends Reusable, K extends Reusable> implements Reusable<RemoveCacheEntryRequestDetails<I, K>> {
 
-    I cacheId;
-    K key;
+    final I cacheId;
+    final K key;
     final RequestId requestId = new RequestId();
 
     public String getRequestId(){
@@ -32,8 +34,8 @@ public class RemoveCacheEntryRequestDetails<I, K> implements Reusable<RemoveCach
      */
     @Override
     public void clear() {
-        cacheId = null;
-        key = null;
+        cacheId.clear();
+        key.clear();
         this.requestId.clear();
     }
 
@@ -42,8 +44,8 @@ public class RemoveCacheEntryRequestDetails<I, K> implements Reusable<RemoveCach
      */
     @Override
     public void copyFrom(RemoveCacheEntryRequestDetails<I, K> source) {
-        this.cacheId = source.getCacheId();
-        this.key = source.getKey();
+        this.cacheId.copyFrom(source.getCacheId());
+        this.key.copyFrom(source.getKey());
         this.requestId.copyFrom(source.requestId);
     }
 }
