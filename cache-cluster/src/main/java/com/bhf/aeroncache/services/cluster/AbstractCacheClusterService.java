@@ -106,7 +106,7 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
         var requestDetails = getDeleteCacheRequestDetails(session, buffer, offset);
         I cacheId = requestDetails.getCacheId();
         var deleteCacheResult = cacheManager.deleteCache(cacheId);
-        handlePostDeleteCache(cacheId, deleteCacheResult, session, buffer, offset);
+        handlePostDeleteCache(cacheId, deleteCacheResult, requestDetails, session, buffer, offset);
     }
 
     /**
@@ -119,7 +119,9 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
     void handleClearCache(ClientSession session, DirectBuffer buffer, int offset) {
         var requestDetails = getClearCacheRequestDetails(session, buffer, offset);
         I cacheId = requestDetails.getCacheId();
+        var requestId = requestDetails.getRequestId();
         var clearCacheResult = cacheManager.clearCache(cacheId);
+        clearCacheResult.setRequestId(requestId);
         handlePostClearCache(cacheId, clearCacheResult, session, buffer, offset);
     }
 
@@ -134,7 +136,9 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
         var requestDetails = getRemoveCacheEntryRequestDetails(session, buffer, offset);
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
+        var requestId = requestDetails.getRequestId();
         var removeCacheEntryResult = cacheManager.getCache(cacheId).remove(key);
+        removeCacheEntryResult.setRequestId(requestId);
         handlePostRemoveCacheEntry(cacheId, key, removeCacheEntryResult, session, buffer, offset);
     }
 
@@ -150,7 +154,9 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         V value = requestDetails.getValue();
+        var requestId = requestDetails.getRequestId();
         var addCacheEntryResult = cacheManager.getCache(cacheId).add(key, value);
+        addCacheEntryResult.setRequestId(requestId);
         handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, buffer, offset);
     }
 
@@ -165,7 +171,9 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
         var requestDetails = getCacheEntryRequestDetails(session, buffer, offset);
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
+        var requestId = requestDetails.getRequestId();
         var getCacheEntryResult = cacheManager.getCache(cacheId).get(key);
+        getCacheEntryResult.setRequestId(requestId);
         handlePostGetCacheEntry(cacheId, key, getCacheEntryResult, session, buffer, offset);
     }
 
@@ -179,8 +187,10 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
     void handleCreateCache(ClientSession session, DirectBuffer buffer, int offset) {
         CreateCacheRequestDetails<I> requestDetails = getCreateCacheRequestDetails(session, buffer, offset);
         I cacheId = requestDetails.getCacheId();
-        log.info("Got create cache message for cache id {}", cacheId);
+        var requestId = requestDetails.getRequestId();
+        log.info("Got create cache message for cache id {}, request Id: {}", cacheId, requestId);
         var cacheCreationResult = cacheManager.createCache(cacheId);
+        cacheCreationResult.setRequestId(requestId);
         handlePostCreateCache(cacheId, cacheCreationResult, session, buffer, offset);
     }
 
@@ -206,7 +216,7 @@ public abstract class AbstractCacheClusterService<I, K, V> implements ClusteredS
 
     protected abstract void handlePostClearCache(I cacheId, ClearCacheResult<I> clearCacheResult, ClientSession session, DirectBuffer buffer, int offset);
 
-    protected abstract void handlePostDeleteCache(I cacheId, Cache<I, K, V> deleteCacheResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostDeleteCache(I cacheId, Cache<I, K, V> deleteCacheResult, DeleteCacheRequestDetails<I> requestDetails, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
      * @param session   Session to send the message too.

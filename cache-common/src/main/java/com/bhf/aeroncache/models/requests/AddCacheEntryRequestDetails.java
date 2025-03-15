@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.models.requests;
 
+import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,6 +19,15 @@ public class AddCacheEntryRequestDetails<I, K, V> implements Reusable<AddCacheEn
     I cacheId;
     K key;
     V value;
+    final RequestId requestId = new RequestId();
+
+    public String getRequestId(){
+        return requestId.getRequestId();
+    }
+
+    public void setRequestId(String requestId) {
+        this.requestId.setRequestId(requestId);
+    }
 
     /**
      * {@inheritDoc}
@@ -27,6 +37,7 @@ public class AddCacheEntryRequestDetails<I, K, V> implements Reusable<AddCacheEn
         cacheId = null;
         key = null;
         value = null;
+        this.requestId.clear();
     }
 
     /**
@@ -37,5 +48,6 @@ public class AddCacheEntryRequestDetails<I, K, V> implements Reusable<AddCacheEn
         this.cacheId = source.getCacheId();
         this.key = source.getKey();
         this.value = source.value;
+        this.requestId.copyFrom(source.requestId);
     }
 }
