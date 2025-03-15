@@ -43,14 +43,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         super(SupplierUtils.longSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier);
     }
 
-    /**
-     * Decode the CreateCache message into a request details flyweight.
-     *
-     * @param session The client session.
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset from within the buffer to decode from.
-     * @return The CreateCacheRequestDetails flyweight.
-     */
     @Override
     protected CreateCacheRequestDetails<ReusableLong> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         createCacheRequestDetails.clear();
@@ -62,14 +54,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         return createCacheRequestDetails;
     }
 
-    /**
-     * Decode the ClearCache message into a request details flyweight.
-     *
-     * @param session The client session.
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset from within the buffer to decode from.
-     * @return The ClearCacheRequestDetails flyweight.
-     */
     @Override
     protected ClearCacheRequestDetails<ReusableLong> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         clearCacheRequestDetails.clear();
@@ -81,14 +65,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         return clearCacheRequestDetails;
     }
 
-    /**
-     * Decode the RemoveCacheEntry message into a request details flyweight.
-     *
-     * @param session The client session.
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset from within the buffer to decode from.
-     * @return The RemoveCacheEntryRequestDetails flyweight.
-     */
     @Override
     protected RemoveCacheEntryRequestDetails<ReusableLong, ReusableString> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         removeCacheEntryRequestDetails.clear();
@@ -102,14 +78,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         return removeCacheEntryRequestDetails;
     }
 
-    /**
-     * Decode the AddCacheEntry message into a request details flyweight.
-     *
-     * @param session The client session.
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset from within the buffer to decode from.
-     * @return The AddCacheEntryRequestDetails flyweight.
-     */
     @Override
     protected AddCacheEntryRequestDetails<ReusableLong, ReusableString, ReusableString> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         addCacheEntryRequestDetails.clear();
@@ -123,16 +91,8 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         addCacheEntryRequestDetails.getValue().copyFrom(value);
         addCacheEntryRequestDetails.setRequestId(requestID);
         return addCacheEntryRequestDetails;
-
     }
-    /**
-     * Decode the GetCacheEntry message into a request details flyweight.
-     *
-     * @param session The client session.
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset from within the buffer to decode from.
-     * @return The GetCacheEntryRequestDetails flyweight.
-     */
+
     @Override
     protected GetCacheEntryRequestDetails<ReusableLong, ReusableString> getCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         getCacheEntryRequestDetails.clear();
@@ -146,14 +106,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         return getCacheEntryRequestDetails;
     }
 
-    /**
-     * Decode the DeleteCache message into a request details flyweight.
-     *
-     * @param session The client session.
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset from within the buffer to decode from.
-     * @return The DeleteCacheRequestDetails flyweight.
-     */
     @Override
     protected DeleteCacheRequestDetails<ReusableLong> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         deleteCacheRequestDetails.clear();
@@ -165,15 +117,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         return deleteCacheRequestDetails;
     }
 
-    /**
-     * After the cache is created, send out a CacheCreated SBE message.
-     *
-     * @param cacheId             The ID of the cache created.
-     * @param cacheCreationResult The result from the request to create the cache.
-     * @param session             The client session.
-     * @param buffer              The buffer from which the creation request was decoded.
-     * @param offset              The offset from within the buffer to decode the original request from.
-     */
     @Override
     protected void handlePostCreateCache(ReusableLong cacheId, CreateCacheResult<ReusableLong> cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset) {
         cacheCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
@@ -182,15 +125,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         sendMessage(session, egressBuffer, cacheCreatedEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 
-    /**
-     * After an entry is added to a cache, send out a EntryCreated SBE message.
-     *
-     * @param cacheId             The ID of the cache in which the entry was created.
-     * @param addCacheEntryResult The result from the request to add an entry.
-     * @param session             The client session.
-     * @param buffer              The buffer from which the entry creation request was created.
-     * @param offset              The offset from within the buffer to decode the original request from.
-     */
     @Override
     protected void handlePostAddCacheEntry(ReusableLong cacheId, ReusableString key, ReusableString value, AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
         entryCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
@@ -200,15 +134,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         sendMessage(session, egressBuffer, entryCreatedEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 
-    /**
-     * Get an entry from the cache, send out a CacheEntry SBE message.
-     *
-     * @param cacheId             The ID of the cache we need to get the entry from.
-     * @param getCacheEntryResult The result from the request to add an entry.
-     * @param session             The client session.
-     * @param buffer              The buffer from which the entry creation request was created.
-     * @param offset              The offset from within the buffer to decode the original request from.
-     */
     @Override
     protected void handlePostGetCacheEntry(ReusableLong cacheId, ReusableString key, GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
         cacheEntryResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
@@ -223,15 +148,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         sendMessage(session, egressBuffer, cacheEntryResultEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 
-    /**
-     * After an entry is removed from the cache, send out a EntryRemoved SBE message.
-     *
-     * @param cacheId                The ID of the cache in which the entry was removed.
-     * @param removeCacheEntryResult The result from the request to remove an entry.
-     * @param session                The client session.
-     * @param buffer                 The buffer from which the entry removal request was created.
-     * @param offset                 The offset from within the buffer to decode the original request from.
-     */
     @Override
     protected void handlePostRemoveCacheEntry(ReusableLong cacheId, ReusableString key, RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
         entryRemovedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
@@ -241,15 +157,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         sendMessage(session, egressBuffer, entryRemovedEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 
-    /**
-     * After a cache is cleared, send out a CacheCleared SBE message.
-     *
-     * @param cacheId          The ID of the cache in which the entry was removed.
-     * @param clearCacheResult The result from the request to clear a cache.
-     * @param session          The client session.
-     * @param buffer           The buffer from which the clear request was created.
-     * @param offset           The offset from within the buffer to decode the original request from.
-     */
     @Override
     protected void handlePostClearCache(ReusableLong cacheId, ClearCacheResult<ReusableLong> clearCacheResult, ClientSession session, DirectBuffer buffer, int offset) {
         cacheClearedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
@@ -258,16 +165,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         sendMessage(session, egressBuffer, cacheClearedEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 
-    /**
-     * After a cache is deleted, send out a CacheDeleted SBE message.
-     *
-     * @param cacheId           The ID of the cache which was deleted.
-     * @param deleteCacheResult The deleted cache.
-     * @param requestDetails    The original request to delete the cache.
-     * @param session           The client session.
-     * @param buffer            The buffer from which the delete request was created.
-     * @param offset            The offset from within the buffer to decode the original request from.
-     */
     @Override
     protected void handlePostDeleteCache(ReusableLong cacheId, Cache<ReusableLong, ReusableString, ReusableString> deleteCacheResult, DeleteCacheRequestDetails<ReusableLong> requestDetails, ClientSession session, DirectBuffer buffer, int offset) {
         cacheDeletedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);

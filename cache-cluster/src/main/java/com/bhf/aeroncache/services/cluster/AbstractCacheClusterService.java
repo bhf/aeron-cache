@@ -26,7 +26,7 @@ import java.util.function.Supplier;
  * The cache cluster service provides access to a CacheManager via an
  * Aeron cluster interface. It processes the core messages of the cache and
  * delegates those to the implementation of the
- * {@link CacheManager}. This level of abstraction if not responsible for
+ * {@link CacheManager}. This level of abstraction is not responsible for
  * decoding of the actual messages.
  */
 @Log4j2
@@ -205,28 +205,131 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         handlePostCreateCache(cacheId, cacheCreationResult, session, buffer, offset);
     }
 
+    /**
+     * Decode the CreateCache message into a request details flyweight.
+     *
+     * @param session The client session.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset from within the buffer to decode from.
+     * @return The CreateCacheRequestDetails flyweight.
+     */
     protected abstract CreateCacheRequestDetails<I> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
 
+    /**
+     * Decode the ClearCache message into a request details flyweight.
+     *
+     * @param session The client session.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset from within the buffer to decode from.
+     * @return The ClearCacheRequestDetails flyweight.
+     */
     protected abstract ClearCacheRequestDetails<I> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
 
+    /**
+     * Decode the RemoveCacheEntry message into a request details flyweight.
+     *
+     * @param session The client session.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset from within the buffer to decode from.
+     * @return The RemoveCacheEntryRequestDetails flyweight.
+     */
     protected abstract RemoveCacheEntryRequestDetails<I, K> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
 
+    /**
+     * Decode the AddCacheEntry message into a request details flyweight.
+     *
+     * @param session The client session.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset from within the buffer to decode from.
+     * @return The AddCacheEntryRequestDetails flyweight.
+     */
     protected abstract AddCacheEntryRequestDetails<I, K, V> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
 
+    /**
+     * Decode the GetCacheEntry message into a request details flyweight.
+     *
+     * @param session The client session.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset from within the buffer to decode from.
+     * @return The GetCacheEntryRequestDetails flyweight.
+     */
     protected abstract GetCacheEntryRequestDetails<I, K> getCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
 
+    /**
+     * Decode the DeleteCache message into a request details flyweight.
+     *
+     * @param session The client session.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset from within the buffer to decode from.
+     * @return The DeleteCacheRequestDetails flyweight.
+     */
     protected abstract DeleteCacheRequestDetails<I> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
 
+    /**
+     * After the cache is created, send out a CacheCreated SBE message.
+     *
+     * @param cacheId             The ID of the cache created.
+     * @param cacheCreationResult The result from the request to create the cache.
+     * @param session             The client session.
+     * @param buffer              The buffer from which the creation request was decoded.
+     * @param offset              The offset from within the buffer to decode the original request from.
+     */
     protected abstract void handlePostCreateCache(I cacheId, CreateCacheResult<I> cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset);
 
+    /**
+     * After an entry is added to a cache, send out a EntryCreated SBE message.
+     *
+     * @param cacheId             The ID of the cache in which the entry was created.
+     * @param addCacheEntryResult The result from the request to add an entry.
+     * @param session             The client session.
+     * @param buffer              The buffer from which the entry creation request was created.
+     * @param offset              The offset from within the buffer to decode the original request from.
+     */
     protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
 
-    protected abstract void handlePostGetCacheEntry(I cacheId, K key, GetCacheEntryResult<I, K, V> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
+    /**
+     * Get an entry from the cache, send out a CacheEntry SBE message.
+     *
+     * @param cacheId             The ID of the cache we need to get the entry from.
+     * @param getCacheEntryResult The result from the request to add an entry.
+     * @param session             The client session.
+     * @param buffer              The buffer from which the entry creation request was created.
+     * @param offset              The offset from within the buffer to decode the original request from.
+     */
+    protected abstract void handlePostGetCacheEntry(I cacheId, K key, GetCacheEntryResult<I, K, V> getCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
 
+    /**
+     * After an entry is removed from the cache, send out a EntryRemoved SBE message.
+     *
+     * @param cacheId                The ID of the cache in which the entry was removed.
+     * @param removeCacheEntryResult The result from the request to remove an entry.
+     * @param session                The client session.
+     * @param buffer                 The buffer from which the entry removal request was created.
+     * @param offset                 The offset from within the buffer to decode the original request from.
+     */
     protected abstract void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
 
+    /**
+     * After a cache is cleared, send out a CacheCleared SBE message.
+     *
+     * @param cacheId          The ID of the cache in which the entry was removed.
+     * @param clearCacheResult The result from the request to clear a cache.
+     * @param session          The client session.
+     * @param buffer           The buffer from which the clear request was created.
+     * @param offset           The offset from within the buffer to decode the original request from.
+     */
     protected abstract void handlePostClearCache(I cacheId, ClearCacheResult<I> clearCacheResult, ClientSession session, DirectBuffer buffer, int offset);
 
+    /**
+     * After a cache is deleted, send out a CacheDeleted SBE message.
+     *
+     * @param cacheId           The ID of the cache which was deleted.
+     * @param deleteCacheResult The deleted cache.
+     * @param requestDetails    The original request to delete the cache.
+     * @param session           The client session.
+     * @param buffer            The buffer from which the delete request was created.
+     * @param offset            The offset from within the buffer to decode the original request from.
+     */
     protected abstract void handlePostDeleteCache(I cacheId, Cache<I, K, V> deleteCacheResult, DeleteCacheRequestDetails<I> requestDetails, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
