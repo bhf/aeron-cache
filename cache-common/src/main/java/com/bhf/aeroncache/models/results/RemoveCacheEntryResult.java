@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.models.results;
 
+import com.bhf.aeroncache.annotations.Flyweight;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
@@ -13,6 +14,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
+@Flyweight
 public class RemoveCacheEntryResult<I, K> implements Reusable<RemoveCacheEntryResult<I, K>> {
 
     I cacheId;
