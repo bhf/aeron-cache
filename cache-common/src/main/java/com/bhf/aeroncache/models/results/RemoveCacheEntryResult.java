@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.models.results;
 
+import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,6 +17,15 @@ public class RemoveCacheEntryResult<I, K> implements Reusable<RemoveCacheEntryRe
 
     I cacheId;
     K key;
+    final RequestId requestId = new RequestId();
+
+    public String getRequestId(){
+        return requestId.getRequestId();
+    }
+
+    public void setRequestId(String requestId) {
+        this.requestId.setRequestId(requestId);
+    }
 
     /**
      * {@inheritDoc}
@@ -24,6 +34,7 @@ public class RemoveCacheEntryResult<I, K> implements Reusable<RemoveCacheEntryRe
     public void clear() {
         key = null;
         cacheId = null;
+        requestId.clear();
     }
 
     /**
@@ -33,5 +44,6 @@ public class RemoveCacheEntryResult<I, K> implements Reusable<RemoveCacheEntryRe
     public void copyFrom(RemoveCacheEntryResult<I, K> source) {
         this.key = source.key;
         this.cacheId = source.cacheId;
+        this.requestId.copyFrom(source.requestId);
     }
 }

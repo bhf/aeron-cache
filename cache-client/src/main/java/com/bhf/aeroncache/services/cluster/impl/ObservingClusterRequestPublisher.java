@@ -226,16 +226,12 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
      * @param getCacheEntryResult The result of getting something from the cache.
      */
     public void handleCacheEntryResult(GetCacheEntryResult<Long, String, String> getCacheEntryResult) {
-        var expectedId = getCacheEntryResult.getCacheId();
-        while (getCacheEntryObservers.iterator().hasNext()) {
-            var next = getCacheEntryObservers.iterator().next();
-            if (expectedId.equals(next.getId())) {
-                next.accept(getCacheEntryResult);
-                getCacheEntryObservers.iterator().remove();
-            }
+        var targetId = getCacheEntryResult.getRequestId();
+        getCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntryResult));
+        getCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
+        if (getCacheEntryConsumer != null) {
+            getCacheEntryConsumer.accept(getCacheEntryResult);
         }
-
-        getCacheEntryConsumer.accept(getCacheEntryResult);
     }
 
     /**
@@ -245,16 +241,12 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
      * @param createCacheResult The result of creating a cache.
      */
     public void handleCacheCreated(CreateCacheResult<Long> createCacheResult) {
-        var expectedId = createCacheResult.getCacheId();
-        while (createCacheObservers.iterator().hasNext()) {
-            var next = createCacheObservers.iterator().next();
-            if (expectedId.equals(next.getId())) {
-                next.accept(createCacheResult);
-                createCacheObservers.iterator().remove();
-            }
+        var targetId = createCacheResult.getRequestId();
+        createCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(createCacheResult));
+        createCacheObservers.removeIf(p -> p.getId().equals(targetId));
+        if (createCacheConsumer != null) {
+            createCacheConsumer.accept(createCacheResult);
         }
-
-        createCacheConsumer.accept(createCacheResult);
     }
 
     /**
@@ -264,16 +256,13 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
      * @param addCacheEntryResult The result of adding an entry to the cache.
      */
     public void handleCacheEntryCreated(AddCacheEntryResult<Long, String> addCacheEntryResult) {
-        var expectedId = addCacheEntryResult.getCacheID();
-        while (addCacheEntryObservers.iterator().hasNext()) {
-            var next = addCacheEntryObservers.iterator().next();
-            if (expectedId.equals(next.getId())) {
-                next.accept(addCacheEntryResult);
-                addCacheEntryObservers.iterator().remove();
-            }
+        var targetId = addCacheEntryResult.getRequestId();
+        addCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(addCacheEntryResult));
+        addCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
+        if (addCacheEntryConsumer != null) {
+            addCacheEntryConsumer.accept(addCacheEntryResult);
         }
 
-        addCacheEntryConsumer.accept(addCacheEntryResult);
     }
 
     /**
@@ -283,16 +272,12 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
      * @param removeCacheEntryResult The result of a cache entry removal.
      */
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<Long, String> removeCacheEntryResult) {
-        var expectedId = removeCacheEntryResult.getCacheId();
-        while (removeCacheEntryObservers.iterator().hasNext()) {
-            var next = removeCacheEntryObservers.iterator().next();
-            if (expectedId.equals(next.getId())) {
-                next.accept(removeCacheEntryResult);
-                removeCacheEntryObservers.iterator().remove();
-            }
+        var targetId = removeCacheEntryResult.getRequestId();
+        removeCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(removeCacheEntryResult));
+        removeCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
+        if (removeCacheEntryConsumer != null) {
+            removeCacheEntryConsumer.accept(removeCacheEntryResult);
         }
-
-        removeCacheEntryConsumer.accept(removeCacheEntryResult);
     }
 
     /**
@@ -302,16 +287,12 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
      * @param clearCacheResult The result of clearing a cache.
      */
     public void handleCacheCleared(ClearCacheResult<Long> clearCacheResult) {
-        var expectedId = clearCacheResult.getCacheId();
-        while (clearCacheObservers.iterator().hasNext()) {
-            var next = clearCacheObservers.iterator().next();
-            if (expectedId.equals(next.getId())) {
-                next.accept(clearCacheResult);
-                clearCacheObservers.iterator().remove();
-            }
+        var targetId = clearCacheResult.getRequestId();
+        clearCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(clearCacheResult));
+        clearCacheObservers.removeIf(p -> p.getId().equals(targetId));
+        if (clearCacheConsumer != null) {
+            clearCacheConsumer.accept(clearCacheResult);
         }
-
-        clearCacheConsumer.accept(clearCacheResult);
     }
 
     /**
@@ -321,15 +302,11 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
      * @param deleteCacheResult The result of deleting a cache.
      */
     public void handleCacheDeleted(DeleteCacheResult<Long> deleteCacheResult) {
-        var expectedId = deleteCacheResult.getCacheId();
-        while (deleteCacheObservers.iterator().hasNext()) {
-            var next = deleteCacheObservers.iterator().next();
-            if (expectedId.equals(next.getId())) {
-                next.accept(deleteCacheResult);
-                deleteCacheObservers.iterator().remove();
-            }
+        var targetId = deleteCacheResult.getRequestId();
+        deleteCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(deleteCacheResult));
+        deleteCacheObservers.removeIf(p -> p.getId().equals(targetId));
+        if (deleteCacheConsumer != null) {
+            deleteCacheConsumer.accept(deleteCacheResult);
         }
-
-        deleteCacheConsumer.accept(deleteCacheResult);
     }
 }

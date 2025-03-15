@@ -85,10 +85,13 @@ public class AeronCacheListener implements EgressListener {
         var cacheID = getCacheEntryDecoder.cacheId();
         var key = getCacheEntryDecoder.key();
         var value = getCacheEntryDecoder.value();
-        log.info("Got cache entry result from cache {} with key {}, value: {}", cacheID, key, value);
+        var requestId = getCacheEntryDecoder.requestId();
+        log.info("Got cache entry result from cache {} with key {}, value: {}, requestId: {}", cacheID, key, value, requestId);
+        getCacheEntryResult.clear();
         getCacheEntryResult.setCacheId(cacheID);
         getCacheEntryResult.setEntryKey(key);
         getCacheEntryResult.setEntryValue(value);
+        getCacheEntryResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryResult(getCacheEntryResult);
@@ -96,7 +99,8 @@ public class AeronCacheListener implements EgressListener {
     }
 
     /**
-     * Handle a cache created event by decoding it and delegating the result to the consumer.
+     * Handle a cache created event by decoding it and delegating the
+     * result to the {@link ObservingClusterRequestPublisher}.
      *
      * @param buffer The buffer to decode from.
      * @param offset The offset at which to start decoding.
@@ -104,9 +108,11 @@ public class AeronCacheListener implements EgressListener {
     private void handleCacheCreated(DirectBuffer buffer, int offset) {
         cacheCreatedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheCreatedDecoder.cacheId();
-        log.info("Created cache {}", cacheId);
+        var requestId = cacheCreatedDecoder.requestId();
+        log.info("Created cache {}, requestId: {}", cacheId, requestId);
         createCacheResult.clear();
         createCacheResult.setCacheId(cacheId);
+        createCacheResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheCreated(createCacheResult);
@@ -122,12 +128,14 @@ public class AeronCacheListener implements EgressListener {
     private void handleCacheEntryCreated(DirectBuffer buffer, int offset) {
         addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = addCacheEntryDecoder.cacheId();
-        String key = addCacheEntryDecoder.key();
-        log.info("Got cache entry created message for cache {} with key {}", cacheId, key);
+        var key = addCacheEntryDecoder.key();
+        var requestId = addCacheEntryDecoder.requestId();
+        log.info("Got cache entry created message for cache {} with key {}, requestId: {}", cacheId, key, requestId);
         addCacheEntryResult.clear();
         addCacheEntryResult.setEntryAdded(true);
         addCacheEntryResult.setEntryKey(key);
         addCacheEntryResult.setCacheID(cacheId);
+        addCacheEntryResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryCreated(addCacheEntryResult);
@@ -144,10 +152,12 @@ public class AeronCacheListener implements EgressListener {
         cacheEntryRemovedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheEntryRemovedDecoder.cacheId();
         var key = cacheEntryRemovedDecoder.key();
-        log.info("Got cache entry removed for cache {} with key {}", cacheId, key);
+        var requestId = cacheEntryRemovedDecoder.requestId();
+        log.info("Got cache entry removed for cache {} with key {}, requestId: {}", cacheId, key, requestId);
         removeCacheEntryResult.clear();
         removeCacheEntryResult.setKey(key);
         removeCacheEntryResult.setCacheId(cacheId);
+        removeCacheEntryResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryRemoved(removeCacheEntryResult);
@@ -163,9 +173,11 @@ public class AeronCacheListener implements EgressListener {
     private void handleCacheCleared(DirectBuffer buffer, int offset) {
         cacheClearedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheClearedDecoder.cacheId();
-        log.info("Got cache cleared on cache {}", cacheId);
+        var requestId = cacheClearedDecoder.requestId();
+        log.info("Got cache cleared on cache {}, requestId: {}", cacheId, requestId);
         clearCacheResult.clear();
         clearCacheResult.setCacheId(cacheId);
+        clearCacheResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheCleared(clearCacheResult);
@@ -181,9 +193,11 @@ public class AeronCacheListener implements EgressListener {
     private void handleCacheDeleted(DirectBuffer buffer, int offset) {
         cacheDeletedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheDeletedDecoder.cacheId();
-        log.info("Got cache deleted on cache {}", cacheId);
+        var requestId = cacheDeletedDecoder.requestId();
+        log.info("Got cache deleted on cache {}, requestId: {}", cacheId, requestId);
         deleteCacheResult.clear();
         deleteCacheResult.setCacheId(cacheId);
+        deleteCacheResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheDeleted(deleteCacheResult);
