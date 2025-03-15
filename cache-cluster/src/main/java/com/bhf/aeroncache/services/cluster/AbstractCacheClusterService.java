@@ -266,7 +266,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     protected abstract DeleteCacheRequestDetails<I> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
 
     /**
-     * After the cache is created, send out a CacheCreated SBE message.
+     * After the cache is created, send out a CacheCreated message.
      *
      * @param cacheId             The ID of the cache created.
      * @param cacheCreationResult The result from the request to create the cache.
@@ -277,7 +277,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     protected abstract void handlePostCreateCache(I cacheId, CreateCacheResult<I> cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
-     * After an entry is added to a cache, send out a EntryCreated SBE message.
+     * After an entry is added to a cache, send out a EntryCreated message.
      *
      * @param cacheId             The ID of the cache in which the entry was created.
      * @param addCacheEntryResult The result from the request to add an entry.
@@ -288,7 +288,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
-     * Get an entry from the cache, send out a CacheEntry SBE message.
+     * Get an entry from the cache, send out a CacheEntry message.
      *
      * @param cacheId             The ID of the cache we need to get the entry from.
      * @param getCacheEntryResult The result from the request to add an entry.
@@ -299,7 +299,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     protected abstract void handlePostGetCacheEntry(I cacheId, K key, GetCacheEntryResult<I, K, V> getCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
-     * After an entry is removed from the cache, send out a EntryRemoved SBE message.
+     * After an entry is removed from the cache, send out a EntryRemoved message.
      *
      * @param cacheId                The ID of the cache in which the entry was removed.
      * @param removeCacheEntryResult The result from the request to remove an entry.
@@ -310,7 +310,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     protected abstract void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
-     * After a cache is cleared, send out a CacheCleared SBE message.
+     * After a cache is cleared, send out a CacheCleared message.
      *
      * @param cacheId          The ID of the cache in which the entry was removed.
      * @param clearCacheResult The result from the request to clear a cache.
@@ -321,7 +321,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     protected abstract void handlePostClearCache(I cacheId, ClearCacheResult<I> clearCacheResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
-     * After a cache is deleted, send out a CacheDeleted SBE message.
+     * After a cache is deleted, send out a CacheDeleted message.
      *
      * @param cacheId           The ID of the cache which was deleted.
      * @param deleteCacheResult The deleted cache.
