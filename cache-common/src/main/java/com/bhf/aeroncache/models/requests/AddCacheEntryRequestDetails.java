@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.models.requests;
 
+import com.bhf.aeroncache.annotations.Flyweight;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
@@ -16,6 +17,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @RequiredArgsConstructor
+@Flyweight
 public class AddCacheEntryRequestDetails<I extends Reusable, K extends Reusable, V extends Reusable> implements Reusable<AddCacheEntryRequestDetails<I, K, V>> {
 
     final I cacheId;
