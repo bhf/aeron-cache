@@ -12,6 +12,7 @@ import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
+import org.apache.logging.log4j.util.Strings;
 
 import java.util.function.Supplier;
 
@@ -138,12 +139,15 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     protected void handlePostGetCacheEntry(ReusableLong cacheId, ReusableString key, GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
         cacheEntryResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheEntryResultEncoder.cacheId(cacheId.getValue())
-                .key(getCacheEntryResult.getEntryKey().value())
-                .requestId(getCacheEntryResult.getRequestId());
-        
+                .key(getCacheEntryResult.getEntryKey().value());
+
         if (getCacheEntryResult.getEntryValue() != null) {
             cacheEntryResultEncoder.value(getCacheEntryResult.getEntryValue().value());
+        } else {
+            cacheEntryResultEncoder.value(Strings.EMPTY);
         }
+
+        cacheEntryResultEncoder.requestId(getCacheEntryResult.getRequestId());
 
         sendMessage(session, egressBuffer, cacheEntryResultEncoder.encodedLength() + headerEncoder.encodedLength());
     }

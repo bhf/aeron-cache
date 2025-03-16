@@ -1,8 +1,10 @@
 package com.bhf.aeroncache.models.results;
 
+import com.bhf.aeroncache.annotations.Flyweight;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 /**
@@ -12,9 +14,11 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class CreateCacheResult<I> implements Reusable<CreateCacheResult<I>> {
+@RequiredArgsConstructor
+@Flyweight
+public class CreateCacheResult<I extends Reusable> implements Reusable<CreateCacheResult<I>> {
 
-    I cacheId;
+    final I cacheId;
     final RequestId requestId = new RequestId();
 
     public String getRequestId(){
@@ -30,7 +34,7 @@ public class CreateCacheResult<I> implements Reusable<CreateCacheResult<I>> {
      */
     @Override
     public void clear() {
-        cacheId = null;
+        cacheId.clear();
         requestId.clear();
     }
 
@@ -39,7 +43,17 @@ public class CreateCacheResult<I> implements Reusable<CreateCacheResult<I>> {
      */
     @Override
     public void copyFrom(CreateCacheResult<I> source) {
-        this.cacheId = source.cacheId;
+        this.cacheId.copyFrom(source.cacheId);
         this.requestId.copyFrom(source.requestId);
+    }
+
+    @Override
+    public void copyFrom(Reusable<CreateCacheResult<I>> source) {
+        this.copyFrom(source.value());
+    }
+
+    @Override
+    public CreateCacheResult<I> value() {
+        return this;
     }
 }

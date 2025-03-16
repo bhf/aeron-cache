@@ -1,11 +1,12 @@
 package com.bhf.aeroncache.services.cache;
 
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 
-public interface Cache<I, K, V> {
+public interface Cache<I extends Reusable, K extends Reusable, V extends Reusable> {
 
     /**
      * Add an entry to the cache.

@@ -38,4 +38,14 @@ public class GetCacheEntryRequestDetails<I extends Reusable, K extends Reusable>
         this.key.copyFrom(source.key);
         this.requestId.copyFrom(source.requestId);
     }
+
+    @Override
+    public void copyFrom(Reusable<GetCacheEntryRequestDetails<I, K>> source) {
+        this.copyFrom(source.value());
+    }
+
+    @Override
+    public GetCacheEntryRequestDetails<I, K> value() {
+        return this;
+    }
 }

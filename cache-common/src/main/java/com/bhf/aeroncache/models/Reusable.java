@@ -17,4 +17,16 @@ public interface Reusable<T> {
      * @param source The source from which we are copying state.
      */
     void copyFrom(T source);
+
+    /**
+     * Copy from the source object into this object.
+     * @param source
+     */
+    void copyFrom(Reusable<T> source);
+
+    /**
+     * Get the value.
+     * @return The underlying value.
+     */
+    T value();
 }

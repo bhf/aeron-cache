@@ -50,4 +50,14 @@ public class RemoveCacheEntryRequestDetails<I extends Reusable, K extends Reusab
         this.key.copyFrom(source.getKey());
         this.requestId.copyFrom(source.requestId);
     }
+
+    @Override
+    public void copyFrom(Reusable<RemoveCacheEntryRequestDetails<I, K>> source) {
+        this.copyFrom(source.value());
+    }
+
+    @Override
+    public RemoveCacheEntryRequestDetails<I, K> value() {
+        return this;
+    }
 }

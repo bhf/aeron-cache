@@ -1,24 +1,28 @@
 package com.bhf.aeroncache.services.cache.impl;
 
+import com.bhf.aeroncache.types.ReusableLong;
+import com.bhf.aeroncache.types.ReusableString;
+import com.bhf.aeroncache.utils.SupplierUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
+
 import java.util.stream.Stream;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class HashMapCacheTest {
 
-    HashMapCache<Long, String, String> cache;
+    HashMapCache<ReusableLong, ReusableString, ReusableString> cache;
 
     @BeforeEach
     void setup() {
-        cache = new HashMapCache<>();
+        cache = new HashMapCache<>(SupplierUtils.longSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier);
     }
 
     /**
@@ -28,9 +32,13 @@ class HashMapCacheTest {
      * @param value The value to add to the cache.
      * @return The value added to the cache.
      */
-    private String seedCache(String key, String value) {
-        cache.add(key, value);
-        return value;
+    private ReusableString seedCache(String key, String value) {
+        var reusableValue = new ReusableString();
+        var reusableKey = new ReusableString();
+        reusableKey.copyFrom(key);
+        reusableValue.copyFrom(value);
+        cache.add(reusableKey,reusableValue);
+        return reusableValue;
     }
 
     @ParameterizedTest
@@ -39,12 +47,17 @@ class HashMapCacheTest {
     void testAdd(String key, String value) {
         // Arrange
 
+        var reusableKey = new ReusableString();
+        var reusableValue = new ReusableString();
+        reusableKey.copyFrom(key);
+        reusableValue.copyFrom(value);
+
         // Act
-        var result = cache.add(key, value);
+        var result = cache.add(reusableKey, reusableValue);
 
         // Assert
-        assertEquals(value, cache.cache.get(key));
-        assertEquals(key, result.getEntryKey());
+        assertEquals(value, cache.cache.get(reusableKey).value());
+        assertEquals(key, result.getEntryKey().value());
     }
 
     /**
@@ -54,41 +67,42 @@ class HashMapCacheTest {
      * @return A stream of arguments for the test.
      */
     public static Stream<Arguments> provideTestAddParams() {
-        return Stream.of(Arguments.of(null, null),
-                Arguments.of(null, "value"),
-                Arguments.of("key", null),
+        return Stream.of(
                 Arguments.of("key", "value"));
     }
 
     @ParameterizedTest
     @DisplayName("Should get a known value from specified key")
     @ValueSource(strings = {"key1"})
-    @NullAndEmptySource
     void testGet(String key) {
         // Arrange
         var value = seedCache(key, "value");
+        var reusableKey = new ReusableString();
+        reusableKey.copyFrom(key);
 
         // Act
-        var getResult = cache.get(key);
+        cache.add(reusableKey, value);
+        var getResult = cache.get(reusableKey);
 
         // Assert
         assertEquals(value, getResult.getEntryValue());
-        assertEquals(key, getResult.getEntryKey());
+        assertEquals(key, getResult.getEntryKey().value());
     }
 
     @ParameterizedTest
     @DisplayName("Should remove a known key-value using specified key")
     @ValueSource(strings = {"key1"})
-    @NullAndEmptySource
     void testRemove(String key) {
         // Arrange
         var value = seedCache(key, "value");
+        var reusableKey = new ReusableString();
+        reusableKey.copyFrom(key);
 
         // Act
-        var removeResult = cache.remove(key);
+        var removeResult = cache.remove(reusableKey);
 
         // Assert
-        assertEquals(key, removeResult.getKey());
+        assertEquals(key, removeResult.getKey().value());
     }
 
     @Test

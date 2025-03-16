@@ -3,6 +3,9 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
+import com.bhf.aeroncache.types.ReusableLong;
+import com.bhf.aeroncache.types.ReusableString;
+import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.client.EgressListener;
 import io.aeron.cluster.codecs.EventCode;
 import io.aeron.logbuffer.Header;
@@ -40,12 +43,12 @@ public class AeronCacheListener implements EgressListener {
     private final CacheDeletedDecoder cacheDeletedDecoder = new CacheDeletedDecoder();
     private final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
 
-    private final CreateCacheResult<Long> createCacheResult = new CreateCacheResult<>();
-    private final AddCacheEntryResult<Long, String> addCacheEntryResult = new AddCacheEntryResult<>();
-    private final ClearCacheResult<Long> clearCacheResult = new ClearCacheResult<>();
-    private final DeleteCacheResult<Long> deleteCacheResult = new DeleteCacheResult<>();
-    private final RemoveCacheEntryResult<Long, String> removeCacheEntryResult = new RemoveCacheEntryResult<>();
-    private final GetCacheEntryResult<Long, String, String> getCacheEntryResult = new GetCacheEntryResult<>();
+    private final CreateCacheResult<ReusableLong> createCacheResult = new CreateCacheResult<>(SupplierUtils.longSupplier.get());
+    private final AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult = new AddCacheEntryResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get());
+    private final ClearCacheResult<ReusableLong> clearCacheResult = new ClearCacheResult<>(SupplierUtils.longSupplier.get());
+    private final DeleteCacheResult<ReusableLong> deleteCacheResult = new DeleteCacheResult<>(SupplierUtils.longSupplier.get());
+    private final RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult = new RemoveCacheEntryResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get());
+    private final GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult = new GetCacheEntryResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
 
     /**
      * {@inheritDoc}
@@ -88,9 +91,9 @@ public class AeronCacheListener implements EgressListener {
         var requestId = getCacheEntryDecoder.requestId();
         log.info("Got cache entry result from cache {} with key {}, value: {}, requestId: {}", cacheID, key, value, requestId);
         getCacheEntryResult.clear();
-        getCacheEntryResult.setCacheId(cacheID);
-        getCacheEntryResult.setEntryKey(key);
-        getCacheEntryResult.setEntryValue(value);
+        getCacheEntryResult.getCacheId().copyFrom(cacheID);
+        getCacheEntryResult.getEntryKey().copyFrom(key);
+        getCacheEntryResult.getEntryValue().copyFrom(value);
         getCacheEntryResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {
@@ -111,7 +114,7 @@ public class AeronCacheListener implements EgressListener {
         var requestId = cacheCreatedDecoder.requestId();
         log.info("Created cache {}, requestId: {}", cacheId, requestId);
         createCacheResult.clear();
-        createCacheResult.setCacheId(cacheId);
+        createCacheResult.getCacheId().copyFrom(cacheId);
         createCacheResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {
@@ -133,8 +136,8 @@ public class AeronCacheListener implements EgressListener {
         log.info("Got cache entry created message for cache {} with key {}, requestId: {}", cacheId, key, requestId);
         addCacheEntryResult.clear();
         addCacheEntryResult.setEntryAdded(true);
-        addCacheEntryResult.setEntryKey(key);
-        addCacheEntryResult.setCacheID(cacheId);
+        addCacheEntryResult.getEntryKey().copyFrom(key);
+        addCacheEntryResult.getCacheID().copyFrom(cacheId);
         addCacheEntryResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {
@@ -155,8 +158,8 @@ public class AeronCacheListener implements EgressListener {
         var requestId = cacheEntryRemovedDecoder.requestId();
         log.info("Got cache entry removed for cache {} with key {}, requestId: {}", cacheId, key, requestId);
         removeCacheEntryResult.clear();
-        removeCacheEntryResult.setKey(key);
-        removeCacheEntryResult.setCacheId(cacheId);
+        removeCacheEntryResult.getKey().copyFrom(key);
+        removeCacheEntryResult.getCacheId().copyFrom(cacheId);
         removeCacheEntryResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {
@@ -176,7 +179,7 @@ public class AeronCacheListener implements EgressListener {
         var requestId = cacheClearedDecoder.requestId();
         log.info("Got cache cleared on cache {}, requestId: {}", cacheId, requestId);
         clearCacheResult.clear();
-        clearCacheResult.setCacheId(cacheId);
+        clearCacheResult.getCacheId().copyFrom(cacheId);
         clearCacheResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {
@@ -196,7 +199,7 @@ public class AeronCacheListener implements EgressListener {
         var requestId = cacheDeletedDecoder.requestId();
         log.info("Got cache deleted on cache {}, requestId: {}", cacheId, requestId);
         deleteCacheResult.clear();
-        deleteCacheResult.setCacheId(cacheId);
+        deleteCacheResult.getCacheId().copyFrom(cacheId);
         deleteCacheResult.setRequestId(requestId);
 
         if (cacheResultsCallbacks != null) {

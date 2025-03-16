@@ -46,4 +46,14 @@ public class CreateCacheRequestDetails<I extends Reusable> implements Reusable<C
         this.cacheId.copyFrom(source.cacheId);
         this.requestId.copyFrom(source.requestId);
     }
+
+    @Override
+    public void copyFrom(Reusable<CreateCacheRequestDetails<I>> source) {
+        this.copyFrom(source.value());
+    }
+
+    @Override
+    public CreateCacheRequestDetails<I> value() {
+        return this;
+    }
 }

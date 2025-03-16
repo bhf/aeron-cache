@@ -37,7 +37,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private Cluster cluster;
     private IdleStrategy idleStrategy;
     private final CacheManagerFactory<I, K, V> cacheManagerFactory = new CacheManagerFactory<>();
-    private final CacheManager<I, K, V> cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer());
+    private final CacheManager<I, K, V> cacheManager;
     private Consumer<Image> imageConsumer;
     private Consumer<ExclusivePublication> snapshotConsumer;
     final CreateCacheRequestDetails<I> createCacheRequestDetails;
@@ -54,6 +54,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.addCacheEntryRequestDetails = new AddCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
         this.deleteCacheRequestDetails = new DeleteCacheRequestDetails<>(indexSupplier.get());
         this.getCacheEntryRequestDetails = new GetCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get());
+        this.cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer(), indexSupplier, keySupplier, valueSupplier);
     }
 
     private Consumer<Image> getImageConsumer() {
@@ -116,6 +117,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     void handleDeleteCache(ClientSession session, DirectBuffer buffer, int offset) {
         var requestDetails = getDeleteCacheRequestDetails(session, buffer, offset);
         I cacheId = requestDetails.getCacheId();
+        log.info("Got delete cache message for cache id {}", cacheId);
         var deleteCacheResult = cacheManager.deleteCache(cacheId);
         handlePostDeleteCache(cacheId, deleteCacheResult, requestDetails, session, buffer, offset);
     }
@@ -130,8 +132,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     void handleClearCache(ClientSession session, DirectBuffer buffer, int offset) {
         var requestDetails = getClearCacheRequestDetails(session, buffer, offset);
         I cacheId = requestDetails.getCacheId();
-        var requestId = requestDetails.getRequestId();
+        log.info("Got clear cache message for cache id {}", cacheId);
         var clearCacheResult = cacheManager.clearCache(cacheId);
+        var requestId = requestDetails.getRequestId();
         clearCacheResult.setRequestId(requestId);
         handlePostClearCache(cacheId, clearCacheResult, session, buffer, offset);
     }
@@ -148,7 +151,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         var requestId = requestDetails.getRequestId();
-        var removeCacheEntryResult = cacheManager.getCache(cacheId).remove(key);
+        log.info("Got remove cache entry message for cache id {}, key {}, request Id: {}", cacheId, key, requestId);
+        var removeCacheEntryResult = cacheManager.removeCacheEntry(cacheId, key);
         removeCacheEntryResult.setRequestId(requestId);
         handlePostRemoveCacheEntry(cacheId, key, removeCacheEntryResult, session, buffer, offset);
     }
@@ -166,6 +170,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         K key = requestDetails.getKey();
         V value = requestDetails.getValue();
         var requestId = requestDetails.getRequestId();
+        log.info("Got add cache entry message for cache id {}, key {}, request Id: {}", cacheId, key, requestId);
         var addCacheEntryResult = cacheManager.getCache(cacheId).add(key, value);
         addCacheEntryResult.setRequestId(requestId);
         handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, buffer, offset);
@@ -183,6 +188,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         var requestId = requestDetails.getRequestId();
+        log.info("Got get cache entry for cache id {} on key {}, requestId {}", cacheId, key, requestId);
         var getCacheEntryResult = cacheManager.getCache(cacheId).get(key);
         getCacheEntryResult.setRequestId(requestId);
         handlePostGetCacheEntry(cacheId, key, getCacheEntryResult, session, buffer, offset);

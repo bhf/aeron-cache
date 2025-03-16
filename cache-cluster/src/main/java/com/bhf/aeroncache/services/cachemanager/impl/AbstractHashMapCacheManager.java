@@ -3,9 +3,11 @@ package com.bhf.aeroncache.services.cachemanager.impl;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.services.cache.Cache;
 
 import java.util.HashMap;
+import java.util.function.Supplier;
 
 /**
  * A cache manager which indexes cache instances based on a type I.
@@ -19,6 +21,10 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
 
     private final HashMap<I, Cache<I, K, V>> caches = new HashMap<>();
 
+    public AbstractHashMapCacheManager(Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier, Supplier<V> cacheValueSupplier) {
+        super(cacheIndexSupplier, cacheKeySupplier, cacheValueSupplier);
+    }
+
     @Override
     public Cache<I, K, V> getCache(I cacheId) {
         return caches.get(cacheId);
@@ -27,24 +33,41 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
     @Override
     public ClearCacheResult<I> clearCache(I cacheId) {
         clearCacheResult.clear();
-        getCache(cacheId).clearEntries();
-        clearCacheResult.setCacheId(cacheId);
+        var cache = getCache(cacheId);
+
+        if (cache != null) {
+            cache.clearEntries();
+        }
+
+        clearCacheResult.getCacheId().copyFrom(cacheId);
         return clearCacheResult;
     }
 
     @Override
     public CreateCacheResult<I> createCache(I cacheId) {
         cacheCreationResult.clear();
-        var cache = cacheFactory.getNewCache();
+        var cache = cacheFactory.getNewCache(indexSupplier, keySupplier, valueSupplier);
         caches.put(cacheId, cache);
-        cacheCreationResult.setCacheId(cacheId);
+        cacheCreationResult.getCacheId().copyFrom(cacheId);
         return cacheCreationResult;
     }
 
     @Override
     public Cache<I, K, V> deleteCache(I cacheId) {
         deleteCacheResult.clear();
-        deleteCacheResult.setCacheId(cacheId);
+        deleteCacheResult.getCacheId().copyFrom(cacheId);
         return caches.remove(cacheId);
+    }
+
+    @Override
+    public RemoveCacheEntryResult<I, K> removeCacheEntry(I cacheId, K key) {
+        removeCacheEntryResult.clear();
+        removeCacheEntryResult.getCacheId().copyFrom(cacheId);
+        var cache = getCache(cacheId);
+        if (cache != null) {
+            var result = cache.remove(key);
+            removeCacheEntryResult.getKey().copyFrom(result.getKey());
+        }
+        return removeCacheEntryResult;
     }
 }

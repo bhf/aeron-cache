@@ -16,10 +16,20 @@ public class ReusableString implements Reusable<String> {
         sb.append(source);
     }
 
+    @Override
+    public void copyFrom(Reusable<String> source) {
+        this.copyFrom(source.value());
+    }
+
+    public void copyFrom(ReusableString source) {
+        sb.append(source.sb);
+    }
+
     public void copyFrom(StringBuilder source) {
         sb.append(source);
     }
 
+    @Override
     public String value(){
         return sb.toString();
     }

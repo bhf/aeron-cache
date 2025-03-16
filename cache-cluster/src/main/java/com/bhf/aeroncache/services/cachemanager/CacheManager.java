@@ -1,7 +1,9 @@
 package com.bhf.aeroncache.services.cachemanager;
 
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.services.cache.Cache;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
@@ -13,7 +15,7 @@ import io.aeron.Image;
  * @param <K> The type of the key of each individual cache.
  * @param <V> The type of the value of each individual cache.
  */
-public interface CacheManager<I, K, V> {
+public interface CacheManager<I extends Reusable, K extends Reusable, V extends Reusable> {
 
     /**
      * Create a cache.
@@ -61,4 +63,13 @@ public interface CacheManager<I, K, V> {
      * @return The deleted cache.
      */
     Cache<I, K, V> deleteCache(I cacheId);
+
+    /**
+     * Remove a specific cache entry.
+     *
+     * @param cacheId The id of the cache we're removing from.
+     * @param key     The key for the entry we want to remove.
+     * @return The result of removing the entry.
+     */
+    RemoveCacheEntryResult<I, K> removeCacheEntry(I cacheId, K key);
 }

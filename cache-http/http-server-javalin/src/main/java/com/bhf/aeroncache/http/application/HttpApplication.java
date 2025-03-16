@@ -182,7 +182,7 @@ public class HttpApplication {
         observingPublisher.deleteCacheBlocking(cluster, Long.parseLong(cacheId), c -> {
             var deletedCacheId = c.getCacheId();
             log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
-            var response = new DeleteCacheResponse(deletedCacheId);
+            var response = new DeleteCacheResponse(deletedCacheId.value());
             context.json(response);
         });
     }
@@ -199,7 +199,7 @@ public class HttpApplication {
                 cacheId, key);
         observingPublisher.removeCacheEntryBlocking(cluster, cacheId, key, c -> {
             log.info("Got delete on item from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
-            var response = new DeleteItemResponse(c.getCacheId(), c.getKey());
+            var response = new DeleteItemResponse(c.getCacheId().value(), c.getKey().value());
             ctx.json(response);
         });
     }
@@ -216,7 +216,7 @@ public class HttpApplication {
                 cacheId, key);
         observingPublisher.getCacheEntryBlocking(cluster, cacheId, key, c -> {
             log.info("Got item from cluster on cacheId {}, key {}, value {}", c.getCacheId(), c.getEntryKey(), c.getEntryValue());
-            var response = new GetItemResponse(c.getCacheId(), c.getEntryKey(), c.getEntryValue());
+            var response = new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(), c.getEntryValue().value());
             ctx.json(response);
         });
     }
@@ -233,7 +233,7 @@ public class HttpApplication {
         observingPublisher.addCacheEntryBlocking(cluster, request.cacheId(), request.key(), request.value(), c -> {
             var cacheId = c.getCacheID();
             log.info("Got put item response from cluster on cacheId {}", cacheId);
-            var response = new PutItemResponse(cacheId, request.key());
+            var response = new PutItemResponse(cacheId.getValue(), request.key());
             ctx.json(response);
         });
     }
@@ -249,7 +249,7 @@ public class HttpApplication {
         observingPublisher.sendCreateCacheBlocking(cluster, request.cacheId(), c -> {
             var cacheId = c.getCacheId();
             log.info("Got create cache response from cluster on cacheId {}", cacheId);
-            var response = new CreateCacheResponse(cacheId);
+            var response = new CreateCacheResponse(cacheId.getValue());
             ctx.json(response);
         });
     }

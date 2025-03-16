@@ -43,7 +43,7 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         createCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         publishCreateCache(cluster, createCacheEncoder, headerEncoder);
-        log.info("Sent create cache request");
+        log.info("Sent create cache request on cache {} with request Id {}", cacheId, requestId);
     }
 
     public void publishCreateCache(AeronCluster cluster, CreateCacheEncoder createCacheEncoder, MessageHeaderEncoder headerEncoder){
@@ -64,6 +64,7 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).key(key).entryValue(value).requestId(requestId);
         publishAddCachEntry(cluster, addCacheEntryEncoder, headerEncoder);
+        log.info("Sent add cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
 
     /**
@@ -90,6 +91,7 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         getCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).key(key).requestId(requestId);
         publishGetCacheEntry(cluster, getCacheEntryEncoder, headerEncoder);
+        log.info("Sent get cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
 
     /**
@@ -110,11 +112,13 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         clearCache(cluster, requestId, cacheId);
         waitForResult(cluster);
     }
+
     @Override
     public void clearCache(AeronCluster cluster, String requestId, long cacheId) {
         clearCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         publishClearCache(cluster, clearCacheEncoder, headerEncoder);
+        log.info("Sent clear cache request on cache {} with request Id {}", cacheId, requestId);
     }
 
     /**
@@ -141,6 +145,7 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         deleteCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         publishDeleteCache(cluster, deleteCacheEncoder, headerEncoder);
+        log.info("Sent delete cache request on cache {} with request Id {}", cacheId, requestId);
     }
 
     /**
@@ -167,6 +172,7 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).key(key).requestId(requestId);
         publishRemoveCacheEntry(cluster, removeCacheEntryEncoder, headerEncoder);
+        log.info("Sent remove cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
 
     /**
