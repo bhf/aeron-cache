@@ -13,6 +13,16 @@ public class RequestId implements Reusable<RequestId>{
         sb.append(source.sb);
     }
 
+    @Override
+    public void copyFrom(Reusable<RequestId> source) {
+        this.copyFrom(source.value());
+    }
+
+    @Override
+    public RequestId value() {
+        return this;
+    }
+
     public String getRequestId(){
         return sb.toString();
     }

@@ -46,4 +46,14 @@ public class ClearCacheRequestDetails<I extends Reusable> implements Reusable<Cl
         this.cacheId.copyFrom(source.getCacheId());
         this.requestId.copyFrom(source.requestId);
     }
+
+    @Override
+    public void copyFrom(Reusable<ClearCacheRequestDetails<I>> source) {
+        this.copyFrom(source.value());
+    }
+
+    @Override
+    public ClearCacheRequestDetails<I> value() {
+        return this;
+    }
 }

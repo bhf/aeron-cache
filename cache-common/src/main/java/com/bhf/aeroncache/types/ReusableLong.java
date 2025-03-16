@@ -18,6 +18,12 @@ public class ReusableLong implements Reusable<Long> {
         value = source;
     }
 
+    @Override
+    public void copyFrom(Reusable<Long> source) {
+        this.copyFrom(source.value());
+    }
+
+    @Override
     public Long value() {
         return value;
     }

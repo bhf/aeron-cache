@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cache.impl;
 
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.GetCacheEntryResult;
@@ -8,6 +9,7 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * A cache implementation backed by an on heap {@link HashMap}.
@@ -17,29 +19,39 @@ import java.util.Map;
  * @param <V> The type of the value.
  */
 @Log4j2
-public class HashMapCache<I, K, V> extends AbstractCache<I, K, V> {
+public class HashMapCache<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCache<I, K, V> {
 
     final Map<K, V> cache = new HashMap<>();
+    private final V emptyValue;
+
+    public HashMapCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier) {
+        super(indexSupplier, keySupplier, valueSupplier);
+        this.emptyValue = valueSupplier.get();
+    }
 
     @Override
     public AddCacheEntryResult<I, K> add(K key, V value) {
         addCacheEntryResult.clear();
-        addCacheEntryResult.setEntryKey(key);
+        addCacheEntryResult.getEntryKey().copyFrom(key);
+        K newKey = keySupplier.get();
+        newKey.copyFrom(key);
+        V newValue = valueSupplier.get();
+        newValue.copyFrom(value);
+        cache.put(newKey, newValue);
         addCacheEntryResult.setEntryAdded(true);
-        cache.put(key, value);
         return addCacheEntryResult;
     }
 
     @Override
-    public GetCacheEntryResult<I,K,V> get(K key){
+    public GetCacheEntryResult<I, K, V> get(K key) {
         getCacheEntryResult.clear();
-        getCacheEntryResult.setEntryKey(key);
+        getCacheEntryResult.getEntryKey().copyFrom(key);
 
-        if(cache.containsKey(key)){
-            getCacheEntryResult.setEntryValue(cache.get(key));
-        }
-        else{
+        if (cache.containsKey(key)) {
+            getCacheEntryResult.getEntryValue().copyFrom(cache.get(key));
+        } else {
             log.warn("Cant find key {}", key);
+            getCacheEntryResult.getEntryValue().copyFrom(emptyValue);
         }
 
         return getCacheEntryResult;
@@ -48,8 +60,9 @@ public class HashMapCache<I, K, V> extends AbstractCache<I, K, V> {
     @Override
     public RemoveCacheEntryResult<I, K> remove(K key) {
         removeCacheEntryResult.clear();
-        removeCacheEntryResult.setKey(key);
-        cache.remove(key);
+        removeCacheEntryResult.getKey().copyFrom(key);
+        var removed = cache.remove(key);
+        removeCacheEntryResult.setRemoved(removed != null);
         return removeCacheEntryResult;
     }
 

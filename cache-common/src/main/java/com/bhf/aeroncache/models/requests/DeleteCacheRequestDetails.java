@@ -46,4 +46,14 @@ public class DeleteCacheRequestDetails<I extends Reusable> implements Reusable<D
         this.cacheId.copyFrom(source.cacheId);
         this.requestId.copyFrom(source.requestId);
     }
+
+    @Override
+    public void copyFrom(Reusable<DeleteCacheRequestDetails<I>> source) {
+        this.copyFrom(source.value());
+    }
+
+    @Override
+    public DeleteCacheRequestDetails<I> value() {
+        return this;
+    }
 }

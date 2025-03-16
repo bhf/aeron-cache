@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Market annotation for flyweights.
+ * Marker annotation for flyweights.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

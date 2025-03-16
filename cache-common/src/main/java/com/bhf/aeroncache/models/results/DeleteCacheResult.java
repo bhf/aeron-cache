@@ -1,8 +1,10 @@
 package com.bhf.aeroncache.models.results;
 
+import com.bhf.aeroncache.annotations.Flyweight;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 /**
@@ -12,9 +14,11 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class DeleteCacheResult<I> implements Reusable<DeleteCacheResult<I>> {
+@RequiredArgsConstructor
+@Flyweight
+public class DeleteCacheResult<I extends Reusable> implements Reusable<DeleteCacheResult<I>> {
 
-    I cacheId;
+    final I cacheId;
     final RequestId requestId = new RequestId();
 
     public String getRequestId() {
@@ -27,13 +31,23 @@ public class DeleteCacheResult<I> implements Reusable<DeleteCacheResult<I>> {
 
     @Override
     public void clear() {
-        cacheId = null;
+        cacheId.clear();
         this.requestId.clear();
     }
 
     @Override
     public void copyFrom(DeleteCacheResult<I> source) {
-        this.cacheId = source.cacheId;
+        this.cacheId.copyFrom(source.cacheId);
         this.requestId.copyFrom(source.requestId);
+    }
+
+    @Override
+    public void copyFrom(Reusable<DeleteCacheResult<I>> source) {
+        this.copyFrom(source.value());
+    }
+
+    @Override
+    public DeleteCacheResult<I> value() {
+        return this;
     }
 }

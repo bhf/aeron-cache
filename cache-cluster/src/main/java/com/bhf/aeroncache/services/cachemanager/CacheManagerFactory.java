@@ -6,6 +6,7 @@ import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * A factory to create cache manager instances.
@@ -15,8 +16,8 @@ import java.util.function.Consumer;
  * @param <V> The type of the value for cache entries which this factory will create.
  */
 public class CacheManagerFactory<I extends Reusable, K extends Reusable, V extends Reusable> {
-    public CacheManager<I, K, V> getCacheManager(Consumer<ExclusivePublication> takeSnapshotProcessor, Consumer<Image> loadSnapshotProcessor) {
-        return new AbstractHashMapCacheManager<I,K,V>() {
+    public CacheManager<I, K, V> getCacheManager(Consumer<ExclusivePublication> takeSnapshotProcessor, Consumer<Image> loadSnapshotProcessor, Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier, Supplier<V> cacheValueSupplier) {
+        return new AbstractHashMapCacheManager<I,K,V>(cacheIndexSupplier, cacheKeySupplier, cacheValueSupplier) {
 
             @Override
             public void takeSnapshot(ExclusivePublication snapshotPublication) {
