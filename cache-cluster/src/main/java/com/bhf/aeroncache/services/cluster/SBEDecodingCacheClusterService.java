@@ -3,7 +3,6 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.services.cache.Cache;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
@@ -13,8 +12,6 @@ import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.apache.logging.log4j.util.Strings;
-
-import java.util.function.Supplier;
 
 /**
  * Decode SBE messages representing cache actions. This implementation
@@ -122,6 +119,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     protected void handlePostCreateCache(ReusableLong cacheId, CreateCacheResult<ReusableLong> cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset) {
         cacheCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheCreatedEncoder.cacheId(cacheId.getValue())
+                .status(cacheCreationResult.getStatus())
                 .requestId(cacheCreationResult.getRequestId());
         sendMessage(session, egressBuffer, cacheCreatedEncoder.encodedLength() + headerEncoder.encodedLength());
     }
@@ -130,6 +128,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     protected void handlePostAddCacheEntry(ReusableLong cacheId, ReusableString key, ReusableString value, AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
         entryCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         entryCreatedEncoder.cacheId(cacheId.getValue())
+                .status(addCacheEntryResult.getStatus())
                 .key(key.value())
                 .requestId(addCacheEntryResult.getRequestId());
         sendMessage(session, egressBuffer, entryCreatedEncoder.encodedLength() + headerEncoder.encodedLength());
@@ -139,6 +138,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     protected void handlePostGetCacheEntry(ReusableLong cacheId, ReusableString key, GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
         cacheEntryResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheEntryResultEncoder.cacheId(cacheId.getValue())
+                .status(getCacheEntryResult.getStatus())
                 .key(getCacheEntryResult.getEntryKey().value());
 
         if (getCacheEntryResult.getEntryValue() != null) {
@@ -156,6 +156,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     protected void handlePostRemoveCacheEntry(ReusableLong cacheId, ReusableString key, RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
         entryRemovedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         entryRemovedEncoder.cacheId(cacheId.getValue())
+                .status(removeCacheEntryResult.getStatus())
                 .key(key.value())
                 .requestId(removeCacheEntryResult.getRequestId());
         sendMessage(session, egressBuffer, entryRemovedEncoder.encodedLength() + headerEncoder.encodedLength());
@@ -165,14 +166,16 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     protected void handlePostClearCache(ReusableLong cacheId, ClearCacheResult<ReusableLong> clearCacheResult, ClientSession session, DirectBuffer buffer, int offset) {
         cacheClearedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheClearedEncoder.cacheId(cacheId.getValue())
+                .status(clearCacheResult.getStatus())
                 .requestId(clearCacheResult.getRequestId());
         sendMessage(session, egressBuffer, cacheClearedEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 
     @Override
-    protected void handlePostDeleteCache(ReusableLong cacheId, Cache<ReusableLong, ReusableString, ReusableString> deleteCacheResult, DeleteCacheRequestDetails<ReusableLong> requestDetails, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostDeleteCache(ReusableLong cacheId, DeleteCacheResult<ReusableLong> deleteCacheResult, DeleteCacheRequestDetails<ReusableLong> requestDetails, ClientSession session, DirectBuffer buffer, int offset) {
         cacheDeletedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheDeletedEncoder.cacheId(cacheId.getValue())
+                .status(deleteCacheResult.getStatus())
                 .requestId(requestDetails.getRequestId());
         sendMessage(session, egressBuffer, cacheDeletedEncoder.encodedLength() + headerEncoder.encodedLength());
     }

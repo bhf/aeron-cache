@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class CacheClearedDecoder
 {
-    public static final int BLOCK_LENGTH = 8;
+    public static final int BLOCK_LENGTH = 9;
     public static final int TEMPLATE_ID = 9;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -170,9 +170,50 @@ public final class CacheClearedDecoder
     }
 
 
-    public static int requestIdId()
+    public static int statusId()
     {
         return 2;
+    }
+
+    public static int statusSinceVersion()
+    {
+        return 0;
+    }
+
+    public static int statusEncodingOffset()
+    {
+        return 8;
+    }
+
+    public static int statusEncodingLength()
+    {
+        return 1;
+    }
+
+    public static String statusMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public short statusRaw()
+    {
+        return ((short)(buffer.getByte(offset + 8) & 0xFF));
+    }
+
+    public OperationStatus status()
+    {
+        return OperationStatus.get(((short)(buffer.getByte(offset + 8) & 0xFF)));
+    }
+
+
+    public static int requestIdId()
+    {
+        return 3;
     }
 
     public static int requestIdSinceVersion()
@@ -321,6 +362,9 @@ public final class CacheClearedDecoder
         builder.append("):");
         builder.append("cacheId=");
         builder.append(cacheId());
+        builder.append('|');
+        builder.append("status=");
+        builder.append(status());
         builder.append('|');
         builder.append("requestId=");
         builder.append('\'').append(requestId()).append('\'');

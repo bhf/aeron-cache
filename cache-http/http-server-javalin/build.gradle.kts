@@ -9,6 +9,7 @@ dependencies {
     implementation(project(":cache-client"))
     implementation(project(":cache-common"))
     implementation(project(":cache-messages-http"))
+    implementation(project(":cache-messages-sbe"))
     implementation(libs.aeron)
     implementation(libs.javalin)
     implementation(libs.log4j.api)

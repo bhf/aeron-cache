@@ -172,7 +172,7 @@ public final class AddCacheEntryDecoder
 
     public static int requestIdId()
     {
-        return 3;
+        return 2;
     }
 
     public static int requestIdSinceVersion()
@@ -280,7 +280,7 @@ public final class AddCacheEntryDecoder
 
     public static int keyId()
     {
-        return 4;
+        return 3;
     }
 
     public static int keySinceVersion()
@@ -388,7 +388,7 @@ public final class AddCacheEntryDecoder
 
     public static int entryValueId()
     {
-        return 5;
+        return 4;
     }
 
     public static int entryValueSinceVersion()

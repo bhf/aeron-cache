@@ -1,8 +1,10 @@
 package com.bhf.aeroncache.services.cachemanager.impl;
 
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.results.DeleteCacheResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.services.cache.Cache;
 
@@ -33,13 +35,14 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
     @Override
     public ClearCacheResult<I> clearCache(I cacheId) {
         clearCacheResult.clear();
+        clearCacheResult.getCacheId().copyFrom(cacheId);
         var cache = getCache(cacheId);
-
         if (cache != null) {
             cache.clearEntries();
+            clearCacheResult.setStatus(OperationStatus.SUCCESS);
+        } else {
+            clearCacheResult.setStatus(OperationStatus.UNKNOWN_CACHE);
         }
-
-        clearCacheResult.getCacheId().copyFrom(cacheId);
         return clearCacheResult;
     }
 
@@ -53,10 +56,13 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
     }
 
     @Override
-    public Cache<I, K, V> deleteCache(I cacheId) {
+    public DeleteCacheResult<I> deleteCache(I cacheId) {
         deleteCacheResult.clear();
         deleteCacheResult.getCacheId().copyFrom(cacheId);
-        return caches.remove(cacheId);
+        var removed = caches.remove(cacheId);
+        deleteCacheResult.setStatus(removed != null ?
+                OperationStatus.SUCCESS : OperationStatus.UNKNOWN_CACHE);
+        return deleteCacheResult;
     }
 
     @Override
@@ -67,6 +73,9 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
         if (cache != null) {
             var result = cache.remove(key);
             removeCacheEntryResult.getKey().copyFrom(result.getKey());
+            removeCacheEntryResult.setStatus(result.getStatus());
+        } else {
+            removeCacheEntryResult.setStatus(OperationStatus.UNKNOWN_CACHE);
         }
         return removeCacheEntryResult;
     }
