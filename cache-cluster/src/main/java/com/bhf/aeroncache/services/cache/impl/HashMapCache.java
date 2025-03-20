@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cache.impl;
 
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
@@ -39,6 +40,7 @@ public class HashMapCache<I extends Reusable, K extends Reusable, V extends Reus
         newValue.copyFrom(value);
         cache.put(newKey, newValue);
         addCacheEntryResult.setEntryAdded(true);
+        addCacheEntryResult.setStatus(OperationStatus.SUCCESS);
         return addCacheEntryResult;
     }
 
@@ -49,9 +51,10 @@ public class HashMapCache<I extends Reusable, K extends Reusable, V extends Reus
 
         if (cache.containsKey(key)) {
             getCacheEntryResult.getEntryValue().copyFrom(cache.get(key));
+            getCacheEntryResult.setStatus(OperationStatus.SUCCESS);
         } else {
-            log.warn("Cant find key {}", key);
             getCacheEntryResult.getEntryValue().copyFrom(emptyValue);
+            getCacheEntryResult.setStatus(OperationStatus.UNKNOWN_KEY);
         }
 
         return getCacheEntryResult;
@@ -63,6 +66,8 @@ public class HashMapCache<I extends Reusable, K extends Reusable, V extends Reus
         removeCacheEntryResult.getKey().copyFrom(key);
         var removed = cache.remove(key);
         removeCacheEntryResult.setRemoved(removed != null);
+        removeCacheEntryResult.setStatus(removed != null ?
+                OperationStatus.SUCCESS : OperationStatus.UNKNOWN_KEY);
         return removeCacheEntryResult;
     }
 
@@ -70,6 +75,7 @@ public class HashMapCache<I extends Reusable, K extends Reusable, V extends Reus
     public ClearCacheResult<I> clearEntries() {
         clearCacheResult.clear();
         cache.clear();
+        clearCacheResult.setStatus(OperationStatus.SUCCESS);
         return clearCacheResult;
     }
 }

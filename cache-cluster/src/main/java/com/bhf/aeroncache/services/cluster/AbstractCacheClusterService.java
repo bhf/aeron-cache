@@ -4,7 +4,6 @@ import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.services.cache.Cache;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import io.aeron.ExclusivePublication;
@@ -330,13 +329,13 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * After a cache is deleted, send out a CacheDeleted message.
      *
      * @param cacheId           The ID of the cache which was deleted.
-     * @param deleteCacheResult The deleted cache.
+     * @param deleteCacheResult The result of deleting the cache.
      * @param requestDetails    The original request to delete the cache.
      * @param session           The client session.
      * @param buffer            The buffer from which the delete request was created.
      * @param offset            The offset from within the buffer to decode the original request from.
      */
-    protected abstract void handlePostDeleteCache(I cacheId, Cache<I, K, V> deleteCacheResult, DeleteCacheRequestDetails<I> requestDetails, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostDeleteCache(I cacheId, DeleteCacheResult<I> deleteCacheResult, DeleteCacheRequestDetails<I> requestDetails, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
      * @param session   Session to send the message too.
@@ -405,4 +404,6 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      */
     public void onTimerEvent(final long correlationId, final long timestamp) {
     }
+
+
 }

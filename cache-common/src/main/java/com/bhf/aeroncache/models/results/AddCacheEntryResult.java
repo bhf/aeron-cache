@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.models.results;
 
 import com.bhf.aeroncache.annotations.Flyweight;
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
@@ -23,8 +24,10 @@ public class AddCacheEntryResult<I extends Reusable, K extends Reusable> impleme
     boolean entryAdded;
     final K entryKey;
     final RequestId requestId = new RequestId();
+    OperationStatus status = OperationStatus.NONE;
 
-    public String getRequestId(){
+
+    public String getRequestId() {
         return requestId.getRequestId();
     }
 
@@ -41,6 +44,7 @@ public class AddCacheEntryResult<I extends Reusable, K extends Reusable> impleme
         entryKey.clear();
         cacheID.clear();
         requestId.clear();
+        status = OperationStatus.NONE;
     }
 
     /**
@@ -52,6 +56,7 @@ public class AddCacheEntryResult<I extends Reusable, K extends Reusable> impleme
         this.entryKey.copyFrom(source.entryKey);
         this.cacheID.copyFrom(source.cacheID);
         this.requestId.copyFrom(source.requestId);
+        this.status = source.status;
     }
 
     @Override

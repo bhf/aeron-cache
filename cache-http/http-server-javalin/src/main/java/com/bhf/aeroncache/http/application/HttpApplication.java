@@ -6,9 +6,10 @@ import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.services.cluster.AeronCacheListener;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.AgentRequestPublisher;
-import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.utils.DNSUtils;
+import com.bhf.aeroncache.models.ErrorMessages;
+import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
@@ -21,7 +22,6 @@ import org.agrona.concurrent.*;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 import org.agrona.concurrent.ringbuffer.RingBufferDescriptor;
 import org.agrona.concurrent.status.AtomicCounter;
-import org.eclipse.jetty.http.HttpStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.Inet4Address;
@@ -63,9 +63,9 @@ public class HttpApplication {
             System.out.println("POD_ADDRESS=" + podName);
             System.out.println("CLUSTER_ADDRESSES=" + allHosts);
 
-            final String egressIP = getThisHostName();
+            var egressIP = getThisHostName();
             var hostArray = List.of(allHosts.split(","));
-            final var ingressEndpoints = ingressEndpoints(hostArray);
+            var ingressEndpoints = ingressEndpoints(hostArray);
 
             System.out.println("Awaiting DNS Resolution");
             for (int i = 0; i < hostArray.size(); i++) {
@@ -100,7 +100,6 @@ public class HttpApplication {
 
     @NotNull
     private static ErrorHandler getAgentRunnerErrorHandler() {
-        //return new RethrowingErrorHandler();
         return cluster.context().errorHandler();
     }
 
@@ -152,10 +151,12 @@ public class HttpApplication {
      */
     private static void handleGetReadiness(Context context) {
         if (clusterConnected.get()) {
-            context.status(HttpStatus.OK_200);
+            context.status(HTTPStatusUtils.SERVICE_READY);
+            context.result("Ready");
+        } else {
+            context.status(HTTPStatusUtils.SERVICE_NOT_READY);
+            context.result("Cluster not connected");
         }
-        context.status(HttpStatus.SERVICE_UNAVAILABLE_503);
-        context.result("Ready");
     }
 
     /**
@@ -165,27 +166,39 @@ public class HttpApplication {
      */
     private static void handleGetLiveness(Context context) {
         if (clusterConnected.get()) {
-            context.status(HttpStatus.OK_200);
+            context.status(HTTPStatusUtils.SERVICE_LIVE);
+            context.result("Connected");
+        } else {
+            context.status(HTTPStatusUtils.SERVICE_NOT_LIVE);
+            context.result("Cluster not connected");
         }
-        context.status(HttpStatus.SERVICE_UNAVAILABLE_503);
-        context.result("Alive");
     }
 
     /**
      * Handle a request to delete a cache.
      *
-     * @param context The context.
+     * @param ctx The context.
      */
-    private static void handleDeleteCacheRequest(Context context) {
-        var cacheId = context.pathParam("cacheId");
-        log.info("Got delete cache request for cacheId {}", cacheId);
-        observingPublisher.deleteCacheBlocking(cluster, Long.parseLong(cacheId), c -> {
-            var deletedCacheId = c.getCacheId();
-            log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
-            var response = new DeleteCacheResponse(deletedCacheId.value());
-            context.json(response);
-        });
+    private static void handleDeleteCacheRequest(Context ctx) {
+        try {
+            var cacheId = ctx.pathParam("cacheId");
+            log.info("Got delete cache request for cacheId {}", cacheId);
+            observingPublisher.deleteCacheBlocking(cluster, Long.parseLong(cacheId), c -> {
+                var deletedCacheId = c.getCacheId();
+                log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
+                var response = new DeleteCacheResponse(deletedCacheId.value());
+                ctx.status(HTTPStatusUtils.getHTTPCode(c.getStatus()));
+                ctx.json(response);
+            });
+        } catch (NumberFormatException e) {
+            var errorMsg = STR."Badly formed request to delete cache with Id: \{ ctx.pathParam("cacheId")}";
+            log.warn(errorMsg);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
     }
+
 
     /**
      * Handle a request to delete an item from a cache.
@@ -193,15 +206,24 @@ public class HttpApplication {
      * @param ctx The context.
      */
     private static void handleDeleteItemRequest(Context ctx) {
-        var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
-        var key = ctx.pathParam("key");
-        log.info("Got delete item request on cacheId {}, key {}",
-                cacheId, key);
-        observingPublisher.removeCacheEntryBlocking(cluster, cacheId, key, c -> {
-            log.info("Got delete on item from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
-            var response = new DeleteItemResponse(c.getCacheId().value(), c.getKey().value());
-            ctx.json(response);
-        });
+        try {
+            var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
+            var key = ctx.pathParam("key");
+            log.info("Got delete item request on cacheId {}, key {}",
+                    cacheId, key);
+            observingPublisher.removeCacheEntryBlocking(cluster, cacheId, key, c -> {
+                log.info("Got delete on item from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
+                var response = new DeleteItemResponse(c.getCacheId().value(), c.getKey().value());
+                ctx.status(HTTPStatusUtils.getHTTPCode(c.getStatus()));
+                ctx.json(response);
+            });
+        } catch (NumberFormatException e) {
+            var errorMsg = STR."Badly formed request to delete item with key \{ctx.pathParam("key")} from cache with Id: \{ ctx.pathParam("cacheId")}";
+            log.warn(errorMsg);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
     }
 
     /**
@@ -210,15 +232,24 @@ public class HttpApplication {
      * @param ctx The context.
      */
     private static void handleGetItemRequest(Context ctx) {
-        var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
-        var key = ctx.pathParam("key");
-        log.info("Got get item request on cacheId {}, key {}",
-                cacheId, key);
-        observingPublisher.getCacheEntryBlocking(cluster, cacheId, key, c -> {
-            log.info("Got item from cluster on cacheId {}, key {}, value {}", c.getCacheId(), c.getEntryKey(), c.getEntryValue());
-            var response = new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(), c.getEntryValue().value());
-            ctx.json(response);
-        });
+        try {
+            var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
+            var key = ctx.pathParam("key");
+            log.info("Got get item request on cacheId {}, key {}",
+                    cacheId, key);
+            observingPublisher.getCacheEntryBlocking(cluster, cacheId, key, c -> {
+                log.info("Got item from cluster on cacheId {}, key {}, value {}", c.getCacheId(), c.getEntryKey(), c.getEntryValue());
+                var response = new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(), c.getEntryValue().value());
+                ctx.status(HTTPStatusUtils.getHTTPCode(c.getStatus()));
+                ctx.json(response);
+            });
+        } catch (NumberFormatException e) {
+            var errorMsg = STR."Badly formed request to get item with key \{ctx.pathParam("key")} from cache with Id: \{ ctx.pathParam("cacheId")}";
+            log.warn(errorMsg);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
     }
 
     /**
@@ -227,15 +258,24 @@ public class HttpApplication {
      * @param ctx The context.
      */
     private static void handlePutItemRequest(Context ctx) {
-        var request = ctx.bodyAsClass(PutItemRequest.class);
-        log.info("Got put item request on cacheId {}, key {}, value {}",
-                request.cacheId(), request.key(), request.value());
-        observingPublisher.addCacheEntryBlocking(cluster, request.cacheId(), request.key(), request.value(), c -> {
-            var cacheId = c.getCacheID();
-            log.info("Got put item response from cluster on cacheId {}", cacheId);
-            var response = new PutItemResponse(cacheId.getValue(), request.key());
-            ctx.json(response);
-        });
+        try {
+            var request = ctx.bodyAsClass(PutItemRequest.class);
+            log.info("Got put item request on cacheId {}, key {}, value {}",
+                    request.cacheId(), request.key(), request.value());
+            observingPublisher.addCacheEntryBlocking(cluster, request.cacheId(), request.key(), request.value(), c -> {
+                var cacheId = c.getCacheID();
+                log.info("Got put item response from cluster on cacheId {}", cacheId);
+                var response = new PutItemResponse(cacheId.getValue(), request.key());
+                ctx.status(HTTPStatusUtils.getHTTPCode(c.getStatus()));
+                ctx.json(response);
+            });
+        } catch (Exception e) {
+            var errorMsg = STR."Badly formed request to put item from request: \{ ctx.body()}";
+            log.warn(errorMsg);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
     }
 
     /**
@@ -244,14 +284,23 @@ public class HttpApplication {
      * @param ctx The context.
      */
     private static void handleCreateCacheRequest(Context ctx) {
-        var request = ctx.bodyAsClass(CreateCacheRequest.class);
-        log.info("Got create cache request on cacheId {}", request.cacheId());
-        observingPublisher.sendCreateCacheBlocking(cluster, request.cacheId(), c -> {
-            var cacheId = c.getCacheId();
-            log.info("Got create cache response from cluster on cacheId {}", cacheId);
-            var response = new CreateCacheResponse(cacheId.getValue());
-            ctx.json(response);
-        });
+        try {
+            var request = ctx.bodyAsClass(CreateCacheRequest.class);
+            log.info("Got create cache request on cacheId {}", request.cacheId());
+            observingPublisher.sendCreateCacheBlocking(cluster, request.cacheId(), c -> {
+                var cacheId = c.getCacheId();
+                log.info("Got create cache response from cluster on cacheId {}", cacheId);
+                var response = new CreateCacheResponse(cacheId.getValue());
+                ctx.status(HTTPStatusUtils.getHTTPCode(c.getStatus()));
+                ctx.json(response);
+            });
+        } catch (Exception e) {
+            var errorMsg = STR."Badly formed request to create cache from request: \{ ctx.body()}";
+            log.warn(errorMsg);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
     }
 
     /**

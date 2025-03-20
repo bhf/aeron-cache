@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class CacheEntryResultEncoder
 {
-    public static final int BLOCK_LENGTH = 8;
+    public static final int BLOCK_LENGTH = 9;
     public static final int TEMPLATE_ID = 12;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -156,9 +156,45 @@ public final class CacheEntryResultEncoder
     }
 
 
-    public static int keyId()
+    public static int statusId()
     {
         return 2;
+    }
+
+    public static int statusSinceVersion()
+    {
+        return 0;
+    }
+
+    public static int statusEncodingOffset()
+    {
+        return 8;
+    }
+
+    public static int statusEncodingLength()
+    {
+        return 1;
+    }
+
+    public static String statusMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public CacheEntryResultEncoder status(final OperationStatus value)
+    {
+        buffer.putByte(offset + 8, (byte)value.value());
+        return this;
+    }
+
+    public static int keyId()
+    {
+        return 3;
     }
 
     public static String keyCharacterEncoding()
@@ -242,7 +278,7 @@ public final class CacheEntryResultEncoder
 
     public static int valueId()
     {
-        return 3;
+        return 4;
     }
 
     public static String valueCharacterEncoding()
@@ -326,7 +362,7 @@ public final class CacheEntryResultEncoder
 
     public static int requestIdId()
     {
-        return 4;
+        return 5;
     }
 
     public static String requestIdCharacterEncoding()

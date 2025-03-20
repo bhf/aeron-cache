@@ -158,7 +158,7 @@ public final class AddCacheEntryEncoder
 
     public static int requestIdId()
     {
-        return 3;
+        return 2;
     }
 
     public static String requestIdCharacterEncoding()
@@ -242,7 +242,7 @@ public final class AddCacheEntryEncoder
 
     public static int keyId()
     {
-        return 4;
+        return 3;
     }
 
     public static String keyCharacterEncoding()
@@ -326,7 +326,7 @@ public final class AddCacheEntryEncoder
 
     public static int entryValueId()
     {
-        return 5;
+        return 4;
     }
 
     public static String entryValueCharacterEncoding()

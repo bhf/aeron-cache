@@ -3,6 +3,7 @@ package com.bhf.aeroncache.services.cachemanager;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.results.DeleteCacheResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.services.cache.Cache;
 import io.aeron.ExclusivePublication;
@@ -60,9 +61,9 @@ public interface CacheManager<I extends Reusable, K extends Reusable, V extends 
      * Delete the requested cache.
      *
      * @param cacheId The id of the cache to delete.
-     * @return The deleted cache.
+     * @return The result of deleting the cache.
      */
-    Cache<I, K, V> deleteCache(I cacheId);
+    DeleteCacheResult<I> deleteCache(I cacheId);
 
     /**
      * Remove a specific cache entry.

@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.models.results;
 
 import com.bhf.aeroncache.annotations.Flyweight;
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
@@ -20,6 +21,7 @@ public class ClearCacheResult<I extends Reusable> implements Reusable<ClearCache
 
     final I cacheId;
     final RequestId requestId = new RequestId();
+    OperationStatus status = OperationStatus.NONE;
 
     public String getRequestId() {
         return requestId.getRequestId();
@@ -36,6 +38,7 @@ public class ClearCacheResult<I extends Reusable> implements Reusable<ClearCache
     public void clear() {
         this.cacheId.clear();
         this.requestId.clear();
+        this.status = OperationStatus.NONE;
     }
 
     /**
@@ -45,6 +48,7 @@ public class ClearCacheResult<I extends Reusable> implements Reusable<ClearCache
     public void copyFrom(ClearCacheResult<I> source) {
         this.cacheId.copyFrom(source.cacheId);
         this.requestId.copyFrom(source.requestId);
+        this.status = source.status;
     }
 
     @Override
