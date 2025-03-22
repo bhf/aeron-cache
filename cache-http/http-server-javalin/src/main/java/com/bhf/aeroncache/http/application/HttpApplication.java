@@ -15,6 +15,7 @@ import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
 import io.javalin.Javalin;
+import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.ErrorHandler;
@@ -32,6 +33,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 @Log4j2
 public class HttpApplication {
@@ -136,7 +138,7 @@ public class HttpApplication {
      */
     private static Javalin startHTTPServer() {
 
-        return Javalin.create(/*config*/)
+        return Javalin.create(getHTTPConfig())
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
                 .post(API_PREFIX + "<cacheId>", HttpApplication::handlePutItemRequest)
                 .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
@@ -145,6 +147,14 @@ public class HttpApplication {
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
                 .get(READINESS, HttpApplication::handleGetReadiness)
                 .start(PORT);
+    }
+
+    private static Consumer<JavalinConfig> getHTTPConfig() {
+        return config -> config.bundledPlugins.enableCors(cors -> {
+            cors.addRule(it -> {
+                it.allowHost("http://localhost");
+            });
+        });
     }
 
     /**
