@@ -9,27 +9,20 @@ import com.bhf.aeroncache.services.cluster.AeronCacheListener;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.AgentRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
+import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
+import com.bhf.aeroncache.utils.RingBufferUtils;
 import io.aeron.cluster.client.AeronCluster;
-import io.aeron.driver.MediaDriver;
-import io.aeron.driver.ThreadingMode;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
 import lombok.extern.log4j.Log4j2;
-import org.agrona.ErrorHandler;
-import org.agrona.ExpandableDirectByteBuffer;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.AgentRunner;
+import org.agrona.concurrent.BackoffIdleStrategy;
+import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
-import org.agrona.concurrent.ringbuffer.RingBufferDescriptor;
-import org.agrona.concurrent.status.AtomicCounter;
-import org.jetbrains.annotations.NotNull;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,9 +35,6 @@ public class HttpApplication {
     private static final String API_PREFIX = "/api/v1/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
-    private static final int PORT_BASE = 9000;
-    private static final int PORTS_PER_NODE = 100;
-    static final int CLIENT_FACING_PORT_OFFSET = 2;
     private static AeronCacheListener client;
     private static ObservingClusterRequestPublisher observingPublisher;
     private static AeronCluster cluster;
@@ -55,7 +45,7 @@ public class HttpApplication {
         var app = startHTTPServer();
 
         try {
-            ManyToOneRingBuffer rb = buildRingbuffer();
+            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             System.out.println("Starting AeronCache Cluster Interface");
             observingPublisher = new ObservingClusterRequestPublisher(new AgentRequestPublisher(rb));
             client = new AeronCacheListener();
@@ -67,9 +57,9 @@ public class HttpApplication {
             System.out.println("POD_ADDRESS=" + podName);
             System.out.println("CLUSTER_ADDRESSES=" + allHosts);
 
-            var egressIP = getThisHostName();
+            var egressIP = DNSUtils.getThisHostName();
             var hostArray = List.of(allHosts.split(","));
-            var ingressEndpoints = ingressEndpoints(hostArray);
+            var ingressEndpoints = ClusterUtils.ingressEndpoints(hostArray);
 
             System.out.println("Awaiting DNS Resolution");
             for (int i = 0; i < hostArray.size(); i++) {
@@ -77,58 +67,19 @@ public class HttpApplication {
             }
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
-            cluster = buildClusterConnection(egressIP, ingressEndpoints);
+            cluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client);
 
             System.out.println("Building cluster agent");
             var idleStrategy = new BackoffIdleStrategy();
             ClusterClientAgent agent = new ClusterClientAgent(cluster, rb, idleStrategy);
-            var errorHandler = getAgentRunnerErrorHandler();
-            var errorCounter = getAgentErrorCounter();
+            var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(cluster);
+            var errorCounter = ClusterUtils.getAgentErrorCounter(cluster);
             AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(runner);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private static ManyToOneRingBuffer buildRingbuffer() {
-        var bufferSize = 4096 + RingBufferDescriptor.TRAILER_LENGTH;
-        AtomicBuffer buffer = new UnsafeBuffer(new ExpandableDirectByteBuffer(bufferSize));
-        return new ManyToOneRingBuffer(buffer);
-    }
-
-    private static AtomicCounter getAgentErrorCounter() {
-        return cluster.context().aeron().addCounter(1, "AeronCacheAgent");
-    }
-
-    @NotNull
-    private static ErrorHandler getAgentRunnerErrorHandler() {
-        return cluster.context().errorHandler();
-    }
-
-    /**
-     * Ingress endpoints generated from a list of hostnames.
-     *
-     * @param hostnames for the cluster members.
-     * @return a formatted string of ingress endpoints for connecting to a cluster.
-     */
-    public static String ingressEndpoints(final List<String> hostnames) {
-        final StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < hostnames.size(); i++) {
-            sb.append(i).append('=');
-            sb.append(hostnames.get(i)).append(':').append(
-                    calculatePort(i, CLIENT_FACING_PORT_OFFSET));
-            sb.append(',');
-        }
-
-        sb.setLength(sb.length() - 1);
-
-        return sb.toString();
-    }
-
-    static int calculatePort(final int nodeId, final int offset) {
-        return PORT_BASE + (nodeId * PORTS_PER_NODE) + offset;
     }
 
     /**
@@ -149,6 +100,11 @@ public class HttpApplication {
                 .start(PORT);
     }
 
+    /**
+     * Basic configuration for CORS.
+     *
+     * @return Config for Javalin.
+     */
     private static Consumer<JavalinConfig> getHTTPConfig() {
         return config -> config.bundledPlugins.enableCors(cors -> {
             cors.addRule(it -> {
@@ -334,47 +290,5 @@ public class HttpApplication {
         }
     }
 
-    /**
-     * Build the connection to the cluster.
-     *
-     * @return An {@link AeronCluster} instance.
-     */
-    private static AeronCluster buildClusterConnection(String egressIP, String ingressEndpoints) {
-        System.out.println("Building cluster connection...");
-        MediaDriver mediaDriver = MediaDriver.launchEmbedded(new MediaDriver.Context()
-                .threadingMode(ThreadingMode.SHARED)
-                .dirDeleteOnStart(true)
-                .dirDeleteOnShutdown(true));
-        return AeronCluster.connect(
-                new AeronCluster.Context()
-                        .egressListener(client)
-                        .egressChannel("aeron:udp?endpoint=" + egressIP + ":0")
-                        .aeronDirectoryName(mediaDriver.aeronDirectoryName())
-                        .ingressChannel("aeron:udp")
-                        .ingressEndpoints(ingressEndpoints));
-    }
 
-    public static String getThisHostName() {
-        try {
-            final Enumeration<NetworkInterface> interfaceEnumeration = NetworkInterface.getNetworkInterfaces();
-            while (interfaceEnumeration.hasMoreElements()) {
-                final var networkInterface = interfaceEnumeration.nextElement();
-
-                if (networkInterface.getName().startsWith("eth0")) {
-                    System.out.println("Found eth0 interface: " + networkInterface);
-                    final Enumeration<InetAddress> interfaceAddresses = networkInterface.getInetAddresses();
-                    while (interfaceAddresses.hasMoreElements()) {
-                        if (interfaceAddresses.nextElement() instanceof Inet4Address inet4Address) {
-                            var address = inet4Address.getHostAddress();
-                            System.out.println("Returning IP4 address: " + address);
-                            return address;
-                        }
-                    }
-                }
-            }
-        } catch (final Exception e) {
-            // ignore
-        }
-        return "localhost";
-    }
 }

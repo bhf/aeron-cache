@@ -2,11 +2,18 @@ package com.bhf.aeroncache.utils;
 
 import org.agrona.concurrent.SystemEpochClock;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
 import java.util.List;
 
+/**
+ * Utilities and helpers for the DNS and networking.
+ */
 public class DNSUtils {
+
     public static void awaitDnsResolution(final List<String> hostArray, final int nodeId) {
         if (applyDnsDelay()) {
             System.out.println("Waiting 5 seconds for DNS to be registered...");
@@ -59,5 +66,34 @@ public class DNSUtils {
             return false;
         }
         return Boolean.parseBoolean(dnsDelay);
+    }
+
+    /**
+     * Get the current node's hostname from the eth0 interface.
+     *
+     * @return The hostname.
+     */
+    public static String getThisHostName() {
+        try {
+            final Enumeration<NetworkInterface> interfaceEnumeration = NetworkInterface.getNetworkInterfaces();
+            while (interfaceEnumeration.hasMoreElements()) {
+                final var networkInterface = interfaceEnumeration.nextElement();
+
+                if (networkInterface.getName().startsWith("eth0")) {
+                    System.out.println("Found eth0 interface: " + networkInterface);
+                    final Enumeration<InetAddress> interfaceAddresses = networkInterface.getInetAddresses();
+                    while (interfaceAddresses.hasMoreElements()) {
+                        if (interfaceAddresses.nextElement() instanceof Inet4Address inet4Address) {
+                            var address = inet4Address.getHostAddress();
+                            System.out.println("Returning IP4 address: " + address);
+                            return address;
+                        }
+                    }
+                }
+            }
+        } catch (final Exception e) {
+            // ignore
+        }
+        return "localhost";
     }
 }
