@@ -86,15 +86,17 @@ public class AeronCacheListener implements EgressListener {
     private void handleCacheEntryResult(DirectBuffer buffer, int offset) {
         getCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheID = getCacheEntryDecoder.cacheId();
+        var status = getCacheEntryDecoder.status();
         var key = getCacheEntryDecoder.key();
         var value = getCacheEntryDecoder.value();
         var requestId = getCacheEntryDecoder.requestId();
-        log.info("Got cache entry result from cache {} with key {}, value: {}, requestId: {}", cacheID, key, value, requestId);
+        log.info("Got cache entry result from cache {} with key {}, value: {}, requestId: {}, status {}", cacheID, key, value, requestId, status);
         getCacheEntryResult.clear();
         getCacheEntryResult.getCacheId().copyFrom(cacheID);
         getCacheEntryResult.getEntryKey().copyFrom(key);
         getCacheEntryResult.getEntryValue().copyFrom(value);
         getCacheEntryResult.setRequestId(requestId);
+        getCacheEntryResult.setStatus(status);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryResult(getCacheEntryResult);
@@ -112,10 +114,12 @@ public class AeronCacheListener implements EgressListener {
         cacheCreatedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheCreatedDecoder.cacheId();
         var requestId = cacheCreatedDecoder.requestId();
-        log.info("Created cache {}, requestId: {}", cacheId, requestId);
+        var status = cacheCreatedDecoder.status();
+        log.info("Created cache {}, requestId: {}, status {}", cacheId, requestId, status);
         createCacheResult.clear();
         createCacheResult.getCacheId().copyFrom(cacheId);
         createCacheResult.setRequestId(requestId);
+        createCacheResult.setStatus(status);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheCreated(createCacheResult);
@@ -133,12 +137,14 @@ public class AeronCacheListener implements EgressListener {
         var cacheId = addCacheEntryDecoder.cacheId();
         var key = addCacheEntryDecoder.key();
         var requestId = addCacheEntryDecoder.requestId();
-        log.info("Got cache entry created message for cache {} with key {}, requestId: {}", cacheId, key, requestId);
+        var status = addCacheEntryDecoder.status();
+        log.info("Got cache entry created message for cache {} with key {}, requestId: {}, status {}", cacheId, key, requestId, status);
         addCacheEntryResult.clear();
         addCacheEntryResult.setEntryAdded(true);
         addCacheEntryResult.getEntryKey().copyFrom(key);
         addCacheEntryResult.getCacheID().copyFrom(cacheId);
         addCacheEntryResult.setRequestId(requestId);
+        addCacheEntryResult.setStatus(status);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryCreated(addCacheEntryResult);
@@ -156,11 +162,13 @@ public class AeronCacheListener implements EgressListener {
         var cacheId = cacheEntryRemovedDecoder.cacheId();
         var key = cacheEntryRemovedDecoder.key();
         var requestId = cacheEntryRemovedDecoder.requestId();
-        log.info("Got cache entry removed for cache {} with key {}, requestId: {}", cacheId, key, requestId);
+        var status = cacheEntryRemovedDecoder.status();
+        log.info("Got cache entry removed for cache {} with key {}, requestId: {}, status {}", cacheId, key, requestId, status);
         removeCacheEntryResult.clear();
         removeCacheEntryResult.getKey().copyFrom(key);
         removeCacheEntryResult.getCacheId().copyFrom(cacheId);
         removeCacheEntryResult.setRequestId(requestId);
+        removeCacheEntryResult.setStatus(status);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryRemoved(removeCacheEntryResult);
@@ -177,10 +185,12 @@ public class AeronCacheListener implements EgressListener {
         cacheClearedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheClearedDecoder.cacheId();
         var requestId = cacheClearedDecoder.requestId();
-        log.info("Got cache cleared on cache {}, requestId: {}", cacheId, requestId);
+        var status = cacheClearedDecoder.status();
+        log.info("Got cache cleared on cache {}, requestId: {}, status: {}", cacheId, requestId, status);
         clearCacheResult.clear();
         clearCacheResult.getCacheId().copyFrom(cacheId);
         clearCacheResult.setRequestId(requestId);
+        clearCacheResult.setStatus(status);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheCleared(clearCacheResult);
@@ -197,10 +207,12 @@ public class AeronCacheListener implements EgressListener {
         cacheDeletedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheDeletedDecoder.cacheId();
         var requestId = cacheDeletedDecoder.requestId();
-        log.info("Got cache deleted on cache {}, requestId: {}", cacheId, requestId);
+        var status = cacheDeletedDecoder.status();
+        log.info("Got cache deleted on cache {}, requestId: {}, status {}", cacheId, requestId, status);
         deleteCacheResult.clear();
         deleteCacheResult.getCacheId().copyFrom(cacheId);
         deleteCacheResult.setRequestId(requestId);
+        deleteCacheResult.setStatus(status);
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheDeleted(deleteCacheResult);

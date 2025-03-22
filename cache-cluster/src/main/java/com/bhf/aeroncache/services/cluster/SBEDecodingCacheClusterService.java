@@ -81,9 +81,9 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         addCacheEntryRequestDetails.clear();
         addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         long cacheId = addCacheEntryDecoder.cacheId();
+        var requestID = addCacheEntryDecoder.requestId();
         var key = addCacheEntryDecoder.key();
         var value = addCacheEntryDecoder.entryValue();
-        var requestID = addCacheEntryDecoder.requestId();
         addCacheEntryRequestDetails.getCacheId().copyFrom(cacheId);
         addCacheEntryRequestDetails.getKey().copyFrom(key);
         addCacheEntryRequestDetails.getValue().copyFrom(value);

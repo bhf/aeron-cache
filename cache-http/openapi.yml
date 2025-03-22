@@ -1,0 +1,220 @@
+openapi: 3.0.1
+info:
+  title: Aeron Cache HTTP API
+  description: This API exposes endpoints to interact with Aeron Cache.
+  termsOfService: https://www.github.com/bhf
+  contact:
+    name: Sanjeev
+    url: https://www.sanjeev.pages.dev
+    email: na@na.com
+  license:
+    name: MIT License
+    url: https://choosealicense.com/licenses/mit/
+  version: '1.0'
+servers:
+  - url: http://localhost:7070
+    description: Dev server
+paths:
+  /api/v1/cache:
+    post:
+      tags:
+        - Create Cache
+      operationId: createCache
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CreateResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/cache/{cacheId}:
+    post:
+      tags:
+        - Put Item in Cache
+      operationId: putItem
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The numeric ID of the cache
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutItemRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PutItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Delete Cache
+      operationId: deleteCache
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The numeric ID of the cache
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DeleteCacheResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/cache/{cacheId}/{key}:
+    get:
+      tags:
+        - Get Item from Cache
+      operationId: getItem
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The numeric ID of the cache
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The key of the item
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/GetItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Delete Item from Cache
+      operationId: deleteItem
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The numeric ID of the cache
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The key of the item
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DeleteItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        errorMsg:
+          type: string
+        helpMsg:
+          type: string
+    CreateRequest:
+      type: object
+      properties:
+        cacheId:
+          type: integer
+          format: int64
+    CreateResponse:
+      type: object
+      properties:
+        cacheId:
+          type: integer
+          format: int64
+    PutItemRequest:
+      type: object
+      properties:
+        cacheId:
+          type: integer
+          format: int64
+        key:
+          type: string
+        value:
+          type: string
+    PutItemResponse:
+      type: object
+      properties:
+        cacheId:
+          type: integer
+          format: int64
+        key:
+          type: string
+    DeleteCacheResponse:
+      type: object
+      properties:
+        cacheId:
+          type: integer
+          format: int64
+    GetItemResponse:
+      type: object
+      properties:
+        cacheId:
+          type: integer
+          format: int64
+        key:
+          type: string
+        value:
+          type: string
+    DeleteItemResponse:
+      type: object
+      properties:
+        cacheId:
+          type: integer
+          format: int64
+        key:
+          type: string

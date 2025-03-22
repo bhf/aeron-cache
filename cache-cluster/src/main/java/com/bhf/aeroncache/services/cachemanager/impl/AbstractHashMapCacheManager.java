@@ -2,10 +2,7 @@ package com.bhf.aeroncache.services.cachemanager.impl;
 
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.results.ClearCacheResult;
-import com.bhf.aeroncache.models.results.CreateCacheResult;
-import com.bhf.aeroncache.models.results.DeleteCacheResult;
-import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
+import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.Cache;
 
 import java.util.HashMap;
@@ -52,6 +49,7 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
         var cache = cacheFactory.getNewCache(indexSupplier, keySupplier, valueSupplier);
         caches.put(cacheId, cache);
         cacheCreationResult.getCacheId().copyFrom(cacheId);
+        cacheCreationResult.setStatus(OperationStatus.SUCCESS);
         return cacheCreationResult;
     }
 
@@ -78,5 +76,21 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
             removeCacheEntryResult.setStatus(OperationStatus.UNKNOWN_CACHE);
         }
         return removeCacheEntryResult;
+    }
+
+    @Override
+    public GetCacheEntryResult<I, K, V> getCacheEntry(I cacheId, K key) {
+        getCacheEntryResult.clear();
+        getCacheEntryResult.getCacheId().copyFrom(cacheId);
+        var cache = getCache(cacheId);
+        if (cache != null) {
+            var result = cache.get(key);
+            getCacheEntryResult.getEntryKey().copyFrom(result.getEntryKey());
+            getCacheEntryResult.getEntryValue().copyFrom(result.getEntryValue());
+            getCacheEntryResult.setStatus(result.getStatus());
+        } else {
+            getCacheEntryResult.setStatus(OperationStatus.UNKNOWN_CACHE);
+        }
+        return getCacheEntryResult;
     }
 }

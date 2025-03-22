@@ -41,7 +41,8 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     @Override
     public void sendCreateCache(AeronCluster cluster, String requestId, long cacheId) {
         createCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).requestId(requestId);
+                .cacheId(cacheId)
+                .requestId(requestId);
         publishCreateCache(cluster, createCacheEncoder, headerEncoder);
         log.info("Sent create cache request on cache {} with request Id {}", cacheId, requestId);
     }
@@ -62,7 +63,10 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     @Override
     public void addCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key, String value) {
         addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key).entryValue(value).requestId(requestId);
+                .cacheId(cacheId)
+                .requestId(requestId)
+                .key(key)
+                .entryValue(value);
         publishAddCachEntry(cluster, addCacheEntryEncoder, headerEncoder);
         log.info("Sent add cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }

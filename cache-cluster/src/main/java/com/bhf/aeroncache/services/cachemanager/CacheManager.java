@@ -1,10 +1,7 @@
 package com.bhf.aeroncache.services.cachemanager;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.results.ClearCacheResult;
-import com.bhf.aeroncache.models.results.CreateCacheResult;
-import com.bhf.aeroncache.models.results.DeleteCacheResult;
-import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
+import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.Cache;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
@@ -73,4 +70,13 @@ public interface CacheManager<I extends Reusable, K extends Reusable, V extends 
      * @return The result of removing the entry.
      */
     RemoveCacheEntryResult<I, K> removeCacheEntry(I cacheId, K key);
+
+    /**
+     * Get a specific cache entry.
+     *
+     * @param cacheId The id of the cache we want to get the value from.
+     * @param key The key for the entry we want.
+     * @return The result of getting the entry from the cache.
+     */
+    GetCacheEntryResult<I, K, V> getCacheEntry(I cacheId, K key);
 }
