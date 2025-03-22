@@ -3,12 +3,13 @@ package com.bhf.aeroncache.http.application;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
+import com.bhf.aeroncache.messages.OperationStatus;
+import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.services.cluster.AeronCacheListener;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.AgentRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.utils.DNSUtils;
-import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
@@ -29,6 +30,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Log4j2
@@ -133,6 +135,7 @@ public class HttpApplication {
      * @return The wired up Javalin instance.
      */
     private static Javalin startHTTPServer() {
+
         return Javalin.create(/*config*/)
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
                 .post(API_PREFIX + "<cacheId>", HttpApplication::handlePutItemRequest)
@@ -147,30 +150,30 @@ public class HttpApplication {
     /**
      * Is the application ready to process requests.
      *
-     * @param context The context.
+     * @param ctx The context.
      */
-    private static void handleGetReadiness(Context context) {
+    private static void handleGetReadiness(Context ctx) {
         if (clusterConnected.get()) {
-            context.status(HTTPStatusUtils.SERVICE_READY);
-            context.result("Ready");
+            ctx.status(HTTPStatusUtils.SERVICE_READY);
+            ctx.result("Ready");
         } else {
-            context.status(HTTPStatusUtils.SERVICE_NOT_READY);
-            context.result("Cluster not connected");
+            ctx.status(HTTPStatusUtils.SERVICE_NOT_READY);
+            ctx.result("Cluster not connected");
         }
     }
 
     /**
      * Is the application live and running.
      *
-     * @param context The context.
+     * @param ctx The context.
      */
-    private static void handleGetLiveness(Context context) {
+    private static void handleGetLiveness(Context ctx) {
         if (clusterConnected.get()) {
-            context.status(HTTPStatusUtils.SERVICE_LIVE);
-            context.result("Connected");
+            ctx.status(HTTPStatusUtils.SERVICE_LIVE);
+            ctx.result("Connected");
         } else {
-            context.status(HTTPStatusUtils.SERVICE_NOT_LIVE);
-            context.result("Cluster not connected");
+            ctx.status(HTTPStatusUtils.SERVICE_NOT_LIVE);
+            ctx.result("Cluster not connected");
         }
     }
 
@@ -183,14 +186,17 @@ public class HttpApplication {
         try {
             var cacheId = ctx.pathParam("cacheId");
             log.info("Got delete cache request for cacheId {}", cacheId);
-            observingPublisher.deleteCacheBlocking(cluster, Long.parseLong(cacheId), c -> {
+
+            CompletableFuture<DeleteCacheResponse> future = new CompletableFuture<>();
+            CompletableFuture.runAsync(() -> observingPublisher.deleteCacheBlocking(cluster, Long.parseLong(cacheId), c -> {
                 var deletedCacheId = c.getCacheId();
                 log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
                 var response = new DeleteCacheResponse(deletedCacheId.value());
-                ctx.status(HTTPStatusUtils.getHTTPCode(c.getStatus()));
-                ctx.json(response);
-            });
-        } catch (NumberFormatException e) {
+                future.complete(response);
+            }));
+
+            ctx.json(future.get());
+        } catch (Exception e) {
             var errorMsg = STR."Badly formed request to delete cache with Id: \{ ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID);
@@ -211,13 +217,16 @@ public class HttpApplication {
             var key = ctx.pathParam("key");
             log.info("Got delete item request on cacheId {}, key {}",
                     cacheId, key);
-            observingPublisher.removeCacheEntryBlocking(cluster, cacheId, key, c -> {
+
+            CompletableFuture<DeleteItemResponse> future = new CompletableFuture<>();
+            CompletableFuture.runAsync(() -> observingPublisher.removeCacheEntryBlocking(cluster, cacheId, key, c -> {
                 log.info("Got delete on item from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
                 var response = new DeleteItemResponse(c.getCacheId().value(), c.getKey().value());
-                ctx.status(HTTPStatusUtils.getHTTPCode(c.getStatus()));
-                ctx.json(response);
-            });
-        } catch (NumberFormatException e) {
+                future.complete(response);
+            }));
+
+            ctx.json(future.get());
+        } catch (Exception e) {
             var errorMsg = STR."Badly formed request to delete item with key \{ctx.pathParam("key")} from cache with Id: \{ ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID);
@@ -237,13 +246,19 @@ public class HttpApplication {
             var key = ctx.pathParam("key");
             log.info("Got get item request on cacheId {}, key {}",
                     cacheId, key);
-            observingPublisher.getCacheEntryBlocking(cluster, cacheId, key, c -> {
+
+            CompletableFuture<GetItemResponse> future = new CompletableFuture<>();
+            CompletableFuture.runAsync(() -> observingPublisher.getCacheEntryBlocking(cluster, cacheId, key, c -> {
                 log.info("Got item from cluster on cacheId {}, key {}, value {}", c.getCacheId(), c.getEntryKey(), c.getEntryValue());
-                var response = new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(), c.getEntryValue().value());
-                ctx.status(HTTPStatusUtils.getHTTPCode(c.getStatus()));
-                ctx.json(response);
-            });
-        } catch (NumberFormatException e) {
+                var noCache = c.getStatus()== OperationStatus.UNKNOWN_CACHE;
+                var response = noCache ?
+                        new GetItemResponse(0, "NA", "NA") :
+                        new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(), c.getEntryValue().value());
+                future.complete(response);
+            }));
+
+            ctx.json(future.get());
+        } catch (Exception e) {
             var errorMsg = STR."Badly formed request to get item with key \{ctx.pathParam("key")} from cache with Id: \{ ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID);
@@ -262,13 +277,16 @@ public class HttpApplication {
             var request = ctx.bodyAsClass(PutItemRequest.class);
             log.info("Got put item request on cacheId {}, key {}, value {}",
                     request.cacheId(), request.key(), request.value());
-            observingPublisher.addCacheEntryBlocking(cluster, request.cacheId(), request.key(), request.value(), c -> {
+
+            CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
+            CompletableFuture.runAsync(() -> observingPublisher.addCacheEntryBlocking(cluster, request.cacheId(), request.key(), request.value(), c -> {
                 var cacheId = c.getCacheID();
                 log.info("Got put item response from cluster on cacheId {}", cacheId);
                 var response = new PutItemResponse(cacheId.getValue(), request.key());
-                ctx.status(HTTPStatusUtils.getHTTPCode(c.getStatus()));
-                ctx.json(response);
-            });
+                future.complete(response);
+            }));
+
+            ctx.json(future.get());
         } catch (Exception e) {
             var errorMsg = STR."Badly formed request to put item from request: \{ ctx.body()}";
             log.warn(errorMsg);
@@ -287,13 +305,16 @@ public class HttpApplication {
         try {
             var request = ctx.bodyAsClass(CreateCacheRequest.class);
             log.info("Got create cache request on cacheId {}", request.cacheId());
-            observingPublisher.sendCreateCacheBlocking(cluster, request.cacheId(), c -> {
+
+            CompletableFuture<CreateCacheResponse> future = new CompletableFuture<>();
+            CompletableFuture.runAsync(() -> observingPublisher.sendCreateCacheBlocking(cluster, request.cacheId(), c -> {
                 var cacheId = c.getCacheId();
                 log.info("Got create cache response from cluster on cacheId {}", cacheId);
                 var response = new CreateCacheResponse(cacheId.getValue());
-                ctx.status(HTTPStatusUtils.getHTTPCode(c.getStatus()));
-                ctx.json(response);
-            });
+                future.complete(response);
+            }));
+
+            ctx.json(future.get());
         } catch (Exception e) {
             var errorMsg = STR."Badly formed request to create cache from request: \{ ctx.body()}";
             log.warn(errorMsg);

@@ -169,9 +169,10 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         K key = requestDetails.getKey();
         V value = requestDetails.getValue();
         var requestId = requestDetails.getRequestId();
-        log.info("Got add cache entry message for cache id {}, key {}, request Id: {}", cacheId, key, requestId);
+        log.info("Got add cache entry message for cache id {}, key {}, value {}, request Id: {}", cacheId, key, value, requestId);
         var addCacheEntryResult = cacheManager.getCache(cacheId).add(key, value);
         addCacheEntryResult.setRequestId(requestId);
+        log.info("Result for add entry, key: {}, status: {}, ", addCacheEntryResult.getEntryKey(), addCacheEntryResult.getStatus());
         handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, buffer, offset);
     }
 
@@ -188,8 +189,10 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         K key = requestDetails.getKey();
         var requestId = requestDetails.getRequestId();
         log.info("Got get cache entry for cache id {} on key {}, requestId {}", cacheId, key, requestId);
-        var getCacheEntryResult = cacheManager.getCache(cacheId).get(key);
+        var getCacheEntryResult = cacheManager.getCacheEntry(cacheId, key);
         getCacheEntryResult.setRequestId(requestId);
+        getCacheEntryResult.getCacheId().copyFrom(cacheId);
+        log.info("Sending GET result: cacheId {}, key {}, value {}, reqId {}, status {}", getCacheEntryResult.getCacheId(), getCacheEntryResult.getEntryKey(), getCacheEntryResult.getEntryValue(), getCacheEntryResult.getRequestId(), getCacheEntryResult.getStatus());
         handlePostGetCacheEntry(cacheId, key, getCacheEntryResult, session, buffer, offset);
     }
 
@@ -207,6 +210,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         log.info("Got create cache message for cache id {}, request Id: {}", cacheId, requestId);
         var cacheCreationResult = cacheManager.createCache(cacheId);
         cacheCreationResult.setRequestId(requestId);
+        log.info("Will send result: "+cacheCreationResult.getStatus());
         handlePostCreateCache(cacheId, cacheCreationResult, session, buffer, offset);
     }
 

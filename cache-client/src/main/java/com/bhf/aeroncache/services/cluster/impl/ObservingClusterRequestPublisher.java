@@ -8,6 +8,7 @@ import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import io.aeron.cluster.client.AeronCluster;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +24,7 @@ import java.util.function.Consumer;
  * {@link IdentifiableConsumer} with an internally generated Id.
  */
 @RequiredArgsConstructor
+@Log4j2
 public class ObservingClusterRequestPublisher implements ClusterRequestPublisher, ClusterRequestConsumingPublisher {
 
     private final ClusterMessagePublisher publisher;
@@ -124,6 +126,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
+        log.info("Adding cache entry");
         publisher.addCacheEntry(cluster, requestId, cacheId, key, value);
     }
 
@@ -218,7 +221,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
-        publisher.deleteCache(cluster, requestId, cacheId);
+        publisher.removeCacheEntry(cluster, requestId, cacheId, key);
     }
 
     /**

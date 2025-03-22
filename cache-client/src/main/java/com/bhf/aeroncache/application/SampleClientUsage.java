@@ -41,12 +41,12 @@ public class SampleClientUsage {
 
     static void addConsumers(AeronCacheListener client, ObservingClusterRequestPublisher observingPublisher) {
         observingPublisher
-                .onCreateCache(c -> System.out.println("Cache created with id " + c.getCacheId()))
-                .onAddCacheEntry(c -> System.out.println("Cache entry created cache " + c.getCacheID()))
-                .onRemoveCacheEntry(c -> System.out.println("Cache entry removed on cache " + c.getCacheId()))
-                .onClearCache(c -> System.out.println("Cache cleared on cache " + c.getCacheId()))
-                .onDeleteCache(c -> System.out.println("Cache deleted on cache " + c.getCacheId()))
-                .onGetCacheEntry(c -> System.out.println("Cache entry GET on cache " + c.getCacheId()));
+                .onCreateCache(c -> System.out.println("Cache created with id " + c.getCacheId()+", requestID="+c.getRequestId()+", status="+c.getStatus()))
+                .onAddCacheEntry(c -> System.out.println("Cache entry created cache " + c.getCacheID()+", key="+c.getEntryKey()+", requestId="+c.getRequestId()+", status="+c.getStatus()))
+                .onRemoveCacheEntry(c -> System.out.println("Cache entry removed on cache " + c.getCacheId()+", key="+c.getKey()+", requestId="+c.getRequestId()+", status="+c.getStatus()))
+                .onClearCache(c -> System.out.println("Cache cleared on cache " + c.getCacheId()+", requestId="+c.getRequestId()+", status="+c.getStatus()))
+                .onDeleteCache(c -> System.out.println("Cache deleted on cache " + c.getCacheId()+", requestId="+c.getRequestId()+", status="+c.getStatus()))
+                .onGetCacheEntry(c -> System.out.println("Cache entry GET on cache " + c.getCacheId()+", key="+c.getEntryKey()+", value="+c.getEntryValue()+", requestId="+c.getRequestId()+", status="+c.getStatus()));
     }
 
     /**

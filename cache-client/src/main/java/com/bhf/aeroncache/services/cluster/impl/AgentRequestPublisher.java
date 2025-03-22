@@ -16,7 +16,11 @@ public class AgentRequestPublisher extends ClusterMessagePublisher {
 
     @Override
     void publishAddCachEntry(AeronCluster cluster, AddCacheEntryEncoder addCacheEntry, MessageHeaderEncoder header) {
-        rb.write(0, addCacheEntry.buffer(), 0, addCacheEntry.encodedLength()+header.encodedLength());
+        var msgLength = addCacheEntry.encodedLength() + header.encodedLength();
+        var index = rb.tryClaim(addCacheEntry.sbeTemplateId(), msgLength);
+        var destBuffer = rb.buffer();
+        destBuffer.putBytes(index, addCacheEntry.buffer(), 0, msgLength);
+        rb.commit(index);
     }
 
     @Override
