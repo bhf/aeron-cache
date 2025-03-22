@@ -1,34 +1,11 @@
-# Cache HTTP Server
+# Cache HTTP Servers
 
-A HTTP server exposing cache functions over REST.
+HTTP server implementations. Currently only Javalin.
 
-## Endpoints
+## OpenAPI
 
-### Create Cache: 
+Launch the swagger editor using launchSwaggerEditor.sh and open http://localhost/?
 
-POST localhost:7070/api/v1/cache/
+## http-integration-tests
 
-Body:
-
-{cacheId}
-
-### Put Item in Cache:
-
-POST localhost:7070/api/v1/cache/{cacheId}/
-
-Body:
-
-Key, Value
-
-### Get Item from Cache:
-
-GET localhost:7070/api/v1/cache/{cacheId}/{key}
-
-### Remove Item from Cache:
-
-DELETE localhost:7070/api/v1/cache/{cacheId}/{key}
-
-### Delete Cache
-
-DELETE localhost:7070/api/v1/cache/{cacheId}/
-
+Some basic API tests with REST Assured.

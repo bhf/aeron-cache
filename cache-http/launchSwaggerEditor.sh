@@ -1,0 +1,1 @@
+docker run -p 80:8080 -v $(pwd):/tmp -e SWAGGER_FILE=/tmp/openapi.yml docker.swagger.io/swaggerapi/swagger-editor
