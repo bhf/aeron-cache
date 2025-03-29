@@ -16,9 +16,9 @@ __cache-messages-sbe__ - Core SBE messages used by the cache.
 
 __cache-messages-http__ - Messages used by HTTP interfaces to the cache.
 
-__cache-ui (coming soon)__ - A UI that uses the REST API provided by cache-http-server
+__cache-ui__ - A UI that uses the REST API provided by cache-http-server
 
-__k8s (wip)__ - Helm charts and other K8s resources
+__k8s__ - Helm charts and other K8s resources
 
 ## How To Run
 
