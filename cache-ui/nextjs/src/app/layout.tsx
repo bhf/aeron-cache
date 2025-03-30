@@ -1,34 +1,27 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type {Metadata} from "next";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
-  title: "Aeron Cache",
-  description: "Aeron Cache",
+    title: "Aeron Cache",
+    description: "Aeron Cache",
 };
 
 export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
+                                       children,
+                                   }: Readonly<{
+    children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    return (
+        <html lang="en">
+        <body antialiased="true">
         {children}
-      </body>
-    </html>
-  );
+        <div className="footer absolute bottom-0 w-full space-x-15 flex justify-center items-center">
+            <a href="https://github.com/bhf/aeron-cache" target={"_blank"}>Github</a>
+            <a href="https://www.linkedin.com/in/sanjeevsarda/" target={"_blank"}>LinkedIn</a>
+            <a href="https://sanjeev.pages.dev/" target={"_blank"}>Blog</a>
+        </div>
+        </body>
+        </html>
+    );
 }
