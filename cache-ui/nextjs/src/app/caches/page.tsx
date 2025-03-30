@@ -1,3 +1,5 @@
+import CreateCacheRequest from "@/components/CreateCache";
+
 /**
  * A component to display a table of available caches.
  * @constructor
@@ -15,8 +17,7 @@ function CacheTable() {
  */
 function CreateCache() {
     return (
-        <div>
-        </div>
+        <CreateCacheRequest/>
     );
 }
 
@@ -28,8 +29,6 @@ function CreateCache() {
 export default async function Page() {
     return (
         <div>
-            <h1>All Caches</h1>
-            <h2>Create cache</h2>
             <CreateCache/>
             <h2>All Caches</h2>
             <CacheTable/>
