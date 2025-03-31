@@ -33,7 +33,7 @@ export default function RootLayout({
 
     function header() {
         return <div className="header absolute top-0 w-full space-x-5 flex justify-left sticky pb-2 pt-2 pl-2 bg-linear-to-t from-gray-100 to-gray-200">
-            <Radio size={38} color="black" />
+            <Radio size={38} color="#37912f" />
             <p className="text-3xl text-gray-900 dark:text-white">Aeron Cache</p>
         </div>;
     }

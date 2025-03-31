@@ -1,13 +1,15 @@
 import CreateCacheRequest from "@/components/CreateCache";
+import {DataTable} from "@/components/AllCachesTable";
+import {liveUsersCols} from "@/components/AllCachesColumns";
 
 /**
  * A component to display a table of available caches.
  * @constructor
  */
 function CacheTable() {
+    let data = [{cacheId: 1, itemCount: 0}]
     return (
-        <div>
-        </div>
+        <DataTable columns={liveUsersCols} data={data}/>
     );
 }
 
@@ -29,9 +31,12 @@ function CreateCache() {
 export default async function Page() {
     return (
         <div>
-            <CreateCache/>
-            <h2>All Caches</h2>
-            <CacheTable/>
+            <div className="pb-2 px-8 md:w-1/2">
+                <CreateCache/>
+            </div>
+            <div className="pb-2 px-8 md:w-1/2">
+                <CacheTable/>
+            </div>
         </div>
     );
 }
