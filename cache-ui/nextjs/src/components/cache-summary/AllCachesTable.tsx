@@ -22,7 +22,14 @@ interface DataTableProps<TData, TValue> {
     data: TData[]
 }
 
-export function DataTable<TData, TValue>({
+/**
+ * A table for displaying which caches are available and
+ * any summary information.
+ * @param columns Columns of the table.
+ * @param data The data of the table.
+ * @constructor
+ */
+export function AllCachesDataTable<TData, TValue>({
                                              columns,
                                              data
                                          }: DataTableProps<TData, TValue>) {

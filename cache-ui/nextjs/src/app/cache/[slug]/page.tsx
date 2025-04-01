@@ -1,3 +1,6 @@
+import {CacheItemsDataTable} from "@/components/cache-view/CacheItemsTable";
+import {cacheItemColumns} from "@/components/cache-view/CacheItemColumns";
+
 /**
  * A component to delete a cache.
  * @constructor
@@ -47,9 +50,9 @@ function RemoveByKey() {
  * @constructor
  */
 function CacheItemsTable() {
+    let data = [{key: "someKey", value: "someValue"}]
     return (
-        <div>
-        </div>
+        <CacheItemsDataTable columns={cacheItemColumns} data={data}/>
     );
 }
 
@@ -81,8 +84,9 @@ export default async function Page() {
             <AddItem/>
             <h2>Remove by key</h2>
             <RemoveByKey/>
-            <h2>View items in this cache</h2>
-            <CacheItemsTable/>
+            <div className="py-2 px-8 md:w-1/2">
+                <CacheItemsTable/>
+            </div>
         </div>
     )
 }
