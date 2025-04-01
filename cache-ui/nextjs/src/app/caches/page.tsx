@@ -1,6 +1,6 @@
 import CreateCacheRequest from "@/components/CreateCache";
-import {DataTable} from "@/components/AllCachesTable";
-import {liveUsersCols} from "@/components/AllCachesColumns";
+import {AllCachesDataTable} from "@/components/cache-summary/AllCachesTable";
+import {liveUsersCols} from "@/components/cache-summary/AllCachesColumns";
 
 /**
  * A component to display a table of available caches.
@@ -9,7 +9,7 @@ import {liveUsersCols} from "@/components/AllCachesColumns";
 function CacheTable() {
     let data = [{cacheId: 1, itemCount: 0}]
     return (
-        <DataTable columns={liveUsersCols} data={data}/>
+        <AllCachesDataTable columns={liveUsersCols} data={data}/>
     );
 }
 
