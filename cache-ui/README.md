@@ -6,4 +6,4 @@ Implementations of the Aeron Cache UI. Currently supports:
 
 ![img.png](ui-main-page.png)
 
-![img_1.png](ui-cache-view.png)
+![img.png](ui-cache-view.png)
