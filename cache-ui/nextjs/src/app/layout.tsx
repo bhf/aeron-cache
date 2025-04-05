@@ -1,6 +1,7 @@
 import type {Metadata} from "next";
 import "./globals.css";
 import {Github, Linkedin, Radio, Star} from "@deemlol/next-icons";
+import Link from "next/link";
 
 
 export const metadata: Metadata = {
@@ -33,16 +34,23 @@ export default function RootLayout({
 
     function header() {
         return <div className="header absolute top-0 w-full space-x-5 flex justify-left sticky pb-2 pt-2 pl-2 bg-linear-to-t from-gray-100 to-gray-200">
-            <Radio size={38} color="#37912f" />
-            <p className="text-3xl text-gray-900 dark:text-white">Aeron Cache</p>
+            
+            <Link href={"/"}>
+            <div className="text-3xl text-gray-900 dark:text-white">
+                <div className={"pl-6"}>
+                <Radio size={38} color="#37912f" />
+                </div>
+                Aeron Cache
+            </div>
+            </Link>
         </div>;
     }
 
     return (
         <html lang="en">
-        <body antialiased="true">
+        <body>
         {header()}
-        <div className="pl-2 pt-2">
+        <div className="pl-2 pt-3">
         {children}
         </div>
         {footer()}

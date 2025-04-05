@@ -39,6 +39,8 @@ export function CacheItemsDataTable<TData, TValue>({
         []
     )
 
+    const [columnVisibility] = React.useState({'cacheId': false,});
+
     const table = useReactTable({
         data,
         columns,
@@ -51,6 +53,7 @@ export function CacheItemsDataTable<TData, TValue>({
         state: {
             sorting,
             columnFilters,
+            columnVisibility: columnVisibility
         },
     })
 

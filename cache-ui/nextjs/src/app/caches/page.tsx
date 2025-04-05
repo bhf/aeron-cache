@@ -1,6 +1,6 @@
 import CreateCacheRequest from "@/components/CreateCache";
 import {AllCachesDataTable} from "@/components/cache-summary/AllCachesTable";
-import {liveUsersCols} from "@/components/cache-summary/AllCachesColumns";
+import {allCachesColumns} from "@/components/cache-summary/AllCachesColumns";
 
 /**
  * A component to display a table of available caches.
@@ -8,8 +8,9 @@ import {liveUsersCols} from "@/components/cache-summary/AllCachesColumns";
  */
 function CacheTable() {
     let data = [{cacheId: 1, itemCount: 0}]
+    // noinspection TypeScriptValidateTypes
     return (
-        <AllCachesDataTable columns={liveUsersCols} data={data}/>
+        <AllCachesDataTable columns={allCachesColumns} data={data}/>
     );
 }
 
@@ -31,10 +32,10 @@ function CreateCache() {
 export default async function Page() {
     return (
         <div>
-            <div className="pb-2 px-8 md:w-1/2">
+            <div className="pb-2 px-8 md:w-1/2" data-testid="createCache">
                 <CreateCache/>
             </div>
-            <div className="pb-2 px-8 md:w-1/2">
+            <div className="pb-2 px-8 md:w-1/2" data-testid="cacheTable">
                 <CacheTable/>
             </div>
         </div>

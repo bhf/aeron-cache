@@ -9,7 +9,7 @@ export default function CreateCacheRequest() {
         <Form action={createCacheRequest}>
             <div className="grid gap-4">
                 <div className="grid gap-2">
-                    <Label htmlFor="Cache ID">Cache ID</Label>
+                    <Label htmlFor="Cache ID">Create Cache</Label>
                     <Input
                         id="cacheId"
                         type="number"
