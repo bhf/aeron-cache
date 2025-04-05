@@ -1,15 +1,6 @@
 import {Card, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card"
 import {Badge} from "@/components/ui/badge";
-import {
-    BinocularsIcon,
-    ChartColumn, DatabaseIcon,
-    EggFriedIcon,
-    EggIcon, EyeIcon,
-    FerrisWheel,
-    FerrisWheelIcon, FireExtinguisherIcon, MicroscopeIcon,
-    ShieldAlert,
-    TrendingUpIcon
-} from "lucide-react";
+import {BinocularsIcon, DatabaseIcon, FireExtinguisherIcon, MicroscopeIcon} from "lucide-react";
 
 export function DashboardStats() {
     return (
