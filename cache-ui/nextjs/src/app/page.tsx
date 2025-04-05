@@ -28,12 +28,19 @@ function CreateCache() {
 
 export default async function Page() {
 
+    const dashStats = {
+        errorCount: "3",
+        totalItemsCount: "1,344",
+        totalCachesCount: "12",
+        totalOpsCount: "1,234,567"
+    }
+
     return (
         <div>
             <div className="flex flex-1 flex-col">
                 <div className="@container/main flex flex-1 flex-col gap-2">
                     <div className="flex flex-col gap-4 py-4 md:w-1/2 md:gap-6 md:py-6">
-                        <DashboardStats/>
+                        <DashboardStats {...dashStats}/>
                     </div>
                 </div>
             </div>
@@ -48,7 +55,6 @@ export default async function Page() {
                             <CreateCache/>
                         </CardContent>
                     </Card>
-
                 </div>
                 <div className="pb-2 px-6 md:w-1/2">
                     <CacheTable/>
