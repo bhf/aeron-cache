@@ -40,8 +40,10 @@ export default async function Page({
         <div>
             <div className={"text-2xl pb-1 justify-between space-x-2"} data-testid="deleteClear">
                 <p>{"Cache ID: " + cacheId}</p>
-                <DeleteCache cacheId={cacheId}/>
-                <ClearCache cacheId={cacheId}/>
+                <div className={"py-2 justify-between space-x-4"} data-testid="deleteClear">
+                    <DeleteCache cacheId={cacheId}/>
+                    <ClearCache cacheId={cacheId}/>
+                </div>
             </div>
 
             <Card className="pt-5 pb-2 px-2 md:w-1/3">

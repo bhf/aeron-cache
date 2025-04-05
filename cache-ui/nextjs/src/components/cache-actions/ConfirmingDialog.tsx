@@ -9,6 +9,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {RecycleIcon, TrashIcon} from "lucide-react";
 
 interface ConfirmingDialogProps {
     title: string
@@ -24,10 +25,22 @@ interface ConfirmingDialogProps {
  * @constructor
  */
 export function ConfirmingDialog(props: ConfirmingDialogProps) {
+
+    const isDelete = props.buttonText=="Delete"
+    const isClear = props.buttonText=="Clear"
+    let actionTriggerElement
+    if (isDelete) {
+        actionTriggerElement = <TrashIcon/>
+    }
+    else if (isClear) {
+        actionTriggerElement = <RecycleIcon/>
+    }
+
+
     return (
         <AlertDialog>
             <AlertDialogTrigger className={"outline px-2 rounded-md text-lg"}>
-                {props.buttonText}
+                {isDelete||isClear ? actionTriggerElement : props.buttonText}
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
