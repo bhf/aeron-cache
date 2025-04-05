@@ -166,6 +166,12 @@ cache-client-1  | Cache deleted on cache 1736754923534
 
 ```
 
+## Frontend
+
+![img.png](cache-ui/ui-main-page.png)
+
+![img.png](cache-ui/ui-cache-view.png)
+
 ### JUnit Tests
 
 ```bash
