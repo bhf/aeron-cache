@@ -1,6 +1,9 @@
 "use client"
 import {ConfirmingDialog} from "@/components/cache-actions/ConfirmingDialog";
 import {getCacheAPIURI} from "@/lib/actions";
+import {getLogger} from "@/lib/loggingUtil";
+
+const logger = getLogger("RemoveItem")
 
 interface RemoveCacheItemProps {
     cacheId: number
@@ -18,10 +21,10 @@ const headers = {
  */
 export function RemoveCacheItem(props: RemoveCacheItemProps) {
     const sendRemoveItemRequest = async () => {
-        console.log("Called remove cache item for cache: " + props.cacheId + ", on key: " + props.itemKey);
+        logger.info("Called remove cache item for cache: " + props.cacheId + ", on key: " + props.itemKey);
         const cacheId = props.cacheId
         const key = props.itemKey
-        console.log("Remove item request for cache with id " + cacheId + " on key " + key)
+        logger.info("Remove item request for cache with id " + cacheId + " on key " + key)
         try {
             const rawResponse = await fetch(await getCacheAPIURI() + '/cache/' + cacheId + "/" + key, {
                     method: 'DELETE',
@@ -30,9 +33,9 @@ export function RemoveCacheItem(props: RemoveCacheItemProps) {
                 },
             );
             const content = await rawResponse.json();
-            console.log("Got response from sending request to remove item on key " + key + ", response:" + content)
+            logger.info("Got response from sending request to remove item on key " + key + ", response:" + content)
         } catch (err) {
-            console.error("Error whilst sending request to remove item ", err);
+            logger.error("Error whilst sending request to remove item ", err);
         }
     }
 
