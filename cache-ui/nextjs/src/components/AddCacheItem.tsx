@@ -11,9 +11,8 @@ interface AddItemProps {
 export default function AddItemRequest(props: AddItemProps) {
     return (
         <Form action={addItemToCacheRequest}>
-            <div className="grid gap-4">
+            <div className="grid gap-4 pt-2">
                 <div className="grid gap-2">
-                    <Label htmlFor="Cache ID">Add Item to Cache</Label>
                     <Input
                         id="key"
                         type="string"
