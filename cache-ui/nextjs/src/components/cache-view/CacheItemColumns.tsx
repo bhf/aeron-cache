@@ -16,8 +16,8 @@ export function getCacheItemColumns(cacheId: number):ColumnDef<CacheInfo>[] {
             header: "Value",
         },
         {
-            id: "remove-item",
-            header: "Remove Item",
+            id: "actions",
+            header: "Actions",
             cell: ({ row }) => {
                 const itemKey = row.getValue("key")
 
@@ -45,8 +45,8 @@ export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
 
     },
     {
-        id: "remove-item",
-        header: "Remove Item",
+        id: "actions",
+        header: "Actions",
         cell: ({ row }) => {
             const itemKey = row.getValue("key")
             const cacheId = row.getValue("cacheId")
