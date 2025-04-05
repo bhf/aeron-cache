@@ -108,7 +108,7 @@ public class HttpApplication {
     private static Consumer<JavalinConfig> getHTTPConfig() {
         return config -> config.bundledPlugins.enableCors(cors -> {
             cors.addRule(it -> {
-                it.allowHost("http://localhost");
+                it.allowHost("http://localhost:3000", "http://localhost");
             });
         });
     }

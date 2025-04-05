@@ -2,6 +2,32 @@
 
 import {ColumnDef} from "@tanstack/react-table"
 import {CacheInfo} from "@/lib/types";
+import {RemoveCacheItem} from "@/app/cache/[slug]/RemoveCacheItem";
+
+
+export function getCacheItemColumns(cacheId: number):ColumnDef<CacheInfo>[] {
+    return [
+        {
+            accessorKey: "key",
+            header: "Key",
+        },
+        {
+            accessorKey: "value",
+            header: "Value",
+        },
+        {
+            id: "remove-item",
+            header: "Remove Item",
+            cell: ({ row }) => {
+                const itemKey = row.getValue("key")
+
+                return (
+                    <RemoveCacheItem cacheId={cacheId} itemKey={itemKey as string}></RemoveCacheItem>
+                )
+            },
+        },
+    ]
+}
 
 export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
     {
@@ -11,5 +37,23 @@ export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
     {
         accessorKey: "value",
         header: "Value",
+    },
+    {
+        accessorKey: "cacheId",
+        header: "CacheId",
+        enableHiding: true,
+
+    },
+    {
+        id: "remove-item",
+        header: "Remove Item",
+        cell: ({ row }) => {
+            const itemKey = row.getValue("key")
+            const cacheId = row.getValue("cacheId")
+
+            return (
+                    <RemoveCacheItem cacheId={cacheId as number} itemKey={itemKey as string}></RemoveCacheItem>
+            )
+        },
     },
 ]
