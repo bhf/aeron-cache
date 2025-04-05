@@ -1,6 +1,6 @@
 import type {Metadata} from "next";
 import "./globals.css";
-import {Github, Linkedin, Radio, Star} from "@deemlol/next-icons";
+import {ExternalLink, Github, Linkedin, Radio, Star} from "@deemlol/next-icons";
 import Link from "next/link";
 
 
@@ -16,7 +16,8 @@ export default function RootLayout({
 }>) {
 
     function footer() {
-        return <div className="footer absolute bottom-0 w-full space-x-15 flex justify-center items-center pb-1 pt-1 bg-linear-to-t from-gray-200 to-gray-100">
+        return <div
+            className="footer absolute bottom-0 w-full space-x-15 flex justify-center items-center pb-1 pt-1 bg-linear-to-t from-gray-200 to-gray-100">
             <div className="space-x-2 flex justify-center items-center">
                 <a href="https://github.com/bhf/aeron-cache" target={"_blank"}>Github</a>
                 <Github size={20} color="black"/>
@@ -33,17 +34,29 @@ export default function RootLayout({
     }
 
     function header() {
-        return <div className="header absolute top-0 w-full space-x-5 flex justify-left sticky pb-2 pt-2 pl-2 bg-linear-to-t from-gray-100 to-gray-200">
-            
-            <Link href={"/"}>
-            <div className="text-3xl text-gray-900 dark:text-white">
-                <div className={"pl-6"}>
-                <Radio size={38} color="#37912f" />
+        return (
+            <div>
+                <div
+                    className="header absolute top-0 w-full space-x-5 flex justify-left sticky pb-2 pt-2 pl-2 bg-linear-to-t from-gray-100 to-gray-200">
+
+                    <Link href={"/"}>
+                        <div className="text-3xl text-gray-900 dark:text-white">
+                            <div className={"pl-6"}>
+                                <Radio size={38} color="#37912f"/>
+                            </div>
+                            Aeron Cache
+                        </div>
+                    </Link>
+                    <div className="hidden lg:flex lg:flex-1 lg:justify-end pr-4">
+                        <Link href="https://github.com/bhf/aeron-cache/tree/main/docs" target={"_blank"} className={"pr-1"}>
+                            Help
+                        </Link>
+                        <ExternalLink size={15} color="black" />
+                    </div>
                 </div>
-                Aeron Cache
+
             </div>
-            </Link>
-        </div>;
+        );
     }
 
     return (
@@ -51,7 +64,7 @@ export default function RootLayout({
         <body>
         {header()}
         <div className="pl-2 pt-3">
-        {children}
+            {children}
         </div>
         {footer()}
         </body>
