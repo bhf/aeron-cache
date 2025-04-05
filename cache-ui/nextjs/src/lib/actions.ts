@@ -1,8 +1,12 @@
 "use server"
 
+import {getLogger} from "@/lib/loggingUtil";
+
 /**
  * React server actions.
  */
+
+const logger = getLogger("ServerActions")
 
 const headers = {
     'Accept': 'application/json',
@@ -19,7 +23,7 @@ export async function getCacheAPIURI(){
  */
 export async function createCacheRequest(formData: FormData) {
     const cacheId = formData.get('cacheId')
-    console.log("Creating cache request with id", cacheId)
+    logger.info("Creating cache request with id", cacheId)
     try {
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/', {
             method: 'POST',
@@ -27,9 +31,9 @@ export async function createCacheRequest(formData: FormData) {
             body: JSON.stringify({cacheId})
         });
         const content = await rawResponse.json();
-        console.log("Got response from sending request to create cache ", content)
+        logger.info("Got response from sending request to create cache ", content)
     } catch (err) {
-        console.error("Error whilst sending request to create cache ", err);
+        logger.error("Error whilst sending request to create cache ", err);
     }
 }
 
@@ -39,7 +43,7 @@ export async function createCacheRequest(formData: FormData) {
  */
 export async function deleteCacheRequest(formData: FormData) {
     const cacheId = formData.get('cacheId')
-    console.log("Delete cache request with id", cacheId)
+    logger.info("Delete cache request with id", cacheId)
     try {
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/api/v1/cache/' + cacheId, {
                 method: 'DELETE',
@@ -47,9 +51,9 @@ export async function deleteCacheRequest(formData: FormData) {
             },
         );
         const content = await rawResponse.json();
-        console.log("Got response from sending request to delete cache ", content)
+        logger.info("Got response from sending request to delete cache ", content)
     } catch (err) {
-        console.error("Error whilst sending request to delete cache ", err);
+        logger.error("Error whilst sending request to delete cache ", err);
     }
 }
 
@@ -59,7 +63,7 @@ export async function deleteCacheRequest(formData: FormData) {
  */
 export async function clearCacheRequest(formData: FormData) {
     const cacheId = formData.get('cacheId')
-    console.log("Clear cache request with id", cacheId)
+    logger.info("Clear cache request with id", cacheId)
     try {
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/api/v1/cache/' + cacheId, {
                 method: 'DELETE',
@@ -67,9 +71,9 @@ export async function clearCacheRequest(formData: FormData) {
             },
         );
         const content = await rawResponse.json();
-        console.log("Got response from sending request to clear cache ", content)
+        logger.info("Got response from sending request to clear cache ", content)
     } catch (err) {
-        console.error("Error whilst sending request to clear cache ", err);
+        logger.error("Error whilst sending request to clear cache ", err);
     }
 }
 
@@ -81,7 +85,7 @@ export async function addItemToCacheRequest(formData: FormData) {
     const cacheId = formData.get('cacheId')
     const key = formData.get('key')
     const value = formData.get('value')
-    console.log("Add item request for cache with id: " + cacheId + ", on key: " + key + " with value: " + value)
+    logger.info("Add item request for cache with id: " + cacheId + ", on key: " + key + " with value: " + value)
     try {
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + cacheId, {
                 method: 'POST',
@@ -90,9 +94,9 @@ export async function addItemToCacheRequest(formData: FormData) {
             },
         );
         const content = await rawResponse.json();
-        console.log("Got response from sending request to add item on key " + key + ", response:" + content)
+        logger.info("Got response from sending request to add item on key " + key + ", response:" + content)
     } catch (err) {
-        console.error("Error whilst sending request to add item ", err);
+        logger.error("Error whilst sending request to add item ", err);
     }
 }
 
@@ -103,7 +107,7 @@ export async function addItemToCacheRequest(formData: FormData) {
 export async function removeItemFromCacheRequest(formData: FormData) {
     const cacheId = formData.get('cacheId')
     const key = formData.get('key')
-    console.log("Remove item request for cache with id" + cacheId + "on key " + key)
+    logger.info("Remove item request for cache with id" + cacheId + "on key " + key)
     try {
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/api/v1/cache/' + cacheId + "/" + key, {
                 method: 'DELETE',
@@ -112,8 +116,8 @@ export async function removeItemFromCacheRequest(formData: FormData) {
             },
         );
         const content = await rawResponse.json();
-        console.log("Got response from sending request to remove item on key " + key + ", response:" + content)
+        logger.info("Got response from sending request to remove item on key " + key + ", response:" + content)
     } catch (err) {
-        console.error("Error whilst sending request to remove item ", err);
+        logger.error("Error whilst sending request to remove item ", err);
     }
 }

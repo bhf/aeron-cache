@@ -1,6 +1,9 @@
 "use client"
 import {ConfirmingDialog} from "@/components/cache-actions/ConfirmingDialog";
 import {getCacheAPIURI} from "@/lib/actions";
+import {getLogger} from "@/lib/loggingUtil";
+
+const logger = getLogger("DeleteCache")
 
 interface DeleteCacheProps {
     cacheId: number
@@ -17,9 +20,9 @@ const headers = {
  */
 export function DeleteCache(props: DeleteCacheProps) {
     const sendDeleteCacheRequest = async () => {
-        console.log("Called deleteCache for cache " + props.cacheId);
+        logger.info("Called deleteCache for cache " + props.cacheId);
         const cacheId = props.cacheId
-        console.log("Delete cache request with id", cacheId)
+        logger.info("Delete cache request with id", cacheId)
         try {
             const rawResponse = await fetch(await getCacheAPIURI() + '/cache/' + cacheId, {
                     method: 'DELETE',
@@ -27,9 +30,9 @@ export function DeleteCache(props: DeleteCacheProps) {
                 },
             );
             const content = await rawResponse.json();
-            console.log("Got response from sending request to delete cache ", content)
+            logger.info("Got response from sending request to delete cache ", content)
         } catch (err) {
-            console.error("Error whilst sending request to delete cache ", err);
+            logger.error("Error whilst sending request to delete cache ", err);
         }
     }
 
