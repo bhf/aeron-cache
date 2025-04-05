@@ -30,10 +30,10 @@ export function ConfirmingDialog(props: ConfirmingDialogProps) {
     const isClear = props.buttonText=="Clear"
     let actionTriggerElement
     if (isDelete) {
-        actionTriggerElement = <TrashIcon/>
+        actionTriggerElement = <TrashIcon className="size-5"/>
     }
     else if (isClear) {
-        actionTriggerElement = <RecycleIcon/>
+        actionTriggerElement = <RecycleIcon className="size-5"/>
     }
 
 

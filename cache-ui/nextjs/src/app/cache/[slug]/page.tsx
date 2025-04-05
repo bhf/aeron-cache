@@ -40,7 +40,7 @@ export default async function Page({
         <div>
             <div className={"text-2xl pb-1 justify-between space-x-2"} data-testid="deleteClear">
                 <p>{"Cache ID: " + cacheId}</p>
-                <div className={"py-2 justify-between space-x-4"} data-testid="deleteClear">
+                <div className={"py-1 justify-between space-x-2"} data-testid="deleteClear">
                     <DeleteCache cacheId={cacheId}/>
                     <ClearCache cacheId={cacheId}/>
                 </div>
