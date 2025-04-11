@@ -2,6 +2,7 @@ import type {Metadata} from "next";
 import "./globals.css";
 import {ExternalLink, Github, Linkedin, Radio, Star} from "@deemlol/next-icons";
 import Link from "next/link";
+import {Toaster} from "@/components/ui/sonner";
 
 
 export const metadata: Metadata = {
@@ -17,7 +18,7 @@ export default function RootLayout({
 
     function footer() {
         return <div
-            className="footer absolute bottom-0 w-full space-x-15 flex justify-center items-center pb-1 pt-1 bg-linear-to-t from-gray-200 to-gray-100">
+            className="footer mt-auto absolute bottom-0 w-full space-x-15 flex justify-center items-center pb-1 pt-1 bg-linear-to-t from-gray-200 to-gray-100">
             <div className="space-x-2 flex justify-center items-center">
                 <a href="https://github.com/bhf/aeron-cache" target={"_blank"}>Github</a>
                 <Github size={20} color="black"/>
@@ -48,10 +49,12 @@ export default function RootLayout({
                         </div>
                     </Link>
                     <div className="hidden lg:flex lg:flex-1 lg:justify-end pr-4">
-                        <Link href="https://github.com/bhf/aeron-cache/tree/main/docs" target={"_blank"} className={"pr-1"}>
+                        <Link href="https://github.com/bhf/aeron-cache/tree/main/docs" target={"_blank"}
+                              className={"pr-1"}>
                             Help
                         </Link>
-                        <ExternalLink size={15} color="black" />
+                        <ExternalLink size={15} color="black"/>
+
                     </div>
                 </div>
 
@@ -62,11 +65,14 @@ export default function RootLayout({
     return (
         <html lang="en">
         <body>
-        {header()}
-        <div className="pl-2 pt-3">
-            {children}
-        </div>
-        {footer()}
+            {header()}
+            <div className="pl-2 pt-3">
+                {children}
+            </div>
+            <Toaster/>
+            <div className={"hidden 2xl:block flex flex-col"}>
+                {footer()}
+            </div>
         </body>
         </html>
     );

@@ -55,6 +55,11 @@ export function CacheItemsDataTable<TData, TValue>({
             columnFilters,
             columnVisibility: columnVisibility
         },
+        initialState: {
+            pagination: {
+                pageSize: 8, //custom default page size
+            },
+        },
     })
 
     return (

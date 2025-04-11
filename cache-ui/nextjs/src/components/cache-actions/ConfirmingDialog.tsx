@@ -9,7 +9,8 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import {MinusIcon, RecycleIcon, TrashIcon} from "lucide-react";
+import {DeleteIcon, RecycleIcon, Trash2Icon} from "lucide-react";
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,} from "@/components/ui/tooltip"
 
 interface ConfirmingDialogProps {
     title: string
@@ -32,22 +33,36 @@ export function ConfirmingDialog(props: ConfirmingDialogProps) {
 
     let actionTriggerElement
     if (isDelete) {
-        actionTriggerElement = <TrashIcon className="size-5"/>
+        actionTriggerElement = <Trash2Icon className="size-5"/>
     }
     else if (isClear) {
         actionTriggerElement = <RecycleIcon className="size-5"/>
     }
     else if (isRemove) {
-        actionTriggerElement = <MinusIcon className="size-5"/>
+        actionTriggerElement = <DeleteIcon className="size-5"/>
     }
 
     const isCacheAction = isDelete || isClear || isRemove;
 
     return (
         <AlertDialog>
-            <AlertDialogTrigger className={"outline px-2 rounded-md text-lg"}>
-                {isCacheAction ? actionTriggerElement : props.buttonText}
-            </AlertDialogTrigger>
+
+
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <AlertDialogTrigger className={"outline px-2 py-1 rounded-sm text-lg bg-white shadow-md hover:bg-aeroncache"}>
+                            {isCacheAction ? actionTriggerElement : props.buttonText}
+                        </AlertDialogTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>{props.buttonText}</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+
+
+
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>{props.title}</AlertDialogTitle>

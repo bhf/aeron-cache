@@ -2,6 +2,8 @@
 import {ConfirmingDialog} from "@/components/cache-actions/ConfirmingDialog";
 import {getCacheAPIURI} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
+import {toast} from "sonner";
+import {redirect} from "next/navigation";
 
 const logger = getLogger("RemoveItem")
 
@@ -16,6 +18,52 @@ const headers = {
 };
 
 /**
+ * Raise an alert that the item
+ * couldn't be removed.
+ */
+function toasterAlert() {
+    let props = {title: "Error sending remove item request", description: "Couldn't remove item", actionLabel: "OK"};
+
+    toast(props.title, {
+        description: props.description,
+        action: {
+            label: props.actionLabel,
+            onClick: () => console.log("Undo"),
+        },
+    })
+}
+
+/**
+ * Raise a toast that the action occurred successfully.
+ */
+function toastSuccess() {
+    let props = {title: "Success", description: "Removed item", actionLabel: "OK"};
+
+    toast.success(props.title, {
+        description: props.description,
+        action: {
+            label: props.actionLabel,
+            onClick: () => console.log(""),
+        },
+    })
+}
+
+/**
+ * Raise a toast that the action failed.
+ */
+function toastFailure(reason: string) {
+    let props = {title: "Error", description: "Failed to remove item: " + reason, actionLabel: "OK"};
+
+    toast.error(props.title, {
+        description: props.description,
+        action: {
+            label: props.actionLabel,
+            onClick: () => console.log(""),
+        },
+    })
+}
+
+/**
  * A component to remove items from a cache.
  * @constructor
  */
@@ -25,23 +73,34 @@ export function RemoveCacheItem(props: RemoveCacheItemProps) {
         const cacheId = props.cacheId
         const key = props.itemKey
         logger.info("Remove item request for cache with id " + cacheId + " on key " + key)
+
+        let rawResponse;
         try {
-            const rawResponse = await fetch(await getCacheAPIURI() + '/cache/' + cacheId + "/" + key, {
+            rawResponse = await fetch(await getCacheAPIURI() + '/cache/' + cacheId + "/" + key, {
                     method: 'DELETE',
                     headers,
                     body: JSON.stringify({cacheId, key})
                 },
             );
-            const content = await rawResponse.json();
-            logger.info("Got response from sending request to remove item on key " + key + ", response:" + content)
-        } catch (err) {
-            logger.error("Error whilst sending request to remove item ", err);
+        } catch (e) {
+            logger.warn("Failed to send request to remove cache item", e)
+            toasterAlert()
+            return
+        }
+
+        const content = await rawResponse.json();
+        logger.info("Got response from sending request to remove item on key " + key + ", response:" + content)
+
+        if (rawResponse.status === 200) {
+            toastSuccess()
+        } else {
+            toastFailure(content.operationStatus)
         }
     }
 
     return (
         <ConfirmingDialog title={"Removing On Key: " + props.itemKey}
-                          message={"Are you sure you want to remove this item from cache "+props.cacheId+"?"}
+                          message={"Are you sure you want to remove this item from cache " + props.cacheId + "?"}
                           cancelText={"Cancel"} actionText={"Continue"} action={sendRemoveItemRequest}
                           buttonText={"Remove"}/>
     );

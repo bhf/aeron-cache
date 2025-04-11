@@ -16,7 +16,19 @@ interface CacheItemsTableProps {
  * @constructor
  */
 function CacheItemsTable(props: CacheItemsTableProps) {
-    let data = [{key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0}]
+    let data = [
+        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
+        /*{key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
+        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
+        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
+        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
+        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
+        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
+        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
+        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
+        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0}*/
+
+    ]
     // noinspection TypeScriptValidateTypes
     return (
         <CacheItemsDataTable columns={cacheItemColumns} data={data}/>
@@ -38,7 +50,7 @@ export default async function Page({
 
     return (
         <div>
-            <div className={"text-2xl pb-1 justify-between space-x-2"} data-testid="deleteClear">
+            <div className={"text-2xl pb-4 justify-between space-x-2"} data-testid="deleteClear">
                 <p>{"Cache ID: " + cacheId}</p>
                 <div className={"py-1 justify-between space-x-2"} data-testid="deleteClear">
                     <DeleteCache cacheId={cacheId}/>
@@ -46,14 +58,18 @@ export default async function Page({
                 </div>
             </div>
 
-            <Card className="pt-5 pb-2 px-2 md:w-1/3">
-                <div data-testid="addItem">
-                    <CardTitle>Add Item</CardTitle>
-                    <AddItemRequest cacheId={cacheId}/>
-                </div>
-            </Card>
-            <div className="py-8 px-2 md:w-1/3">
-                <CacheItemsTable cacheId={cacheId}/>
+            <div className={"pb-1 justify-between space-y-6"} data-testid="deleteClear">
+                <Card className="pt-5 pb-2 px-2 md:w-1/3 shadow-lg">
+                    <div data-testid="addItem">
+                        <CardTitle>Add Item</CardTitle>
+                        <AddItemRequest cacheId={cacheId}/>
+                    </div>
+                </Card>
+                <Card className="pt-5 pb-2 px-2 md:w-1/3 shadow-lg">
+                    <div data-testid="cacheItems">
+                        <CacheItemsTable cacheId={cacheId}/>
+                    </div>
+                </Card>
             </div>
         </div>
     )

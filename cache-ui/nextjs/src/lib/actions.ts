@@ -19,9 +19,10 @@ export async function getCacheAPIURI(){
 
 /**
  * Create a cache.
+ * @param currentState
  * @param formData The form data with the params used to create the cache.
  */
-export async function createCacheRequest(formData: FormData) {
+export async function createCacheRequest(currentState: {message: string, error: boolean}, formData: FormData) {
     const cacheId = formData.get('cacheId')
     logger.info("Creating cache request with id", cacheId)
     try {
@@ -32,8 +33,15 @@ export async function createCacheRequest(formData: FormData) {
         });
         const content = await rawResponse.json();
         logger.info("Got response from sending request to create cache ", content)
+
+        if (rawResponse.status != 200) {
+            return {message: "Problem creating cache: "+content.operationStatus, error: true};
+        }
+
+        return {message: "Successfully created cache", error: false};
     } catch (err) {
         logger.error("Error whilst sending request to create cache ", err);
+        return {message: "Error creating cache", error: true};
     }
 }
 
@@ -79,9 +87,10 @@ export async function clearCacheRequest(formData: FormData) {
 
 /**
  * Add an item to the cache.
+ * @param formState
  * @param formData The form data with the params used to add the item to the cache.
  */
-export async function addItemToCacheRequest(formData: FormData) {
+export async function addItemToCacheRequest(formState: { message: string; error: boolean }, formData: FormData) {
     const cacheId = formData.get('cacheId')
     const key = formData.get('key')
     const value = formData.get('value')
@@ -94,9 +103,11 @@ export async function addItemToCacheRequest(formData: FormData) {
             },
         );
         const content = await rawResponse.json();
-        logger.info("Got response from sending request to add item on key " + key + ", response:" + content)
+        logger.info("Got response from sending request to add item:", content)
+        return {message: "Successfully added item", error: false};
     } catch (err) {
         logger.error("Error whilst sending request to add item ", err);
+        return {message: "Error trying to add item", error: true};
     }
 }
 

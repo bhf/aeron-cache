@@ -53,6 +53,11 @@ export function AllCachesDataTable<TData, TValue>({
             sorting,
             columnFilters,
         },
+        initialState: {
+            pagination: {
+                pageSize: 5, //custom default page size
+            },
+        },
     })
 
     return (
