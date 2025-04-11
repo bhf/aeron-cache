@@ -13,6 +13,8 @@ public enum OperationStatus
 
     UNKNOWN_KEY((short)4),
 
+    CACHE_EXISTS((short)5),
+
     /**
      * To be used to represent not present or null.
      */
@@ -43,16 +45,16 @@ public enum OperationStatus
      */
     public static OperationStatus get(final short value)
     {
-        switch (value)
-        {
-            case 0: return NONE;
-            case 1: return SUCCESS;
-            case 2: return ERROR;
-            case 3: return UNKNOWN_CACHE;
-            case 4: return UNKNOWN_KEY;
-            case 255: return NULL_VAL;
-        }
+        return switch (value) {
+            case 0 -> NONE;
+            case 1 -> SUCCESS;
+            case 2 -> ERROR;
+            case 3 -> UNKNOWN_CACHE;
+            case 4 -> UNKNOWN_KEY;
+            case 5 -> CACHE_EXISTS;
+            case 255 -> NULL_VAL;
+            default -> throw new IllegalArgumentException("Unknown value: " + value);
+        };
 
-        throw new IllegalArgumentException("Unknown value: " + value);
     }
 }

@@ -6,11 +6,11 @@ import lombok.Getter;
 @Getter
 public class ReusableLong implements Reusable<Long> {
 
-    long value;
+    Long value;
 
     @Override
     public void clear() {
-        value = 0;
+        value = 0L;
     }
 
     @Override
@@ -36,11 +36,11 @@ public class ReusableLong implements Reusable<Long> {
 
     @Override
     public String toString() {
-        return String.valueOf(value);
+        return value.toString();
     }
 
     @Override
     public int hashCode() {
-        return Long.hashCode(value);
+        return value.hashCode();
     }
 }

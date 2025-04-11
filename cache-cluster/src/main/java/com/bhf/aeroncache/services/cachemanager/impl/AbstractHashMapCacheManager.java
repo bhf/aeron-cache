@@ -4,6 +4,7 @@ import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.Cache;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
 import java.util.function.Supplier;
@@ -16,6 +17,7 @@ import java.util.function.Supplier;
  * @param <K> The key type for the caches.
  * @param <V> The value type for the caches.
  */
+@Log4j2
 public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCacheManager<I, K, V> {
 
     private final HashMap<I, Cache<I, K, V>> caches = new HashMap<>();
@@ -46,9 +48,19 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
     @Override
     public CreateCacheResult<I> createCache(I cacheId) {
         cacheCreationResult.clear();
-        var cache = cacheFactory.getNewCache(indexSupplier, keySupplier, valueSupplier);
-        caches.put(cacheId, cache);
         cacheCreationResult.getCacheId().copyFrom(cacheId);
+
+        log.info("Known caches {}", caches.keySet());
+
+        if (caches.containsKey(cacheId)) {
+            cacheCreationResult.setStatus(OperationStatus.CACHE_EXISTS);
+            return cacheCreationResult;
+        }
+
+        var cache = cacheFactory.getNewCache(indexSupplier, keySupplier, valueSupplier);
+        I newKey = indexSupplier.get();
+        newKey.copyFrom(cacheId);
+        caches.put(newKey, cache);
         cacheCreationResult.setStatus(OperationStatus.SUCCESS);
         return cacheCreationResult;
     }
@@ -58,6 +70,11 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
         deleteCacheResult.clear();
         deleteCacheResult.getCacheId().copyFrom(cacheId);
         var removed = caches.remove(cacheId);
+
+        if (removed == null) {
+            log.info("Tried to remove unknown cache {}, known caches: {}", cacheId, caches.keySet());
+        }
+
         deleteCacheResult.setStatus(removed != null ?
                 OperationStatus.SUCCESS : OperationStatus.UNKNOWN_CACHE);
         return deleteCacheResult;

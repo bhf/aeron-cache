@@ -5,7 +5,7 @@ plugins {
 
 
 dependencies {
-
+    implementation(project(":cache-messages-sbe"))
 }
 
 tasks.test {

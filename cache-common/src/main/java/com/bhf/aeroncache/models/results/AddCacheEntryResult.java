@@ -20,12 +20,16 @@ import lombok.Setter;
 @Flyweight
 public class AddCacheEntryResult<I extends Reusable, K extends Reusable> implements Reusable<AddCacheEntryResult<I, K>> {
 
-    final I cacheID;
+    I cacheID;
     boolean entryAdded;
-    final K entryKey;
+    K entryKey;
     final RequestId requestId = new RequestId();
     OperationStatus status = OperationStatus.NONE;
 
+    public AddCacheEntryResult(I cacheID, K entryKey) {
+        this.cacheID = cacheID;
+        this.entryKey = entryKey;
+    }
 
     public String getRequestId() {
         return requestId.getRequestId();

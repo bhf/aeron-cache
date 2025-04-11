@@ -23,6 +23,8 @@ import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,7 +40,8 @@ public class HttpApplication {
     private static AeronCacheListener client;
     private static ObservingClusterRequestPublisher observingPublisher;
     private static AeronCluster cluster;
-    private static AtomicBoolean clusterConnected = new AtomicBoolean(false);
+    private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
+    private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
 
     public static void main(String[] args) {
         System.out.println("Starting HTTP interface");
@@ -90,14 +93,39 @@ public class HttpApplication {
     private static Javalin startHTTPServer() {
 
         return Javalin.create(getHTTPConfig())
+                .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
                 .post(API_PREFIX + "<cacheId>", HttpApplication::handlePutItemRequest)
                 .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
                 .delete(API_PREFIX + "<cacheId>", HttpApplication::handleDeleteCacheRequest)
                 .get(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleGetItemRequest)
+                .get("/api/v1/caches", HttpApplication::handleGetCachesRequest)
+                .get("/api/v1/stats", HttpApplication::handleGetStatsRequest)
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
                 .get(READINESS, HttpApplication::handleGetReadiness)
                 .start(PORT);
+    }
+
+    private static void handleGetStatsRequest(Context context) {
+        log.info("Got request to get cache stats");
+        context.json(statsTracker.getCacheStats());
+    }
+
+    final static HashSet<Long> allCaches = new HashSet<>();
+
+    /**
+     * Handle getting details of available caches. Currently only
+     * implemented in memory on the HTTP side.
+     *
+     * @param context The context.
+     */
+    private static void handleGetCachesRequest(Context context) {
+        log.info("Got request to get all cache details");
+        List<CacheDetails> cacheDetails = new ArrayList<>();
+        for (Long l : allCaches) {
+            cacheDetails.add(new CacheDetails(l, 0));
+        }
+        context.json(cacheDetails);
     }
 
     /**
@@ -157,15 +185,24 @@ public class HttpApplication {
             CompletableFuture.runAsync(() -> observingPublisher.deleteCacheBlocking(cluster, Long.parseLong(cacheId), c -> {
                 var deletedCacheId = c.getCacheId();
                 log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
-                var response = new DeleteCacheResponse(deletedCacheId.value());
+                var response = new DeleteCacheResponse(deletedCacheId.value(), c.getStatus());
                 future.complete(response);
             }));
 
-            ctx.json(future.get());
+            var response = future.get();
+
+            if (response.operationStatus() == OperationStatus.SUCCESS) {
+                allCaches.remove(response.cacheId());
+                statsTracker.getTotalCaches().decrementAndGet();
+            }
+
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
         } catch (Exception e) {
-            var errorMsg = STR."Badly formed request to delete cache with Id: \{ ctx.pathParam("cacheId")}";
+            var errorMsg = STR."Badly formed request to delete cache with Id: \{ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID, OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -186,16 +223,24 @@ public class HttpApplication {
 
             CompletableFuture<DeleteItemResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.removeCacheEntryBlocking(cluster, cacheId, key, c -> {
-                log.info("Got delete on item from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
-                var response = new DeleteItemResponse(c.getCacheId().value(), c.getKey().value());
+                log.info("Got delete item response from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
+                var response = new DeleteItemResponse(c.getCacheId().value(), c.getKey().value(), c.getStatus());
                 future.complete(response);
             }));
 
-            ctx.json(future.get());
+            var response = future.get();
+
+            if (response.operationStatus() == OperationStatus.SUCCESS) {
+                statsTracker.getTotalItems().decrementAndGet();
+            }
+
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
         } catch (Exception e) {
-            var errorMsg = STR."Badly formed request to delete item with key \{ctx.pathParam("key")} from cache with Id: \{ ctx.pathParam("cacheId")}";
+            var errorMsg = STR."Badly formed request to delete item with key \{ctx.pathParam("key")} from cache with Id: \{ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID, OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -215,19 +260,22 @@ public class HttpApplication {
 
             CompletableFuture<GetItemResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.getCacheEntryBlocking(cluster, cacheId, key, c -> {
-                log.info("Got item from cluster on cacheId {}, key {}, value {}", c.getCacheId(), c.getEntryKey(), c.getEntryValue());
-                var noCache = c.getStatus()== OperationStatus.UNKNOWN_CACHE;
+                log.info("Get item response from cluster on cacheId {}, key {}, value {}", c.getCacheId(), c.getEntryKey(), c.getEntryValue());
+                var noCache = c.getStatus() == OperationStatus.UNKNOWN_CACHE;
                 var response = noCache ?
-                        new GetItemResponse(0, "NA", "NA") :
-                        new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(), c.getEntryValue().value());
+                        new GetItemResponse(0, "NA", "NA", c.getStatus()) :
+                        new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(), c.getEntryValue().value(), c.getStatus());
                 future.complete(response);
             }));
 
-            ctx.json(future.get());
+            var response = future.get();
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
         } catch (Exception e) {
-            var errorMsg = STR."Badly formed request to get item with key \{ctx.pathParam("key")} from cache with Id: \{ ctx.pathParam("cacheId")}";
+            var errorMsg = STR."Badly formed request to get item with key \{ctx.pathParam("key")} from cache with Id: \{ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID, OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -248,15 +296,23 @@ public class HttpApplication {
             CompletableFuture.runAsync(() -> observingPublisher.addCacheEntryBlocking(cluster, request.cacheId(), request.key(), request.value(), c -> {
                 var cacheId = c.getCacheID();
                 log.info("Got put item response from cluster on cacheId {}", cacheId);
-                var response = new PutItemResponse(cacheId.getValue(), request.key());
+                var response = new PutItemResponse(cacheId.getValue(), request.key(), c.getStatus());
                 future.complete(response);
             }));
 
-            ctx.json(future.get());
+            var response = future.get();
+
+            if (response.operationStatus() == OperationStatus.SUCCESS) {
+                statsTracker.getTotalItems().incrementAndGet();
+            }
+
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
         } catch (Exception e) {
-            var errorMsg = STR."Badly formed request to put item from request: \{ ctx.body()}";
+            var errorMsg = STR."Badly formed request to put item from request: \{ctx.body()}";
             log.warn(errorMsg);
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -276,19 +332,27 @@ public class HttpApplication {
             CompletableFuture.runAsync(() -> observingPublisher.sendCreateCacheBlocking(cluster, request.cacheId(), c -> {
                 var cacheId = c.getCacheId();
                 log.info("Got create cache response from cluster on cacheId {}", cacheId);
-                var response = new CreateCacheResponse(cacheId.getValue());
+                var response = new CreateCacheResponse(cacheId.getValue(), c.getStatus());
                 future.complete(response);
             }));
 
-            ctx.json(future.get());
+            var response = future.get();
+
+            if (response.operationStatus() == OperationStatus.SUCCESS) {
+                allCaches.add(response.cacheId());
+                statsTracker.getTotalCaches().incrementAndGet();
+            }
+
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
         } catch (Exception e) {
-            var errorMsg = STR."Badly formed request to create cache from request: \{ ctx.body()}";
+            var errorMsg = STR."Badly formed request to create cache from request: \{ctx.body()}";
             log.warn(errorMsg);
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
     }
-
 
 }

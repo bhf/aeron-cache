@@ -16,6 +16,7 @@
             <validValue name="ERROR">2</validValue>
             <validValue name="UNKNOWN_CACHE">3</validValue>
             <validValue name="UNKNOWN_KEY">4</validValue>
+            <validValue name="CACHE_EXISTS">5</validValue>
         </enum>
         <composite name="messageHeader" description="Message identifiers and length of message root">
             <type name="blockLength" primitiveType="uint16"/>
