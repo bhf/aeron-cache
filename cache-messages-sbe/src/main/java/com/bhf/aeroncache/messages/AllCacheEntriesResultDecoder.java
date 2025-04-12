@@ -1,0 +1,775 @@
+/* Generated SBE (Simple Binary Encoding) message codec. */
+package com.bhf.aeroncache.messages;
+
+import org.agrona.MutableDirectBuffer;
+import org.agrona.DirectBuffer;
+
+
+/**
+ * Get all the entries from a cache
+ */
+@SuppressWarnings("all")
+public final class AllCacheEntriesResultDecoder
+{
+    public static final int BLOCK_LENGTH = 10;
+    public static final int TEMPLATE_ID = 13;
+    public static final int SCHEMA_ID = 1;
+    public static final int SCHEMA_VERSION = 0;
+    public static final java.nio.ByteOrder BYTE_ORDER = java.nio.ByteOrder.LITTLE_ENDIAN;
+
+    private final AllCacheEntriesResultDecoder parentMessage = this;
+    private DirectBuffer buffer;
+    private int initialOffset;
+    private int offset;
+    private int limit;
+    int actingBlockLength;
+    int actingVersion;
+
+    public int sbeBlockLength()
+    {
+        return BLOCK_LENGTH;
+    }
+
+    public int sbeTemplateId()
+    {
+        return TEMPLATE_ID;
+    }
+
+    public int sbeSchemaId()
+    {
+        return SCHEMA_ID;
+    }
+
+    public int sbeSchemaVersion()
+    {
+        return SCHEMA_VERSION;
+    }
+
+    public String sbeSemanticType()
+    {
+        return "AllCacheEntriesResult";
+    }
+
+    public DirectBuffer buffer()
+    {
+        return buffer;
+    }
+
+    public int initialOffset()
+    {
+        return initialOffset;
+    }
+
+    public int offset()
+    {
+        return offset;
+    }
+
+    public AllCacheEntriesResultDecoder wrap(
+        final DirectBuffer buffer,
+        final int offset,
+        final int actingBlockLength,
+        final int actingVersion)
+    {
+        if (buffer != this.buffer)
+        {
+            this.buffer = buffer;
+        }
+        this.initialOffset = offset;
+        this.offset = offset;
+        this.actingBlockLength = actingBlockLength;
+        this.actingVersion = actingVersion;
+        limit(offset + actingBlockLength);
+
+        return this;
+    }
+
+    public AllCacheEntriesResultDecoder wrapAndApplyHeader(
+        final DirectBuffer buffer,
+        final int offset,
+        final MessageHeaderDecoder headerDecoder)
+    {
+        headerDecoder.wrap(buffer, offset);
+
+        final int templateId = headerDecoder.templateId();
+        if (TEMPLATE_ID != templateId)
+        {
+            throw new IllegalStateException("Invalid TEMPLATE_ID: " + templateId);
+        }
+
+        return wrap(
+            buffer,
+            offset + MessageHeaderDecoder.ENCODED_LENGTH,
+            headerDecoder.blockLength(),
+            headerDecoder.version());
+    }
+
+    public int encodedLength()
+    {
+        return limit - offset;
+    }
+
+    public int limit()
+    {
+        return limit;
+    }
+
+    public void limit(final int limit)
+    {
+        this.limit = limit;
+    }
+
+    public static int cacheIdId()
+    {
+        return 1;
+    }
+
+    public static int cacheIdSinceVersion()
+    {
+        return 0;
+    }
+
+    public static int cacheIdEncodingOffset()
+    {
+        return 0;
+    }
+
+    public static int cacheIdEncodingLength()
+    {
+        return 8;
+    }
+
+    public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public static long cacheIdNullValue()
+    {
+        return -9223372036854775808L;
+    }
+
+    public static long cacheIdMinValue()
+    {
+        return -9223372036854775807L;
+    }
+
+    public static long cacheIdMaxValue()
+    {
+        return 9223372036854775807L;
+    }
+
+    public long cacheId()
+    {
+        return buffer.getLong(offset + 0, java.nio.ByteOrder.LITTLE_ENDIAN);
+    }
+
+
+    public static int statusId()
+    {
+        return 2;
+    }
+
+    public static int statusSinceVersion()
+    {
+        return 0;
+    }
+
+    public static int statusEncodingOffset()
+    {
+        return 8;
+    }
+
+    public static int statusEncodingLength()
+    {
+        return 1;
+    }
+
+    public static String statusMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public short statusRaw()
+    {
+        return ((short)(buffer.getByte(offset + 8) & 0xFF));
+    }
+
+    public OperationStatus status()
+    {
+        return OperationStatus.get(((short)(buffer.getByte(offset + 8) & 0xFF)));
+    }
+
+
+    public static int endOfBatchId()
+    {
+        return 3;
+    }
+
+    public static int endOfBatchSinceVersion()
+    {
+        return 0;
+    }
+
+    public static int endOfBatchEncodingOffset()
+    {
+        return 9;
+    }
+
+    public static int endOfBatchEncodingLength()
+    {
+        return 1;
+    }
+
+    public static String endOfBatchMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public short endOfBatchRaw()
+    {
+        return ((short)(buffer.getByte(offset + 9) & 0xFF));
+    }
+
+    public BooleanType endOfBatch()
+    {
+        return BooleanType.get(((short)(buffer.getByte(offset + 9) & 0xFF)));
+    }
+
+
+    private final ItemsDecoder items = new ItemsDecoder(this);
+
+    public static long itemsDecoderId()
+    {
+        return 40;
+    }
+
+    public static int itemsDecoderSinceVersion()
+    {
+        return 0;
+    }
+
+    public ItemsDecoder items()
+    {
+        items.wrap(buffer);
+        return items;
+    }
+
+    public static final class ItemsDecoder
+        implements Iterable<ItemsDecoder>, java.util.Iterator<ItemsDecoder>
+    {
+        public static final int HEADER_SIZE = 4;
+        private final AllCacheEntriesResultDecoder parentMessage;
+        private DirectBuffer buffer;
+        private int count;
+        private int index;
+        private int offset;
+        private int blockLength;
+
+        ItemsDecoder(final AllCacheEntriesResultDecoder parentMessage)
+        {
+            this.parentMessage = parentMessage;
+        }
+
+        public void wrap(final DirectBuffer buffer)
+        {
+            if (buffer != this.buffer)
+            {
+                this.buffer = buffer;
+            }
+
+            index = 0;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + HEADER_SIZE);
+            blockLength = (buffer.getShort(limit + 0, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
+            count = (buffer.getShort(limit + 2, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
+        }
+
+        public ItemsDecoder next()
+        {
+            if (index >= count)
+            {
+                throw new java.util.NoSuchElementException();
+            }
+
+            offset = parentMessage.limit();
+            parentMessage.limit(offset + blockLength);
+            ++index;
+
+            return this;
+        }
+
+        public static int countMinValue()
+        {
+            return 0;
+        }
+
+        public static int countMaxValue()
+        {
+            return 65534;
+        }
+
+        public static int sbeHeaderSize()
+        {
+            return HEADER_SIZE;
+        }
+
+        public static int sbeBlockLength()
+        {
+            return 0;
+        }
+
+        public int actingBlockLength()
+        {
+            return blockLength;
+        }
+
+        public int count()
+        {
+            return count;
+        }
+
+        public java.util.Iterator<ItemsDecoder> iterator()
+        {
+            return this;
+        }
+
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        public boolean hasNext()
+        {
+            return index < count;
+        }
+
+        public static int keyId()
+        {
+            return 41;
+        }
+
+        public static int keySinceVersion()
+        {
+            return 0;
+        }
+
+        public static String keyCharacterEncoding()
+        {
+            return "UTF-8";
+        }
+
+        public static String keyMetaAttribute(final MetaAttribute metaAttribute)
+        {
+            if (MetaAttribute.PRESENCE == metaAttribute)
+            {
+                return "required";
+            }
+
+            return "";
+        }
+
+        public static int keyHeaderLength()
+        {
+            return 4;
+        }
+
+        public int keyLength()
+        {
+            final int limit = parentMessage.limit();
+            return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        }
+
+        public int skipKey()
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            final int dataOffset = limit + headerLength;
+            parentMessage.limit(dataOffset + dataLength);
+
+            return dataLength;
+        }
+
+        public int getKey(final MutableDirectBuffer dst, final int dstOffset, final int length)
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            final int bytesCopied = Math.min(length, dataLength);
+            parentMessage.limit(limit + headerLength + dataLength);
+            buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+            return bytesCopied;
+        }
+
+        public int getKey(final byte[] dst, final int dstOffset, final int length)
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            final int bytesCopied = Math.min(length, dataLength);
+            parentMessage.limit(limit + headerLength + dataLength);
+            buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+            return bytesCopied;
+        }
+
+        public void wrapKey(final DirectBuffer wrapBuffer)
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            parentMessage.limit(limit + headerLength + dataLength);
+            wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
+        }
+
+        public String key()
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            parentMessage.limit(limit + headerLength + dataLength);
+
+            if (0 == dataLength)
+            {
+                return "";
+            }
+
+            final byte[] tmp = new byte[dataLength];
+            buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
+
+            final String value;
+            try
+            {
+                value = new String(tmp, "UTF-8");
+            }
+            catch (final java.io.UnsupportedEncodingException ex)
+            {
+                throw new RuntimeException(ex);
+            }
+
+            return value;
+        }
+
+        public static int valueId()
+        {
+            return 42;
+        }
+
+        public static int valueSinceVersion()
+        {
+            return 0;
+        }
+
+        public static String valueCharacterEncoding()
+        {
+            return "UTF-8";
+        }
+
+        public static String valueMetaAttribute(final MetaAttribute metaAttribute)
+        {
+            if (MetaAttribute.PRESENCE == metaAttribute)
+            {
+                return "required";
+            }
+
+            return "";
+        }
+
+        public static int valueHeaderLength()
+        {
+            return 4;
+        }
+
+        public int valueLength()
+        {
+            final int limit = parentMessage.limit();
+            return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        }
+
+        public int skipValue()
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            final int dataOffset = limit + headerLength;
+            parentMessage.limit(dataOffset + dataLength);
+
+            return dataLength;
+        }
+
+        public int getValue(final MutableDirectBuffer dst, final int dstOffset, final int length)
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            final int bytesCopied = Math.min(length, dataLength);
+            parentMessage.limit(limit + headerLength + dataLength);
+            buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+            return bytesCopied;
+        }
+
+        public int getValue(final byte[] dst, final int dstOffset, final int length)
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            final int bytesCopied = Math.min(length, dataLength);
+            parentMessage.limit(limit + headerLength + dataLength);
+            buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+            return bytesCopied;
+        }
+
+        public void wrapValue(final DirectBuffer wrapBuffer)
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            parentMessage.limit(limit + headerLength + dataLength);
+            wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
+        }
+
+        public String value()
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            parentMessage.limit(limit + headerLength + dataLength);
+
+            if (0 == dataLength)
+            {
+                return "";
+            }
+
+            final byte[] tmp = new byte[dataLength];
+            buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
+
+            final String value;
+            try
+            {
+                value = new String(tmp, "UTF-8");
+            }
+            catch (final java.io.UnsupportedEncodingException ex)
+            {
+                throw new RuntimeException(ex);
+            }
+
+            return value;
+        }
+
+        public StringBuilder appendTo(final StringBuilder builder)
+        {
+            if (null == buffer)
+            {
+                return builder;
+            }
+
+            builder.append('(');
+            builder.append("key=");
+            builder.append('\'').append(key()).append('\'');
+            builder.append('|');
+            builder.append("value=");
+            builder.append('\'').append(value()).append('\'');
+            builder.append(')');
+
+            return builder;
+        }
+    }
+
+    public static int requestIdId()
+    {
+        return 4;
+    }
+
+    public static int requestIdSinceVersion()
+    {
+        return 0;
+    }
+
+    public static String requestIdCharacterEncoding()
+    {
+        return "UTF-8";
+    }
+
+    public static String requestIdMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public static int requestIdHeaderLength()
+    {
+        return 4;
+    }
+
+    public int requestIdLength()
+    {
+        final int limit = parentMessage.limit();
+        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+    }
+
+    public int skipRequestId()
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataOffset = limit + headerLength;
+        parentMessage.limit(dataOffset + dataLength);
+
+        return dataLength;
+    }
+
+    public int getRequestId(final MutableDirectBuffer dst, final int dstOffset, final int length)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+        return bytesCopied;
+    }
+
+    public int getRequestId(final byte[] dst, final int dstOffset, final int length)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+        return bytesCopied;
+    }
+
+    public void wrapRequestId(final DirectBuffer wrapBuffer)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+        wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
+    }
+
+    public String requestId()
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+
+        if (0 == dataLength)
+        {
+            return "";
+        }
+
+        final byte[] tmp = new byte[dataLength];
+        buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
+
+        final String value;
+        try
+        {
+            value = new String(tmp, "UTF-8");
+        }
+        catch (final java.io.UnsupportedEncodingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+
+        return value;
+    }
+
+    public String toString()
+    {
+        if (null == buffer)
+        {
+            return "";
+        }
+
+        final AllCacheEntriesResultDecoder decoder = new AllCacheEntriesResultDecoder();
+        decoder.wrap(buffer, initialOffset, actingBlockLength, actingVersion);
+
+        return decoder.appendTo(new StringBuilder()).toString();
+    }
+
+    public StringBuilder appendTo(final StringBuilder builder)
+    {
+        if (null == buffer)
+        {
+            return builder;
+        }
+
+        final int originalLimit = limit();
+        limit(initialOffset + actingBlockLength);
+        builder.append("[AllCacheEntriesResult](sbeTemplateId=");
+        builder.append(TEMPLATE_ID);
+        builder.append("|sbeSchemaId=");
+        builder.append(SCHEMA_ID);
+        builder.append("|sbeSchemaVersion=");
+        if (parentMessage.actingVersion != SCHEMA_VERSION)
+        {
+            builder.append(parentMessage.actingVersion);
+            builder.append('/');
+        }
+        builder.append(SCHEMA_VERSION);
+        builder.append("|sbeBlockLength=");
+        if (actingBlockLength != BLOCK_LENGTH)
+        {
+            builder.append(actingBlockLength);
+            builder.append('/');
+        }
+        builder.append(BLOCK_LENGTH);
+        builder.append("):");
+        builder.append("cacheId=");
+        builder.append(cacheId());
+        builder.append('|');
+        builder.append("status=");
+        builder.append(status());
+        builder.append('|');
+        builder.append("endOfBatch=");
+        builder.append(endOfBatch());
+        builder.append('|');
+        builder.append("items=[");
+        ItemsDecoder items = items();
+        if (items.count() > 0)
+        {
+            while (items.hasNext())
+            {
+                items.next().appendTo(builder);
+                builder.append(',');
+            }
+            builder.setLength(builder.length() - 1);
+        }
+        builder.append(']');
+        builder.append('|');
+        builder.append("requestId=");
+        builder.append('\'').append(requestId()).append('\'');
+
+        limit(originalLimit);
+
+        return builder;
+    }
+}

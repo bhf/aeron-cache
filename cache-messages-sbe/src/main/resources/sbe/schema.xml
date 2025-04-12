@@ -44,6 +44,10 @@
             <type name="length" primitiveType="uint32" maxValue="1073741824"/>
             <type name="varData" primitiveType="uint8" length="0"/>
         </composite>
+        <enum name="BooleanType" encodingType="uint8" description="Boolean Type.">
+            <validValue name="F" description="False value representation.">0</validValue>
+            <validValue name="T" description="True value representation.">1</validValue>
+        </enum>
     </types>
 
     <sbe:message name="CreateCache" id="1" semanticType="CreateCache"
@@ -130,6 +134,24 @@
         <data name="key" id="3" type="varStringEncoding"/>
         <data name="value" id="4" type="varStringEncoding"/>
         <data name="requestId" id="5" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="AllCacheEntriesResult" id="13" semanticType="AllCacheEntriesResult"
+                 description="Get all the entries from a cache">
+        <field name="cacheId" id="1" type="CacheId"/>
+        <field name="status" id="2" type="OperationStatus"/>
+        <field name="endOfBatch" id="3" type="BooleanType"/>
+        <group name="items" id="40" dimensionType="groupSizeEncoding">
+            <data name="key" id="41" type="varStringEncoding"/>
+            <data name="value" id="42" type="varStringEncoding"/>
+        </group>
+        <data name="requestId" id="4" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="GetAllCacheEntries" id="14" semanticType="GetAllCacheEntries"
+                 description="Get all entries in the specified cache">
+        <field name="cacheId" id="1" type="CacheId"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
 </sbe:messageSchema>

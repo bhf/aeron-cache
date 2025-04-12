@@ -124,4 +124,21 @@ public interface ClusterRequestPublisher {
      */
     void removeCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key);
 
+    /**
+     * Send a message to get all cache entries.
+     *
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param requestId The Id of this request.
+     * @param cacheId   The ID of the cache we're removing an entry from.
+     */
+    void getCacheEntries(AeronCluster cluster, String requestId, long cacheId);
+
+    /**
+     * Send a message to get all cache entries in a blocking manner.
+     *
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param requestId The Id of this request.
+     * @param cacheId   The ID of the cache we're removing an entry from.
+     */
+    void getCacheEntriesBlocking(AeronCluster cluster, String requestId, long cacheId);
 }

@@ -6,6 +6,8 @@ import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 
+import java.util.Map;
+
 public interface Cache<I extends Reusable, K extends Reusable, V extends Reusable> {
 
     /**
@@ -38,4 +40,10 @@ public interface Cache<I extends Reusable, K extends Reusable, V extends Reusabl
      * @return The result of clearing all entries.
      */
     ClearCacheResult<I> clearEntries();
+
+    /**
+     * Get all the entries.
+     * @return A {@link Map} of all entries in this cache.
+     */
+    Map<K, V> getAllEntries();
 }

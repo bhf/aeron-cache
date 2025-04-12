@@ -34,6 +34,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     private final List<IdentifiableConsumer<String, DeleteCacheResult<ReusableLong>>> deleteCacheObservers = new CopyOnWriteArrayList<>();
     private final List<IdentifiableConsumer<String, RemoveCacheEntryResult<ReusableLong, ReusableString>>> removeCacheEntryObservers = new CopyOnWriteArrayList<>();
     private final List<IdentifiableConsumer<String, ClearCacheResult<ReusableLong>>> clearCacheObservers = new CopyOnWriteArrayList<>();
+    private final List<IdentifiableConsumer<String, GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>>> getCacheEntriesObservers = new CopyOnWriteArrayList<>();
 
 
     private Consumer<CreateCacheResult<ReusableLong>> createCacheConsumer;
@@ -42,6 +43,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     private Consumer<DeleteCacheResult<ReusableLong>> deleteCacheConsumer;
     private Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> removeCacheEntryConsumer;
     private Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> getCacheEntryConsumer;
+    private Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> getCacheEntriesConsumer;
 
     public ObservingClusterRequestPublisher onCreateCache(Consumer<CreateCacheResult<ReusableLong>> c) {
         createCacheConsumer = c;
@@ -126,7 +128,6 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
             }
         });
 
-        log.info("Adding cache entry");
         publisher.addCacheEntry(cluster, requestId, cacheId, key, value);
     }
 
@@ -242,6 +243,34 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         publisher.removeCacheEntry(cluster, requestId, cacheId, key);
     }
 
+    @Override
+    public void getCacheEntries(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.getCacheEntries(cluster, requestId, cacheId);
+    }
+
+    @Override
+    public void getCacheEntriesBlocking(AeronCluster cluster, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> consumer) {
+        var requestId = UUID.randomUUID().toString();
+        getCacheEntriesObservers.add(new IdentifiableConsumer<>() {
+            @Override
+            public String getId() {
+                return requestId;
+            }
+
+            @Override
+            public void accept(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult) {
+                consumer.accept(getCacheEntriesResult);
+            }
+        });
+
+        publisher.getCacheEntries(cluster, requestId, cacheId);
+    }
+
+    @Override
+    public void getCacheEntriesBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.getCacheEntriesBlocking(cluster, requestId, cacheId);
+    }
+
     /**
      * Handle a message indicating the value of a get operation on a particular key
      * and delegate it to any relevant consumer.
@@ -254,6 +283,21 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         getCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
         if (getCacheEntryConsumer != null) {
             getCacheEntryConsumer.accept(getCacheEntryResult);
+        }
+    }
+
+    /**
+     * Handle a message indicating the values of an entire cache
+     * and delegate it to any relevant consumer.
+     *
+     * @param getCacheEntriesResult The result of getting all items from the cache.
+     */
+    public void handleAllCacheEntries(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult) {
+        var targetId = getCacheEntriesResult.getRequestId();
+        getCacheEntriesObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntriesResult));
+        getCacheEntriesObservers.removeIf(p -> p.getId().equals(targetId));
+        if (getCacheEntriesConsumer != null) {
+            getCacheEntriesConsumer.accept(getCacheEntriesResult);
         }
     }
 

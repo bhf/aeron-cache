@@ -79,4 +79,12 @@ public interface CacheManager<I extends Reusable, K extends Reusable, V extends 
      * @return The result of getting the entry from the cache.
      */
     GetCacheEntryResult<I, K, V> getCacheEntry(I cacheId, K key);
+
+    /**
+     * Get all cache entries.
+     *
+     * @param cacheId The id of the cache we want to get the values from.
+     * @return The result of getting the entries from the cache.
+     */
+    GetAllCacheEntriesResult<I, K, V> getAllCacheEntries(I cacheId);
 }

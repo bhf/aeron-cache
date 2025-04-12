@@ -45,6 +45,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final AddCacheEntryRequestDetails<I, K, V> addCacheEntryRequestDetails;
     final DeleteCacheRequestDetails<I> deleteCacheRequestDetails;
     final GetCacheEntryRequestDetails<I, K> getCacheEntryRequestDetails;
+    final GetAllCacheEntriesRequestDetails<I> getAllCacheEntriesRequestDetails;
 
     final AddCacheEntryResult<I, K> addEntryFailureResult =new AddCacheEntryResult<>();
 
@@ -55,6 +56,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.addCacheEntryRequestDetails = new AddCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
         this.deleteCacheRequestDetails = new DeleteCacheRequestDetails<>(indexSupplier.get());
         this.getCacheEntryRequestDetails = new GetCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get());
+        this.getAllCacheEntriesRequestDetails = new GetAllCacheEntriesRequestDetails<>(indexSupplier.get());
         this.cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer(), indexSupplier, keySupplier, valueSupplier);
     }
 
@@ -89,6 +91,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
             case RemoveCacheEntryEncoder.TEMPLATE_ID -> handleRemoveCacheEntry(session, buffer, offset);
             case ClearCacheEncoder.TEMPLATE_ID -> handleClearCache(session, buffer, offset);
             case DeleteCacheEncoder.TEMPLATE_ID -> handleDeleteCache(session, buffer, offset);
+            case GetAllCacheEntriesEncoder.TEMPLATE_ID -> handleGetAllCacheEntries(session, buffer, offset);
             default -> throw new IllegalStateException("Unexpected value: " + templateId);
         }
     }
@@ -222,6 +225,25 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     }
 
     /**
+     * Handle a request to get all items from a cache.
+     *
+     * @param session Session requesting the add entry operation.
+     * @param buffer  Buffer containing the message.
+     * @param offset  Offset in the buffer at which the message is encoded.
+     */
+    private void handleGetAllCacheEntries(ClientSession session, DirectBuffer buffer, int offset) {
+        var requestDetails = getAllCacheEntriesRequestDetails(session, buffer, offset);
+        I cacheId = requestDetails.getCacheId();
+        var requestId = requestDetails.getRequestId();
+        log.info("Got get cache content for cache id {}, requestId {}", cacheId, requestId);
+
+        var getAllCacheEntriesResult = cacheManager.getAllCacheEntries(cacheId);
+        getAllCacheEntriesResult.setRequestId(requestId);
+        getAllCacheEntriesResult.getCacheId().copyFrom(cacheId);
+        handlePostGetAllCacheEntries(cacheId, getAllCacheEntriesResult, session, buffer, offset);
+    }
+
+    /**
      * Handle a request to create a cache.
      *
      * @param session Session requesting the create cache operation.
@@ -290,6 +312,16 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     protected abstract GetCacheEntryRequestDetails<I, K> getCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
 
     /**
+     * Decode the GetAllCacheEntries message into a request details flyweight.
+     *
+     * @param session The client session.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset from within the buffer to decode from.
+     * @return The GetAllCacheEntriesRequestDetails flyweight.
+     */
+    protected abstract GetAllCacheEntriesRequestDetails<I> getAllCacheEntriesRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+
+    /**
      * Decode the DeleteCache message into a request details flyweight.
      *
      * @param session The client session.
@@ -331,6 +363,17 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param offset              The offset from within the buffer to decode the original request from.
      */
     protected abstract void handlePostGetCacheEntry(I cacheId, K key, GetCacheEntryResult<I, K, V> getCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
+
+    /**
+     * Get all entries from the cache.
+     *
+     * @param cacheId             The ID of the cache we need to get all entries from.
+     * @param getCacheEntryResult The result from the request to get all entries.
+     * @param session             The client session.
+     * @param buffer              The buffer from which the request was created.
+     * @param offset              The offset from within the buffer to decode the original request from.
+     */
+    protected abstract void handlePostGetAllCacheEntries(I cacheId, GetAllCacheEntriesResult<I, K, V> getCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
      * After an entry is removed from the cache, send out a EntryRemoved message.

@@ -29,8 +29,10 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     private final RemoveCacheEntryDecoder removeCacheEntryDecoder = new RemoveCacheEntryDecoder();
     private final AddCacheEntryDecoder addCacheEntryDecoder = new AddCacheEntryDecoder();
     private final GetCacheEntryDecoder getCacheEntryDecoder = new GetCacheEntryDecoder();
+    private final GetAllCacheEntriesDecoder getAllCacheEntriesDecoder = new GetAllCacheEntriesDecoder();
     private final CacheEntryCreatedEncoder entryCreatedEncoder = new CacheEntryCreatedEncoder();
     private final CacheEntryResultEncoder cacheEntryResultEncoder = new CacheEntryResultEncoder();
+    private final AllCacheEntriesResultEncoder allCacheEntriesResultEncoder = new AllCacheEntriesResultEncoder();
     private final CacheEntryRemovedEncoder entryRemovedEncoder = new CacheEntryRemovedEncoder();
     private final CacheClearedEncoder cacheClearedEncoder = new CacheClearedEncoder();
     private final DeleteCacheDecoder deleteCacheDecoder = new DeleteCacheDecoder();
@@ -105,6 +107,17 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
+    protected GetAllCacheEntriesRequestDetails<ReusableLong> getAllCacheEntriesRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+        getAllCacheEntriesRequestDetails.clear();
+        getAllCacheEntriesDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheId = getAllCacheEntriesDecoder.cacheId();
+        var requestId = getAllCacheEntriesDecoder.requestId();
+        getAllCacheEntriesRequestDetails.getCacheId().copyFrom(cacheId);
+        getAllCacheEntriesRequestDetails.setRequestId(requestId);
+        return getAllCacheEntriesRequestDetails;
+    }
+
+    @Override
     protected DeleteCacheRequestDetails<ReusableLong> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         deleteCacheRequestDetails.clear();
         deleteCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
@@ -150,6 +163,26 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         cacheEntryResultEncoder.requestId(getCacheEntryResult.getRequestId());
 
         sendMessage(session, egressBuffer, cacheEntryResultEncoder.encodedLength() + headerEncoder.encodedLength());
+    }
+
+    @Override
+    protected void handlePostGetAllCacheEntries(ReusableLong cacheId, GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getAllCacheEntriesResult, ClientSession session, DirectBuffer buffer, int offset) {
+        allCacheEntriesResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        allCacheEntriesResultEncoder.cacheId(cacheId.getValue())
+                .status(getAllCacheEntriesResult.getStatus())
+                .endOfBatch(BooleanType.T);
+
+        var values = getAllCacheEntriesResult.getValues();
+        int size = values.size();
+        var itemsEncoder = allCacheEntriesResultEncoder.itemsCount(size);
+
+        values.forEach((key, value) -> {
+            itemsEncoder.next();
+            itemsEncoder.key(key.value()).value(value.value());
+        });
+
+        allCacheEntriesResultEncoder.requestId(getAllCacheEntriesResult.getRequestId());
+        sendMessage(session, egressBuffer, allCacheEntriesResultEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 
     @Override
