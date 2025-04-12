@@ -60,13 +60,6 @@ function CreateCache() {
 
 export default async function Page() {
 
-    const dashStats = {
-        errorCount: "3",
-        totalItemsCount: "1,344",
-        totalCachesCount: "12",
-        totalOpsCount: "1,234,567"
-    }
-
     let rawResponse
     try {
         rawResponse = await fetch(await getCacheAPIURI() + '/stats/', {

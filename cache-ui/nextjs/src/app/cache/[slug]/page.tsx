@@ -4,31 +4,41 @@ import {DeleteCache} from "@/app/cache/[slug]/DeleteCache";
 import {ClearCache} from "@/app/cache/[slug]/ClearCache";
 import AddItemRequest from "@/components/AddCacheItem";
 import {Card, CardTitle} from "@/components/ui/card";
+import {getCacheAPIURI} from "@/lib/actions";
+import {getLogger} from "@/lib/loggingUtil";
 
+const logger = getLogger("CachePage")
+
+const headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+}
 
 interface CacheItemsTableProps {
     cacheId: number
 }
 
-
 /**
  * A component to display the items in this cache.
  * @constructor
  */
-function CacheItemsTable(props: CacheItemsTableProps) {
-    let data = [
-        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
-        /*{key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
-        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
-        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
-        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
-        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
-        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
-        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
-        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0},
-        {key: "someKey", value: "someValue", cacheId: props.cacheId, itemCount: 0}*/
+async function CacheItemsTable(props: CacheItemsTableProps) {
 
-    ]
+    let rawResponse
+    try {
+        rawResponse = await fetch(await getCacheAPIURI() + '/cache/'+props.cacheId , {
+                method: 'GET',
+                headers
+            },
+        )
+    } catch (err) {
+        logger.warn("Error whilst trying to get cache content ", err);
+        return
+    }
+
+    const content = await rawResponse.json();
+    logger.info("Cache content ", content);
+    const data = content.items
     // noinspection TypeScriptValidateTypes
     return (
         <CacheItemsDataTable columns={cacheItemColumns} data={data}/>

@@ -7,6 +7,7 @@ import {Button} from "@/components/ui/button";
 import React, {useState} from "react";
 import {toast} from "sonner";
 import {getLogger} from "@/lib/loggingUtil";
+import {redirect} from "next/navigation";
 
 interface AddItemProps {
     cacheId: number
@@ -85,6 +86,7 @@ export default function AddItemRequest(props: AddItemProps) {
         }
         else{
             await toastSuccess()
+            redirect("/cache/"+formData.get("cacheId"))
         }
     }
 

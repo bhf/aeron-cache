@@ -93,6 +93,7 @@ export function RemoveCacheItem(props: RemoveCacheItemProps) {
 
         if (rawResponse.status === 200) {
             toastSuccess()
+            redirect("/cache/"+cacheId)
         } else {
             toastFailure(content.operationStatus)
         }
