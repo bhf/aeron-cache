@@ -96,9 +96,10 @@ public class HttpApplication {
                 .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
                 .post(API_PREFIX + "<cacheId>", HttpApplication::handlePutItemRequest)
-                .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
                 .delete(API_PREFIX + "<cacheId>", HttpApplication::handleDeleteCacheRequest)
+                .patch(API_PREFIX + "<cacheId>", HttpApplication::handleClearCacheRequest)
                 .get(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleGetItemRequest)
+                .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
                 .get("/api/v1/caches", HttpApplication::handleGetCachesRequest)
                 .get("/api/v1/stats", HttpApplication::handleGetStatsRequest)
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
@@ -241,6 +242,36 @@ public class HttpApplication {
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID, OperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
+    /**
+     * Handle a request to clear a cache.
+     *
+     * @param ctx The context.
+     */
+    private static void handleClearCacheRequest(Context ctx) {
+        try {
+            var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
+            log.info("Got clear request on cacheId {}", cacheId);
+
+            CompletableFuture<ClearCacheResponse> future = new CompletableFuture<>();
+            CompletableFuture.runAsync(() -> observingPublisher.clearCacheBlocking(cluster, cacheId, c -> {
+                log.info("Got clear cache response from cluster on cacheId {}", c.getCacheId());
+                var response = new ClearCacheResponse(cacheId, c.getStatus());
+                future.complete(response);
+            }));
+
+            var response = future.get();
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = STR."Badly formed request to clear cache with ID \{ctx.pathParam("cacheId")}";
+            log.warn(errorMsg);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }

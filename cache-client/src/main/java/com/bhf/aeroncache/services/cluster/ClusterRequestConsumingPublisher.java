@@ -60,4 +60,13 @@ public interface ClusterRequestConsumingPublisher {
      * @param c       The consumer that will handle the result.
      */
     void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c);
+
+    /**
+     * Send a message to clear a cache in a blocking manner.
+     *
+     * @param cluster The Aeron Cluster instance to use.
+     * @param cacheId The ID of the cache we're removing an entry from.
+     * @param c       The consumer that will handle the result.
+     */
+    void clearCacheBlocking(AeronCluster cluster, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c);
 }

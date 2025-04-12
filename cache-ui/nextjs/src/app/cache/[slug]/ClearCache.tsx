@@ -36,7 +36,7 @@ function toasterAlert() {
  * Raise a toast that the action occurred successfully.
  */
 function toastSuccess() {
-    let props = {title: "Success", description: "Deleted cache", actionLabel: "OK"};
+    let props = {title: "Success", description: "Cleared cache", actionLabel: "OK"};
 
     toast.success(props.title, {
         description: props.description,
@@ -51,7 +51,7 @@ function toastSuccess() {
  * Raise a toast that the action failed.
  */
 function toastFailure(reason: string) {
-    let props = {title: "Error", description: "Failed to delete cache: " + reason, actionLabel: "OK"};
+    let props = {title: "Error", description: "Failed to clear cache: " + reason, actionLabel: "OK"};
 
     toast.error(props.title, {
         description: props.description,
@@ -75,7 +75,7 @@ export function ClearCache(props: ClearCacheProps) {
         let rawResponse
         try {
             rawResponse = await fetch(await getCacheAPIURI() + '/cache/' + cacheId, {
-                    method: 'DELETE',
+                    method: 'PATCH',
                     headers
                 },
             )
@@ -90,7 +90,6 @@ export function ClearCache(props: ClearCacheProps) {
 
         if (rawResponse.status === 200) {
             toastSuccess()
-            redirect('/')
         } else {
             toastFailure(content.operationStatus)
         }

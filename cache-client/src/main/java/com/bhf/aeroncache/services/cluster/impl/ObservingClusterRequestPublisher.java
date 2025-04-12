@@ -169,6 +169,24 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
+    public void clearCacheBlocking(AeronCluster cluster, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c) {
+        var requestId = UUID.randomUUID().toString();
+        clearCacheObservers.add(new IdentifiableConsumer<>() {
+            @Override
+            public String getId() {
+                return requestId;
+            }
+
+            @Override
+            public void accept(ClearCacheResult<ReusableLong> clearCacheEntryResult) {
+                c.accept(clearCacheEntryResult);
+            }
+        });
+
+        publisher.clearCache(cluster, requestId, cacheId);
+    }
+
+    @Override
     public void deleteCache(AeronCluster cluster, String requestId, long cacheId) {
         publisher.deleteCache(cluster, requestId, cacheId);
     }
