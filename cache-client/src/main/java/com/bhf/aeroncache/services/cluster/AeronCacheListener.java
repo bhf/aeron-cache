@@ -42,6 +42,7 @@ public class AeronCacheListener implements EgressListener {
     private final CacheClearedDecoder cacheClearedDecoder = new CacheClearedDecoder();
     private final CacheDeletedDecoder cacheDeletedDecoder = new CacheDeletedDecoder();
     private final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
+    private final AllCacheEntriesResultDecoder allCacheEntriesResultDecoder = new AllCacheEntriesResultDecoder();
 
     private final CreateCacheResult<ReusableLong> createCacheResult = new CreateCacheResult<>(SupplierUtils.longSupplier.get());
     private final AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult = new AddCacheEntryResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get());
@@ -49,6 +50,7 @@ public class AeronCacheListener implements EgressListener {
     private final DeleteCacheResult<ReusableLong> deleteCacheResult = new DeleteCacheResult<>(SupplierUtils.longSupplier.get());
     private final RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult = new RemoveCacheEntryResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get());
     private final GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult = new GetCacheEntryResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
+    private final GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult = new GetAllCacheEntriesResult<>(SupplierUtils.longSupplier.get());
 
     /**
      * {@inheritDoc}
@@ -73,6 +75,7 @@ public class AeronCacheListener implements EgressListener {
             case CacheClearedDecoder.TEMPLATE_ID -> handleCacheCleared(buffer, offset);
             case CacheDeletedDecoder.TEMPLATE_ID -> handleCacheDeleted(buffer, offset);
             case CacheEntryRemovedDecoder.TEMPLATE_ID -> handleCacheEntryRemoved(buffer, offset);
+            case AllCacheEntriesResultDecoder.TEMPLATE_ID -> handleAllCacheEntriesResult(buffer, offset);
             default -> log.warn("Got unknown message with TID {}", templateId);
         }
     }
@@ -100,6 +103,42 @@ public class AeronCacheListener implements EgressListener {
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryResult(getCacheEntryResult);
+        }
+    }
+
+    /**
+     * Handle the result of getting all cache entries.
+     *
+     * @param buffer The buffer to decode from.
+     * @param offset The offset at which to start decoding.
+     */
+    private void handleAllCacheEntriesResult(DirectBuffer buffer, int offset) {
+        allCacheEntriesResultDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheID = allCacheEntriesResultDecoder.cacheId();
+        var status = allCacheEntriesResultDecoder.status();
+        var eob = allCacheEntriesResultDecoder.endOfBatch();
+
+        getCacheEntriesResult.clear();
+        getCacheEntriesResult.getCacheId().copyFrom(cacheID);
+        getCacheEntriesResult.setStatus(status);
+
+        // process group of key-value from the decoder directly into the flyweight
+
+        for (AllCacheEntriesResultDecoder.ItemsDecoder item : allCacheEntriesResultDecoder.items()) {
+            var key = new ReusableString();
+            var value = new ReusableString();
+            key.copyFrom(item.key());
+            value.copyFrom(item.value());
+            getCacheEntriesResult.getValues().put(key, value);
+            log.info("Got key: {}, value: {}", key, value);
+        }
+
+        var requestId = allCacheEntriesResultDecoder.requestId();
+        getCacheEntriesResult.setRequestId(requestId);
+        log.info("Got cache content result from cache {}, requestId: {}, status {}", cacheID, requestId, status);
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleAllCacheEntries(getCacheEntriesResult);
         }
     }
 

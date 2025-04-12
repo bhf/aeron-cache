@@ -110,4 +110,18 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
         }
         return getCacheEntryResult;
     }
+
+    @Override
+    public GetAllCacheEntriesResult<I, K, V> getAllCacheEntries(I cacheId) {
+        getAllCacheEntriesResult.clear();
+        getAllCacheEntriesResult.getCacheId().copyFrom(cacheId);
+        var cache = getCache(cacheId);
+        if (cache != null) {
+            getAllCacheEntriesResult.setStatus(OperationStatus.SUCCESS);
+            getAllCacheEntriesResult.getValues().putAll(cache.getAllEntries());
+        } else {
+            getAllCacheEntriesResult.setStatus(OperationStatus.UNKNOWN_CACHE);
+        }
+        return getAllCacheEntriesResult;
+    }
 }

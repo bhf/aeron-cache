@@ -78,4 +78,9 @@ public class HashMapCache<I extends Reusable, K extends Reusable, V extends Reus
         clearCacheResult.setStatus(OperationStatus.SUCCESS);
         return clearCacheResult;
     }
+
+    @Override
+    public Map<K, V> getAllEntries() {
+        return cache;
+    }
 }

@@ -5,10 +5,13 @@ import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.ErrorMessages;
+import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
 import com.bhf.aeroncache.services.cluster.AeronCacheListener;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.AgentRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
+import com.bhf.aeroncache.types.ReusableLong;
+import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
@@ -23,11 +26,13 @@ import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
+import java.sql.Array;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 @Log4j2
@@ -95,6 +100,7 @@ public class HttpApplication {
         return Javalin.create(getHTTPConfig())
                 .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
+                .get(API_PREFIX + "<cacheId>", HttpApplication::handleGetCacheRequest)
                 .post(API_PREFIX + "<cacheId>", HttpApplication::handlePutItemRequest)
                 .delete(API_PREFIX + "<cacheId>", HttpApplication::handleDeleteCacheRequest)
                 .patch(API_PREFIX + "<cacheId>", HttpApplication::handleClearCacheRequest)
@@ -106,6 +112,8 @@ public class HttpApplication {
                 .get(READINESS, HttpApplication::handleGetReadiness)
                 .start(PORT);
     }
+
+
 
     private static void handleGetStatsRequest(Context context) {
         log.info("Got request to get cache stats");
@@ -384,6 +392,47 @@ public class HttpApplication {
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
+    }
+
+    /**
+     * Handle a request to get a whole cache.
+     *
+     * @param ctx The context.
+     */
+    private static void handleGetCacheRequest(Context ctx) {
+        try {
+            var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
+            log.info("Got get cache content request on cacheId {}", cacheId);
+
+            CompletableFuture<GetCacheResponse> future = new CompletableFuture<>();
+            CompletableFuture.runAsync(() -> observingPublisher.getCacheEntriesBlocking(cluster, cacheId, c -> {
+                log.info("Get cache content response from cluster on cacheId {}", c.getCacheId());
+                var noCache = c.getStatus() == OperationStatus.UNKNOWN_CACHE;
+                var response = noCache ?
+                        new GetCacheResponse(0, OperationStatus.UNKNOWN_CACHE, List.of()) :
+                        new GetCacheResponse(0, c.getStatus(), buildItemsList(c));
+                future.complete(response);
+            }));
+
+            var response = future.get();
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = STR."Badly formed request to get cache content for cache ID \{ctx.pathParam("cacheId")}";
+            log.warn(errorMsg);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, OperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
+    private static List<CacheItem> buildItemsList(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> c) {
+        List<CacheItem> res = new ArrayList<>();
+        c.getValues().forEach((key, value) -> {
+            res.add(new CacheItem(key.value(), value.value()));
+        });
+        return res;
     }
 
 }

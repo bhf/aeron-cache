@@ -31,6 +31,7 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     private final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
     private final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
     private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
+    private final GetAllCacheEntriesEncoder getAllCacheEntriesEncoder = new GetAllCacheEntriesEncoder();
 
     @Override
     public void sendCreateCacheBlocking(AeronCluster cluster, String requestId, long cacheId) {
@@ -188,6 +189,33 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     void publishRemoveCacheEntry(AeronCluster cluster, RemoveCacheEntryEncoder removeCacheEntry, MessageHeaderEncoder header) {
         idleStrategy.reset();
         while (cluster.offer(msgBuffer, 0, removeCacheEntry.encodedLength() + header.encodedLength()) < 0) {
+            idleStrategy.idle(cluster.pollEgress());
+        }
+    }
+
+    @Override
+    public void getCacheEntriesBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        getCacheEntries(cluster, requestId, cacheId);
+        waitForResult(cluster);
+    }
+
+    @Override
+    public void getCacheEntries(AeronCluster cluster, String requestId, long cacheId) {
+        getAllCacheEntriesEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId).requestId(requestId);
+        publishGetAllCacheEntries(cluster, getAllCacheEntriesEncoder, headerEncoder);
+        log.info("Sent get cache content request on cache {} with request Id {}", cacheId, requestId);
+    }
+
+    /**
+     * Publish a request to get all cache entries.
+     * @param cluster The cluster on which the cache resides.
+     * @param getAllCacheEntriesEncoder The encoded request.
+     * @param header The message header.
+     */
+    private void publishGetAllCacheEntries(AeronCluster cluster, GetAllCacheEntriesEncoder getAllCacheEntriesEncoder, MessageHeaderEncoder header) {
+        idleStrategy.reset();
+        while (cluster.offer(msgBuffer, 0, getAllCacheEntriesEncoder.encodedLength() + header.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
     }
