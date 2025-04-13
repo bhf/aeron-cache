@@ -90,6 +90,7 @@ export function ClearCache(props: ClearCacheProps) {
 
         if (rawResponse.status === 200) {
             toastSuccess()
+            redirect("/cache/"+props.cacheId)
         } else {
             toastFailure(content.operationStatus)
         }
