@@ -98,12 +98,14 @@ public class HttpApplication {
         return Javalin.create(getHTTPConfig())
                 .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
+                .get(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleGetItemRequest)
                 .get(API_PREFIX + "<cacheId>", HttpApplication::handleGetCacheRequest)
                 .post(API_PREFIX + "<cacheId>", HttpApplication::handlePutItemRequest)
+                .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
                 .delete(API_PREFIX + "<cacheId>", HttpApplication::handleDeleteCacheRequest)
                 .patch(API_PREFIX + "<cacheId>", HttpApplication::handleClearCacheRequest)
-                .get(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleGetItemRequest)
-                .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
+
+
                 .get("/api/v1/caches", HttpApplication::handleGetCachesRequest)
                 .get("/api/v1/stats", HttpApplication::handleGetStatsRequest)
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
