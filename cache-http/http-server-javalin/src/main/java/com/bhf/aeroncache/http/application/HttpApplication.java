@@ -104,8 +104,6 @@ public class HttpApplication {
                 .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
                 .delete(API_PREFIX + "<cacheId>", HttpApplication::handleDeleteCacheRequest)
                 .patch(API_PREFIX + "<cacheId>", HttpApplication::handleClearCacheRequest)
-
-
                 .get("/api/v1/caches", HttpApplication::handleGetCachesRequest)
                 .get("/api/v1/stats", HttpApplication::handleGetStatsRequest)
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
