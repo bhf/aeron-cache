@@ -39,9 +39,14 @@ async function CacheItemsTable(props: CacheItemsTableProps) {
     const content = await rawResponse.json();
     logger.info("Cache content ", content);
     const data = content.items
+
+    const cleanInput = data.map(item => {
+        return {...item, cacheId: props.cacheId};
+    })
+
     // noinspection TypeScriptValidateTypes
     return (
-        <CacheItemsDataTable columns={cacheItemColumns} data={data}/>
+        <CacheItemsDataTable columns={cacheItemColumns} data={cleanInput}/>
     );
 }
 
