@@ -6,6 +6,8 @@ import AddItemRequest from "@/components/AddCacheItem";
 import {Card, CardTitle} from "@/components/ui/card";
 import {getCacheAPIURI} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
+import {FC, JSX, Suspense} from "react";
+import {Skeleton} from "@/components/ui/skeleton";
 
 const logger = getLogger("CachePage")
 
@@ -26,7 +28,7 @@ async function CacheItemsTable(props: CacheItemsTableProps) {
 
     let rawResponse
     try {
-        rawResponse = await fetch(await getCacheAPIURI() + '/cache/'+props.cacheId , {
+        rawResponse = await fetch(await getCacheAPIURI() + '/cache/' + props.cacheId, {
                 method: 'GET',
                 headers
             },
@@ -37,7 +39,6 @@ async function CacheItemsTable(props: CacheItemsTableProps) {
     }
 
     const content = await rawResponse.json();
-    logger.info("Cache content ", content);
     const data = content.items
 
     const cleanInput = data.map(item => {
@@ -49,6 +50,26 @@ async function CacheItemsTable(props: CacheItemsTableProps) {
         <CacheItemsDataTable columns={cacheItemColumns} data={cleanInput}/>
     );
 }
+
+/**
+ * A basic loading skeleton for the table.
+ * @constructor
+ */
+const SkeletonLoading: () => JSX.Element = () => (
+    <div className="flex items-center space-x-4">
+        <Skeleton className="h-12 w-12 rounded-full" />
+        <div className="space-y-2">
+            <Skeleton className="h-8 w-[500px]" />
+            <Skeleton className="h-8 w-[500px]" />
+            <Skeleton className="h-8 w-[500px]" />
+            <Skeleton className="h-8 w-[500px]" />
+            <Skeleton className="h-8 w-[500px]" />
+            <Skeleton className="h-8 w-[500px]" />
+            <Skeleton className="h-8 w-[500px]" />
+            <Skeleton className="h-8 w-[500px]" />
+        </div>
+    </div>
+)
 
 /**
  * A page to display information on a specific Aeron Cache instance.
@@ -82,7 +103,9 @@ export default async function Page({
                 </Card>
                 <Card className="pt-5 pb-2 px-2 md:w-1/3 shadow-lg">
                     <div data-testid="cacheItems">
-                        <CacheItemsTable cacheId={cacheId}/>
+                        <Suspense fallback={<SkeletonLoading/>}>
+                            <CacheItemsTable cacheId={cacheId}/>
+                        </Suspense>
                     </div>
                 </Card>
             </div>
