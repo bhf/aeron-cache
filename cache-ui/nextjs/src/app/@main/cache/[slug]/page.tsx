@@ -1,13 +1,13 @@
 import {CacheItemsDataTable} from "@/components/cache-view/CacheItemsTable";
 import {cacheItemColumns} from "@/components/cache-view/CacheItemColumns";
-import {DeleteCache} from "@/app/cache/[slug]/DeleteCache";
-import {ClearCache} from "@/app/cache/[slug]/ClearCache";
 import AddItemRequest from "@/components/AddCacheItem";
 import {Card, CardTitle} from "@/components/ui/card";
 import {getCacheAPIURI} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
 import {JSX, Suspense} from "react";
 import {Skeleton} from "@/components/ui/skeleton";
+import {DeleteCache} from "@/app/@main/cache/[slug]/DeleteCache";
+import {ClearCache} from "@/app/@main/cache/[slug]/ClearCache";
 
 const logger = getLogger("CachePage")
 

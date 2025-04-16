@@ -2,7 +2,8 @@
 
 import {ColumnDef} from "@tanstack/react-table"
 import {CacheInfo} from "@/lib/types";
-import {RemoveCacheItem} from "@/app/cache/[slug]/RemoveCacheItem";
+import {RemoveCacheItem} from "@/app/@main/cache/[slug]/RemoveCacheItem";
+
 
 
 export function getCacheItemColumns(cacheId: number):ColumnDef<CacheInfo>[] {

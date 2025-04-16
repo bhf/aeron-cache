@@ -11,10 +11,11 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({
-                                       children, dashboard
+                                       children, dashboard, main
                                    }: Readonly<{
     children: React.ReactNode,
-    dashboard: React.ReactNode;
+    dashboard: React.ReactNode,
+    main: React.ReactNode
 }>) {
 
     function footer() {
@@ -69,7 +70,7 @@ export default function RootLayout({
             {header()}
             <div className="pl-2 pt-3">
                 {dashboard}
-                {children}
+                {main}
             </div>
             <Toaster/>
         </body>
