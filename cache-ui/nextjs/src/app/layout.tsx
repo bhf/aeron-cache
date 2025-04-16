@@ -1,8 +1,9 @@
 import type {Metadata} from "next";
 import "./globals.css";
-import {ExternalLink, Github, Linkedin, Radio, Star} from "@deemlol/next-icons";
+import {Radio} from "@deemlol/next-icons";
 import Link from "next/link";
 import {Toaster} from "@/components/ui/sonner";
+import AboutAeronCache from "@/components/About";
 
 
 export const metadata: Metadata = {
@@ -17,24 +18,6 @@ export default function RootLayout({
     dashboard: React.ReactNode,
     main: React.ReactNode
 }>) {
-
-    function footer() {
-        return <div
-            className="footer mt-auto absolute bottom-0 w-full space-x-15 flex justify-center items-center pb-1 pt-1 bg-linear-to-t from-gray-200 to-gray-100">
-            <div className="space-x-2 flex justify-center items-center">
-                <a href="https://github.com/bhf/aeron-cache" target={"_blank"}>Github</a>
-                <Github size={20} color="black"/>
-            </div>
-            <div className="space-x-2 flex justify-center items-center">
-                <a href="https://www.linkedin.com/in/sanjeevsarda/" target={"_blank"}>LinkedIn</a>
-                <Linkedin size={20} color="black"/>
-            </div>
-            <div className="space-x-2 flex justify-center items-center">
-                <a href="https://sanjeev.pages.dev/" target={"_blank"}>StayTuned</a>
-                <Star size={20} color="black"/>
-            </div>
-        </div>;
-    }
 
     function header() {
         return (
@@ -51,12 +34,7 @@ export default function RootLayout({
                         </div>
                     </Link>
                     <div className="hidden lg:flex lg:flex-1 lg:justify-end pr-4">
-                        <Link href="https://github.com/bhf/aeron-cache/tree/main/docs" target={"_blank"}
-                              className={"pr-1"}>
-                            Help
-                        </Link>
-                        <ExternalLink size={15} color="black"/>
-
+                        <AboutAeronCache/>
                     </div>
                 </div>
 
