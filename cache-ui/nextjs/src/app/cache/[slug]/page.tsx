@@ -6,7 +6,7 @@ import AddItemRequest from "@/components/AddCacheItem";
 import {Card, CardTitle} from "@/components/ui/card";
 import {getCacheAPIURI} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
-import {FC, JSX, Suspense} from "react";
+import {JSX, Suspense} from "react";
 import {Skeleton} from "@/components/ui/skeleton";
 
 const logger = getLogger("CachePage")
@@ -18,6 +18,11 @@ const headers = {
 
 interface CacheItemsTableProps {
     cacheId: number
+}
+
+interface CacheItem {
+    key: string
+    value: string
 }
 
 /**
@@ -41,7 +46,7 @@ async function CacheItemsTable(props: CacheItemsTableProps) {
     const content = await rawResponse.json();
     const data = content.items
 
-    const cleanInput = data.map(item => {
+    const cleanInput = data.map((item: CacheItem) => {
         return {...item, cacheId: props.cacheId};
     })
 
@@ -57,16 +62,16 @@ async function CacheItemsTable(props: CacheItemsTableProps) {
  */
 const SkeletonLoading: () => JSX.Element = () => (
     <div className="flex items-center space-x-4">
-        <Skeleton className="h-12 w-12 rounded-full" />
+        <Skeleton className="h-12 w-12 rounded-full"/>
         <div className="space-y-2">
-            <Skeleton className="h-8 w-[500px]" />
-            <Skeleton className="h-8 w-[500px]" />
-            <Skeleton className="h-8 w-[500px]" />
-            <Skeleton className="h-8 w-[500px]" />
-            <Skeleton className="h-8 w-[500px]" />
-            <Skeleton className="h-8 w-[500px]" />
-            <Skeleton className="h-8 w-[500px]" />
-            <Skeleton className="h-8 w-[500px]" />
+            <Skeleton className="h-8 w-[500px]"/>
+            <Skeleton className="h-8 w-[500px]"/>
+            <Skeleton className="h-8 w-[500px]"/>
+            <Skeleton className="h-8 w-[500px]"/>
+            <Skeleton className="h-8 w-[500px]"/>
+            <Skeleton className="h-8 w-[500px]"/>
+            <Skeleton className="h-8 w-[500px]"/>
+            <Skeleton className="h-8 w-[500px]"/>
         </div>
     </div>
 )
@@ -85,7 +90,7 @@ export default async function Page({
     const cacheId = Number.parseInt(slug);
 
     return (
-        <div>
+        <div className={"pl-6"}>
             <div className={"text-2xl pb-4 justify-between space-x-2"} data-testid="deleteClear">
                 <p>{"Cache ID: " + cacheId}</p>
                 <div className={"py-1 justify-between space-x-2"} data-testid="deleteClear">

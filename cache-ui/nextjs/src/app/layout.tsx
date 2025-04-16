@@ -11,9 +11,10 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({
-                                       children,
+                                       children, dashboard
                                    }: Readonly<{
-    children: React.ReactNode;
+    children: React.ReactNode,
+    dashboard: React.ReactNode;
 }>) {
 
     function footer() {
@@ -67,12 +68,10 @@ export default function RootLayout({
         <body>
             {header()}
             <div className="pl-2 pt-3">
+                {dashboard}
                 {children}
             </div>
             <Toaster/>
-            <div className={"hidden 2xl:block flex flex-col"}>
-                {footer()}
-            </div>
         </body>
         </html>
     );
