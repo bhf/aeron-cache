@@ -7,7 +7,6 @@ import {Button} from "@/components/ui/button";
 import {toast} from "sonner";
 import React, {useState} from "react";
 import {getLogger} from "@/lib/loggingUtil";
-import {redirect} from "next/navigation";
 
 const logger = getLogger("CreateCache")
 
@@ -85,8 +84,6 @@ export default function CreateCacheRequest() {
         }
         else{
             toastSuccess()
-            // revalidate the endpoint from which we get all available caches
-            redirect("/")
         }
     }
 

@@ -86,7 +86,6 @@ export default function AddItemRequest(props: AddItemProps) {
         }
         else{
             await toastSuccess()
-            redirect("/cache/"+formData.get("cacheId"))
         }
     }
 

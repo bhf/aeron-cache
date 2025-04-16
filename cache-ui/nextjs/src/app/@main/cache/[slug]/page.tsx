@@ -35,7 +35,8 @@ async function CacheItemsTable(props: CacheItemsTableProps) {
     try {
         rawResponse = await fetch(await getCacheAPIURI() + '/cache/' + props.cacheId, {
                 method: 'GET',
-                headers
+                headers,
+                next: { tags: ['Cache-'+props.cacheId] }
             },
         )
     } catch (err) {

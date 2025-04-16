@@ -22,7 +22,8 @@ async function CacheTable() {
     try {
         rawResponse = await fetch(await getCacheAPIURI() + '/caches/', {
                 method: 'GET',
-                headers
+                headers,
+                next: { tags: ['AllCaches'] }
             },
         )
     } catch (err) {

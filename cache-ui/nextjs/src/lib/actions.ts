@@ -1,6 +1,7 @@
 "use server"
 
 import {getLogger} from "@/lib/loggingUtil";
+import {revalidateTag} from "next/cache";
 
 /**
  * React server actions.
@@ -37,6 +38,9 @@ export async function createCacheRequest(currentState: {message: string, error: 
         if (rawResponse.status != 200) {
             return {message: "Problem creating cache: "+content.operationStatus, error: true};
         }
+
+        // revalidate the endpoint from which we get all available caches
+        revalidateTag("AllCaches")
 
         return {message: "Successfully created cache", error: false};
     } catch (err) {
@@ -104,6 +108,14 @@ export async function addItemToCacheRequest(formState: { message: string; error:
         );
         const content = await rawResponse.json();
         logger.info("Got response from sending request to add item:", content)
+
+        if (rawResponse.status != 200) {
+            return {message: "Problem adding item to cache: "+content.operationStatus, error: true};
+        }
+
+        // revalidate the endpoint from which we get this cache's data
+        revalidateTag("Cache-"+cacheId)
+
         return {message: "Successfully added item", error: false};
     } catch (err) {
         logger.error("Error whilst sending request to add item ", err);
