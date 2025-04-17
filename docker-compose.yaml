@@ -25,6 +25,7 @@ services:
       - CLUSTER_ADDRESSES=node0,node1,node2
       - CLUSTER_NODE=0
       - CLUSTER_PORT_BASE=9000
+      - OTEL_SERVICE_NAME=aeron-cache-cluster-node
   node1:
     build:
       context: cache-cluster
@@ -37,6 +38,7 @@ services:
       - CLUSTER_ADDRESSES=node0,node1,node2
       - CLUSTER_NODE=1
       - CLUSTER_PORT_BASE=9000
+      - OTEL_SERVICE_NAME=aeron-cache-cluster-node
   node2:
     build:
       context: cache-cluster
@@ -49,6 +51,7 @@ services:
       - CLUSTER_ADDRESSES=node0,node1,node2
       - CLUSTER_NODE=2
       - CLUSTER_PORT_BASE=9000
+      - OTEL_SERVICE_NAME=aeron-cache-cluster-node
   cache-http-client:
     shm_size: '1gb'
     build:

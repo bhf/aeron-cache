@@ -6,6 +6,7 @@ import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
+import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 import io.aeron.cluster.codecs.CloseReason;
@@ -34,6 +35,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private Cluster cluster;
+    private final CacheTracingService tracingService;
     private IdleStrategy idleStrategy;
     private final CacheManagerFactory<I, K, V> cacheManagerFactory = new CacheManagerFactory<>();
     private final CacheManager<I, K, V> cacheManager;
@@ -46,10 +48,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final DeleteCacheRequestDetails<I> deleteCacheRequestDetails;
     final GetCacheEntryRequestDetails<I, K> getCacheEntryRequestDetails;
     final GetAllCacheEntriesRequestDetails<I> getAllCacheEntriesRequestDetails;
-
     final AddCacheEntryResult<I, K> addEntryFailureResult = new AddCacheEntryResult<>();
 
-    protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, String nodeId) {
+    protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, String nodeId, CacheTracingService tracingService) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(indexSupplier.get());
         this.clearCacheRequestDetails = new ClearCacheRequestDetails<>(indexSupplier.get());
         this.removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get());
@@ -59,6 +60,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.getAllCacheEntriesRequestDetails = new GetAllCacheEntriesRequestDetails<>(indexSupplier.get());
         this.cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer(), indexSupplier, keySupplier, valueSupplier);
         this.nodeId = nodeId;
+        this.tracingService = tracingService;
     }
 
     private Consumer<Image> getImageConsumer() {
@@ -121,10 +123,12 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      */
     void handleDeleteCache(ClientSession session, DirectBuffer buffer, int offset) {
         var requestDetails = getDeleteCacheRequestDetails(session, buffer, offset);
+        tracingService.startHandleDeleteCache(requestDetails);
         I cacheId = requestDetails.getCacheId();
         log.info("Got delete cache request for cache id {}", cacheId);
         var deleteCacheResult = cacheManager.deleteCache(cacheId);
         handlePostDeleteCache(cacheId, deleteCacheResult, requestDetails, session, buffer, offset);
+        tracingService.endHandleDeleteCache(requestDetails);
     }
 
     /**
@@ -136,12 +140,14 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      */
     void handleClearCache(ClientSession session, DirectBuffer buffer, int offset) {
         var requestDetails = getClearCacheRequestDetails(session, buffer, offset);
+        tracingService.startHandleClearCache(requestDetails);
         I cacheId = requestDetails.getCacheId();
         log.info("Got clear cache request for cache id {}", cacheId);
         var clearCacheResult = cacheManager.clearCache(cacheId);
         var requestId = requestDetails.getRequestId();
         clearCacheResult.setRequestId(requestId);
         handlePostClearCache(cacheId, clearCacheResult, session, buffer, offset);
+        tracingService.endHandleClearCache(requestDetails);
     }
 
     /**
@@ -153,6 +159,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      */
     void handleRemoveCacheEntry(ClientSession session, DirectBuffer buffer, int offset) {
         var requestDetails = getRemoveCacheEntryRequestDetails(session, buffer, offset);
+        tracingService.startRemoveCacheEntry(requestDetails);
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         var requestId = requestDetails.getRequestId();
@@ -160,6 +167,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var removeCacheEntryResult = cacheManager.removeCacheEntry(cacheId, key);
         removeCacheEntryResult.setRequestId(requestId);
         handlePostRemoveCacheEntry(cacheId, key, removeCacheEntryResult, session, buffer, offset);
+        tracingService.endRemoveCacheEntry(requestDetails);
     }
 
     /**
@@ -171,6 +179,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      */
     void handleAddCacheEntry(ClientSession session, DirectBuffer buffer, int offset) {
         var requestDetails = getAddCacheEntryRequestDetails(session, buffer, offset);
+        tracingService.startAddCacheEntry(requestDetails);
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         V value = requestDetails.getValue();
@@ -187,6 +196,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         addCacheEntryResult.setRequestId(requestId);
         log.info("Result for add entry, key: {}, status: {}, ", addCacheEntryResult.getEntryKey(), addCacheEntryResult.getStatus());
         handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, buffer, offset);
+        tracingService.endAddCacheEntry(requestDetails);
     }
 
     /**
@@ -214,6 +224,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      */
     void handleGetCacheEntry(ClientSession session, DirectBuffer buffer, int offset) {
         var requestDetails = getCacheEntryRequestDetails(session, buffer, offset);
+        tracingService.startGetCacheEntry(requestDetails);
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         var requestId = requestDetails.getRequestId();
@@ -223,6 +234,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         getCacheEntryResult.getCacheId().copyFrom(cacheId);
         log.info("Sending GET result: cacheId {}, key {}, value {}, reqId {}, status {}", getCacheEntryResult.getCacheId(), getCacheEntryResult.getEntryKey(), getCacheEntryResult.getEntryValue(), getCacheEntryResult.getRequestId(), getCacheEntryResult.getStatus());
         handlePostGetCacheEntry(cacheId, key, getCacheEntryResult, session, buffer, offset);
+        tracingService.endGetCacheEntry(requestDetails);
     }
 
     /**
@@ -234,6 +246,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      */
     private void handleGetAllCacheEntries(ClientSession session, DirectBuffer buffer, int offset) {
         var requestDetails = getAllCacheEntriesRequestDetails(session, buffer, offset);
+        tracingService.startGetAllCacheEntries(requestDetails);
         I cacheId = requestDetails.getCacheId();
         var requestId = requestDetails.getRequestId();
         log.info("Got get cache content for cache id {}, requestId {}", cacheId, requestId);
@@ -242,6 +255,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         getAllCacheEntriesResult.setRequestId(requestId);
         getAllCacheEntriesResult.getCacheId().copyFrom(cacheId);
         handlePostGetAllCacheEntries(cacheId, getAllCacheEntriesResult, session, buffer, offset);
+        tracingService.endGetAllCacheEntries(requestDetails);
     }
 
     /**
@@ -253,6 +267,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      */
     void handleCreateCache(ClientSession session, DirectBuffer buffer, int offset) {
         CreateCacheRequestDetails<I> requestDetails = getCreateCacheRequestDetails(session, buffer, offset);
+        tracingService.startCreateCacheRequest(requestDetails);
         I cacheId = requestDetails.getCacheId();
         var requestId = requestDetails.getRequestId();
         log.info("Got create cache request for cache id {}, request Id: {}", cacheId, requestId);
@@ -260,6 +275,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         cacheCreationResult.setRequestId(requestId);
         log.info("Will send result: " + cacheCreationResult.getStatus());
         handlePostCreateCache(cacheId, cacheCreationResult, session, buffer, offset);
+        tracingService.endCreateCacheRequest(requestDetails);
     }
 
     /**
