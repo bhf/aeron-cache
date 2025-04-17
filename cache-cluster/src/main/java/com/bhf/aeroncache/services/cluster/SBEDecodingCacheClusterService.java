@@ -3,6 +3,7 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
@@ -39,8 +40,8 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     private final CacheDeletedEncoder cacheDeletedEncoder = new CacheDeletedEncoder();
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
 
-    public SBEDecodingCacheClusterService(String nodeId) {
-        super(SupplierUtils.longSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, nodeId);
+    public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService) {
+        super(SupplierUtils.longSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, nodeId, tracingService);
     }
 
     @Override

@@ -4,6 +4,8 @@ import com.bhf.aeroncache.messages.CacheCreatedDecoder;
 import com.bhf.aeroncache.messages.CreateCacheEncoder;
 import com.bhf.aeroncache.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.messages.MessageHeaderEncoder;
+import com.bhf.aeroncache.services.tracing.CacheTracingService;
+import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
 import io.aeron.DirectBufferVector;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.logbuffer.BufferClaim;
@@ -39,9 +41,13 @@ class SBEDecodingCacheClusterServiceTest {
 
     @BeforeEach
     void setup() {
-        sut = new SBEDecodingCacheClusterService("node0");
+        sut = new SBEDecodingCacheClusterService("node0", getMockedTracingService());
         responseBuffer = new ExpandableArrayBuffer();
         requestBuffer = new ExpandableArrayBuffer();
+    }
+
+    private CacheTracingService getMockedTracingService() {
+        return new NoOpTracingService();
     }
 
     /**
