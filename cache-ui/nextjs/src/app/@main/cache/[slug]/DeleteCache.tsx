@@ -1,6 +1,6 @@
 "use client"
 import {ConfirmingDialog} from "@/components/cache-actions/ConfirmingDialog";
-import {getCacheAPIURI} from "@/lib/actions";
+import {deleteCacheRequest, getCacheAPIURI} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
 import {toast} from "sonner";
 import {redirect} from "next/navigation";
@@ -10,11 +10,6 @@ const logger = getLogger("DeleteCache")
 interface DeleteCacheProps {
     cacheId: number
 }
-
-const headers = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json'
-};
 
 /**
  * Raise an alert that the request to delete the cache
@@ -72,28 +67,16 @@ export function DeleteCache(props: DeleteCacheProps) {
         const cacheId = props.cacheId
         logger.info("Delete cache request with id", cacheId)
 
-        let rawResponse
-        try {
-            rawResponse = await fetch(await getCacheAPIURI() + '/cache/' + cacheId, {
-                    method: 'DELETE',
-                    headers
-                },
-            );
-        } catch (e) {
-            logger.warn("Error whilst sending request to delete cache ", e);
-            alertOnErrorSending()
-            return
-        }
-        const content = await rawResponse.json();
+        const content = await deleteCacheRequest(cacheId)
+
         logger.info("Got response from request to delete cache ", content)
 
-        if (rawResponse.status === 200) {
+        if (content.operationStatus === "SUCCESS") {
             toastSuccess()
             redirect('/')
         } else {
             toastFailure(content.operationStatus)
         }
-
     }
 
     return (

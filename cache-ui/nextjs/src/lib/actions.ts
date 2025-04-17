@@ -30,7 +30,8 @@ export async function createCacheRequest(currentState: {message: string, error: 
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/', {
             method: 'POST',
             headers,
-            body: JSON.stringify({cacheId})
+            body: JSON.stringify({cacheId}),
+            cache: "no-cache"
         });
         const content = await rawResponse.json();
         logger.info("Got response from sending request to create cache ", content)
@@ -51,19 +52,20 @@ export async function createCacheRequest(currentState: {message: string, error: 
 
 /**
  * Delete a cache.
- * @param formData The form data with the params used to create the cache.
+ * @param cacheId
  */
-export async function deleteCacheRequest(formData: FormData) {
-    const cacheId = formData.get('cacheId')
+export async function deleteCacheRequest(cacheId: number) {
     logger.info("Delete cache request with id", cacheId)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/api/v1/cache/' + cacheId, {
+        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + cacheId, {
                 method: 'DELETE',
-                headers
+                headers,
+                cache: "no-cache"
             },
         );
         const content = await rawResponse.json();
         logger.info("Got response from sending request to delete cache ", content)
+        return content
     } catch (err) {
         logger.error("Error whilst sending request to delete cache ", err);
     }
@@ -73,17 +75,18 @@ export async function deleteCacheRequest(formData: FormData) {
  * Clear a cache.
  * @param formData The form data with the params used to clear the cache.
  */
-export async function clearCacheRequest(formData: FormData) {
-    const cacheId = formData.get('cacheId')
+export async function clearCacheRequest(cacheId: number) {
     logger.info("Clear cache request with id", cacheId)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/api/v1/cache/' + cacheId, {
-                method: 'DELETE',
-                headers
+        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + cacheId, {
+                method: 'PATCH',
+                headers,
+                cache: "no-cache"
             },
         );
         const content = await rawResponse.json();
         logger.info("Got response from sending request to clear cache ", content)
+        return content
     } catch (err) {
         logger.error("Error whilst sending request to clear cache ", err);
     }
@@ -103,7 +106,8 @@ export async function addItemToCacheRequest(formState: { message: string; error:
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + cacheId, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({cacheId, key, value})
+                body: JSON.stringify({cacheId, key, value}),
+                cache: "no-cache"
             },
         );
         const content = await rawResponse.json();
@@ -127,19 +131,21 @@ export async function addItemToCacheRequest(formState: { message: string; error:
  * Remove an item from the cache.
  * @param formData The form data with the params used to remove the item from the cache.
  */
-export async function removeItemFromCacheRequest(formData: FormData) {
-    const cacheId = formData.get('cacheId')
-    const key = formData.get('key')
-    logger.info("Remove item request for cache with id" + cacheId + "on key " + key)
+export async function removeItemFromCacheRequest(props: {cacheId: number, key: string}) {
+    /*const cacheId = formData.get('cacheId')
+    const key = formData.get('key')*/
+    logger.info("Remove item request for cache with id " + props.cacheId + "on key " + props.key)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/api/v1/cache/' + cacheId + "/" + key, {
+        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + props.cacheId + "/" + props.key, {
                 method: 'DELETE',
                 headers,
-                body: JSON.stringify({cacheId, key})
+                body: JSON.stringify(props),
+                cache: "no-cache"
             },
         );
         const content = await rawResponse.json();
-        logger.info("Got response from sending request to remove item on key " + key + ", response:" + content)
+        logger.info("Got response from sending request to remove item on key " + props.key + ", response:" + content)
+        return content
     } catch (err) {
         logger.error("Error whilst sending request to remove item ", err);
     }

@@ -1,6 +1,6 @@
 "use client"
 import {ConfirmingDialog} from "@/components/cache-actions/ConfirmingDialog";
-import {getCacheAPIURI} from "@/lib/actions";
+import {clearCacheRequest} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
 import {toast} from "sonner";
 import {redirect} from "next/navigation";
@@ -11,10 +11,6 @@ interface ClearCacheProps {
 
 const logger = getLogger("ClearCache")
 
-const headers = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json'
-};
 
 /**
  * Raise an alert that the cache
@@ -72,23 +68,10 @@ export function ClearCache(props: ClearCacheProps) {
         const cacheId = props.cacheId
         logger.info("Clear cache request with id ", cacheId)
 
-        let rawResponse
-        try {
-            rawResponse = await fetch(await getCacheAPIURI() + '/cache/' + cacheId, {
-                    method: 'PATCH',
-                    headers
-                },
-            )
-        } catch (err) {
-            logger.warn("Error whilst sending request to clear cache ", err);
-            toasterAlert();
-            return
-        }
-
-        const content = await rawResponse.json();
+        const content = await clearCacheRequest(cacheId)
         logger.info("Got response from sending request to clear cache ", content)
 
-        if (rawResponse.status === 200) {
+        if (content.operationStatus === "SUCCESS") {
             toastSuccess()
             redirect("/cache/"+props.cacheId)
         } else {
