@@ -5,7 +5,7 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from "@/comp
 import {getCacheAPIURI} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
 
-const logger = getLogger("MainDash")
+const logger = getLogger("MainPanel")
 
 const headers = {
     'Accept': 'application/json',
@@ -22,7 +22,8 @@ async function CacheTable() {
     try {
         rawResponse = await fetch(await getCacheAPIURI() + '/caches/', {
                 method: 'GET',
-                headers
+                headers,
+                cache: "no-cache"
             },
         )
     } catch (err) {

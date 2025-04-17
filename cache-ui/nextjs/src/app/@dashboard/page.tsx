@@ -15,11 +15,12 @@ export default async function Page() {
     try {
         rawResponse = await fetch(await getCacheAPIURI() + '/stats/', {
                 method: 'GET',
-                headers
+                headers,
+                cache: "no-cache"
             },
         )
     } catch (err) {
-        logger.warn("Error whilst sending request to clear cache ", err);
+        logger.warn("Error whilst sending request to get stats ", err);
         return
     }
 
