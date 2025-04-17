@@ -178,7 +178,7 @@ public class ClusterNodeApplication {
                         .aeronDirectoryName(aeronDirName)
                         .archiveContext(aeronArchiveContext.clone())
                         .clusterDir(new File(baseDir, "cluster"))
-                        .clusteredService(new SBEDecodingCacheClusterService())
+                        .clusteredService(new SBEDecodingCacheClusterService(String.valueOf(nodeId)))
                         .errorHandler(errorHandler("Clustered Service"));
 
         System.out.println("Awaiting DNS Resolution");

@@ -1,5 +1,18 @@
 version: '3.8'
 services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=debug
+    networks:
+      internal_bus:
+        ipv4_address: 172.16.202.7
+    depends_on:
+      - cache-ui
   node0:
     build:
       context: cache-cluster
@@ -9,7 +22,7 @@ services:
       internal_bus:
         ipv4_address: 172.16.202.2
     environment:
-      - CLUSTER_ADDRESSES=172.16.202.2,172.16.202.3,172.16.202.4
+      - CLUSTER_ADDRESSES=node0,node1,node2
       - CLUSTER_NODE=0
       - CLUSTER_PORT_BASE=9000
   node1:
@@ -21,7 +34,7 @@ services:
       internal_bus:
         ipv4_address: 172.16.202.3
     environment:
-      - CLUSTER_ADDRESSES=172.16.202.2,172.16.202.3,172.16.202.4
+      - CLUSTER_ADDRESSES=node0,node1,node2
       - CLUSTER_NODE=1
       - CLUSTER_PORT_BASE=9000
   node2:
@@ -33,7 +46,7 @@ services:
       internal_bus:
         ipv4_address: 172.16.202.4
     environment:
-      - CLUSTER_ADDRESSES=172.16.202.2,172.16.202.3,172.16.202.4
+      - CLUSTER_ADDRESSES=node0,node1,node2
       - CLUSTER_NODE=2
       - CLUSTER_PORT_BASE=9000
   cache-http-client:
@@ -49,8 +62,11 @@ services:
       internal_bus:
         ipv4_address: 172.16.202.5
     environment:
-      - CLUSTER_ADDRESSES=172.16.202.2,172.16.202.3,172.16.202.4
+      - CLUSTER_ADDRESSES=node0,node1,node2
       - EGRESS_IP=172.16.202.5
+      - OTEL_SERVICE_NAME=aeron-cache-http
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_JAVAAGENT_LOGGING=none
   cache-ui:
     build:
       context: cache-ui/nextjs
@@ -66,7 +82,7 @@ services:
     ports:
       - 3000:3000
     environment:
-      - AERON_CACHE_API=http://172.16.202.5:7070/api/v1
+      - AERON_CACHE_API=http://cache-http-client:7070/api/v1
 networks:
   internal_bus:
     driver: bridge

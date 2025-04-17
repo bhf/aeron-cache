@@ -39,8 +39,8 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     private final CacheDeletedEncoder cacheDeletedEncoder = new CacheDeletedEncoder();
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
 
-    public SBEDecodingCacheClusterService() {
-        super(SupplierUtils.longSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier);
+    public SBEDecodingCacheClusterService(String nodeId) {
+        super(SupplierUtils.longSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, nodeId);
     }
 
     @Override

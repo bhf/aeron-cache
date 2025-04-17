@@ -47,9 +47,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final GetCacheEntryRequestDetails<I, K> getCacheEntryRequestDetails;
     final GetAllCacheEntriesRequestDetails<I> getAllCacheEntriesRequestDetails;
 
-    final AddCacheEntryResult<I, K> addEntryFailureResult =new AddCacheEntryResult<>();
+    final AddCacheEntryResult<I, K> addEntryFailureResult = new AddCacheEntryResult<>();
 
-    protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier) {
+    protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, String nodeId) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(indexSupplier.get());
         this.clearCacheRequestDetails = new ClearCacheRequestDetails<>(indexSupplier.get());
         this.removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get());
@@ -58,6 +58,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.getCacheEntryRequestDetails = new GetCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get());
         this.getAllCacheEntriesRequestDetails = new GetAllCacheEntriesRequestDetails<>(indexSupplier.get());
         this.cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer(), indexSupplier, keySupplier, valueSupplier);
+        this.nodeId = nodeId;
     }
 
     private Consumer<Image> getImageConsumer() {
@@ -257,7 +258,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         log.info("Got create cache request for cache id {}, request Id: {}", cacheId, requestId);
         var cacheCreationResult = cacheManager.createCache(cacheId);
         cacheCreationResult.setRequestId(requestId);
-        log.info("Will send result: "+cacheCreationResult.getStatus());
+        log.info("Will send result: " + cacheCreationResult.getStatus());
         handlePostCreateCache(cacheId, cacheCreationResult, session, buffer, offset);
     }
 

@@ -39,7 +39,7 @@ class SBEDecodingCacheClusterServiceTest {
 
     @BeforeEach
     void setup() {
-        sut = new SBEDecodingCacheClusterService();
+        sut = new SBEDecodingCacheClusterService("node0");
         responseBuffer = new ExpandableArrayBuffer();
         requestBuffer = new ExpandableArrayBuffer();
     }
