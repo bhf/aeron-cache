@@ -2,6 +2,7 @@ package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
+import com.bhf.aeroncache.services.tracing.impl.OtelTracingService;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import io.aeron.ChannelUriStringBuilder;
@@ -180,7 +181,7 @@ public class ClusterNodeApplication {
                         .aeronDirectoryName(aeronDirName)
                         .archiveContext(aeronArchiveContext.clone())
                         .clusterDir(new File(baseDir, "cluster"))
-                        .clusteredService(new SBEDecodingCacheClusterService(String.valueOf(nodeId), getTracingService()))
+                        .clusteredService(new SBEDecodingCacheClusterService(String.valueOf(nodeId), getTracingService(nodeId)))
                         .errorHandler(errorHandler("Clustered Service"));
 
         System.out.println("Awaiting DNS Resolution");
@@ -203,15 +204,16 @@ public class ClusterNodeApplication {
         }
     }
 
-    private static CacheTracingService getTracingService() {
+    private static CacheTracingService getTracingService(int nodeId) {
         String tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
+        String jaegerExporter = System.getenv("OTEL_EXPORTER_OTLP_ENDPOINT");
 
         if (tracingServiceName != null) {
             System.out.println("Aeron Cache tracing is enabled as OTEL Service:" + tracingServiceName);
+            return new OtelTracingService(jaegerExporter, tracingServiceName, String.valueOf(nodeId));
         }
 
         return new NoOpTracingService();
     }
-
 
 }
