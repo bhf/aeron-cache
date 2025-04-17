@@ -102,12 +102,12 @@ public class ClusterNodeApplication {
      * @param args passed to the process.
      */
     public static void main(final String[] args) {
-        int nodeId = Integer.parseInt(args[0]);
-        String[] hostnames = {"localhost","localhost","localhost"};
+        int nodeId = -1;
+        String[] hostnames = null;
 
         System.out.println("Launching AeronCache Cluster Node");
 
-       /* try {
+        try {
             var clusterNode = System.getenv("CLUSTER_NODE");
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
             System.out.println("CLUSTER_NODE=" + clusterNode);
@@ -128,7 +128,6 @@ public class ClusterNodeApplication {
             System.out.println("Using pod name: " + podName + ", nodeId: " + nodeId + " cluster addresses: " + Arrays.toString(hostnames));
         } catch (Exception e) {
         }
-*/
         final String hostname = hostnames[nodeId];
         System.out.println("This node's hostname:" + hostname);
         final File baseDir = new File(System.getProperty("user.dir"), "node" + nodeId);

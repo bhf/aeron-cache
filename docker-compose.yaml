@@ -51,6 +51,22 @@ services:
     environment:
       - CLUSTER_ADDRESSES=172.16.202.2,172.16.202.3,172.16.202.4
       - EGRESS_IP=172.16.202.5
+  cache-ui:
+    build:
+      context: cache-ui/nextjs
+      dockerfile: ./Dockerfile
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - cache-http-client
+    networks:
+      internal_bus:
+        ipv4_address: 172.16.202.6
+    ports:
+      - 3000:3000
+    environment:
+      - AERON_CACHE_API=http://172.16.202.5:7070/api/v1
 networks:
   internal_bus:
     driver: bridge
