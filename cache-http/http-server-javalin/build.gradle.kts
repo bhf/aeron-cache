@@ -19,6 +19,9 @@ dependencies {
     implementation(libs.log4j.core)
     implementation("org.slf4j:slf4j-simple:2.0.16")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+    implementation("io.opentelemetry:opentelemetry-api:1.49.0")
+    implementation("io.opentelemetry:opentelemetry-sdk:1.49.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.49.0")
 
     agent("io.opentelemetry.javaagent:opentelemetry-javaagent:2.15.0")
     extension("io.opentelemetry.contrib:opentelemetry-samplers:1.46.0-alpha") {

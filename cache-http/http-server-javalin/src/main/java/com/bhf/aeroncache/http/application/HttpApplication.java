@@ -20,6 +20,7 @@ import io.aeron.cluster.client.AeronCluster;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
+import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.BackoffIdleStrategy;
@@ -29,6 +30,7 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -46,8 +48,12 @@ public class HttpApplication {
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
 
+    private static String tracingServiceName;
+
     public static void main(String[] args) {
         System.out.println("Starting HTTP interface");
+        tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
+
         var app = startHTTPServer();
 
         try {
@@ -110,7 +116,6 @@ public class HttpApplication {
                 .get(READINESS, HttpApplication::handleGetReadiness)
                 .start(PORT);
     }
-
 
 
     private static void handleGetStatsRequest(Context context) {
@@ -188,13 +193,14 @@ public class HttpApplication {
             var cacheId = ctx.pathParam("cacheId");
             log.info("Got delete cache request for cacheId {}", cacheId);
 
+            var requestId = getRequestId(ctx);
             CompletableFuture<DeleteCacheResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.deleteCacheBlocking(cluster, Long.parseLong(cacheId), c -> {
                 var deletedCacheId = c.getCacheId();
                 log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
                 var response = new DeleteCacheResponse(deletedCacheId.value(), c.getStatus());
                 future.complete(response);
-            }));
+            }, requestId));
 
             var response = future.get();
 
@@ -228,12 +234,13 @@ public class HttpApplication {
             log.info("Got delete item request on cacheId {}, key {}",
                     cacheId, key);
 
+            var requestId = getRequestId(ctx);
             CompletableFuture<DeleteItemResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.removeCacheEntryBlocking(cluster, cacheId, key, c -> {
                 log.info("Got delete item response from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
                 var response = new DeleteItemResponse(c.getCacheId().value(), c.getKey().value(), c.getStatus());
                 future.complete(response);
-            }));
+            }, requestId));
 
             var response = future.get();
 
@@ -263,12 +270,13 @@ public class HttpApplication {
             var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
             log.info("Got clear request on cacheId {}", cacheId);
 
+            var requestId = getRequestId(ctx);
             CompletableFuture<ClearCacheResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.clearCacheBlocking(cluster, cacheId, c -> {
                 log.info("Got clear cache response from cluster on cacheId {}", c.getCacheId());
                 var response = new ClearCacheResponse(cacheId, c.getStatus());
                 future.complete(response);
-            }));
+            }, requestId));
 
             var response = future.get();
             ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
@@ -295,6 +303,7 @@ public class HttpApplication {
             log.info("Got get item request on cacheId {}, key {}",
                     cacheId, key);
 
+            var requestId = getRequestId(ctx);
             CompletableFuture<GetItemResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.getCacheEntryBlocking(cluster, cacheId, key, c -> {
                 log.info("Get item response from cluster on cacheId {}, key {}, value {}", c.getCacheId(), c.getEntryKey(), c.getEntryValue());
@@ -303,7 +312,7 @@ public class HttpApplication {
                         new GetItemResponse(0, "NA", "NA", c.getStatus()) :
                         new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(), c.getEntryValue().value(), c.getStatus());
                 future.complete(response);
-            }));
+            }, requestId));
 
             var response = future.get();
             ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
@@ -329,13 +338,14 @@ public class HttpApplication {
             log.info("Got put item request on cacheId {}, key {}, value {}",
                     request.cacheId(), request.key(), request.value());
 
+            var requestId = getRequestId(ctx);
             CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.addCacheEntryBlocking(cluster, request.cacheId(), request.key(), request.value(), c -> {
                 var cacheId = c.getCacheID();
                 log.info("Got put item response from cluster on cacheId {}", cacheId);
                 var response = new PutItemResponse(cacheId.getValue(), request.key(), c.getStatus());
                 future.complete(response);
-            }));
+            }, requestId));
 
             var response = future.get();
 
@@ -364,6 +374,7 @@ public class HttpApplication {
         try {
             var request = ctx.bodyAsClass(CreateCacheRequest.class);
             log.info("Got create cache request on cacheId {}", request.cacheId());
+            var requestId = getRequestId(ctx);
 
             CompletableFuture<CreateCacheResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.sendCreateCacheBlocking(cluster, request.cacheId(), c -> {
@@ -371,7 +382,7 @@ public class HttpApplication {
                 log.info("Got create cache response from cluster on cacheId {}", cacheId);
                 var response = new CreateCacheResponse(cacheId.getValue(), c.getStatus());
                 future.complete(response);
-            }));
+            }, requestId));
 
             var response = future.get();
 
@@ -402,6 +413,7 @@ public class HttpApplication {
             var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
             log.info("Got get cache content request on cacheId {}", cacheId);
 
+            var requestId = getRequestId(ctx);
             CompletableFuture<GetCacheResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.getCacheEntriesBlocking(cluster, cacheId, c -> {
                 log.info("Get cache content response from cluster on cacheId {}", c.getCacheId());
@@ -410,7 +422,7 @@ public class HttpApplication {
                         new GetCacheResponse(0, OperationStatus.UNKNOWN_CACHE, List.of()) :
                         new GetCacheResponse(0, c.getStatus(), buildItemsList(c));
                 future.complete(response);
-            }));
+            }, requestId));
 
             var response = future.get();
             ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
@@ -431,6 +443,29 @@ public class HttpApplication {
             res.add(new CacheItem(key.value(), value.value()));
         });
         return res;
+    }
+
+    /**
+     * Build the requestId based on whether tracing is enabled.
+     *
+     * @param ctx The Context.
+     * @return A requestId
+     */
+    private static String getRequestId(Context ctx) {
+        return tracingServiceName != null ? getTraceBasedRequestId(ctx) : UUID.randomUUID().toString();
+    }
+
+    /**
+     * Use the current span and trace Ids to build a requestId to
+     * be sent to the Aeron Cache cluster.
+     * @param ctx
+     * @return
+     */
+    private static String getTraceBasedRequestId(Context ctx) {
+        var currentSpanId = Span.current().getSpanContext().getSpanId();
+        var currentTraceId = Span.current().getSpanContext().getTraceId();
+        log.info("Creating requestId using traceID {} and spanID {}", currentTraceId, currentSpanId);
+        return STR."\{currentTraceId}@\{currentSpanId}";
     }
 
 }

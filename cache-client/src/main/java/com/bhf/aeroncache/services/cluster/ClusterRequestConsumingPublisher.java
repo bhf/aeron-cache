@@ -16,65 +16,73 @@ public interface ClusterRequestConsumingPublisher {
      * until you get a response. Passes the result to the
      * Consumer.
      *
-     * @param cluster  The Aeron Cluster instance to use.
-     * @param cacheId  The ID of the cache to create.
-     * @param consumer The consumer of the result.
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param cacheId   The ID of the cache to create.
+     * @param consumer  The consumer of the result.
+     * @param requestId The request ID.
      */
-    void sendCreateCacheBlocking(AeronCluster cluster, long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer);
+    void sendCreateCacheBlocking(AeronCluster cluster, long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer, String requestId);
 
     /**
      * Send a message to add a cache entry in a blocking manner.
      *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're adding too.
-     * @param key     The key to use.
-     * @param value   The value to use.
-     * @param c       The consumer that will handle the result.
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param cacheId   The ID of the cache we're adding too.
+     * @param key       The key to use.
+     * @param value     The value to use.
+     * @param c         The consumer that will handle the result.
+     * @param requestId The request ID.
      */
-    void addCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c);
+    void addCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c, String requestId);
 
     /**
      * Send a message to get a cache entry in a blocking manner.
      *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're adding too.
-     * @param key     The key to use.
-     * @param c       The consumer to handle the result.
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param cacheId   The ID of the cache we're adding too.
+     * @param key       The key to use.
+     * @param c         The consumer to handle the result.
+     * @param requestId The request ID.
      */
-    void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c);
+    void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c, String requestId);
 
     /**
      * Send a message to delete a cache in a blocking manner.
      *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're deleting.
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param cacheId   The ID of the cache we're deleting.
+     * @param requestId The request ID.
      */
-    void deleteCacheBlocking(AeronCluster cluster, long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer);
+    void deleteCacheBlocking(AeronCluster cluster, long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer, String requestId);
 
     /**
      * Send a message to remove a cache entry in a blocking manner.
      *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're removing an entry from.
-     * @param key     The key of the entry we're removing.
-     * @param c       The consumer that will handle the result.
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param cacheId   The ID of the cache we're removing an entry from.
+     * @param key       The key of the entry we're removing.
+     * @param c         The consumer that will handle the result.
+     * @param requestId The request ID.
      */
-    void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c);
+    void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c, String requestId);
 
     /**
      * Send a message to clear a cache in a blocking manner.
      *
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're removing an entry from.
-     * @param c       The consumer that will handle the result.
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param cacheId   The ID of the cache we're removing an entry from.
+     * @param c         The consumer that will handle the result.
+     * @param requestId The request ID.
      */
-    void clearCacheBlocking(AeronCluster cluster, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c);
+    void clearCacheBlocking(AeronCluster cluster, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c, String requestId);
 
     /**
      * Send a message to get all cache items.
-     * @param cluster The Aeron Cluster instance to use.
-     * @param cacheId The ID of the cache we're removing an entry from.
-     * @param c       The consumer that will handle the result.
+     *
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param cacheId   The ID of the cache we're removing an entry from.
+     * @param c         The consumer that will handle the result.
+     * @param requestId The request ID.
      */
-    void getCacheEntriesBlocking(AeronCluster cluster, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c);
+    void getCacheEntriesBlocking(AeronCluster cluster, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c, String requestId);
 }

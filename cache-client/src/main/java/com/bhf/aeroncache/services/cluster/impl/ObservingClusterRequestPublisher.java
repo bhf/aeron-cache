@@ -86,8 +86,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void sendCreateCacheBlocking(AeronCluster cluster, long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer) {
-        var requestId = UUID.randomUUID().toString();
+    public void sendCreateCacheBlocking(AeronCluster cluster, long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer, String requestId) {
         createCacheObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
@@ -114,8 +113,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void addCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> consumer) {
-        var requestId = UUID.randomUUID().toString();
+    public void addCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> consumer, String requestId) {
         addCacheEntryObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
@@ -137,8 +135,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> consumer) {
-        var requestId = UUID.randomUUID().toString();
+    public void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> consumer, String requestId) {
         getCacheEntryObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
@@ -170,8 +167,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void clearCacheBlocking(AeronCluster cluster, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c) {
-        var requestId = UUID.randomUUID().toString();
+    public void clearCacheBlocking(AeronCluster cluster, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c, String requestId) {
         clearCacheObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
@@ -198,8 +194,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void deleteCacheBlocking(AeronCluster cluster, long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer) {
-        var requestId = UUID.randomUUID().toString();
+    public void deleteCacheBlocking(AeronCluster cluster, long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer, String requestId) {
         deleteCacheObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
@@ -226,8 +221,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> consumer) {
-        var requestId = UUID.randomUUID().toString();
+    public void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> consumer, String requestId) {
         removeCacheEntryObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
@@ -249,8 +243,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void getCacheEntriesBlocking(AeronCluster cluster, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> consumer) {
-        var requestId = UUID.randomUUID().toString();
+    public void getCacheEntriesBlocking(AeronCluster cluster, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> consumer, String requestId) {
         getCacheEntriesObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
