@@ -13,6 +13,41 @@ services:
         ipv4_address: 172.16.202.7
     depends_on:
       - cache-ui
+#  prometheus:
+#    image: prom/prometheus:latest
+#    container_name: prometheus-aeron-cache
+#    ports:
+#      - 9090:9090
+#    command:
+#      - --config.file=/etc/prometheus/prometheus.yml
+#    volumes:
+#      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+#    depends_on:
+#      - cadvisor
+#  cadvisor:
+#    image: gcr.io/cadvisor/cadvisor:latest
+#    container_name: cadvisor-aeron-cache
+#    ports:
+#      - 8080:8080
+#    volumes:
+#      - /:/rootfs:ro
+#      - /var/run:/var/run:rw
+#      - /sys:/sys:ro
+#      - /var/lib/docker/:/var/lib/docker:ro
+#    depends_on:
+#      - cache-ui
+#  grafana:
+#    image: grafana/grafana
+#    environment:
+#      GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION: "true"
+#      GF_AUTH_ANONYMOUS_ENABLED: "true"
+#      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+#      GF_AUTH_DISABLE_SIGNOUT_MENU: "true"
+#      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+#    volumes:
+#      - ./grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yaml
+#    ports:
+#      - "9100:3000"
   node0:
     build:
       context: cache-cluster
@@ -67,6 +102,8 @@ services:
     networks:
       internal_bus:
         ipv4_address: 172.16.202.5
+    ports:
+      - 7070:7070
     environment:
       - CLUSTER_ADDRESSES=node0,node1,node2
       - EGRESS_IP=172.16.202.5

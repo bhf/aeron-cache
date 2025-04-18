@@ -20,6 +20,16 @@ import io.aeron.cluster.client.AeronCluster;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
+import io.javalin.micrometer.MicrometerPlugin;
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.DiskSpaceMetrics;
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
+import io.micrometer.core.instrument.binder.system.UptimeMetrics;
+import io.micrometer.prometheusmetrics.PrometheusConfig;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.concurrent.AgentRunner;
@@ -27,6 +37,7 @@ import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -101,7 +112,23 @@ public class HttpApplication {
      */
     private static Javalin startHTTPServer() {
 
-        return Javalin.create(getHTTPConfig())
+        PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        registry.config().commonTags("application", "aeron-cache-http");
+
+        new ClassLoaderMetrics().bindTo(registry);
+        new JvmMemoryMetrics().bindTo(registry);
+        new JvmGcMetrics().bindTo(registry);
+        new JvmThreadMetrics().bindTo(registry);
+        new UptimeMetrics().bindTo(registry);
+        new ProcessorMetrics().bindTo(registry);
+        new DiskSpaceMetrics(new File(System.getProperty("user.dir"))).bindTo(registry);
+
+        MicrometerPlugin micrometerPlugin = new MicrometerPlugin(micrometerPluginConfig -> micrometerPluginConfig.registry = registry);
+        var config = getHTTPConfig(micrometerPlugin);
+
+        String promoMicrometerContentType = "text/plain; version=0.0.4; charset=utf-8";
+
+        return Javalin.create(config)
                 .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
                 .get(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleGetItemRequest)
@@ -114,9 +141,9 @@ public class HttpApplication {
                 .get("/api/v1/stats", HttpApplication::handleGetStatsRequest)
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
                 .get(READINESS, HttpApplication::handleGetReadiness)
+                .get("/prometheus", ctx -> ctx.contentType(promoMicrometerContentType).result(registry.scrape()))
                 .start(PORT);
     }
-
 
     private static void handleGetStatsRequest(Context context) {
         log.info("Got request to get cache stats");
@@ -145,12 +172,16 @@ public class HttpApplication {
      *
      * @return Config for Javalin.
      */
-    private static Consumer<JavalinConfig> getHTTPConfig() {
-        return config -> config.bundledPlugins.enableCors(cors -> {
-            cors.addRule(it -> {
-                it.allowHost("http://localhost:3000", "http://localhost");
+    private static Consumer<JavalinConfig> getHTTPConfig(MicrometerPlugin micrometerPlugin) {
+        return config -> {
+            config.bundledPlugins.enableCors(cors -> {
+                cors.addRule(it -> {
+                    it.allowHost("http://localhost:3000", "http://localhost");
+                });
             });
-        });
+
+            config.registerPlugin(micrometerPlugin);
+        };
     }
 
     /**

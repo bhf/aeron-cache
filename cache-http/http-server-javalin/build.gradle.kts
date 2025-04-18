@@ -22,6 +22,8 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-api:1.49.0")
     implementation("io.opentelemetry:opentelemetry-sdk:1.49.0")
     implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.49.0")
+    implementation("io.micrometer:micrometer-registry-prometheus:1.14.6")
+    implementation("io.javalin:javalin-micrometer:6.6.0")
 
     agent("io.opentelemetry.javaagent:opentelemetry-javaagent:2.15.0")
     extension("io.opentelemetry.contrib:opentelemetry-samplers:1.46.0-alpha") {
