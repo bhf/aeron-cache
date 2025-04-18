@@ -38,6 +38,8 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     private final CacheClearedEncoder cacheClearedEncoder = new CacheClearedEncoder();
     private final DeleteCacheDecoder deleteCacheDecoder = new DeleteCacheDecoder();
     private final CacheDeletedEncoder cacheDeletedEncoder = new CacheDeletedEncoder();
+    private final GetCacheStatsDecoder getCacheStatsDecoder = new GetCacheStatsDecoder();
+    private final AllCacheStatsResultEncoder cacheStatsResultEncoder = new AllCacheStatsResultEncoder();
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
 
     public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService) {
@@ -130,6 +132,15 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
+    protected GetCacheStatsRequestDetails getCacheStatsRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+        getCacheStatsRequestDetails.clear();
+        getCacheStatsDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var requestId = getCacheStatsDecoder.requestId();
+        getCacheStatsRequestDetails.setRequestId(requestId);
+        return getCacheStatsRequestDetails;
+    }
+
+    @Override
     protected void handlePostCreateCache(ReusableLong cacheId, CreateCacheResult<ReusableLong> cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset) {
         cacheCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheCreatedEncoder.cacheId(cacheId.getValue())
@@ -212,5 +223,26 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .status(deleteCacheResult.getStatus())
                 .requestId(requestDetails.getRequestId());
         sendMessage(session, egressBuffer, cacheDeletedEncoder.encodedLength() + headerEncoder.encodedLength());
+    }
+
+    @Override
+    protected void handlePostGetCacheStats(CacheStatsResult<ReusableLong> cacheStatsResult, ClientSession session, DirectBuffer buffer, int offset) {
+        cacheStatsResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        cacheStatsResultEncoder.status(OperationStatus.SUCCESS);
+
+        var values = cacheStatsResult.getStats();
+        int size = values.size();
+        var itemsEncoder = cacheStatsResultEncoder.statsCount(size);
+        values.forEach(v -> {
+            itemsEncoder.next();
+            itemsEncoder.added(v.addedCount);
+            itemsEncoder.removed(v.removedCount);
+            itemsEncoder.cleared(v.clearedCount);
+            itemsEncoder.size(v.size);
+            itemsEncoder.cacheId(v.getCacheId().value());
+        });
+
+        cacheStatsResultEncoder.requestId(cacheStatsResult.getRequestId());
+        sendMessage(session, egressBuffer, cacheStatsResultEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 }

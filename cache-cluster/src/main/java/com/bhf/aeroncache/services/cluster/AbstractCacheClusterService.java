@@ -48,7 +48,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final DeleteCacheRequestDetails<I> deleteCacheRequestDetails;
     final GetCacheEntryRequestDetails<I, K> getCacheEntryRequestDetails;
     final GetAllCacheEntriesRequestDetails<I> getAllCacheEntriesRequestDetails;
-    final AddCacheEntryResult<I, K> addEntryFailureResult = new AddCacheEntryResult<>();
+    final AddCacheEntryResult<I, K> addEntryFailureResult;
+    final GetCacheStatsRequestDetails getCacheStatsRequestDetails;
 
     protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, String nodeId, CacheTracingService tracingService) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(indexSupplier.get());
@@ -58,6 +59,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.deleteCacheRequestDetails = new DeleteCacheRequestDetails<>(indexSupplier.get());
         this.getCacheEntryRequestDetails = new GetCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get());
         this.getAllCacheEntriesRequestDetails = new GetAllCacheEntriesRequestDetails<>(indexSupplier.get());
+        this.addEntryFailureResult = new AddCacheEntryResult<>();
+        this.getCacheStatsRequestDetails = new GetCacheStatsRequestDetails();
         this.cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer(), indexSupplier, keySupplier, valueSupplier);
         this.nodeId = nodeId;
         this.tracingService = tracingService;
@@ -95,9 +98,11 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
             case ClearCacheEncoder.TEMPLATE_ID -> handleClearCache(session, buffer, offset);
             case DeleteCacheEncoder.TEMPLATE_ID -> handleDeleteCache(session, buffer, offset);
             case GetAllCacheEntriesEncoder.TEMPLATE_ID -> handleGetAllCacheEntries(session, buffer, offset);
+            case GetCacheStatsEncoder.TEMPLATE_ID -> handleGetCacheStats(session, buffer, offset);
             default -> throw new IllegalStateException("Unexpected value: " + templateId);
         }
     }
+
 
     /**
      * Cluster started.
@@ -279,6 +284,24 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     }
 
     /**
+     * Handle a request to get all cache stats.
+     *
+     * @param session Session requesting the get all stats operation.
+     * @param buffer  Buffer containing the message.
+     * @param offset  Offset in the buffer at which the message is encoded.
+     */
+    void handleGetCacheStats(ClientSession session, DirectBuffer buffer, int offset) {
+        GetCacheStatsRequestDetails requestDetails = getCacheStatsRequestDetails(session, buffer, offset);
+        tracingService.startGetAllStatsRequest(requestDetails);
+        var requestId = requestDetails.getRequestId();
+        log.info("Got request for all cache stats, request Id: {}", requestId);
+        var cacheStatsResult = cacheManager.getCacheStatsResult();
+        cacheStatsResult.setRequestId(requestId);
+        handlePostGetCacheStats(cacheStatsResult, session, buffer, offset);
+        tracingService.endGetAllStatsRequest(requestDetails);
+    }
+
+    /**
      * Decode the CreateCache message into a request details flyweight.
      *
      * @param session The client session.
@@ -347,6 +370,16 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @return The DeleteCacheRequestDetails flyweight.
      */
     protected abstract DeleteCacheRequestDetails<I> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+
+    /**
+     * Decode the CacheStatsRequest message into a request details flyweight.
+     *
+     * @param session The client session.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset from within the buffer to decode from.
+     * @return The GetCacheStatsRequestDetails flyweight.
+     */
+    protected abstract GetCacheStatsRequestDetails getCacheStatsRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
 
     /**
      * After the cache is created, send out a CacheCreated message.
@@ -425,6 +458,16 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param offset            The offset from within the buffer to decode the original request from.
      */
     protected abstract void handlePostDeleteCache(I cacheId, DeleteCacheResult<I> deleteCacheResult, DeleteCacheRequestDetails<I> requestDetails, ClientSession session, DirectBuffer buffer, int offset);
+
+    /**
+     * Send out the cache stats.
+     *
+     * @param cacheStatsResult The stats across all caches.
+     * @param session           The client session.
+     * @param buffer            The buffer from which the delete request was created.
+     * @param offset            The offset from within the buffer to decode the original request from.
+     */
+    protected abstract void handlePostGetCacheStats(CacheStatsResult<I> cacheStatsResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
      * @param session   Session to send the message too.

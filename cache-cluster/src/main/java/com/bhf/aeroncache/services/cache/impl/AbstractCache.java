@@ -1,10 +1,7 @@
 package com.bhf.aeroncache.services.cache.impl;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.results.GetCacheEntryResult;
-import com.bhf.aeroncache.models.results.AddCacheEntryResult;
-import com.bhf.aeroncache.models.results.ClearCacheResult;
-import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
+import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.Cache;
 
 import java.util.function.Supplier;
@@ -24,14 +21,21 @@ public abstract class AbstractCache<I extends Reusable, K extends Reusable, V ex
     final Supplier<I> indexSupplier;
     final Supplier<K> keySupplier;
     final Supplier<V> valueSupplier;
+    final CacheStats<I> stats;
 
     public AbstractCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier) {
         this.addCacheEntryResult = new AddCacheEntryResult<>(indexSupplier.get(), keySupplier.get());
         this.removeCacheEntryResult = new RemoveCacheEntryResult<>(indexSupplier.get(), keySupplier.get());
         this.clearCacheResult = new ClearCacheResult<>(indexSupplier.get());
         this.getCacheEntryResult = new GetCacheEntryResult<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
+        this.stats = new CacheStats<>(indexSupplier.get());
         this.indexSupplier = indexSupplier;
         this.keySupplier = keySupplier;
         this.valueSupplier = valueSupplier;
+    }
+
+    @Override
+    public CacheStats getCacheStats() {
+        return stats;
     }
 }

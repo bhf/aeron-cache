@@ -1,10 +1,7 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.results.GetCacheEntryResult;
-import com.bhf.aeroncache.models.results.AddCacheEntryResult;
-import com.bhf.aeroncache.models.results.ClearCacheResult;
-import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
+import com.bhf.aeroncache.models.results.*;
 
 import java.util.Map;
 
@@ -46,4 +43,10 @@ public interface Cache<I extends Reusable, K extends Reusable, V extends Reusabl
      * @return A {@link Map} of all entries in this cache.
      */
     Map<K, V> getAllEntries();
+
+    /**
+     * Get stats about this cache.
+     * @return A {@link CacheStats} reusable.
+     */
+    CacheStats getCacheStats();
 }

@@ -22,6 +22,7 @@ public abstract class AbstractCacheManager<I extends Reusable, K extends Reusabl
     final RemoveCacheEntryResult<I, K> removeCacheEntryResult;
     final GetCacheEntryResult<I, K, V> getCacheEntryResult;
     final GetAllCacheEntriesResult<I, K, V> getAllCacheEntriesResult;
+    final CacheStatsResult allCacheStatsResult;
     final CacheFactory<I, K, V> cacheFactory = new CacheFactory<>();
     final Supplier<I> indexSupplier;
     final Supplier<K> keySupplier;
@@ -34,6 +35,7 @@ public abstract class AbstractCacheManager<I extends Reusable, K extends Reusabl
         this.removeCacheEntryResult = new RemoveCacheEntryResult<>(cacheIndexSupplier.get(), cacheKeySupplier.get());
         this.getCacheEntryResult = new GetCacheEntryResult<>(cacheIndexSupplier.get(), cacheKeySupplier.get(), cacheValueSupplier.get());
         this.getAllCacheEntriesResult = new GetAllCacheEntriesResult<>(cacheIndexSupplier.get());
+        this.allCacheStatsResult = new CacheStatsResult();
         this.indexSupplier = cacheIndexSupplier;
         this.keySupplier = cacheKeySupplier;
         this.valueSupplier = cacheValueSupplier;

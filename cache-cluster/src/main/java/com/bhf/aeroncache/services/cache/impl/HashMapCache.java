@@ -41,6 +41,8 @@ public class HashMapCache<I extends Reusable, K extends Reusable, V extends Reus
         cache.put(newKey, newValue);
         addCacheEntryResult.setEntryAdded(true);
         addCacheEntryResult.setStatus(OperationStatus.SUCCESS);
+        stats.addedCount++;
+        stats.size = cache.size();
         return addCacheEntryResult;
     }
 
@@ -68,6 +70,8 @@ public class HashMapCache<I extends Reusable, K extends Reusable, V extends Reus
         removeCacheEntryResult.setRemoved(removed != null);
         removeCacheEntryResult.setStatus(removed != null ?
                 OperationStatus.SUCCESS : OperationStatus.UNKNOWN_KEY);
+        stats.removedCount++;
+        stats.size = cache.size();
         return removeCacheEntryResult;
     }
 
@@ -76,6 +80,8 @@ public class HashMapCache<I extends Reusable, K extends Reusable, V extends Reus
         clearCacheResult.clear();
         cache.clear();
         clearCacheResult.setStatus(OperationStatus.SUCCESS);
+        stats.clearedCount++;
+        stats.size = 0;
         return clearCacheResult;
     }
 
