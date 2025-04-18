@@ -145,9 +145,44 @@ public class HttpApplication {
                 .start(PORT);
     }
 
-    private static void handleGetStatsRequest(Context context) {
+    private static void handleGetStatsRequest(Context ctx) {
         log.info("Got request to get cache stats");
-        context.json(statsTracker.getCacheStats());
+
+        try {
+            var requestId = getRequestId(ctx);
+            CompletableFuture<CacheStats> future = new CompletableFuture<>();
+            CompletableFuture.runAsync(() -> observingPublisher.getAllCacheStatsBlocking(cluster, c -> {
+                log.info("Got cache stats, requestId {}", c.getRequestId());
+
+                int totalOps=statsTracker.getTotalOpsCount().get();
+                int totalCaches=0;
+                int totalItems=0;
+
+                var stats = c.getStats();
+                for(var x: stats){
+                    totalCaches++;
+                    totalItems+=x.size;
+                }
+
+                var statsTrackerStats = statsTracker.getCacheStats();
+                var response = new CacheStats(totalOps, totalCaches, totalItems, statsTrackerStats.errorCount());
+                future.complete(response);
+            }, requestId));
+
+            var response = future.get();
+
+            ctx.status(HTTPStatusUtils.SERVICE_LIVE);
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to get cache stats";
+            log.warn(errorMsg);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, OperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+
+
     }
 
     final static HashSet<Long> allCaches = new HashSet<>();

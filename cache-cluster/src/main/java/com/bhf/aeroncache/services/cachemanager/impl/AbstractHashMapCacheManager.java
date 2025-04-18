@@ -124,4 +124,18 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
         }
         return getAllCacheEntriesResult;
     }
+
+    @Override
+    public CacheStatsResult getCacheStatsResult() {
+        allCacheStatsResult.clear();
+
+        caches.forEach((cacheId, cache) -> {
+            var stats = cache.getCacheStats();
+            log.info("Got cache stats on cacheId {}", cacheId);
+            stats.getCacheId().copyFrom(cacheId);
+            allCacheStatsResult.getStats().add(stats);
+        });
+
+        return allCacheStatsResult;
+    }
 }

@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
@@ -35,6 +34,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     private final List<IdentifiableConsumer<String, RemoveCacheEntryResult<ReusableLong, ReusableString>>> removeCacheEntryObservers = new CopyOnWriteArrayList<>();
     private final List<IdentifiableConsumer<String, ClearCacheResult<ReusableLong>>> clearCacheObservers = new CopyOnWriteArrayList<>();
     private final List<IdentifiableConsumer<String, GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>>> getCacheEntriesObservers = new CopyOnWriteArrayList<>();
+    private final List<IdentifiableConsumer<String, CacheStatsResult<ReusableLong>>> allCacheStatsObservers = new CopyOnWriteArrayList<>();
 
 
     private Consumer<CreateCacheResult<ReusableLong>> createCacheConsumer;
@@ -243,6 +243,11 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
+    public void getCacheEntriesBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.getCacheEntriesBlocking(cluster, requestId, cacheId);
+    }
+
+    @Override
     public void getCacheEntriesBlocking(AeronCluster cluster, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> consumer, String requestId) {
         getCacheEntriesObservers.add(new IdentifiableConsumer<>() {
             @Override
@@ -260,9 +265,32 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void getCacheEntriesBlocking(AeronCluster cluster, String requestId, long cacheId) {
-        publisher.getCacheEntriesBlocking(cluster, requestId, cacheId);
+    public void getAllCacheStats(AeronCluster cluster, String requestId) {
+        publisher.getAllCacheStats(cluster, requestId);
     }
+
+    @Override
+    public void getAllCacheStatsBlocking(AeronCluster cluster, String requestId) {
+        publisher.getAllCacheStatsBlocking(cluster, requestId);
+    }
+
+    @Override
+    public void getAllCacheStatsBlocking(AeronCluster cluster, Consumer<CacheStatsResult<ReusableLong>> consumer, String requestId) {
+        allCacheStatsObservers.add(new IdentifiableConsumer<>() {
+            @Override
+            public String getId() {
+                return requestId;
+            }
+
+            @Override
+            public void accept(CacheStatsResult<ReusableLong> getCacheStatsResult) {
+                consumer.accept(getCacheStatsResult);
+            }
+        });
+
+        publisher.getAllCacheStats(cluster, requestId);
+    }
+
 
     /**
      * Handle a message indicating the value of a get operation on a particular key
@@ -368,5 +396,17 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         if (deleteCacheConsumer != null) {
             deleteCacheConsumer.accept(deleteCacheResult);
         }
+    }
+
+    /**
+     * Handle a message with all cache stats, delegating it
+     * to any relevant consumer.
+     *
+     * @param statsResult The result of getting all cache stats.
+     */
+    public void handleAllCacheStats(CacheStatsResult<ReusableLong> statsResult) {
+        var targetId = statsResult.getRequestId();
+        allCacheStatsObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(statsResult));
+        allCacheStatsObservers.removeIf(p -> p.getId().equals(targetId));
     }
 }

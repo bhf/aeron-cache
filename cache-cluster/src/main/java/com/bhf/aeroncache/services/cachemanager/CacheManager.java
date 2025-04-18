@@ -87,4 +87,10 @@ public interface CacheManager<I extends Reusable, K extends Reusable, V extends 
      * @return The result of getting the entries from the cache.
      */
     GetAllCacheEntriesResult<I, K, V> getAllCacheEntries(I cacheId);
+
+    /**
+     * Get stats from all caches.
+     * @return The cache stats.
+     */
+    CacheStatsResult<I> getCacheStatsResult();
 }

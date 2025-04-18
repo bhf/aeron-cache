@@ -154,4 +154,22 @@
         <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
+    <sbe:message name="GetCacheStats" id="15" semanticType="GetCacheStats"
+                 description="Get stats on all caches">
+        <data name="requestId" id="1" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="AllCacheStatsResult" id="16" semanticType="AllCacheStatsResult"
+                 description="All of the cache stats">
+        <field name="status" id="1" type="OperationStatus"/>
+        <group name="stats" id="20" dimensionType="groupSizeEncoding">
+            <field name="added" id="21" type="int64"/>
+            <field name="removed" id="22" type="int64"/>
+            <field name="cleared" id="23" type="int64"/>
+            <field name="size" id="24" type="int64"/>
+            <field name="cacheId" id="25" type="CacheId"/>
+        </group>
+        <data name="requestId" id="3" type="varStringEncoding"/>
+    </sbe:message>
+
 </sbe:messageSchema>

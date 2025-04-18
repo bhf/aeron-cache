@@ -177,4 +177,23 @@ public class OtelTracingService implements CacheTracingService {
     public void endCreateCacheRequest(CreateCacheRequestDetails requestDetails) {
         Span.current().end();
     }
+
+    @Override
+    public void startGetAllStatsRequest(GetCacheStatsRequestDetails requestDetails) {
+        var splitRequest = requestDetails.getRequestId().split("@");
+        var traceIdHex = splitRequest[0];
+        var spanIdHex = splitRequest[1];
+        SpanContext spanContext = SpanContext.createFromRemoteParent(traceIdHex, spanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
+        log.info("GetAllStats SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
+        Span spanNoOp = Span.wrap(spanContext);
+        Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
+        Span span = tracer.spanBuilder("getAllStatsRequest").setParent(Context.current().with(spanNoOp)).startSpan();
+        span.setAttribute("nodeId", nodeId);
+        span.makeCurrent();
+    }
+
+    @Override
+    public void endGetAllStatsRequest(GetCacheStatsRequestDetails requestDetails) {
+        Span.current().end();
+    }
 }

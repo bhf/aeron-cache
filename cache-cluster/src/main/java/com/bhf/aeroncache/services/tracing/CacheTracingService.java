@@ -33,4 +33,8 @@ public interface CacheTracingService {
     void startCreateCacheRequest(CreateCacheRequestDetails requestDetails);
 
     void endCreateCacheRequest(CreateCacheRequestDetails requestDetails);
+
+    void startGetAllStatsRequest(GetCacheStatsRequestDetails requestDetails);
+
+    void endGetAllStatsRequest(GetCacheStatsRequestDetails requestDetails);
 }

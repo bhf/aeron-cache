@@ -85,4 +85,13 @@ public interface ClusterRequestConsumingPublisher {
      * @param requestId The request ID.
      */
     void getCacheEntriesBlocking(AeronCluster cluster, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c, String requestId);
+
+    /**
+     * Send a message to get all cache stats.
+     *
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param c         The consumer that will handle the result.
+     * @param requestId The request ID.
+     */
+    void getAllCacheStatsBlocking(AeronCluster cluster, Consumer<CacheStatsResult<ReusableLong>> c, String requestId);
 }
