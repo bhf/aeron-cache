@@ -135,6 +135,11 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
+    public void getCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key) {
+        publisher.getCacheEntryBlocking(cluster, requestId, cacheId, key);
+    }
+
+    @Override
     public void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> consumer, String requestId) {
         getCacheEntryObservers.add(new IdentifiableConsumer<>() {
             @Override
@@ -149,11 +154,6 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         });
 
         publisher.getCacheEntry(cluster, requestId, cacheId, key);
-    }
-
-    @Override
-    public void getCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key) {
-        publisher.getCacheEntryBlocking(cluster, requestId, cacheId, key);
     }
 
     @Override
