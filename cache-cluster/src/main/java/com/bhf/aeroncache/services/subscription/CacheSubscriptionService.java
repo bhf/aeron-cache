@@ -1,0 +1,44 @@
+package com.bhf.aeroncache.services.subscription;
+
+import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.requests.CacheSubscriptionRequestDetails;
+import com.bhf.aeroncache.models.requests.CacheUnsubscribeRequestDetails;
+import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.types.ReusableString;
+import io.aeron.cluster.service.ClientSession;
+import org.agrona.MutableDirectBuffer;
+
+/**
+ * Service for subscribing to caches.
+ */
+public interface CacheSubscriptionService<I extends Reusable> {
+
+    /**
+     * Subscribe to a cache.
+     *
+     * @param requestDetails The details of the subscription.
+     * @param session
+     * @return A response to the request for subscription.
+     */
+    CacheSubscriptionResult<I> subscribe(CacheSubscriptionRequestDetails<I> requestDetails, ClientSession session);
+
+    /**
+     * Unsubscribe to a cache.
+     *
+     * @param requestDetails The unsubscribe details.
+     * @param session
+     * @return The response to a request to unsubscribe.
+     */
+    CacheUnsubscribeResult<I> unsubscribe(CacheUnsubscribeRequestDetails<I> requestDetails, ClientSession session);
+
+    void handleDeleteCache(DeleteCacheResult<I> requestDetails, MutableDirectBuffer egressBuffer, CacheDeletedEncoder cacheDeletedEncoder, MessageHeaderEncoder headerEncoder);
+
+    void handleClearCache(ClearCacheResult<I> clearCacheResult, MutableDirectBuffer egressBuffer, CacheClearedEncoder cacheClearedEncoder, MessageHeaderEncoder headerEncoder);
+
+    void handleEntryRemoved(RemoveCacheEntryResult<I, ReusableString> removeCacheEntryResult, MutableDirectBuffer egressBuffer, CacheEntryRemovedEncoder entryRemovedEncoder, MessageHeaderEncoder headerEncoder);
+
+    void handleEntryAdded(AddCacheEntryResult<I, ReusableString> addCacheEntryResult, MutableDirectBuffer egressBuffer, ReusableString key, ReusableString value, CacheEntryCreatedEncoder entryCreatedEncoder, MessageHeaderEncoder headerEncoder);
+
+    void onSessionClose(ClientSession session);
+}

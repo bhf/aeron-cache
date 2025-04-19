@@ -87,4 +87,24 @@ public class NoOpTracingService implements CacheTracingService {
     public void endGetAllStatsRequest(GetCacheStatsRequestDetails requestDetails) {
 
     }
+
+    @Override
+    public void startCacheSubscriptionRequest(CacheSubscriptionRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void endCacheSubscriptionRequest(CacheSubscriptionRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void startCacheUnsubscribeRequest(CacheUnsubscribeRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void endCacheUnsubscribeRequest(CacheUnsubscribeRequestDetails requestDetails) {
+
+    }
 }

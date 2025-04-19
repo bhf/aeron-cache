@@ -7,17 +7,14 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-/**
- * Decoded version of a request to get all cache stats.
- *
- */
 @Getter
 @Setter
 @RequiredArgsConstructor
 @Flyweight
-public class GetCacheStatsRequestDetails implements Reusable<GetCacheStatsRequestDetails> {
+public class CacheUnsubscribeRequestDetails<I> implements Reusable<CacheUnsubscribeRequestDetails<I>> {
 
     final RequestId requestId = new RequestId();
+    final I cacheId;
 
     public String getRequestId(){
         return requestId.getRequestId();
@@ -27,29 +24,23 @@ public class GetCacheStatsRequestDetails implements Reusable<GetCacheStatsReques
         this.requestId.setRequestId(requestId);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void clear() {
-        this.requestId.clear();
+        requestId.clear();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void copyFrom(GetCacheStatsRequestDetails source) {
+    public void copyFrom(CacheUnsubscribeRequestDetails<I> source) {
         this.requestId.copyFrom(source.requestId);
     }
 
     @Override
-    public void copyFrom(Reusable<GetCacheStatsRequestDetails> source) {
+    public void copyFrom(Reusable<CacheUnsubscribeRequestDetails<I>> source) {
         this.copyFrom(source.value());
     }
 
     @Override
-    public GetCacheStatsRequestDetails value() {
+    public CacheUnsubscribeRequestDetails<I> value() {
         return this;
     }
 }

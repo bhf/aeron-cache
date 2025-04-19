@@ -407,7 +407,7 @@ public class HttpApplication {
             var requestId = getRequestId(ctx);
             CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.addCacheEntryBlocking(cluster, request.cacheId(), request.key(), request.value(), c -> {
-                var cacheId = c.getCacheID();
+                var cacheId = c.getCacheId();
                 log.info("Got put item response from cluster on cacheId {}", cacheId);
                 var response = new PutItemResponse(cacheId.getValue(), request.key(), c.getStatus());
                 future.complete(response);

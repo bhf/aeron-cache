@@ -37,4 +37,12 @@ public interface CacheTracingService {
     void startGetAllStatsRequest(GetCacheStatsRequestDetails requestDetails);
 
     void endGetAllStatsRequest(GetCacheStatsRequestDetails requestDetails);
+
+    void startCacheSubscriptionRequest(CacheSubscriptionRequestDetails requestDetails);
+
+    void endCacheSubscriptionRequest(CacheSubscriptionRequestDetails requestDetails);
+
+    void startCacheUnsubscribeRequest(CacheUnsubscribeRequestDetails requestDetails);
+
+    void endCacheUnsubscribeRequest(CacheUnsubscribeRequestDetails requestDetails);
 }

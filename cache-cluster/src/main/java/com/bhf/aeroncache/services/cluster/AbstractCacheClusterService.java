@@ -6,6 +6,8 @@ import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
+import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
+import com.bhf.aeroncache.services.subscription.CacheSubscriptionServiceImpl;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
@@ -34,8 +36,10 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
     final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
+    private final Supplier<I> indexSupplier;
     private Cluster cluster;
     private final CacheTracingService tracingService;
+    CacheSubscriptionService<I> subscriptionService;
     private IdleStrategy idleStrategy;
     private final CacheManagerFactory<I, K, V> cacheManagerFactory = new CacheManagerFactory<>();
     private final CacheManager<I, K, V> cacheManager;
@@ -50,6 +54,11 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final GetAllCacheEntriesRequestDetails<I> getAllCacheEntriesRequestDetails;
     final AddCacheEntryResult<I, K> addEntryFailureResult;
     final GetCacheStatsRequestDetails getCacheStatsRequestDetails;
+    final CacheSubscriptionRequestDetails<I> cacheSubscribeRequestDetails;
+    final CacheUnsubscribeRequestDetails<I> cacheUnsubscribeRequestDetails;
+
+    final CacheSubscriptionResult<I> subscribeResult;
+    final CacheUnsubscribeResult<I> unsubscribeResult;
 
     protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, String nodeId, CacheTracingService tracingService) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(indexSupplier.get());
@@ -61,9 +70,14 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.getAllCacheEntriesRequestDetails = new GetAllCacheEntriesRequestDetails<>(indexSupplier.get());
         this.addEntryFailureResult = new AddCacheEntryResult<>();
         this.getCacheStatsRequestDetails = new GetCacheStatsRequestDetails();
+        this.cacheSubscribeRequestDetails = new CacheSubscriptionRequestDetails<>(indexSupplier.get());
+        this.cacheUnsubscribeRequestDetails = new CacheUnsubscribeRequestDetails<>(indexSupplier.get());
+        this.subscribeResult = new CacheSubscriptionResult<>(indexSupplier.get());
+        this.unsubscribeResult = new CacheUnsubscribeResult<>(indexSupplier.get());
         this.cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer(), indexSupplier, keySupplier, valueSupplier);
         this.nodeId = nodeId;
         this.tracingService = tracingService;
+        this.indexSupplier = indexSupplier;
     }
 
     private Consumer<Image> getImageConsumer() {
@@ -99,10 +113,11 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
             case DeleteCacheEncoder.TEMPLATE_ID -> handleDeleteCache(session, buffer, offset);
             case GetAllCacheEntriesEncoder.TEMPLATE_ID -> handleGetAllCacheEntries(session, buffer, offset);
             case GetCacheStatsEncoder.TEMPLATE_ID -> handleGetCacheStats(session, buffer, offset);
+            case CacheSubscriptionRequestEncoder.TEMPLATE_ID -> handleCacheSubscriptionRequest(session, buffer, offset);
+            case CacheUnsubscribeRequestEncoder.TEMPLATE_ID -> handleCacheUnsubscribeRequest(session, buffer, offset);
             default -> throw new IllegalStateException("Unexpected value: " + templateId);
         }
     }
-
 
     /**
      * Cluster started.
@@ -117,6 +132,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         if (null != snapshotImage) {
             loadSnapshot(cluster, snapshotImage);
         }
+
+        log.info("Starting subscription service");
+        this.subscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscribeResult, unsubscribeResult, indexSupplier);
     }
 
     /**
@@ -301,6 +319,28 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         tracingService.endGetAllStatsRequest(requestDetails);
     }
 
+    void handleCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset) {
+        CacheSubscriptionRequestDetails<I> requestDetails = getCacheSubscriptionRequest(session, buffer, offset);
+        tracingService.startCacheSubscriptionRequest(requestDetails);
+        var requestId = requestDetails.getRequestId();
+        var cacheId = requestDetails.getCacheId();
+        log.info("Got request to subscribe for cache updates on cache: {}, request Id: {}", cacheId, requestId);
+        var result = subscriptionService.subscribe(requestDetails, session);
+        handlePostCacheSubscriptionRequest(result, session, buffer, offset);
+        tracingService.endCacheSubscriptionRequest(requestDetails);
+    }
+
+    void handleCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset) {
+        CacheUnsubscribeRequestDetails<I> requestDetails = getCacheUnsubscribeRequest(session, buffer, offset);
+        tracingService.startCacheUnsubscribeRequest(requestDetails);
+        var requestId = requestDetails.getRequestId();
+        var cacheId = requestDetails.getCacheId();
+        log.info("Got request to unsubscribe for cache updates on cache: {}, request Id: {}", cacheId, requestId);
+        var result = subscriptionService.unsubscribe(requestDetails, session);
+        handlePostCacheUnsubscribeRequest(result, session, buffer, offset);
+        tracingService.endCacheUnsubscribeRequest(requestDetails);
+    }
+
     /**
      * Decode the CreateCache message into a request details flyweight.
      *
@@ -380,6 +420,26 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @return The GetCacheStatsRequestDetails flyweight.
      */
     protected abstract GetCacheStatsRequestDetails getCacheStatsRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+
+    /**
+     * Decode the CacheSubscriptionRequest message into a request details flyweight.
+     *
+     * @param session The client session.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset from within the buffer to decode from.
+     * @return The CacheSubscriptionRequestDetails flyweight.
+     */
+    protected abstract CacheSubscriptionRequestDetails<I> getCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset);
+
+    /**
+     * Decode the CacheUnsubscribeRequest message into a request details flyweight.
+     *
+     * @param session The client session.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset from within the buffer to decode from.
+     * @return The CacheUnsubscribeRequestDetails flyweight.
+     */
+    protected abstract CacheUnsubscribeRequestDetails<I> getCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset);
 
     /**
      * After the cache is created, send out a CacheCreated message.
@@ -470,6 +530,26 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     protected abstract void handlePostGetCacheStats(CacheStatsResult<I> cacheStatsResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
+     * Send out the result of subscribing to a cache.
+     *
+     * @param subscriptionRequestResult The result of subscribing.
+     * @param session           The client session.
+     * @param buffer            The buffer from which the delete request was created.
+     * @param offset            The offset from within the buffer to decode the original request from.
+     */
+    protected abstract void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I> subscriptionRequestResult, ClientSession session, DirectBuffer buffer, int offset);
+
+    /**
+     * Send out the result of unsubscribing to a cache.
+     *
+     * @param unsubscribeResponse The result of unsubscribing.
+     * @param session           The client session.
+     * @param buffer            The buffer from which the delete request was created.
+     * @param offset            The offset from within the buffer to decode the original request from.
+     */
+    protected abstract void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<I> unsubscribeResponse, ClientSession session, DirectBuffer buffer, int offset);
+
+    /**
      * @param session   Session to send the message too.
      * @param msgBuffer The buffer containing the message.
      * @param len       The length of the message.
@@ -528,6 +608,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      */
     public void onSessionClose(final ClientSession session, final long timestamp, final CloseReason closeReason) {
         log.info("Client session closed {} on node {}, close reason: {}", session, nodeId, closeReason);
+        subscriptionService.onSessionClose(session);
     }
 
     /**

@@ -24,8 +24,8 @@ public class HTTPStatusUtils {
             case NONE -> 218;
             case SUCCESS -> 200;
             case ERROR -> 500;
-            case CACHE_EXISTS -> 400;
-            case UNKNOWN_CACHE, UNKNOWN_KEY -> 404;
+            case CACHE_EXISTS, DUPLICATE_SUBSCRIPTION -> 400;
+            case UNKNOWN_CACHE, UNKNOWN_KEY, UNKNOWN_SUBSCRIPTION -> 404;
             case NULL_VAL -> 418;
         };
     }

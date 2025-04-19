@@ -17,6 +17,8 @@
             <validValue name="UNKNOWN_CACHE">3</validValue>
             <validValue name="UNKNOWN_KEY">4</validValue>
             <validValue name="CACHE_EXISTS">5</validValue>
+            <validValue name="DUPLICATE_SUBSCRIPTION">6</validValue>
+            <validValue name="UNKNOWN_SUBSCRIPTION">7</validValue>
         </enum>
         <composite name="messageHeader" description="Message identifiers and length of message root">
             <type name="blockLength" primitiveType="uint16"/>
@@ -170,6 +172,40 @@
             <field name="cacheId" id="25" type="CacheId"/>
         </group>
         <data name="requestId" id="3" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="CacheSubscriptionRequest" id="17" semanticType="CacheSubscriptionRequest"
+                 description="Subscribe to cache updates">
+        <field name="cacheId" id="1" type="CacheId"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="CacheSubscriptionResponse" id="18" semanticType="CacheSubscriptionResponse"
+                 description="Response to subscription request to a cache">
+        <field name="cacheId" id="1" type="CacheId"/>
+        <field name="status" id="2" type="OperationStatus"/>
+        <data name="requestId" id="3" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="CacheUnsubscribeRequest" id="19" semanticType="CacheUnsubscribeRequest"
+                 description="Unsubscribe to cache updates">
+        <field name="cacheId" id="1" type="CacheId"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="CacheUnsubscribeResponse" id="20" semanticType="CacheUnsubscribeResponse"
+                 description="Response to unsubscribe request to a cache">
+        <field name="cacheId" id="1" type="CacheId"/>
+        <field name="status" id="2" type="OperationStatus"/>
+        <data name="requestId" id="3" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="CacheEntryUpdate" id="21" semanticType="CacheEntryUpdate"
+                 description="An update to a cache entry">
+        <field name="cacheId" id="1" type="CacheId"/>
+        <data name="key" id="2" type="varStringEncoding"/>
+        <data name="value" id="3" type="varStringEncoding"/>
+        <data name="requestId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
 </sbe:messageSchema>

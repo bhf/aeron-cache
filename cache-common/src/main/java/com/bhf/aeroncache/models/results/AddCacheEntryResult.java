@@ -20,14 +20,14 @@ import lombok.Setter;
 @Flyweight
 public class AddCacheEntryResult<I extends Reusable, K extends Reusable> implements Reusable<AddCacheEntryResult<I, K>> {
 
-    I cacheID;
+    I cacheId;
     boolean entryAdded;
     K entryKey;
     final RequestId requestId = new RequestId();
     OperationStatus status = OperationStatus.NONE;
 
     public AddCacheEntryResult(I cacheID, K entryKey) {
-        this.cacheID = cacheID;
+        this.cacheId = cacheID;
         this.entryKey = entryKey;
     }
 
@@ -46,7 +46,7 @@ public class AddCacheEntryResult<I extends Reusable, K extends Reusable> impleme
     public void clear() {
         entryAdded = false;
         entryKey.clear();
-        cacheID.clear();
+        cacheId.clear();
         requestId.clear();
         status = OperationStatus.NONE;
     }
@@ -58,7 +58,7 @@ public class AddCacheEntryResult<I extends Reusable, K extends Reusable> impleme
     public void copyFrom(AddCacheEntryResult<I, K> source) {
         this.entryAdded = source.entryAdded;
         this.entryKey.copyFrom(source.entryKey);
-        this.cacheID.copyFrom(source.cacheID);
+        this.cacheId.copyFrom(source.cacheId);
         this.requestId.copyFrom(source.requestId);
         this.status = source.status;
     }
