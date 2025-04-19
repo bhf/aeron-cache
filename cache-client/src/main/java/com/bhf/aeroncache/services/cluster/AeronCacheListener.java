@@ -184,7 +184,7 @@ public class AeronCacheListener implements EgressListener {
         addCacheEntryResult.clear();
         addCacheEntryResult.setEntryAdded(true);
         addCacheEntryResult.getEntryKey().copyFrom(key);
-        addCacheEntryResult.getCacheID().copyFrom(cacheId);
+        addCacheEntryResult.getCacheId().copyFrom(cacheId);
         addCacheEntryResult.setRequestId(requestId);
         addCacheEntryResult.setStatus(status);
 

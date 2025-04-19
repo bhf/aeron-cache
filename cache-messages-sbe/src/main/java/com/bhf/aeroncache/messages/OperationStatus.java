@@ -15,6 +15,10 @@ public enum OperationStatus
 
     CACHE_EXISTS((short)5),
 
+    DUPLICATE_SUBSCRIPTION((short)6),
+
+    UNKNOWN_SUBSCRIPTION((short)7),
+
     /**
      * To be used to represent not present or null.
      */
@@ -45,16 +49,19 @@ public enum OperationStatus
      */
     public static OperationStatus get(final short value)
     {
-        return switch (value) {
-            case 0 -> NONE;
-            case 1 -> SUCCESS;
-            case 2 -> ERROR;
-            case 3 -> UNKNOWN_CACHE;
-            case 4 -> UNKNOWN_KEY;
-            case 5 -> CACHE_EXISTS;
-            case 255 -> NULL_VAL;
-            default -> throw new IllegalArgumentException("Unknown value: " + value);
-        };
+        switch (value)
+        {
+            case 0: return NONE;
+            case 1: return SUCCESS;
+            case 2: return ERROR;
+            case 3: return UNKNOWN_CACHE;
+            case 4: return UNKNOWN_KEY;
+            case 5: return CACHE_EXISTS;
+            case 6: return DUPLICATE_SUBSCRIPTION;
+            case 7: return UNKNOWN_SUBSCRIPTION;
+            case 255: return NULL_VAL;
+        }
 
+        throw new IllegalArgumentException("Unknown value: " + value);
     }
 }

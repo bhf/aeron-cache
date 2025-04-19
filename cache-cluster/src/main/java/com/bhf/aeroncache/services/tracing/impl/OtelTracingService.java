@@ -45,12 +45,17 @@ public class OtelTracingService implements CacheTracingService {
         log.info("Created OTEL Tracing Service for {} on {}", serviceName, jaegerEndpoint);
     }
 
-    @Override
-    public void startHandleDeleteCache(DeleteCacheRequestDetails requestDetails) {
-        var splitRequest = requestDetails.getRequestId().split("@");
+    private static SpanContext getSpanContext(String requestId) {
+        String[] splitRequest = requestId.split("@");
         var traceIdHex = splitRequest[0];
         var spanIdHex = splitRequest[1];
         SpanContext spanContext = SpanContext.createFromRemoteParent(traceIdHex, spanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
+        return spanContext;
+    }
+
+    @Override
+    public void startHandleDeleteCache(DeleteCacheRequestDetails requestDetails) {
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
         log.info("DeleteCache SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
         Span spanNoOp = Span.wrap(spanContext);
         Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
@@ -66,10 +71,7 @@ public class OtelTracingService implements CacheTracingService {
 
     @Override
     public void startHandleClearCache(ClearCacheRequestDetails requestDetails) {
-        var splitRequest = requestDetails.getRequestId().split("@");
-        var traceIdHex = splitRequest[0];
-        var spanIdHex = splitRequest[1];
-        SpanContext spanContext = SpanContext.createFromRemoteParent(traceIdHex, spanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
         log.info("ClearCache SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
         Span spanNoOp = Span.wrap(spanContext);
         Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
@@ -85,10 +87,7 @@ public class OtelTracingService implements CacheTracingService {
 
     @Override
     public void startRemoveCacheEntry(RemoveCacheEntryRequestDetails requestDetails) {
-        var splitRequest = requestDetails.getRequestId().split("@");
-        var traceIdHex = splitRequest[0];
-        var spanIdHex = splitRequest[1];
-        SpanContext spanContext = SpanContext.createFromRemoteParent(traceIdHex, spanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
         log.info("RemoveEntry SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
         Span spanNoOp = Span.wrap(spanContext);
         Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
@@ -104,10 +103,7 @@ public class OtelTracingService implements CacheTracingService {
 
     @Override
     public void startAddCacheEntry(AddCacheEntryRequestDetails requestDetails) {
-        var splitRequest = requestDetails.getRequestId().split("@");
-        var traceIdHex = splitRequest[0];
-        var spanIdHex = splitRequest[1];
-        SpanContext spanContext = SpanContext.createFromRemoteParent(traceIdHex, spanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
         log.info("AddEntry SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
         Span spanNoOp = Span.wrap(spanContext);
         Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
@@ -123,10 +119,7 @@ public class OtelTracingService implements CacheTracingService {
 
     @Override
     public void startGetCacheEntry(GetCacheEntryRequestDetails requestDetails) {
-        var splitRequest = requestDetails.getRequestId().split("@");
-        var traceIdHex = splitRequest[0];
-        var spanIdHex = splitRequest[1];
-        SpanContext spanContext = SpanContext.createFromRemoteParent(traceIdHex, spanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
         log.info("GetEntry SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
         Span spanNoOp = Span.wrap(spanContext);
         Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
@@ -142,10 +135,7 @@ public class OtelTracingService implements CacheTracingService {
 
     @Override
     public void startGetAllCacheEntries(GetAllCacheEntriesRequestDetails requestDetails) {
-        var splitRequest = requestDetails.getRequestId().split("@");
-        var traceIdHex = splitRequest[0];
-        var spanIdHex = splitRequest[1];
-        SpanContext spanContext = SpanContext.createFromRemoteParent(traceIdHex, spanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
         log.info("GetAll SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
         Span spanNoOp = Span.wrap(spanContext);
         Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
@@ -161,10 +151,7 @@ public class OtelTracingService implements CacheTracingService {
 
     @Override
     public void startCreateCacheRequest(CreateCacheRequestDetails requestDetails) {
-        var splitRequest = requestDetails.getRequestId().split("@");
-        var traceIdHex = splitRequest[0];
-        var spanIdHex = splitRequest[1];
-        SpanContext spanContext = SpanContext.createFromRemoteParent(traceIdHex, spanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
         log.info("CreateCache SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
         Span spanNoOp = Span.wrap(spanContext);
         Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
@@ -180,10 +167,7 @@ public class OtelTracingService implements CacheTracingService {
 
     @Override
     public void startGetAllStatsRequest(GetCacheStatsRequestDetails requestDetails) {
-        var splitRequest = requestDetails.getRequestId().split("@");
-        var traceIdHex = splitRequest[0];
-        var spanIdHex = splitRequest[1];
-        SpanContext spanContext = SpanContext.createFromRemoteParent(traceIdHex, spanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
         log.info("GetAllStats SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
         Span spanNoOp = Span.wrap(spanContext);
         Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
@@ -194,6 +178,38 @@ public class OtelTracingService implements CacheTracingService {
 
     @Override
     public void endGetAllStatsRequest(GetCacheStatsRequestDetails requestDetails) {
+        Span.current().end();
+    }
+
+    @Override
+    public void startCacheSubscriptionRequest(CacheSubscriptionRequestDetails requestDetails) {
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
+        log.info("CacheSubscribe SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
+        Span spanNoOp = Span.wrap(spanContext);
+        Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
+        Span span = tracer.spanBuilder("subscribeCacheRequest").setParent(Context.current().with(spanNoOp)).startSpan();
+        span.setAttribute("nodeId", nodeId);
+        span.makeCurrent();
+    }
+
+    @Override
+    public void endCacheSubscriptionRequest(CacheSubscriptionRequestDetails requestDetails) {
+        Span.current().end();
+    }
+
+    @Override
+    public void startCacheUnsubscribeRequest(CacheUnsubscribeRequestDetails requestDetails) {
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
+        log.info("CacheUnsubscribe SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
+        Span spanNoOp = Span.wrap(spanContext);
+        Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
+        Span span = tracer.spanBuilder("unsubscribeCacheRequest").setParent(Context.current().with(spanNoOp)).startSpan();
+        span.setAttribute("nodeId", nodeId);
+        span.makeCurrent();
+    }
+
+    @Override
+    public void endCacheUnsubscribeRequest(CacheUnsubscribeRequestDetails requestDetails) {
         Span.current().end();
     }
 }

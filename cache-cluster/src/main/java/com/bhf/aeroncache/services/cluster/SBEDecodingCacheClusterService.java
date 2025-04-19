@@ -40,6 +40,10 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     private final CacheDeletedEncoder cacheDeletedEncoder = new CacheDeletedEncoder();
     private final GetCacheStatsDecoder getCacheStatsDecoder = new GetCacheStatsDecoder();
     private final AllCacheStatsResultEncoder cacheStatsResultEncoder = new AllCacheStatsResultEncoder();
+    private final CacheSubscriptionRequestDecoder cacheSubscriptionRequestDecoder = new CacheSubscriptionRequestDecoder();
+    private final CacheUnsubscribeRequestDecoder cacheUnsubscribeRequestDecoder = new CacheUnsubscribeRequestDecoder();
+    private final CacheSubscriptionResponseEncoder cacheSubscriptionResponseEncoder = new CacheSubscriptionResponseEncoder();
+    private final CacheUnsubscribeResponseEncoder cacheUnsubscribeResponseEncoder = new CacheUnsubscribeResponseEncoder();
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
 
     public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService) {
@@ -141,6 +145,28 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
+    protected CacheSubscriptionRequestDetails<ReusableLong> getCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset) {
+        cacheSubscribeRequestDetails.clear();
+        cacheSubscriptionRequestDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheId = cacheSubscriptionRequestDecoder.cacheId();
+        var requestId = cacheSubscriptionRequestDecoder.requestId();
+        cacheSubscribeRequestDetails.getCacheId().copyFrom(cacheId);
+        cacheSubscribeRequestDetails.setRequestId(requestId);
+        return cacheSubscribeRequestDetails;
+    }
+
+    @Override
+    protected CacheUnsubscribeRequestDetails<ReusableLong> getCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset) {
+        cacheUnsubscribeRequestDetails.clear();
+        cacheUnsubscribeRequestDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheId = cacheUnsubscribeRequestDecoder.cacheId();
+        var requestId = cacheUnsubscribeRequestDecoder.requestId();
+        cacheUnsubscribeRequestDetails.getCacheId().copyFrom(cacheId);
+        cacheUnsubscribeRequestDetails.setRequestId(requestId);
+        return cacheUnsubscribeRequestDetails;
+    }
+
+    @Override
     protected void handlePostCreateCache(ReusableLong cacheId, CreateCacheResult<ReusableLong> cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset) {
         cacheCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheCreatedEncoder.cacheId(cacheId.getValue())
@@ -157,6 +183,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .key(key.value())
                 .requestId(addCacheEntryResult.getRequestId());
         sendMessage(session, egressBuffer, entryCreatedEncoder.encodedLength() + headerEncoder.encodedLength());
+        subscriptionService.handleEntryAdded(addCacheEntryResult, egressBuffer, key, value, entryCreatedEncoder, headerEncoder);
     }
 
     @Override
@@ -173,7 +200,6 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         }
 
         cacheEntryResultEncoder.requestId(getCacheEntryResult.getRequestId());
-
         sendMessage(session, egressBuffer, cacheEntryResultEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 
@@ -205,6 +231,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .key(key.value())
                 .requestId(removeCacheEntryResult.getRequestId());
         sendMessage(session, egressBuffer, entryRemovedEncoder.encodedLength() + headerEncoder.encodedLength());
+        subscriptionService.handleEntryRemoved(removeCacheEntryResult, egressBuffer, entryRemovedEncoder, headerEncoder);
     }
 
     @Override
@@ -214,6 +241,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .status(clearCacheResult.getStatus())
                 .requestId(clearCacheResult.getRequestId());
         sendMessage(session, egressBuffer, cacheClearedEncoder.encodedLength() + headerEncoder.encodedLength());
+        subscriptionService.handleClearCache(clearCacheResult, egressBuffer, cacheClearedEncoder, headerEncoder);
     }
 
     @Override
@@ -223,6 +251,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .status(deleteCacheResult.getStatus())
                 .requestId(requestDetails.getRequestId());
         sendMessage(session, egressBuffer, cacheDeletedEncoder.encodedLength() + headerEncoder.encodedLength());
+        subscriptionService.handleDeleteCache(deleteCacheResult, egressBuffer, cacheDeletedEncoder, headerEncoder);
     }
 
     @Override
@@ -244,5 +273,23 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
 
         cacheStatsResultEncoder.requestId(cacheStatsResult.getRequestId());
         sendMessage(session, egressBuffer, cacheStatsResultEncoder.encodedLength() + headerEncoder.encodedLength());
+    }
+
+    @Override
+    protected void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<ReusableLong> subscriptionRequestResult, ClientSession session, DirectBuffer buffer, int offset) {
+        cacheSubscriptionResponseEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        cacheSubscriptionResponseEncoder.cacheId(subscriptionRequestResult.getCacheId().getValue())
+                .status(subscriptionRequestResult.getStatus())
+                .requestId(subscriptionRequestResult.getRequestId());
+        sendMessage(session, egressBuffer, cacheSubscriptionResponseEncoder.encodedLength() + headerEncoder.encodedLength());
+    }
+
+    @Override
+    protected void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<ReusableLong> unsubscribeResponse, ClientSession session, DirectBuffer buffer, int offset) {
+        cacheUnsubscribeResponseEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        cacheUnsubscribeResponseEncoder.cacheId(unsubscribeResponse.getCacheId().getValue())
+                .status(unsubscribeResponse.getStatus())
+                .requestId(unsubscribeResponse.getRequestId());
+        sendMessage(session, egressBuffer, cacheUnsubscribeResponseEncoder.encodedLength() + headerEncoder.encodedLength());
     }
 }

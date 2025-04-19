@@ -1,25 +1,24 @@
-package com.bhf.aeroncache.models.requests;
+package com.bhf.aeroncache.models.results;
 
 import com.bhf.aeroncache.annotations.Flyweight;
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-/**
- * Decoded version of a request to get all cache stats.
- *
- */
 @Getter
 @Setter
 @RequiredArgsConstructor
 @Flyweight
-public class GetCacheStatsRequestDetails implements Reusable<GetCacheStatsRequestDetails> {
+public class CacheUnsubscribeResult<I> implements Reusable<CacheUnsubscribeResult<I>> {
 
     final RequestId requestId = new RequestId();
+    final I cacheId;
+    OperationStatus status = OperationStatus.NONE;
 
-    public String getRequestId(){
+    public String getRequestId() {
         return requestId.getRequestId();
     }
 
@@ -27,29 +26,25 @@ public class GetCacheStatsRequestDetails implements Reusable<GetCacheStatsReques
         this.requestId.setRequestId(requestId);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void clear() {
-        this.requestId.clear();
+        requestId.clear();
+        status = OperationStatus.NONE;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void copyFrom(GetCacheStatsRequestDetails source) {
+    public void copyFrom(CacheUnsubscribeResult<I> source) {
         this.requestId.copyFrom(source.requestId);
+        this.status = source.status;
     }
 
     @Override
-    public void copyFrom(Reusable<GetCacheStatsRequestDetails> source) {
+    public void copyFrom(Reusable<CacheUnsubscribeResult<I>> source) {
         this.copyFrom(source.value());
     }
 
     @Override
-    public GetCacheStatsRequestDetails value() {
+    public CacheUnsubscribeResult<I> value() {
         return this;
     }
 }
