@@ -12,9 +12,9 @@ dependencies {
     implementation(libs.log4j.core)
     implementation(project(":cache-messages-sbe"))
     implementation(project(":cache-common"))
-    implementation("io.opentelemetry:opentelemetry-api:1.49.0")
-    implementation("io.opentelemetry:opentelemetry-sdk:1.49.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.49.0")
+    implementation(libs.opentelemetry.api)
+    implementation(libs.opentelemetry.sdk)
+    implementation(libs.opentelemetry.exporter.otlp)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit)
