@@ -171,9 +171,8 @@ public class HttpApplication {
 
             var response = future.get();
 
-            ctx.status(HTTPStatusUtils.SERVICE_LIVE);
+            ctx.status(HTTPStatusUtils.OK);
             ctx.json(response);
-
         } catch (Exception e) {
             var errorMsg = "Badly formed request to get cache stats";
             log.warn(errorMsg);
@@ -182,8 +181,6 @@ public class HttpApplication {
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
-
-
     }
 
     final static HashSet<Long> allCaches = new HashSet<>();

@@ -12,6 +12,7 @@ public class HTTPStatusUtils {
     public static final int SERVICE_LIVE = 200;
     public static final int SERVICE_NOT_LIVE = 503;
     public static final int BAD_REQUEST = 400;
+    public static final int OK = 200;
 
     /**
      * Get the HTTP code associated with this {@link OperationStatus}.
