@@ -35,6 +35,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     private final List<IdentifiableConsumer<String, ClearCacheResult<ReusableLong>>> clearCacheObservers = new CopyOnWriteArrayList<>();
     private final List<IdentifiableConsumer<String, GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>>> getCacheEntriesObservers = new CopyOnWriteArrayList<>();
     private final List<IdentifiableConsumer<String, CacheStatsResult<ReusableLong>>> allCacheStatsObservers = new CopyOnWriteArrayList<>();
+    private final List<IdentifiableConsumer<String, CacheSubscriptionResult<ReusableLong>>> cacheSubscribeObservers = new CopyOnWriteArrayList<>();
+    private final List<IdentifiableConsumer<String, CacheUnsubscribeResult<ReusableLong>>> cacheUnsubscribeObservers = new CopyOnWriteArrayList<>();
 
 
     private Consumer<CreateCacheResult<ReusableLong>> createCacheConsumer;
@@ -291,6 +293,60 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         publisher.getAllCacheStats(cluster, requestId);
     }
 
+    @Override
+    public void sendCacheSubscribe(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.sendCacheSubscribe(cluster, requestId, cacheId);
+    }
+
+    @Override
+    public void sendCacheSubscribeBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.sendCacheSubscribe(cluster, requestId, cacheId);
+    }
+
+    @Override
+    public void sendCacheSubscribeBlocking(AeronCluster cluster, long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c, String requestId) {
+        cacheSubscribeObservers.add(new IdentifiableConsumer<>() {
+            @Override
+            public String getId() {
+                return requestId;
+            }
+
+            @Override
+            public void accept(CacheSubscriptionResult<ReusableLong> subscriptionResult) {
+                c.accept(subscriptionResult);
+            }
+        });
+
+        publisher.sendCacheSubscribe(cluster, requestId, cacheId);
+    }
+
+    @Override
+    public void sendCacheUnsubscribe(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.sendCacheUnsubscribe(cluster, requestId, cacheId);
+    }
+
+    @Override
+    public void sendCacheUnsubscribeBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        publisher.sendCacheUnsubscribe(cluster, requestId, cacheId);
+    }
+
+    @Override
+    public void sendCacheUnsubscribeBlocking(AeronCluster cluster, long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c, String requestId) {
+        cacheUnsubscribeObservers.add(new IdentifiableConsumer<>() {
+            @Override
+            public String getId() {
+                return requestId;
+            }
+
+            @Override
+            public void accept(CacheUnsubscribeResult<ReusableLong> subscriptionResult) {
+                c.accept(subscriptionResult);
+            }
+        });
+
+        publisher.sendCacheUnsubscribe(cluster, requestId, cacheId);
+    }
+
 
     /**
      * Handle a message indicating the value of a get operation on a particular key
@@ -408,5 +464,33 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         var targetId = statsResult.getRequestId();
         allCacheStatsObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(statsResult));
         allCacheStatsObservers.removeIf(p -> p.getId().equals(targetId));
+    }
+
+    /**
+     * Handle a message about a subscription request to a cache.
+     *
+     * @param cacheSubscriptionResult The result of subscribing to a cache.
+     */
+    public void handleCacheSubscribeResponse(CacheSubscriptionResult<ReusableLong> cacheSubscriptionResult) {
+        var targetId = cacheSubscriptionResult.getRequestId();
+        log.info("Got cache subscribe response on requestId {}", targetId);
+        cacheSubscribeObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(cacheSubscriptionResult));
+        cacheSubscribeObservers.removeIf(p -> p.getId().equals(targetId));
+    }
+
+    /**
+     * Handle a message about an unsubscribe request to a cache.
+     *
+     * @param cacheUnsubscribeResult The result of unsubscribing to a cache.
+     */
+    public void handleCacheUnsubscribeResponse(CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult) {
+        var targetId = cacheUnsubscribeResult.getRequestId();
+        log.info("Got cache unsubscribe response on requestId {}", targetId);
+        cacheUnsubscribeObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(cacheUnsubscribeResult));
+        cacheUnsubscribeObservers.removeIf(p -> p.getId().equals(targetId));
+    }
+
+    public void handleCacheEntryUpdated(CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult) {
+
     }
 }

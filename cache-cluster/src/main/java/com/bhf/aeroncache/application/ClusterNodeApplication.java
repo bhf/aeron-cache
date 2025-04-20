@@ -131,6 +131,12 @@ public class ClusterNodeApplication {
             System.out.println("Using pod name: " + podName + ", nodeId: " + nodeId + " cluster addresses: " + Arrays.toString(hostnames));
         } catch (Exception e) {
         }
+
+        if (hostnames == null) {
+            nodeId = Integer.parseInt(args[0]);
+            hostnames = new String[]{"localhost", "localhost", "localhost"};
+        }
+
         final String hostname = hostnames[nodeId];
         System.out.println("This node's hostname:" + hostname);
         final File baseDir = new File(System.getProperty("user.dir"), "node" + nodeId);

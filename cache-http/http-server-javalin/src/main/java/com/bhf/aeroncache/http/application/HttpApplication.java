@@ -49,6 +49,7 @@ import java.util.function.Consumer;
 @Log4j2
 public class HttpApplication {
 
+    public static final String PROMO_MICROMETER_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
     private static final int PORT = 7070;
     private static final String API_PREFIX = "/api/v1/cache/";
     private static final String LIVENESS = "/liveness/";
@@ -126,8 +127,6 @@ public class HttpApplication {
         MicrometerPlugin micrometerPlugin = new MicrometerPlugin(micrometerPluginConfig -> micrometerPluginConfig.registry = registry);
         var config = getHTTPConfig(micrometerPlugin);
 
-        String promoMicrometerContentType = "text/plain; version=0.0.4; charset=utf-8";
-
         return Javalin.create(config)
                 .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
@@ -141,7 +140,7 @@ public class HttpApplication {
                 .get("/api/v1/stats", HttpApplication::handleGetStatsRequest)
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
                 .get(READINESS, HttpApplication::handleGetReadiness)
-                .get("/prometheus", ctx -> ctx.contentType(promoMicrometerContentType).result(registry.scrape()))
+                .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
                 .start(PORT);
     }
 

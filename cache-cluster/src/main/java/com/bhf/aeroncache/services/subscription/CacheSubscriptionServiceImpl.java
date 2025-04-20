@@ -40,6 +40,7 @@ public class CacheSubscriptionServiceImpl<I extends Reusable> implements CacheSu
         }
 
         subscriptionResult.setRequestId(requestDetails.getRequestId());
+        subscriptionResult.getCacheId().copyFrom(requestDetails.getCacheId());
         if (!existingSubscribers.contains(session)) {
             existingSubscribers.add(session);
             subscriptionResult.setStatus(OperationStatus.SUCCESS);
@@ -107,8 +108,9 @@ public class CacheSubscriptionServiceImpl<I extends Reusable> implements CacheSu
 
     @Override
     public void handleEntryAdded(AddCacheEntryResult<I, ReusableString> addCacheEntryResult, MutableDirectBuffer egressBuffer, ReusableString key, ReusableString value, CacheEntryCreatedEncoder entryCreatedEncoder, MessageHeaderEncoder headerEncoder) {
+        log.info("Sending entry added to subscribers on cacheId {}", addCacheEntryResult.getCacheId());
         for (var session : getSessionsForCache(addCacheEntryResult.getCacheId())) {
-            log.debug("Sending entry added update to session: {}", session.id());
+            log.info("Sending entry added update to session: {}", session.id());
             entryUpdateEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
             entryUpdateEncoder.cacheId((Long) addCacheEntryResult.getCacheId().value())
                     .key(key.value())

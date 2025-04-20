@@ -39,7 +39,7 @@ public interface ClusterRequestConsumingPublisher {
      * Send a message to get a cache entry in a blocking manner.
      *
      * @param cluster   The Aeron Cluster instance to use.
-     * @param cacheId   The ID of the cache we're adding too.
+     * @param cacheId   The ID of the cache we're getting from.
      * @param key       The key to use.
      * @param c         The consumer to handle the result.
      * @param requestId The request ID.
@@ -70,7 +70,7 @@ public interface ClusterRequestConsumingPublisher {
      * Send a message to clear a cache in a blocking manner.
      *
      * @param cluster   The Aeron Cluster instance to use.
-     * @param cacheId   The ID of the cache we're removing an entry from.
+     * @param cacheId   The ID of the cache we're clearing.
      * @param c         The consumer that will handle the result.
      * @param requestId The request ID.
      */
@@ -80,7 +80,7 @@ public interface ClusterRequestConsumingPublisher {
      * Send a message to get all cache items.
      *
      * @param cluster   The Aeron Cluster instance to use.
-     * @param cacheId   The ID of the cache we're removing an entry from.
+     * @param cacheId   The ID of the cache we're getting an entry from.
      * @param c         The consumer that will handle the result.
      * @param requestId The request ID.
      */
@@ -94,4 +94,24 @@ public interface ClusterRequestConsumingPublisher {
      * @param requestId The request ID.
      */
     void getAllCacheStatsBlocking(AeronCluster cluster, Consumer<CacheStatsResult<ReusableLong>> c, String requestId);
+
+    /**
+     * Send a message to subscribe to cache updates.
+     *
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param cacheId   The ID of the cache to subscribe too.
+     * @param c         The consumer that will handle the result.
+     * @param requestId The request ID.
+     */
+    void sendCacheSubscribeBlocking(AeronCluster cluster, long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c, String requestId);
+
+    /**
+     * Send a message to unsubscribe to cache updates.
+     *
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param cacheId   The ID of the cache to unsubscribe from.
+     * @param c         The consumer that will handle the result.
+     * @param requestId The request ID.
+     */
+    void sendCacheUnsubscribeBlocking(AeronCluster cluster, long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c, String requestId);
 }
