@@ -152,7 +152,7 @@ public class HttpApplication {
             CompletableFuture<CacheStats> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.getAllCacheStatsBlocking(cluster, c -> {
                 log.info("Got cache stats, requestId {}", c.getRequestId());
-
+                allCaches.clear();
                 int totalOps=statsTracker.getTotalOpsCount().get();
                 int totalCaches=0;
                 int totalItems=0;
@@ -161,6 +161,7 @@ public class HttpApplication {
                 for(var x: stats){
                     totalCaches++;
                     totalItems+=x.size;
+                    allCaches.add(x.getCacheId().value());
                 }
 
                 var statsTrackerStats = statsTracker.getCacheStats();
@@ -172,6 +173,7 @@ public class HttpApplication {
 
             ctx.status(HTTPStatusUtils.SERVICE_LIVE);
             ctx.json(response);
+
         } catch (Exception e) {
             var errorMsg = "Badly formed request to get cache stats";
             log.warn(errorMsg);
