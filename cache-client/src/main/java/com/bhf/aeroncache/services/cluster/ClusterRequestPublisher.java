@@ -157,4 +157,40 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      */
     void getAllCacheStatsBlocking(AeronCluster cluster, String requestId);
+
+    /**
+     * Send a request to subscribe to cache updates.
+     *
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param requestId The Id of this request.
+     * @param cacheId   The cache to subscribe too.
+     */
+    void sendCacheSubscribe(AeronCluster cluster, String requestId, long cacheId);
+
+    /**
+     * Send a request to subscribe to cache updates in a blocking manner.
+     *
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param requestId The Id of this request.
+     * @param cacheId   The cache to subscribe too.
+     */
+    void sendCacheSubscribeBlocking(AeronCluster cluster, String requestId, long cacheId);
+
+    /**
+     * Send a request to unsubscribe to cache updates.
+     *
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param requestId The Id of this request.
+     * @param cacheId   The cache to unsubscribe too.
+     */
+    void sendCacheUnsubscribe(AeronCluster cluster, String requestId, long cacheId);
+
+    /**
+     * Send a request to unsubscribe to cache updates in a blocking manner.
+     *
+     * @param cluster   The Aeron Cluster instance to use.
+     * @param requestId The Id of this request.
+     * @param cacheId   The cache to unsubscribe too.
+     */
+    void sendCacheUnsubscribeBlocking(AeronCluster cluster, String requestId, long cacheId);
 }

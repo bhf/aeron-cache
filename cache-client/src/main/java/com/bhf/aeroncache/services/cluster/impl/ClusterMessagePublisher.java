@@ -33,6 +33,8 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
     private final GetAllCacheEntriesEncoder getAllCacheEntriesEncoder = new GetAllCacheEntriesEncoder();
     private final GetCacheStatsEncoder getCacheStatsEncoder = new GetCacheStatsEncoder();
+    private final CacheSubscriptionRequestEncoder cacheSubscriptionRequestEncoder = new CacheSubscriptionRequestEncoder();
+    private final CacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder = new CacheUnsubscribeRequestEncoder();
 
     @Override
     public void sendCreateCacheBlocking(AeronCluster cluster, String requestId, long cacheId) {
@@ -225,6 +227,48 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
     public void getAllCacheStatsBlocking(AeronCluster cluster, String requestId) {
         getAllCacheStats(cluster, requestId);
         waitForResult(cluster);
+    }
+
+    @Override
+    public void sendCacheSubscribeBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        sendCacheSubscribe(cluster, requestId, cacheId);
+        waitForResult(cluster);
+    }
+
+    @Override
+    public void sendCacheSubscribe(AeronCluster cluster, String requestId, long cacheId) {
+        cacheSubscriptionRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId).requestId(requestId);
+        publishCacheSubscribe(cluster, cacheSubscriptionRequestEncoder, headerEncoder);
+        log.info("Sent cache subscription request on cache {} with request Id {}", cacheId, requestId);
+    }
+
+    private void publishCacheSubscribe(AeronCluster cluster, CacheSubscriptionRequestEncoder cacheSubscriptionRequestEncoder, MessageHeaderEncoder header) {
+        idleStrategy.reset();
+        while (cluster.offer(msgBuffer, 0, cacheSubscriptionRequestEncoder.encodedLength() + header.encodedLength()) < 0) {
+            idleStrategy.idle(cluster.pollEgress());
+        }
+    }
+
+    @Override
+    public void sendCacheUnsubscribeBlocking(AeronCluster cluster, String requestId, long cacheId) {
+        sendCacheUnsubscribe(cluster, requestId, cacheId);
+        waitForResult(cluster);
+    }
+
+    @Override
+    public void sendCacheUnsubscribe(AeronCluster cluster, String requestId, long cacheId) {
+        cacheUnsubscribeRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId).requestId(requestId);
+        publishCacheUnsubscribe(cluster, cacheUnsubscribeRequestEncoder, headerEncoder);
+        log.info("Sent cache unsubscribe request on cache {} with request Id {}", cacheId, requestId);
+    }
+
+    private void publishCacheUnsubscribe(AeronCluster cluster, CacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder, MessageHeaderEncoder header) {
+        idleStrategy.reset();
+        while (cluster.offer(msgBuffer, 0, cacheUnsubscribeRequestEncoder.encodedLength() + header.encodedLength()) < 0) {
+            idleStrategy.idle(cluster.pollEgress());
+        }
     }
 
     @Override

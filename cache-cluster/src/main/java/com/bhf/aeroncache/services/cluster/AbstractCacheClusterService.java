@@ -217,6 +217,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
         var addCacheEntryResult = cache.add(key, value);
         addCacheEntryResult.setRequestId(requestId);
+        addCacheEntryResult.getCacheId().copyFrom(cacheId);
         log.info("Result for add entry, key: {}, status: {}, ", addCacheEntryResult.getEntryKey(), addCacheEntryResult.getStatus());
         handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, buffer, offset);
         tracingService.endAddCacheEntry(requestDetails);
@@ -234,6 +235,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private void handleMissingCacheOnAddEntry(ClientSession session, DirectBuffer buffer, int offset, I cacheId, K key, V value, String requestId) {
         addEntryFailureResult.setStatus(OperationStatus.UNKNOWN_CACHE);
         addEntryFailureResult.setRequestId(requestId);
+        addEntryFailureResult.setCacheId(cacheId);
         log.info("Cache {} doesn't exist, tried to add on key key: {}", cacheId, addEntryFailureResult.getEntryKey());
         handlePostAddCacheEntry(cacheId, key, value, addEntryFailureResult, session, buffer, offset);
     }
@@ -523,9 +525,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * Send out the cache stats.
      *
      * @param cacheStatsResult The stats across all caches.
-     * @param session           The client session.
-     * @param buffer            The buffer from which the delete request was created.
-     * @param offset            The offset from within the buffer to decode the original request from.
+     * @param session          The client session.
+     * @param buffer           The buffer from which the delete request was created.
+     * @param offset           The offset from within the buffer to decode the original request from.
      */
     protected abstract void handlePostGetCacheStats(CacheStatsResult<I> cacheStatsResult, ClientSession session, DirectBuffer buffer, int offset);
 
@@ -533,9 +535,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * Send out the result of subscribing to a cache.
      *
      * @param subscriptionRequestResult The result of subscribing.
-     * @param session           The client session.
-     * @param buffer            The buffer from which the delete request was created.
-     * @param offset            The offset from within the buffer to decode the original request from.
+     * @param session                   The client session.
+     * @param buffer                    The buffer from which the delete request was created.
+     * @param offset                    The offset from within the buffer to decode the original request from.
      */
     protected abstract void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I> subscriptionRequestResult, ClientSession session, DirectBuffer buffer, int offset);
 
@@ -543,9 +545,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * Send out the result of unsubscribing to a cache.
      *
      * @param unsubscribeResponse The result of unsubscribing.
-     * @param session           The client session.
-     * @param buffer            The buffer from which the delete request was created.
-     * @param offset            The offset from within the buffer to decode the original request from.
+     * @param session             The client session.
+     * @param buffer              The buffer from which the delete request was created.
+     * @param offset              The offset from within the buffer to decode the original request from.
      */
     protected abstract void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<I> unsubscribeResponse, ClientSession session, DirectBuffer buffer, int offset);
 

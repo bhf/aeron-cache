@@ -44,6 +44,9 @@ public class AeronCacheListener implements EgressListener {
     private final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
     private final AllCacheEntriesResultDecoder allCacheEntriesResultDecoder = new AllCacheEntriesResultDecoder();
     private final AllCacheStatsResultDecoder allCacheStatsResultDecoder = new AllCacheStatsResultDecoder();
+    private final CacheSubscriptionResponseDecoder cacheSubscriptionResponseDecoder = new CacheSubscriptionResponseDecoder();
+    private final CacheUnsubscribeResponseDecoder cacheUnsubscribeResponseDecoder = new CacheUnsubscribeResponseDecoder();
+    private final CacheEntryUpdateDecoder cacheEntryUpdateDecoder = new CacheEntryUpdateDecoder();
 
     private final CreateCacheResult<ReusableLong> createCacheResult = new CreateCacheResult<>(SupplierUtils.longSupplier.get());
     private final AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult = new AddCacheEntryResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get());
@@ -53,6 +56,9 @@ public class AeronCacheListener implements EgressListener {
     private final GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult = new GetCacheEntryResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
     private final GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult = new GetAllCacheEntriesResult<>(SupplierUtils.longSupplier.get());
     private final CacheStatsResult<ReusableLong> cacheStatsResult = new CacheStatsResult<>();
+    private final CacheSubscriptionResult<ReusableLong> cacheSubscriptionResult = new CacheSubscriptionResult<>(SupplierUtils.longSupplier.get());
+    private final CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult = new CacheUnsubscribeResult<>(SupplierUtils.longSupplier.get());
+    private final CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult = new CacheEntryUpdateResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
 
     /**
      * {@inheritDoc}
@@ -79,6 +85,9 @@ public class AeronCacheListener implements EgressListener {
             case CacheEntryRemovedDecoder.TEMPLATE_ID -> handleCacheEntryRemoved(buffer, offset);
             case AllCacheEntriesResultDecoder.TEMPLATE_ID -> handleAllCacheEntriesResult(buffer, offset);
             case AllCacheStatsResultDecoder.TEMPLATE_ID -> handleAllCacheStatsResult(buffer, offset);
+            case CacheSubscriptionResponseDecoder.TEMPLATE_ID -> handleCacheSubscribeResult(buffer, offset);
+            case CacheUnsubscribeResponseDecoder.TEMPLATE_ID -> handleCacheUnsubscribeResult(buffer, offset);
+            case CacheEntryUpdateDecoder.TEMPLATE_ID -> handleCacheEntryUpdated(buffer, offset);
             default -> log.warn("Got unknown message with TID {}", templateId);
         }
     }
@@ -172,7 +181,7 @@ public class AeronCacheListener implements EgressListener {
      * Handle a cache entry being created by decoding it and delegating the result to the consumer.
      *
      * @param buffer The buffer to decode from.
-     * @param offset THe offset at which to start decoding.
+     * @param offset The offset at which to start decoding.
      */
     private void handleCacheEntryCreated(DirectBuffer buffer, int offset) {
         addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
@@ -197,7 +206,7 @@ public class AeronCacheListener implements EgressListener {
      * Handle a cache entry being removed by decoding it and delegating the result to the consumer.
      *
      * @param buffer The buffer to decode from.
-     * @param offset THe offset at which to start decoding.
+     * @param offset The offset at which to start decoding.
      */
     private void handleCacheEntryRemoved(DirectBuffer buffer, int offset) {
         cacheEntryRemovedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
@@ -221,7 +230,7 @@ public class AeronCacheListener implements EgressListener {
      * Handle a cache being cleared by decoding it and delegating the result to the consumer.
      *
      * @param buffer The buffer to decode from.
-     * @param offset THe offset at which to start decoding.
+     * @param offset The offset at which to start decoding.
      */
     private void handleCacheCleared(DirectBuffer buffer, int offset) {
         cacheClearedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
@@ -243,7 +252,7 @@ public class AeronCacheListener implements EgressListener {
      * Handle a cache being deleted by decoding it and delegating the result to the consumer.
      *
      * @param buffer The buffer to decode from.
-     * @param offset THe offset at which to start decoding.
+     * @param offset The offset at which to start decoding.
      */
     private void handleCacheDeleted(DirectBuffer buffer, int offset) {
         cacheDeletedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
@@ -261,6 +270,12 @@ public class AeronCacheListener implements EgressListener {
         }
     }
 
+    /**
+     * Handle the result of getting all cache stats.
+     *
+     * @param buffer The buffer to decode from.
+     * @param offset The offset at which to start decoding.
+     */
     private void handleAllCacheStatsResult(DirectBuffer buffer, int offset) {
         allCacheStatsResultDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var status = allCacheStatsResultDecoder.status();
@@ -290,6 +305,77 @@ public class AeronCacheListener implements EgressListener {
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleAllCacheStats(cacheStatsResult);
+        }
+    }
+
+    /**
+     * Handle the result of a subscription request.
+     *
+     * @param buffer The buffer to decode from.
+     * @param offset The offset at which to start decoding.
+     */
+    private void handleCacheSubscribeResult(DirectBuffer buffer, int offset) {
+        cacheSubscriptionResult.clear();
+        cacheSubscriptionResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+
+        var cacheId = cacheSubscriptionResponseDecoder.cacheId();
+        var status = cacheSubscriptionResponseDecoder.status();
+        var requestId = cacheSubscriptionResponseDecoder.requestId();
+
+        log.info("Got cache subscription result on cacheId {}, status {} requestId {}", cacheId, status, requestId);
+
+        cacheSubscriptionResult.getCacheId().copyFrom(cacheId);
+        cacheSubscriptionResult.setStatus(status);
+        cacheSubscriptionResult.setRequestId(requestId);
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheSubscribeResponse(cacheSubscriptionResult);
+        }
+    }
+
+    /**
+     * Handle the result of an unsubscribe request.
+     *
+     * @param buffer The buffer to decode from.
+     * @param offset The offset at which to start decoding.
+     */
+    private void handleCacheUnsubscribeResult(DirectBuffer buffer, int offset) {
+        cacheUnsubscribeResult.clear();
+        cacheUnsubscribeResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+
+        var cacheId = cacheUnsubscribeResponseDecoder.cacheId();
+        var status = cacheUnsubscribeResponseDecoder.status();
+        var requestId = cacheUnsubscribeResponseDecoder.requestId();
+
+        log.info("Got cache unsubscribe result on cacheId {}, status {} requestId {}", cacheId, status, requestId);
+
+        cacheUnsubscribeResult.getCacheId().copyFrom(cacheId);
+        cacheUnsubscribeResult.setStatus(status);
+        cacheUnsubscribeResult.setRequestId(requestId);
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheUnsubscribeResponse(cacheUnsubscribeResult);
+        }
+    }
+
+    private void handleCacheEntryUpdated(DirectBuffer buffer, int offset) {
+        cacheEntryUpdateResult.clear();
+        cacheEntryUpdateDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+
+        var cacheId = cacheEntryUpdateDecoder.cacheId();
+        var key = cacheEntryUpdateDecoder.key();
+        var value = cacheEntryUpdateDecoder.value();
+        var requestId = cacheEntryUpdateDecoder.requestId();
+
+        log.info("Got cache entry updated on cacheId {}, key {} requestId {}", cacheId, key, requestId);
+
+        cacheEntryUpdateResult.getCacheId().copyFrom(cacheId);
+        cacheEntryUpdateResult.setRequestId(requestId);
+        cacheEntryUpdateResult.getKey().copyFrom(key);
+        cacheEntryUpdateResult.getValue().copyFrom(value);
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheEntryUpdated(cacheEntryUpdateResult);
         }
     }
 
