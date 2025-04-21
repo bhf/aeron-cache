@@ -3,9 +3,7 @@ import "./globals.css";
 import {Radio} from "@deemlol/next-icons";
 import Link from "next/link";
 import {Toaster} from "@/components/ui/sonner";
-import AboutAeronCache from "@/components/About";
-import {LayersIcon, TrelloIcon} from "lucide-react";
-import {Button} from "@/components/ui/button";
+import MenuLinks from "@/components/MenuLinks";
 
 
 export const metadata: Metadata = {
@@ -35,15 +33,8 @@ export default function RootLayout({
                             Aeron Cache
                         </div>
                     </Link>
-                    <div className="hidden lg:flex lg:flex-1 lg:justify-end pr-4">
-                        <AboutAeronCache/>
-                        <Link href={"http://localhost:16686/"} target="_blank"><Button
-                            variant="link"><LayersIcon/>Jaeger</Button></Link>
-                        <Link href={"http://localhost:9090/"} target="_blank"><Button
-                            variant="link"><TrelloIcon/>Prometheus</Button></Link>
-                    </div>
+                    <MenuLinks/>
                 </div>
-
             </div>
         );
     }

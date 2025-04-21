@@ -18,6 +18,14 @@ export async function getCacheAPIURI(){
     return process.env.AERON_CACHE_API
 }
 
+export async function getJaegerURL(){
+    return process.env.JAEGER ? process.env.JAEGER : "http://localhost:5000";
+}
+
+export async function getPrometheusURL(){
+    return process.env.PROMETHEUS ? process.env.PROMETHEUS : "http://localhost:5000";
+}
+
 /**
  * Create a cache.
  * @param currentState
