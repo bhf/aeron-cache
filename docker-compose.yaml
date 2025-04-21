@@ -119,6 +119,26 @@ services:
       - OTEL_SERVICE_NAME=aeron-cache-http
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
       - OTEL_JAVAAGENT_LOGGING=none
+  cache-ws-client:
+    shm_size: '1gb'
+    build:
+      context: cache-ws/ws-server-javalin
+      dockerfile: ./Dockerfile
+    depends_on:
+      - node0
+      - node1
+      - node2
+    networks:
+      internal_bus:
+        ipv4_address: 172.16.202.11
+    ports:
+      - 7071:7071
+    environment:
+      - CLUSTER_ADDRESSES=node0,node1,node2
+      - EGRESS_IP=172.16.202.5
+      - OTEL_SERVICE_NAME=aeron-cache-ws
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_JAVAAGENT_LOGGING=none
   cache-ui:
     build:
       context: cache-ui/nextjs
