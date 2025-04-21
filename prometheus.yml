@@ -5,8 +5,14 @@ scrape_configs:
       - targets:
           - cadvisor:8080
   - job_name: cache-http
-    scrape_interval: 2s
+    scrape_interval: 5s
     static_configs:
       - targets:
           - cache-http-client:7070
+    metrics_path: /prometheus
+  - job_name: cache-ws
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+          - cache-ws-client:7071
     metrics_path: /prometheus
