@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-project.setProperty("mainClassName", "com.bhf.aeroncache.http.application.HttpApplication")
+project.setProperty("mainClassName", "com.bhf.aeroncache.ws.application.WebsocketApplication")
 
 val agent = configurations.create("agent")
 val extension = configurations.create("extension")
