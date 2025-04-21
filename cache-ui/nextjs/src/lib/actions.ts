@@ -132,8 +132,6 @@ export async function addItemToCacheRequest(formState: { message: string; error:
  * @param formData The form data with the params used to remove the item from the cache.
  */
 export async function removeItemFromCacheRequest(props: {cacheId: number, key: string}) {
-    /*const cacheId = formData.get('cacheId')
-    const key = formData.get('key')*/
     logger.info("Remove item request for cache with id " + props.cacheId + "on key " + props.key)
     try {
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + props.cacheId + "/" + props.key, {
