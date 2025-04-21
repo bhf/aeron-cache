@@ -155,6 +155,8 @@ services:
       - 3000:3000
     environment:
       - AERON_CACHE_API=http://cache-http-client:7070/api/v1
+      - OTEL_SERVICE_NAME=aeron-cache-ui
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
 networks:
   internal_bus:
     driver: bridge
