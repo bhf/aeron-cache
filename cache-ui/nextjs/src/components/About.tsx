@@ -9,6 +9,7 @@ import {
 import {Github, Linkedin, Star} from "@deemlol/next-icons";
 import {ShieldQuestionIcon} from "lucide-react";
 import {Button} from "@/components/ui/button";
+import Image from "next/image";
 
 export default function AboutAeronCache() {
     return (
@@ -17,11 +18,12 @@ export default function AboutAeronCache() {
                 <DialogTrigger asChild>
                     <Button variant="link"><ShieldQuestionIcon/>About</Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] pb-20">
+                <DialogContent className="sm:max-w-[425px] pb-15">
                     <DialogHeader>
-                        <DialogTitle>Aeron Cache</DialogTitle>
+                        <DialogTitle>About Aeron Cache</DialogTitle>
                         <DialogDescription>
-                            A KV store I wrote to demonstrate some of my skills.
+                            <Image className={"pt-5 pb-5"} src={"/zoom.gif"} width={500} height={296} alt={""}/>
+                            A distributed key value store using Aeron and SBE with a HTTP and WS interface.
                         </DialogDescription>
                     </DialogHeader>
                     <div
