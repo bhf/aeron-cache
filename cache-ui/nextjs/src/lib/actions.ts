@@ -14,16 +14,20 @@ const headers = {
     'Content-Type': 'application/json'
 };
 
-export async function getCacheAPIURI(){
+export async function getCacheAPIURI() {
     return process.env.AERON_CACHE_API
 }
 
-export async function getJaegerURL(){
+export async function getJaegerURL() {
     return process.env.JAEGER ? process.env.JAEGER : "http://localhost:5000";
 }
 
-export async function getPrometheusURL(){
+export async function getPrometheusURL() {
     return process.env.PROMETHEUS ? process.env.PROMETHEUS : "http://localhost:5000";
+}
+
+export async function getWebsocketURL() {
+    return process.env.AERON_CACHE_WS_API ? process.env.AERON_CACHE_WS_API : "ws:localhost:5000";
 }
 
 /**
@@ -31,7 +35,7 @@ export async function getPrometheusURL(){
  * @param currentState
  * @param formData The form data with the params used to create the cache.
  */
-export async function createCacheRequest(currentState: {message: string, error: boolean}, formData: FormData) {
+export async function createCacheRequest(currentState: { message: string, error: boolean }, formData: FormData) {
     const cacheId = formData.get('cacheId')
     logger.info("Creating cache request with id", cacheId)
     try {
@@ -45,7 +49,7 @@ export async function createCacheRequest(currentState: {message: string, error: 
         logger.info("Got response from sending request to create cache ", content)
 
         if (rawResponse.status != 200) {
-            return {message: "Problem creating cache: "+content.operationStatus, error: true};
+            return {message: "Problem creating cache: " + content.operationStatus, error: true};
         }
 
         // revalidate the endpoint from which we get all available caches
@@ -122,11 +126,11 @@ export async function addItemToCacheRequest(formState: { message: string; error:
         logger.info("Got response from sending request to add item:", content)
 
         if (rawResponse.status != 200) {
-            return {message: "Problem adding item to cache: "+content.operationStatus, error: true};
+            return {message: "Problem adding item to cache: " + content.operationStatus, error: true};
         }
 
         // revalidate the endpoint from which we get this cache's data
-        revalidateTag("Cache-"+cacheId)
+        revalidateTag("Cache-" + cacheId)
 
         return {message: "Successfully added item", error: false};
     } catch (err) {
@@ -139,7 +143,7 @@ export async function addItemToCacheRequest(formState: { message: string; error:
  * Remove an item from the cache.
  * @param formData The form data with the params used to remove the item from the cache.
  */
-export async function removeItemFromCacheRequest(props: {cacheId: number, key: string}) {
+export async function removeItemFromCacheRequest(props: { cacheId: number, key: string }) {
     logger.info("Remove item request for cache with id " + props.cacheId + "on key " + props.key)
     try {
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + props.cacheId + "/" + props.key, {
