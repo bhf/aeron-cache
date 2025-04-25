@@ -43,7 +43,7 @@ public class CacheSubscriptionService extends ObservingClusterRequestPublisher {
         if (subscribers != null) {
             var cacheId = String.valueOf(clearCacheResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.CLEAR_CACHE;
-            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, null, null)));
+            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, clearCacheResult.getRequestId())));
         }
     }
 
@@ -55,7 +55,7 @@ public class CacheSubscriptionService extends ObservingClusterRequestPublisher {
         if (subscribers != null) {
             var cacheId = String.valueOf(deleteCacheResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.DELETE_CACHE;
-            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, null, null)));
+            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, deleteCacheResult.getRequestId())));
         }
     }
 
@@ -68,7 +68,7 @@ public class CacheSubscriptionService extends ObservingClusterRequestPublisher {
             var cacheId = String.valueOf(removeCacheEntryResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.REMOVE_ITEM;
             var key = removeCacheEntryResult.getKey().value();
-            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, key, null)));
+            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, key, null, removeCacheEntryResult.getRequestId())));
         }
     }
 
@@ -82,7 +82,7 @@ public class CacheSubscriptionService extends ObservingClusterRequestPublisher {
             var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
             var key = cacheEntryUpdateResult.getKey().value();
             var value = cacheEntryUpdateResult.getValue().value();
-            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, key, value)));
+            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, cacheEntryUpdateResult.getRequestId())));
         }
     }
 
@@ -103,6 +103,7 @@ public class CacheSubscriptionService extends ObservingClusterRequestPublisher {
         } else {
             currentSubscribers = new CopyOnWriteArrayList<>();
             cacheSubscriptions.put(cacheId, currentSubscribers);
+            log.info("Sending request to cluster to subscribe to cache {}", cacheId);
             sendCacheSubscriptionRequest(cluster, requestId, cacheId, wsContext);
         }
 
@@ -147,6 +148,11 @@ public class CacheSubscriptionService extends ObservingClusterRequestPublisher {
         sendCacheUnsubscribeBlocking(cluster, cacheId, unsubscribeResult -> {
             if (unsubscribeResult.getStatus() != OperationStatus.SUCCESS) {
                 log.warn("Couldn't unsubscribe from cache {}, request ID {}", cacheId, requestId);
+            } else {
+                var wsSubscriptions = cacheSubscriptions.remove(cacheId);
+                if (wsSubscriptions != null) {
+                    log.info("Removed {} subscriptions to cacheId {}", wsSubscriptions.size(), cacheId);
+                }
             }
         }, requestId);
     }
@@ -192,6 +198,7 @@ public class CacheSubscriptionService extends ObservingClusterRequestPublisher {
                 if (wsConsumers.isEmpty()) {
                     log.info("Removed last websocket client subscription on cacheId: {}", cacheId);
                     sendCacheUnsubscribeRequest(cluster, requestId, cacheId);
+                    cacheSubscriptions.remove(cacheId);
                 }
             }
         });
