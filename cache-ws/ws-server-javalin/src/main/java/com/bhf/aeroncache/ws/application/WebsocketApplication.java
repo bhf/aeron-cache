@@ -44,6 +44,7 @@ public class WebsocketApplication {
     private static final String API_PREFIX = "/api/ws/v1/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
+    private static final String MULTI_SUB_API_PREFIX = "/api/ws/v1/caches/";
     private static AeronCacheListener client;
     private static CacheSubscriptionService subscriptionService;
     private static AeronCluster cluster;
@@ -116,15 +117,31 @@ public class WebsocketApplication {
 
         return Javalin.create(config)
                 .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
-                .ws(API_PREFIX+"/{cacheId}", WebsocketApplication::handleWs)
+                .ws(API_PREFIX + "/{cacheId}", WebsocketApplication::handleSingleCacheWs)
+                .ws(MULTI_SUB_API_PREFIX + "/{cacheIds}", WebsocketApplication::handleMultiCacheWs)
                 .get(LIVENESS, WebsocketApplication::handleGetLiveness)
                 .get(READINESS, WebsocketApplication::handleGetReadiness)
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
                 .start(PORT);
     }
 
-    private static void handleWs(WsConfig wsConfig) {
-        wsConfig.onConnect(WebsocketApplication::onWsConnect);
+    /**
+     * Setup websocket for subscriptions to a single cache.
+     * @param wsConfig
+     */
+    private static void handleSingleCacheWs(WsConfig wsConfig) {
+        wsConfig.onConnect(WebsocketApplication::onSingleCacheConnect);
+        wsConfig.onClose(WebsocketApplication::onWsClose);
+        wsConfig.onError(WebsocketApplication::onWsError);
+        wsConfig.onMessage(WebsocketApplication::onWsMessage);
+    }
+
+    /**
+     * Setup websocket for subscriptions to multiple caches.
+     * @param wsConfig
+     */
+    private static void handleMultiCacheWs(WsConfig wsConfig) {
+        wsConfig.onConnect(WebsocketApplication::onMultiCacheConnect);
         wsConfig.onClose(WebsocketApplication::onWsClose);
         wsConfig.onError(WebsocketApplication::onWsError);
         wsConfig.onMessage(WebsocketApplication::onWsMessage);
@@ -144,13 +161,43 @@ public class WebsocketApplication {
         subscriptionService.handleWsClosed(cluster, getRequestId(wsCloseContext.getUpgradeCtx$javalin()), wsCloseContext.sessionId());
     }
 
-    private static void onWsConnect(WsConnectContext wsConnectContext) {
+    /**
+     * Add subscription to a single cache to the
+     * websocket.
+     *
+     * @param wsConnectContext
+     */
+    private static void onSingleCacheConnect(WsConnectContext wsConnectContext) {
         try {
             wsConnectContext.enableAutomaticPings();
             var cacheId = Long.parseLong(wsConnectContext.pathParam("cacheId"));
             var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
             log.info("Subscription request for cacheId: {} on ws sessionId: {}", cacheId, wsConnectContext.sessionId());
             subscriptionService.subscribeToCache(cluster, wsConnectContext, cacheId, wsConnectContext.sessionId(), requestId, wsConnectContext::send);
+        } catch (NumberFormatException e) {
+            statsTracker.getTotalErrors().incrementAndGet();
+            log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
+            wsConnectContext.closeSession(WsCloseStatus.PROTOCOL_ERROR, "Couldn't parse cacheId");
+        }
+    }
+
+    /**
+     * Add subscriptions to multiple caches on the same
+     * websocket.
+     *
+     * @param wsConnectContext
+     */
+    private static void onMultiCacheConnect(WsConnectContext wsConnectContext) {
+        try {
+            wsConnectContext.enableAutomaticPings();
+            var cacheIds = wsConnectContext.pathParam("cacheIds");
+            String[] caches = cacheIds.split(",");
+            for (var c : caches) {
+                var cacheId = Long.parseLong(c);
+                var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
+                log.info("Subscription request for cacheId: {} on ws sessionId: {}", cacheId, wsConnectContext.sessionId());
+                subscriptionService.subscribeToCache(cluster, wsConnectContext, cacheId, wsConnectContext.sessionId(), requestId, wsConnectContext::send);
+            }
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();
             log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
@@ -218,6 +265,7 @@ public class WebsocketApplication {
     /**
      * Use the current span and trace Ids to build a requestId to
      * be sent to the Aeron Cache cluster.
+     *
      * @param ctx
      * @return
      */
