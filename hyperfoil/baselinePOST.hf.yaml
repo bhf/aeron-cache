@@ -1,0 +1,26 @@
+name: baseline-post
+http:
+  host: http://localhost:7070
+ergonomics: # Disable stopping the scenario on 4xx or 5xx response
+  autoRangeCheck: false
+usersPerSec: 200
+duration: 60
+scenario:
+  - postRequest:
+      - randomItem:
+          list:
+            - "kv12345678kv12345678"
+            - "kv1234567kv12345678"
+            - "kv123456kv12345678"
+            - "kv12345kv12345678"
+          toVar: randomValues
+      - httpRequest:
+          POST: /baselinePost
+          headers:
+            content-type: application/json
+          body: |
+            {
+                "cacheId" : "808",
+                "key" : "${randomValues}",
+                "value": "${randomValues}"
+            }

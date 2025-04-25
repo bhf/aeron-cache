@@ -1,0 +1,13 @@
+name: baseline-get
+http:
+  host: http://localhost:7070
+ergonomics: # Disable stopping the scenario on 4xx or 5xx response
+  autoRangeCheck: false
+usersPerSec: 200
+duration: 60
+scenario:
+  - getRequest:
+      - httpRequest:
+          GET: /baselineGet
+          headers:
+            content-type: application/json

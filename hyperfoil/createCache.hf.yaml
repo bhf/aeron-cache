@@ -1,0 +1,17 @@
+name: create-cache
+http:
+  host: http://localhost:7070
+ergonomics: # Disable stopping the scenario on 4xx or 5xx response
+  autoRangeCheck: false
+usersPerSec: 1
+duration: 1
+scenario:
+  - jsonBody:
+      - httpRequest:
+          POST: /api/v1/cache
+          headers:
+            content-type: application/json
+          body: |
+            {
+               "cacheId" : "808"
+            }
