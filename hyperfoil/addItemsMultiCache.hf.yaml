@@ -1,0 +1,31 @@
+name: add-item-multi
+http:
+  host: http://localhost:7070
+ergonomics: # Disable stopping the scenario on 4xx or 5xx response
+  autoRangeCheck: false
+usersPerSec: 100
+duration: 60
+scenario:
+  - addItemsToCache:
+      - randomItem:
+          list:
+            - "kv12345678kv12345678"
+            - "kv1234567kv12345678"
+            - "kv123456kv12345678"
+            - "kv12345kv12345678"
+          toVar: randomValues
+      - randomItem:
+          list:
+            - "808"
+            - "333"
+          toVar: randomCache
+      - httpRequest:
+          POST: /api/v1/cache/${randomCache}
+          headers:
+            content-type: application/json
+          body: |
+            {
+                "cacheId" : "${randomCache}",
+                "key" : "${randomValues}",
+                "value": "${randomValues}"
+            }
