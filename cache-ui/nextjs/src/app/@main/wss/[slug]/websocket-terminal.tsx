@@ -11,7 +11,7 @@ import {getLogger} from "@/lib/loggingUtil";
 
 const logger = getLogger("WSTerminalClient")
 
-export default function WebsocketTerminal(props: {url: any}) {
+export default function WebsocketTerminal(props: { url: any }) {
     const [messages, setMessages] = useState<string[]>([]);
 
     let webSocket: WebSocket;
@@ -23,9 +23,44 @@ export default function WebsocketTerminal(props: {url: any}) {
 
     useEffect(() => {
         webSocket.onmessage = (event) => {
-            setMessages((prevMessages) => [...prevMessages, event.data]);
+            logger.info("Received message", event.data);
+            const key = event.data.requestId
+            const data = JSON.parse(event.data)
+            const keyedMsg = JSON.stringify({...data, key: key});
+            setMessages((prevMessages) => [...prevMessages, keyedMsg]);
         };
     }, []);
+
+    useEffect(() => {
+        webSocket.onerror = (event) => {
+            const msg = "Websocket error occurred";
+            const key = Date.now()
+            const keyedMsg = JSON.stringify({msg, key: key})
+            logger.info(msg);
+            setMessages((prevMessages) => [...prevMessages, keyedMsg]);
+        };
+    }, []);
+
+    useEffect(() => {
+        webSocket.onopen = (event) => {
+            const msg = "Websocket connection opened"
+            const key = Date.now()
+            const keyedMsg = JSON.stringify({msg, key: key})
+            logger.info(msg);
+            setMessages((prevMessages) => [...prevMessages, keyedMsg]);
+        };
+    }, []);
+
+    useEffect(() => {
+        webSocket.onclose = (event) => {
+            const msg = "Websocket connection closed"
+            const key = Date.now()
+            const keyedMsg = JSON.stringify({msg, key: key})
+            logger.info(msg);
+            setMessages((prevMessages) => [...prevMessages, keyedMsg]);
+        };
+    }, []);
+
 
     return (
         <div>
