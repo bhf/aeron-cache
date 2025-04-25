@@ -1,9 +1,8 @@
 "use client"
 import {ConfirmingDialog} from "@/components/cache-actions/ConfirmingDialog";
-import {getCacheAPIURI, removeItemFromCacheRequest} from "@/lib/actions";
+import {removeItemFromCacheRequest} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
 import {toast} from "sonner";
-import {redirect} from "next/navigation";
 
 const logger = getLogger("RemoveItem")
 
@@ -11,11 +10,6 @@ interface RemoveCacheItemProps {
     cacheId: number
     itemKey: string
 }
-
-const headers = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json'
-};
 
 /**
  * Raise an alert that the item
@@ -72,31 +66,14 @@ export function RemoveCacheItem(props: RemoveCacheItemProps) {
         logger.info("Called remove cache item for cache: " + props.cacheId + ", on key: " + props.itemKey);
         const cacheId = props.cacheId
         const key = props.itemKey
+
         logger.info("Remove item request for cache with id " + cacheId + " on key " + key)
-
-        /*let rawResponse;
-        try {
-            rawResponse = await fetch(await getCacheAPIURI() + '/cache/' + cacheId + "/" + key, {
-                    method: 'DELETE',
-                    headers,
-                    body: JSON.stringify({cacheId, key}),
-                    cache: "no-cache"
-                },
-            );
-        } catch (e) {
-            logger.warn("Failed to send request to remove cache item", e)
-            toasterAlert()
-            return
-        }
-
-        const content = await rawResponse.json();*/
 
         const content = await removeItemFromCacheRequest({cacheId, key})
         logger.info("Got response from sending request to remove item on key " + key + ", response:" + content)
 
         if (content.operationStatus === "SUCCESS") {
             toastSuccess()
-            redirect("/cache/"+cacheId)
         } else {
             toastFailure(content.operationStatus)
         }

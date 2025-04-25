@@ -28,7 +28,7 @@ async function CacheTable() {
             },
         )
     } catch (err) {
-        logger.warn("Error whilst sending request to clear cache ", err);
+        logger.warn("Error whilst sending request to get cache items ", err);
         return
     }
 
@@ -66,7 +66,7 @@ export default async function Page() {
                         </CardContent>
                     </Card>
                 </div>
-                <div className="pb-6 px-6 md:w-1/2">
+                {/*<div className="pb-6 px-6 md:w-1/2">
                     <Card className={"shadow-lg"}>
                         <CardHeader>
                             <CardTitle>All Caches</CardTitle>
@@ -75,7 +75,7 @@ export default async function Page() {
                             <CacheTable/>
                         </CardContent>
                     </Card>
-                </div>
+                </div>*/}
             </div>
         </div>
     )
