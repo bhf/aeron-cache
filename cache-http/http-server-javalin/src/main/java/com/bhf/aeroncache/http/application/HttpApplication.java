@@ -38,11 +38,9 @@ import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -141,7 +139,25 @@ public class HttpApplication {
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
                 .get(READINESS, HttpApplication::handleGetReadiness)
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
+                .post("baselinePost", HttpApplication::postActionBaseline)
+                .get("baselineGet", HttpApplication::getActionBaseline)
                 .start(PORT);
+    }
+
+    /**
+     * Used to establish a performance baseline for POST requests.
+     * @param ctx
+     */
+    private static void postActionBaseline(Context ctx) {
+        statsTracker.getTotalOpsCount().incrementAndGet();
+    }
+
+    /**
+     * Used to establish a performance baseline for GET requests.
+     * @param ctx
+     */
+    private static void getActionBaseline(Context ctx) {
+        statsTracker.getTotalOpsCount().incrementAndGet();
     }
 
     private static void handleGetStatsRequest(Context ctx) {
@@ -153,15 +169,16 @@ public class HttpApplication {
             CompletableFuture.runAsync(() -> observingPublisher.getAllCacheStatsBlocking(cluster, c -> {
                 log.info("Got cache stats, requestId {}", c.getRequestId());
                 allCaches.clear();
-                int totalOps=statsTracker.getTotalOpsCount().get();
-                int totalCaches=0;
-                int totalItems=0;
+                int totalOps = statsTracker.getTotalOpsCount().get();
+                int totalCaches = 0;
+                int totalItems = 0;
 
                 var stats = c.getStats();
-                for(var x: stats){
+                for (var x : stats) {
                     totalCaches++;
-                    totalItems+=x.size;
+                    totalItems += x.size;
                     allCaches.add(x.getCacheId().value());
+                    cacheToSize.put(x.getCacheId().getValue(), x.size);
                 }
 
                 var statsTrackerStats = statsTracker.getCacheStats();
@@ -184,6 +201,7 @@ public class HttpApplication {
     }
 
     final static HashSet<Long> allCaches = new HashSet<>();
+    final static Map<Long, Long> cacheToSize = new ConcurrentHashMap<>();
 
     /**
      * Handle getting details of available caches. Currently only
@@ -195,7 +213,8 @@ public class HttpApplication {
         log.info("Got request to get all cache details");
         List<CacheDetails> cacheDetails = new ArrayList<>();
         for (Long l : allCaches) {
-            cacheDetails.add(new CacheDetails(l, 0));
+            var itemCount = cacheToSize.getOrDefault(l,0L);
+            cacheDetails.add(new CacheDetails(l, itemCount));
         }
         context.json(cacheDetails);
     }
