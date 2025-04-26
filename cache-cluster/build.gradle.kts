@@ -15,6 +15,7 @@ dependencies {
     implementation(libs.opentelemetry.api)
     implementation(libs.opentelemetry.sdk)
     implementation(libs.opentelemetry.exporter.otlp)
+    implementation("com.lmax:disruptor:3.4.2")
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit)
