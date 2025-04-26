@@ -12,7 +12,7 @@ spec:
         sizeLimit: 1Gi
       name: shm
   containers:
-    - name: aeroncache-http
+    - name: aeroncache-ws
       image: docker.io/library/aeroncache-ws
       imagePullPolicy: Never
       ports:

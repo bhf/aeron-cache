@@ -33,7 +33,7 @@ spec:
           image: docker.io/library/aeroncache-ws
           imagePullPolicy: Never
           ports:
-            - containerPort: 7070
+            - containerPort: 7071
               protocol: TCP
           volumeMounts:
             - mountPath: /dev/shm
@@ -43,4 +43,4 @@ spec:
               value: 127.0.0.1
           envFrom:
             - configMapRef:
-                name: aeroncache-http-config
+                name: aeroncache-ws-config
