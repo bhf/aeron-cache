@@ -14,7 +14,27 @@ docker compose build
 docker compose up
 ```
 
+* Frontend on localhost:3000
+* HTTP API on localhost:7070
+* Websocket on localhost:7071
+* Jaeger tracing on localhost:16686
+* Prometheus on localhost:9090
 
+### Subscribe to Multiple Caches over Websocket
+
+To subscribe to cache updates on caches with IDs 808 and 333:
+
+```bash
+uwsc http://localhost:7071/api/ws/v1/caches/808,333
+```
+
+### UI
+
+![img.png](cache-ui/ui-main-page.png)
+
+![img.png](cache-ui/ui-cache-view.png)
+
+![img.png](cache-ui/ui-cache-ws.png)
 
 ### Structure
 
