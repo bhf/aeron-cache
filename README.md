@@ -4,6 +4,20 @@
 
 A clustered cache built using Aeron Cluster for RAFT.
 
+### How To Run
+
+```bash
+git clone https://github.com/bhf/aeron-cache
+cd aeron-cache/
+./gradlew build
+docker compose build
+docker compose up
+```
+
+
+
+### Structure
+
 __cache-client__ - An Aeron cluster based client for the cache.
 
 __cache-cluster__ - The core cache cluster service.
@@ -20,188 +34,22 @@ __cache-ui__ - A UI that uses the REST API provided by cache-http-server
 
 __k8s__ - Helm charts and other K8s resources
 
-## How To Run
-
-### K8s and MiniKube
-
-```bash
-kubectl run aeroncache-http --image=docker.io/library/aeroncache-http --port=7070 --image-pull-policy Never
-```
-
-You can also see the k8s folders in each module.
-
-Example output for a working AeronCache Cluster node:
-
-```
-optimus@optimus-lab:~/Workspaces/aeron-cache/cache-cluster/k8s$ kubectl logs  aeroncache-cluster-0 -f
-Launching AeronCache Cluster Node
-CLUSTER_NODE=null
-CLUSTER_ADDRESSES=aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local
-CLUSTER_ADDRESSES=aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local
-POD_NAME=aeroncache-cluster-0
-Using pod name: aeroncache-cluster-0, nodeId: 0 cluster addresses: [aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local, aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local, aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local]
-This node's hostname:aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local
-user.dir=/tmp/node0
-AeronDirName=/dev/shm/aeron-root-0-driver
-Awaiting DNS Resolution
-Waiting 5 seconds for DNS to be registered...
-Resolved aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local/10.244.0.83
-Waiting 5 seconds for DNS to be registered...
-Resolved aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local/10.244.0.84
-Waiting 5 seconds for DNS to be registered...
-Resolved aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local/10.244.0.82
-Launching cluster node now...
-[0] Started Cluster Node on aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local...
-15:19:09.916 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - On start called on cluster service
-15:19:10.277 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Node null has new role of LEADER
-16:38:56.656 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Client session open ClientSession{id=1, responseStreamId=102, responseChannel='aeron:udp?endpoint=10.244.0.95:58531', encodedPrincipal=[], responsePublication=Publication{originalRegistrationId=80, registrationId=81, isClosed=false, isConnected=true, initialTermId=-1868010605, termBufferLength=16777216, sessionId=-1584221432, streamId=102, channel='aeron:udp?endpoint=10.244.0.95:58531', position=96}, isClosing=false} on node null
-```
-
-Example output for a working AeronCache HTTP adapter:
-
-```
-Starting HTTP interface
-[main] INFO io.javalin.Javalin - Starting Javalin ...
-[main] INFO org.eclipse.jetty.server.Server - jetty-11.0.24; built: 2024-08-26T18:11:22.448Z; git: 5dfc59a691b748796f922208956bd1f2794bcd16; jvm 21+35-2513
-[main] INFO org.eclipse.jetty.server.session.DefaultSessionIdManager - Session workerName=node0
-[main] INFO org.eclipse.jetty.server.handler.ContextHandler - Started o.e.j.s.ServletContextHandler@4c51cf28{/,null,AVAILABLE}
-[main] INFO org.eclipse.jetty.server.AbstractConnector - Started ServerConnector@4e928fbf{HTTP/1.1, (http/1.1)}{0.0.0.0:7070}
-[main] INFO org.eclipse.jetty.server.Server - Started Server@404bbcbd{STARTING}[11.0.24,sto=0] @762ms
-[main] INFO io.javalin.Javalin - 
-       __                  ___           _____
-      / /___ __   ______ _/ (_)___      / ___/
- __  / / __ `/ | / / __ `/ / / __ \    / __ \
-/ /_/ / /_/ /| |/ / /_/ / / / / / /   / /_/ /
-\____/\__,_/ |___/\__,_/_/_/_/ /_/    \____/
-
-       https://javalin.io/documentation
-
-[main] INFO io.javalin.Javalin - Javalin started in 161ms \o/
-[main] INFO io.javalin.Javalin - Listening on http://localhost:7070/
-Starting AeronCache Cluster Interface
-[main] INFO io.javalin.Javalin - You are running Javalin 6.4.0 (released December 17, 2024).
-POD_ADDRESS=127.0.0.1
-CLUSTER_ADDRESSES=aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local
-Found eth0 interface: name:eth0 (eth0)
-Returning IP4 address: 10.244.0.95
-Awaiting DNS Resolution
-Waiting 5 seconds for DNS to be registered...
-Resolved aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local/10.244.0.83
-Waiting 5 seconds for DNS to be registered...
-Resolved aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local/10.244.0.84
-Waiting 5 seconds for DNS to be registered...
-Resolved aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local to aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local/10.244.0.82
-DNS Resolution Complete. Building cluster connection now.
-Building cluster connection...
-16:42:16.429 [JettyServerThreadPool-36] INFO  com.bhf.aeroncache.http.application.HttpApplication - Got get item request on cacheId 321, key key
-```
-
-### Application
-1. Run ClusterLauncher to spin up a 3 node cluster.
-2. Run SampleClientUsage.
-
-### Docker
-
-To start a 3 node cluster and the sample client application:
-
-```
-docker compose up
-```
-
-Expected output:
-
-```bash
-✔ Network aeron-cache_internal_bus      Created                                                                                                                          0.5s 
- ✔ Container aeron-cache-node2-1         Created                                                                                                                         10.1s 
- ✔ Container aeron-cache-node0-1         Created                                                                                                                         10.0s 
- ✔ Container aeron-cache-node1-1         Created                                                                                                                         10.0s 
- ✔ Container aeron-cache-cache-client-1  Created                                                                                                                          0.8s 
-Attaching to cache-client-1, node0-1, node1-1, node2-1
-node0-1         | HOSTNAMES: [172.16.202.2, 172.16.202.3, 172.16.202.4], NODEID: 0
-node0-1         | [0] Started Cluster Node on 172.16.202.2...
-node0-1         | 07:55:20.856 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - On start called on cluster service
-node2-1         | HOSTNAMES: [172.16.202.2, 172.16.202.3, 172.16.202.4], NODEID: 2
-node2-1         | [2] Started Cluster Node on 172.16.202.4...
-node2-1         | 07:55:21.961 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - On start called on cluster service
-node1-1         | HOSTNAMES: [172.16.202.2, 172.16.202.3, 172.16.202.4], NODEID: 1
-node1-1         | [1] Started Cluster Node on 172.16.202.3...
-node1-1         | 07:55:22.726 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - On start called on cluster service
-cache-client-1  | HOSTNAMES: [172.16.202.2, 172.16.202.3, 172.16.202.4]
-node0-1         | 07:55:22.886 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Node null has new role of LEADER
-cache-client-1  | Sending request to create cache 1736754923534
-node1-1         | 07:55:23.550 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Client session open ClientSession{id=1, responseStreamId=102, responseChannel='aeron:udp?endpoint=172.16.202.5:46532', encodedPrincipal=[], responsePublication=null, isClosing=false} on node null
-node2-1         | 07:55:23.550 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Client session open ClientSession{id=1, responseStreamId=102, responseChannel='aeron:udp?endpoint=172.16.202.5:46532', encodedPrincipal=[], responsePublication=null, isClosing=false} on node null
-node2-1         | 07:55:23.551 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Got create cache message for cache id 1736754923534
-node1-1         | 07:55:23.551 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Got create cache message for cache id 1736754923534
-node0-1         | 07:55:23.554 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Client session open ClientSession{id=1, responseStreamId=102, responseChannel='aeron:udp?endpoint=172.16.202.5:46532', encodedPrincipal=[], responsePublication=Publication{originalRegistrationId=78, registrationId=79, isClosed=false, isConnected=true, initialTermId=-1020204555, termBufferLength=16777216, sessionId=333181510, streamId=102, channel='aeron:udp?endpoint=172.16.202.5:46532', position=96}, isClosing=false} on node null
-node0-1         | 07:55:23.554 [clustered-service-0-0] INFO  com.bhf.aeroncache.services.cluster.AbstractCacheClusterService - Got create cache message for cache id 1736754923534
-cache-client-1  | Got client side message with TID 6
-cache-client-1  | Created cache 1736754923534
-cache-client-1  | Cache created with id 1736754923534
-cache-client-1  | Sending request to add cache entry on cache 1736754923534
-cache-client-1  | Got client side message with TID 7
-cache-client-1  | Got cache entry created message for cache 1736754923534, key key1
-cache-client-1  | Cache entry created cache 1736754923534
-cache-client-1  | Sending request to get cache entry on cache 1736754923534
-cache-client-1  | Got client side message with TID 12
-cache-client-1  | Got cache entry result from cache 1736754923534 with key key1, value {msgType: "D"}
-cache-client-1  | Cache entry GET on cache 1736754923534
-cache-client-1  | Sending request to remove cache entry on cache 1736754923534 with key: key1
-cache-client-1  | Got client side message with TID 8
-cache-client-1  | Got cache entry removed for cache 1736754923534, key key1
-cache-client-1  | Cache entry removed on cache 1736754923534
-cache-client-1  | Sending request to get cache entry on cache 1736754923534
-cache-client-1  | Got client side message with TID 12
-cache-client-1  | Got cache entry result from cache 1736754923534 with key key1, value 
-cache-client-1  | Cache entry GET on cache 1736754923534
-cache-client-1  | Sending request to clear cache on cache 1736754923534
-cache-client-1  | Got client side message with TID 9
-cache-client-1  | Got cache cleared on cache 1736754923534
-cache-client-1  | Cache cleared on cache 1736754923534
-cache-client-1  | Sending request to delete cache on cache 1736754923534
-cache-client-1  | Got client side message with TID 10
-cache-client-1  | Got cache deleted on cache 1736754923534
-cache-client-1  | Cache deleted on cache 1736754923534
+__hyperfoil__ - Some basic hyperfoil tests
 
 
-```
-
-## Frontend
-
-![img.png](cache-ui/ui-main-page.png)
-
-![img.png](cache-ui/ui-cache-view.png)
-
-### JUnit Tests
-
-```bash
-./gradlew test
-```
-
-### JMH Tests
-
-```bash
-./gradlew jmh
-```
 
 ### Overview
 
 #### Message Flow Overview
 
-![img_1.png](docs/images/msgFlow.png)
+![img_1.png](docs/images/msgFlow2.png)
 
 #### Cluster Service Workflow
 
-![img.png](docs/images/cluster-flow.png)
+![img.png](docs/images/cluster-flow2.png)
+
+
 
 ## Future Work
-
-* Cache keys and values to be SBE encoded/decoded
-* Cluster side queries via serializable consumers
-* Annotation processor
-* Startup and periodic snapshot handling 
-* Off heap cache implementation
-* Activation and passivation strategies
-* Custom key entropy source
 
 https://sanjdev.atlassian.net/jira/software/projects/AC/boards/22
