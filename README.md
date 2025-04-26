@@ -21,6 +21,7 @@ docker compose up
 * Websocket on localhost:7071
 * Jaeger tracing on localhost:16686
 * Prometheus on localhost:9090
+* cAdvisor on localhost:8080
 
 ### Subscribe to Multiple Caches over Websocket
 
