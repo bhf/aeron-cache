@@ -4,7 +4,7 @@
 
 A clustered cache built using Aeron Cluster, Agrona and SBE.
 
-*__Hand crafted without LLMs.__*
+*__Hand crafted without LLMs or Agents.__*
 
 ## How To Run
 
