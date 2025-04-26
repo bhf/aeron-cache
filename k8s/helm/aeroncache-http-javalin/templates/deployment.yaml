@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "aeronCacheChart.fullname" . }}
+  name: {{ include "aeroncache-http-javalin.fullname" . }}
   labels:
-    {{- include "aeronCacheChart.labels" . | nindent 4 }}
+    {{- include "aeroncache-http-javalin.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "aeronCacheChart.selectorLabels" . | nindent 6 }}
+      {{- include "aeroncache-http-javalin.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -20,7 +20,7 @@ spec:
       checksum/configmap: {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | sha256sum }}
       checksum/secrets: {{ printf "environments/secrets.%s.yaml" .Values.env | .Files.Get | sha256sum }}
       labels:
-        {{- include "aeronCacheChart.labels" . | nindent 8 }}
+        {{- include "aeroncache-http-javalin.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -29,7 +29,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "aeronCacheChart.serviceAccountName" . }}
+      serviceAccountName: {{ include "aeroncache-http-javalin.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}

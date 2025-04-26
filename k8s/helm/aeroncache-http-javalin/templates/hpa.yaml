@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "aeronCacheChart.fullname" . }}
+  name: {{ include "aeroncache-http-javalin.fullname" . }}
   labels:
-    {{- include "aeronCacheChart.labels" . | nindent 4 }}
+    {{- include "aeroncache-http-javalin.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "aeronCacheChart.fullname" . }}
+    name: {{ include "aeroncache-http-javalin.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

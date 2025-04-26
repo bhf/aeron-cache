@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "aeronCacheChart.fullname" . }}
+  name: {{ include "aeroncache-cluster.fullname" . }}
   labels:
-    {{- include "aeronCacheChart.labels" . | nindent 4 }}
+    {{- include "aeroncache-cluster.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   clusterIP: {{ .Values.service.clusterIP }}
   selector:
-    {{- include "aeronCacheChart.selectorLabels" . | nindent 4 }}
+    {{- include "aeroncache-cluster.selectorLabels" . | nindent 4 }}

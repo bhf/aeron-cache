@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "aeronCacheChart.fullname" . }}
+  name: {{ include "aeroncache-cluster.fullname" . }}
   labels:
-    {{- include "aeronCacheChart.labels" . | nindent 4 }}
+    {{- include "aeroncache-cluster.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -35,7 +35,7 @@ spec:
             {{- end }}
             backend:
               service:
-                name: {{ include "aeronCacheChart.fullname" $ }}
+                name: {{ include "aeroncache-cluster.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
           {{- end }}
