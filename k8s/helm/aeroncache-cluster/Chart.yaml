@@ -1,5 +1,5 @@
 apiVersion: v2
-name: AeronCache Cluster
+name: aeroncache-cluster
 description: A Helm chart for Aeron Cache Cluster.
 type: application
 version: 0.0.1
