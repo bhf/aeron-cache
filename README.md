@@ -2,7 +2,9 @@
 
 # Aeron Cache
 
-A clustered cache built using Aeron Cluster for RAFT.
+A clustered cache built using Aeron Cluster, Agrona and SBE.
+
+*__Hand crafted without LLMs.__*
 
 ## How To Run
 
