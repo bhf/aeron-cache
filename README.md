@@ -4,7 +4,7 @@
 
 A clustered cache built using Aeron Cluster for RAFT.
 
-### How To Run
+## How To Run
 
 ```bash
 git clone https://github.com/bhf/aeron-cache
@@ -28,7 +28,7 @@ To subscribe to cache updates on caches with IDs 808 and 333:
 uwsc http://localhost:7071/api/ws/v1/caches/808,333
 ```
 
-### UI
+## UI
 
 ![img.png](cache-ui/ui-main-page.png)
 
@@ -36,7 +36,7 @@ uwsc http://localhost:7071/api/ws/v1/caches/808,333
 
 ![img.png](cache-ui/ui-cache-ws.png)
 
-### Structure
+## Structure
 
 __cache-client__ - An Aeron cluster based client for the cache.
 
@@ -58,13 +58,13 @@ __hyperfoil__ - Some basic hyperfoil tests
 
 
 
-### Overview
+## Overview
 
-#### Message Flow Overview
+### Message Flow Overview
 
 ![img_1.png](docs/images/msgFlow2.png)
 
-#### Cluster Service Workflow
+### Cluster Service Workflow
 
 ![img.png](docs/images/cluster-flow2.png)
 
