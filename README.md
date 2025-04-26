@@ -2,9 +2,9 @@
 
 # Aeron Cache
 
-A clustered cache built using Aeron Cluster, Agrona and SBE.
-
 *__Hand crafted without LLMs or Agents.__*
+
+A clustered cache built using Aeron, Agrona and SBE. UI with NextJS. Includes HTTP and websocket interfaces with support for multi-cache joins over websocket. Prometheus and tracing with Jaeger.
 
 ## How To Run
 
