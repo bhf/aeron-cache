@@ -74,5 +74,6 @@ __hyperfoil__ - Some basic hyperfoil tests
 
 * Persisting and loading from an Image
 * Abstraction for configurable Map implementation (off heap maps)
+* Industrialization and cache-ops
 
 https://sanjdev.atlassian.net/jira/software/projects/AC/boards/22
