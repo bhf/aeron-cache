@@ -8,6 +8,7 @@ A clustered cache built using Aeron, Agrona and SBE. UI with NextJS, Shadcn and 
 
 ## How To Run
 
+### Docker
 ```bash
 git clone https://github.com/bhf/aeron-cache
 cd aeron-cache/
@@ -23,7 +24,12 @@ docker compose up
 * Prometheus on localhost:9090
 * cAdvisor on localhost:8080
 
-### Subscribe to Multiple Caches over Websocket
+### Helm and K8s
+
+You can see example k8s config in folders called "k8s" in application modules.
+In ```/k8s/helm/``` there are some Helm charts which are a work in progress.
+
+## Subscribe to Multiple Caches over Websocket
 
 To subscribe to cache updates on caches with IDs 808 and 333:
 
@@ -55,7 +61,7 @@ __cache-messages-http__ - Messages used by HTTP interfaces to the cache.
 
 __cache-ui__ - A UI that uses the REST API provided by cache-http-server
 
-__k8s__ - Helm charts and other K8s resources
+__k8s__ - Helm charts and other K8s resources (work in progress)
 
 __hyperfoil__ - Some basic hyperfoil tests
 

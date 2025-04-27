@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aeroncache-cluster-configmap
+  name: aeroncache-cluster-config
   namespace: {{ .Values.namespace }}
 data:
   DNS_DELAY: "true"
