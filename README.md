@@ -53,7 +53,9 @@ __cache-cluster__ - The core cache cluster service.
 
 __cache-common__ - Common entities and classes used in cache implementations.
 
-__cache-http__ - REST interfaces around the cache-client. Various implementations including Javalin.
+__cache-http__ - REST interfaces around the cache-client.
+
+__cache-ws__ - Websocket interfaces around the cache-client.
 
 __cache-messages-sbe__ - Core SBE messages used by the cache.
 
