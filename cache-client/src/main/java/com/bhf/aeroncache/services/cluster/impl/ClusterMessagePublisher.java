@@ -100,12 +100,12 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
         if (useTryClaim) {
             bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE*2, bufferClaim);
+            cluster.tryClaim(BASE_TRY_CLAIM_SIZE, bufferClaim);
             msgBuffer = bufferClaim.buffer();
             msgBufferOffset = bufferClaim.offset();
         }
 
-        addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+        addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
                 .cacheId(cacheId)
                 .requestId(requestId)
                 .key(key)
@@ -201,6 +201,10 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         clearCacheEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         publishClearCache(cluster, clearCacheEncoder, headerEncoder, msgBuffer, msgBufferOffset);
+
+        if (bufferClaim != null) {
+            bufferClaim.commit();
+        }
         log.info("Sent clear cache request on cache {} with request Id {}", cacheId, requestId);
     }
 
@@ -428,12 +432,16 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         cacheUnsubscribeRequestEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         publishCacheUnsubscribe(cluster, cacheUnsubscribeRequestEncoder, headerEncoder, msgBuffer, msgBufferOffset);
+
+        if (bufferClaim != null) {
+            bufferClaim.commit();
+        }
         log.info("Sent cache unsubscribe request on cache {} with request Id {}", cacheId, requestId);
     }
 
     private void publishCacheUnsubscribe(AeronCluster cluster, CacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
         idleStrategy.reset();
-        while (cluster.offer(msgBuffer, 0, cacheUnsubscribeRequestEncoder.encodedLength() + header.encodedLength()) < 0) {
+        while (cluster.offer(msgBuffer, msgBufferOffset, cacheUnsubscribeRequestEncoder.encodedLength() + header.encodedLength()) < 0) {
             idleStrategy.idle(cluster.pollEgress());
         }
     }
@@ -454,6 +462,10 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
         getCacheStatsEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
                 .requestId(requestId);
         publishGetAllCacheStats(cluster, getCacheStatsEncoder, headerEncoder, msgBuffer, msgBufferOffset);
+
+        if (bufferClaim != null) {
+            bufferClaim.commit();
+        }
         log.info("Sent request to get all cache with request Id {}", requestId);
     }
 
