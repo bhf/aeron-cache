@@ -8,25 +8,25 @@ import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * A cache implementation backed by an on heap {@link HashMap}.
+ * A cache implementation backed by a Java {@link Map} implementation.
  *
  * @param <I> The type the cache is indexed on.
  * @param <K> The type of the key.
  * @param <V> The type of the value.
  */
 @Log4j2
-public class HashMapCache<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCache<I, K, V> {
+public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCache<I, K, V> {
 
-    final Map<K, V> cache = new HashMap<>();
+    final Map<K, V> cache;
     private final V emptyValue;
 
-    public HashMapCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier) {
+    public MapCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, Supplier<Map<K,V>> mapSupplier) {
         super(indexSupplier, keySupplier, valueSupplier);
+        this.cache = mapSupplier.get();
         this.emptyValue = valueSupplier.get();
     }
 

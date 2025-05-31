@@ -1,8 +1,9 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.services.cache.impl.HashMapCache;
+import com.bhf.aeroncache.services.cache.impl.MapCache;
 
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
@@ -13,7 +14,7 @@ import java.util.function.Supplier;
  * @param <V> The type of the value for cache entries which this factory will create.
  */
 public class CacheFactory<I extends Reusable, K extends Reusable, V extends Reusable> {
-    public Cache<I, K, V> getNewCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier) {
-        return new HashMapCache<I, K, V>(indexSupplier, keySupplier, valueSupplier);
+    public Cache<I, K, V> getNewCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, Supplier<Map<K, V>> mapSupplier) {
+        return new MapCache<I, K, V>(indexSupplier, keySupplier, valueSupplier, mapSupplier);
     }
 }
