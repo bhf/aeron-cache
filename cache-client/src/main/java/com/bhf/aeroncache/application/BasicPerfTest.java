@@ -50,6 +50,7 @@ public class BasicPerfTest {
                 });
     }
 
+    static int c = 0;
     /**
      * Send messages to the cache cluster.
      *
@@ -61,7 +62,7 @@ public class BasicPerfTest {
      */
     private static void sendMessagesToCache(AeronCacheListener client, AeronCluster cluster, ObservingClusterRequestPublisher publisher, int cacheId, String payloadValue) {
         var ts = System.currentTimeMillis();
-        var requestId = String.valueOf(ts);
+        var requestId = String.valueOf(c++);
         lastSent = ts;
         publisher.addCacheEntryBlocking(cluster, requestId, cacheId, "key1", payloadValue);
     }
@@ -98,8 +99,8 @@ public class BasicPerfTest {
             observingPublisher.sendCreateCacheBlocking(aeronCluster, UUID.randomUUID().toString(), cacheId);
 
             var totalToSend = 10_000;
-            //var payloadSizes = new Integer[]{5, 10, 25};
-            var payloadSizes = new Integer[]{5, 10, 25, 50, 100, 200, 400, 1000};
+            var payloadSizes = new Integer[]{5};
+            //var payloadSizes = new Integer[]{5, 10, 25, 50, 100, 200, 400, 1000};
             //var payloadSizes = new Integer[]{2000, 5000, 10000};
             //var payloadSizes = new Integer[]{20000, 50000, 100000};
 
