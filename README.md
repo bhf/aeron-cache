@@ -84,7 +84,6 @@ __hyperfoil__ - Some basic hyperfoil tests
 ## Future Work
 
 * Persisting and loading from an Image
-* Abstraction for configurable Map implementation (off heap maps)
 * Non-clustered mode (single node cache)
 * Industrialization and cache-ops
 
