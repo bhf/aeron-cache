@@ -16,13 +16,13 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-class HashMapCacheTest {
+class MapCacheTest {
 
-    HashMapCache<ReusableLong, ReusableString, ReusableString> cache;
+    MapCache<ReusableLong, ReusableString, ReusableString> cache;
 
     @BeforeEach
     void setup() {
-        cache = new HashMapCache<>(SupplierUtils.longSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier);
+        cache = new MapCache<>(SupplierUtils.longSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.hashmapSupplier);
     }
 
     /**
@@ -62,7 +62,7 @@ class HashMapCacheTest {
 
     /**
      * Parameter method source for
-     * {@linkplain HashMapCacheTest#testAdd(String, String)}.
+     * {@linkplain MapCacheTest#testAdd(String, String)}.
      *
      * @return A stream of arguments for the test.
      */

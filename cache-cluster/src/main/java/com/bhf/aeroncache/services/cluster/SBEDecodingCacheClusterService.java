@@ -47,7 +47,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
 
     public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService) {
-        super(SupplierUtils.longSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, nodeId, tracingService);
+        super(SupplierUtils.longSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.hashmapSupplier, nodeId, tracingService);
     }
 
     @Override

@@ -21,6 +21,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -60,7 +61,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final CacheSubscriptionResult<I> subscribeResult;
     final CacheUnsubscribeResult<I> unsubscribeResult;
 
-    protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, String nodeId, CacheTracingService tracingService) {
+    protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, Supplier<Map<K, V>> mapSupplier, String nodeId, CacheTracingService tracingService) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(indexSupplier.get());
         this.clearCacheRequestDetails = new ClearCacheRequestDetails<>(indexSupplier.get());
         this.removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get());
@@ -74,7 +75,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.cacheUnsubscribeRequestDetails = new CacheUnsubscribeRequestDetails<>(indexSupplier.get());
         this.subscribeResult = new CacheSubscriptionResult<>(indexSupplier.get());
         this.unsubscribeResult = new CacheUnsubscribeResult<>(indexSupplier.get());
-        this.cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer(), indexSupplier, keySupplier, valueSupplier);
+        this.cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer(), indexSupplier, keySupplier, valueSupplier, mapSupplier);
         this.nodeId = nodeId;
         this.tracingService = tracingService;
         this.indexSupplier = indexSupplier;

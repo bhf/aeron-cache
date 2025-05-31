@@ -7,6 +7,7 @@ import com.bhf.aeroncache.services.cache.Cache;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
@@ -21,9 +22,11 @@ import java.util.function.Supplier;
 public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCacheManager<I, K, V> {
 
     private final HashMap<I, Cache<I, K, V>> caches = new HashMap<>();
+    private final Supplier<Map<K,V>> mapSupplier;
 
-    public AbstractHashMapCacheManager(Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier, Supplier<V> cacheValueSupplier) {
+    public AbstractHashMapCacheManager(Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier, Supplier<V> cacheValueSupplier, Supplier<Map<K, V>> mapSupplier) {
         super(cacheIndexSupplier, cacheKeySupplier, cacheValueSupplier);
+        this.mapSupplier = mapSupplier;
     }
 
     @Override
@@ -57,7 +60,7 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
             return cacheCreationResult;
         }
 
-        var cache = cacheFactory.getNewCache(indexSupplier, keySupplier, valueSupplier);
+        var cache = cacheFactory.getNewCache(indexSupplier, keySupplier, valueSupplier, mapSupplier);
         I newKey = indexSupplier.get();
         newKey.copyFrom(cacheId);
         caches.put(newKey, cache);
