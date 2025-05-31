@@ -22,7 +22,7 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
     public static final int BASE_TRY_CLAIM_SIZE = 512;
     private final MutableDirectBuffer msgBuffer = new ExpandableDirectByteBuffer();
-    private boolean useTryClaim = true;
+    private boolean useTryClaim = false;
 
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
