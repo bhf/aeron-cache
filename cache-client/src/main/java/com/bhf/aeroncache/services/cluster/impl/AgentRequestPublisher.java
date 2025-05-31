@@ -3,6 +3,7 @@ package com.bhf.aeroncache.services.cluster.impl;
 import com.bhf.aeroncache.messages.*;
 import io.aeron.cluster.client.AeronCluster;
 import lombok.RequiredArgsConstructor;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 /**
@@ -15,56 +16,56 @@ public class AgentRequestPublisher extends ClusterMessagePublisher {
     final ManyToOneRingBuffer rb;
 
     @Override
-    void publishAddCachEntry(AeronCluster cluster, AddCacheEntryEncoder addCacheEntry, MessageHeaderEncoder header) {
+    void publishAddCachEntry(AeronCluster cluster, AddCacheEntryEncoder addCacheEntry, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
         var msgLength = addCacheEntry.encodedLength() + header.encodedLength();
         var index = rb.tryClaim(addCacheEntry.sbeTemplateId(), msgLength);
         var destBuffer = rb.buffer();
-        destBuffer.putBytes(index, addCacheEntry.buffer(), 0, msgLength);
+        destBuffer.putBytes(index, addCacheEntry.buffer(), msgBufferOffset, msgLength);
         rb.commit(index);
     }
 
     @Override
-    public void publishCreateCache(AeronCluster cluster, CreateCacheEncoder createCache, MessageHeaderEncoder header) {
+    public void publishCreateCache(AeronCluster cluster, CreateCacheEncoder createCache, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
         var msgLength = createCache.encodedLength() + header.encodedLength();
         var index = rb.tryClaim(createCache.sbeTemplateId(), msgLength);
         var destBuffer = rb.buffer();
-        destBuffer.putBytes(index, createCache.buffer(), 0, msgLength);
+        destBuffer.putBytes(index, createCache.buffer(), msgBufferOffset, msgLength);
         rb.commit(index);
     }
 
     @Override
-    void publishGetCacheEntry(AeronCluster cluster, GetCacheEntryEncoder getCacheEntry, MessageHeaderEncoder header) {
+    void publishGetCacheEntry(AeronCluster cluster, GetCacheEntryEncoder getCacheEntry, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
         var msgLength = getCacheEntry.encodedLength() + header.encodedLength();
         var index = rb.tryClaim(getCacheEntry.sbeTemplateId(), msgLength);
         var destBuffer = rb.buffer();
-        destBuffer.putBytes(index, getCacheEntry.buffer(), 0, msgLength);
+        destBuffer.putBytes(index, getCacheEntry.buffer(), msgBufferOffset, msgLength);
         rb.commit(index);
     }
 
     @Override
-    void publishClearCache(AeronCluster cluster, ClearCacheEncoder clearCache, MessageHeaderEncoder header) {
+    void publishClearCache(AeronCluster cluster, ClearCacheEncoder clearCache, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
         var msgLength = clearCache.encodedLength() + header.encodedLength();
         var index = rb.tryClaim(clearCache.sbeTemplateId(), msgLength);
         var destBuffer = rb.buffer();
-        destBuffer.putBytes(index, clearCache.buffer(), 0, msgLength);
+        destBuffer.putBytes(index, clearCache.buffer(), msgBufferOffset, msgLength);
         rb.commit(index);
     }
 
     @Override
-    void publishDeleteCache(AeronCluster cluster, DeleteCacheEncoder deleteCache, MessageHeaderEncoder header) {
+    void publishDeleteCache(AeronCluster cluster, DeleteCacheEncoder deleteCache, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
         var msgLength = deleteCache.encodedLength() + header.encodedLength();
         var index = rb.tryClaim(deleteCache.sbeTemplateId(), msgLength);
         var destBuffer = rb.buffer();
-        destBuffer.putBytes(index, deleteCache.buffer(), 0, msgLength);
+        destBuffer.putBytes(index, deleteCache.buffer(), msgBufferOffset, msgLength);
         rb.commit(index);
     }
 
     @Override
-    void publishRemoveCacheEntry(AeronCluster cluster, RemoveCacheEntryEncoder removeCacheEntry, MessageHeaderEncoder header) {
+    void publishRemoveCacheEntry(AeronCluster cluster, RemoveCacheEntryEncoder removeCacheEntry, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
         var msgLength = removeCacheEntry.encodedLength() + header.encodedLength();
         var index = rb.tryClaim(removeCacheEntry.sbeTemplateId(), msgLength);
         var destBuffer = rb.buffer();
-        destBuffer.putBytes(index, removeCacheEntry.buffer(), 0, msgLength);
+        destBuffer.putBytes(index, removeCacheEntry.buffer(), msgBufferOffset, msgLength);
         rb.commit(index);
     }
 }
