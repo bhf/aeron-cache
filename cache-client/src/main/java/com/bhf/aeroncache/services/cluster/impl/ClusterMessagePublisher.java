@@ -100,7 +100,7 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
         if (useTryClaim) {
             bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE, bufferClaim);
+            cluster.tryClaim(BASE_TRY_CLAIM_SIZE*2, bufferClaim);
             msgBuffer = bufferClaim.buffer();
             msgBufferOffset = bufferClaim.offset();
         }
