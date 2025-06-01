@@ -17,6 +17,19 @@ docker compose build
 docker compose up
 ```
 
+You should see something like this once the UI is ready:
+
+```bash
+cache-ws-client-1       | Starting Websocket interface
+cache-http-client-1     | Starting HTTP interface
+cache-ui-1              |    ▲ Next.js 15.2.3
+cache-ui-1              |    - Local:        http://localhost:3000
+cache-ui-1              |    - Network:      http://0.0.0.0:3000
+cache-ui-1              | 
+cache-ui-1              |  ✓ Starting...
+
+```
+
 * Frontend on localhost:3000
 * HTTP API on localhost:7070
 * Websocket on localhost:7071
