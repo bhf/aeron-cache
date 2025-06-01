@@ -26,7 +26,13 @@ docker compose up
 
 ### Helm and K8s
 
+The scripts assume you've got a minikube profile setup called "aeroncache".
+
+You can build and push images too your cluster using buildImages-minikube.sh
+
 You can see example k8s config in folders called "k8s" in application modules.
+Look for scripts called apply-k8s.sh which are used to apply the config to your minikube cluster. 
+
 In ```/k8s/helm/``` there are some Helm charts which are a work in progress.
 
 ## Subscribe to Multiple Caches over Websocket

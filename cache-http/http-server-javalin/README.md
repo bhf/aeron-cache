@@ -2,9 +2,7 @@
 
 ## K8s
 
-The http server is deployed as a single pod in the same k8s config. 
-
-It could also be a statefulset deployment with 1 replica as it has an embedded AeronCache Client. 
+The http server is deployed as a statefulset deployment with 1 replica as it has an embedded AeronCache Client. 
 
 It needs to be exposed as a service.
 
@@ -12,8 +10,9 @@ It needs to be exposed as a service.
 
 ```bash
 kubectl apply -f k8s/serviceaccount.yml
-kubectl apply -f k8s/deployment-singlepod.yml
-kubectl apply -f k8s/service-*.yml
+kubectl apply -f k8s/configmap.yml
+kubectl apply -f k8s/deployment-statefulset.yml
+kubectl apply -f k8s/service-lb.yml
 ```
 
 If you're using MiniKube then be sure to open a tunnel:

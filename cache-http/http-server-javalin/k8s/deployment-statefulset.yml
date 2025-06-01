@@ -30,7 +30,7 @@ spec:
           name: shm
       containers:
         - name: aeroncache-http
-          image: docker.io/library/aeroncache-http
+          image: docker.io/library/aeroncache-http-javalin
           imagePullPolicy: Never
           ports:
             - containerPort: 7070
