@@ -8,6 +8,8 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  podManagementPolicy: Parallel
+  serviceName: {{ include "aeroncache-cluster.fullname" . }}
   selector:
     matchLabels:
       {{- include "aeroncache-cluster.selectorLabels" . | nindent 6 }}
@@ -17,8 +19,6 @@ spec:
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      checksum/configmap: {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | sha256sum }}
-      checksum/secrets: {{ printf "environments/secrets.%s.yaml" .Values.env | .Files.Get | sha256sum }}
       labels:
         {{- include "aeroncache-cluster.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}

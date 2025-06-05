@@ -23,11 +23,6 @@ spec:
         app.kubernetes.io/instance: aeroncache-cluster
     spec:
       serviceAccountName: aeroncache-cluster
-      volumes:
-        - emptyDir:
-            medium: Memory
-            sizeLimit: 1Gi
-          name: shm
       containers:
         - name: aeroncache-cluster
           image: docker.io/library/aeroncache-cluster
@@ -43,3 +38,8 @@ spec:
           volumeMounts:
             - mountPath: /dev/shm
               name: shm
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+          name: shm
