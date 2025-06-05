@@ -37,7 +37,7 @@ cache-ui-1              |  ✓ Starting...
 * Prometheus on localhost:9090
 * cAdvisor on localhost:8080
 
-### Helm and K8s
+### Minikube (K8s)
 
 The scripts assume you've got a minikube profile setup called "aeroncache".
 
@@ -84,7 +84,18 @@ default              0         152m
 
 ```
 
+### Helm Charts (K8s)
+
 In ```/k8s/helm/``` there are some Helm charts which are a work in progress.
+
+To install the cache-cluster from it's chart:
+
+```bash
+cd k8s/helm/
+helm --namespace default upgrade -i aeroncache-cluster aeroncache-cluster/
+```
+
+This will result in a working cache-cluster with 3 pods.
 
 ## Subscribe to Multiple Caches over Websocket
 
