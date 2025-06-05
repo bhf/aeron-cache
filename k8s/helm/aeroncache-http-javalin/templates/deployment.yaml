@@ -8,6 +8,8 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  podManagementPolicy: Parallel
+  serviceName: {{ include "aeroncache-http-javalin.fullname" . }}
   selector:
     matchLabels:
       {{- include "aeroncache-http-javalin.selectorLabels" . | nindent 6 }}
@@ -17,8 +19,6 @@ spec:
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      checksum/configmap: {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | sha256sum }}
-      checksum/secrets: {{ printf "environments/secrets.%s.yaml" .Values.env | .Files.Get | sha256sum }}
       labels:
         {{- include "aeroncache-http-javalin.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
@@ -42,6 +42,14 @@ spec:
           {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.aeroncacheHTTPConfigmap }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
