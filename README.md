@@ -4,7 +4,7 @@
 
 *__Hand crafted without LLMs or Agents.__*
 
-A clustered cache built using Aeron, Agrona and SBE. UI with NextJS, Shadcn and Tailwind. Includes HTTP and websocket interfaces with support for multi-cache joins over websocket. Prometheus+cAdvisor and tracing with Jaeger+OTEL.
+A clustered cache built using Aeron, Agrona and SBE. UI with NextJS, Shadcn and Tailwind. Includes HTTP and websocket interfaces with support for multi-cache joins over websocket. Prometheus+cAdvisor and tracing with Jaeger+OTEL. Deployable on Kubernetes via Helm or Kubectl.
 
 ## How To Run
 
@@ -37,7 +37,7 @@ cache-ui-1              |  ✓ Starting...
 * Prometheus on localhost:9090
 * cAdvisor on localhost:8080
 
-### Minikube (K8s)
+### Minikube
 
 The scripts assume you've got a minikube profile setup called "aeroncache".
 
@@ -84,18 +84,22 @@ default              0         152m
 
 ```
 
-### Helm Charts (K8s)
+### Helm Charts
 
 In ```/k8s/helm/``` there are some Helm charts which are a work in progress.
 
-To install the cache-cluster from it's chart:
+To install the cache-cluster, cache-http-javalin (HTTP interface), cache-ws-javalin (websocket interface) from Helm charts:
 
 ```bash
 cd k8s/helm/
 helm --namespace default upgrade -i aeroncache-cluster aeroncache-cluster/
+helm --namespace default upgrade -i aeroncache-http-javalin aeroncache-http-javalin/
+helm --namespace default upgrade -i aeroncache-ws-javalin aeroncache-ws-javalin/
 ```
 
-This will result in a working cache-cluster with 3 pods.
+This will result in a working cache-cluster with 3 pods, an instance of the HTTP interface running in a single pod as a statefulset and an
+instance of the websocket interface also running in a single pod as a statefulset.
+
 
 ## Subscribe to Multiple Caches over Websocket
 
