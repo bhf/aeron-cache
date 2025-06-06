@@ -4,7 +4,10 @@
 
 *__Hand crafted without LLMs or Agents.__*
 
-A clustered cache built using Aeron, Agrona and SBE. UI with NextJS, Shadcn and Tailwind. Includes HTTP and websocket interfaces with support for multi-cache joins over websocket. Prometheus+cAdvisor and tracing with Jaeger+OTEL. Deployable on Kubernetes via Helm or Kubectl.
+A clustered cache built using Aeron, Agrona and SBE. UI with NextJS, Shadcn and Tailwind. 
+Includes HTTP and websocket interfaces with support for multi-cache joins over websocket. 
+Prometheus+cAdvisor and tracing with Jaeger+OTEL. 
+Containerized (Docker compose) and deployable on Kubernetes via Helm or Kubectl.
 
 ## How To Run
 
