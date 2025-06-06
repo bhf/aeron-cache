@@ -84,22 +84,43 @@ default              0         152m
 
 ```
 
+If you apply the k8s config for cache-ui you'll see the UI components in addition to the backend:
+
+```bash
+optimus@optimus-lab:~/Workspaces/aeron-cache/cache-ui$ kubectl get services
+NAME                      TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+aeroncache-ui-nextjs      LoadBalancer   10.106.163.22   <pending>     3000:32345/TCP   33m
+
+optimus@optimus-lab:~/Workspaces/aeron-cache/cache-ui$ kubectl get pods -l "tier=frontend"
+NAME                         READY   STATUS    RESTARTS   AGE
+aeroncache-ui-nextjs-g76pw   1/1     Running   0          10m
+
+optimus@optimus-lab:~/Workspaces/aeron-cache/cache-ui$ kubectl logs aeroncache-ui-nextjs-g76pw
+   ▲ Next.js 15.2.3
+   - Local:        http://localhost:3000
+   - Network:      http://0.0.0.0:3000
+
+ ✓ Starting...
+ ✓ Ready in 120ms
+
+```
+
 ### Helm Charts
 
-In ```/k8s/helm/``` there are some Helm charts which are a work in progress.
+In ```/k8s/helm/``` there are some Helm charts which are a work in progress (missing ancillary telemetry services and awaiting DNS resolution for UI readiness probe).
 
-To install the cache-cluster, cache-http-javalin (HTTP interface), cache-ws-javalin (websocket interface) from Helm charts:
+To install from Helm charts:
 
 ```bash
 cd k8s/helm/
 helm --namespace default upgrade -i aeroncache-cluster aeroncache-cluster/
 helm --namespace default upgrade -i aeroncache-http-javalin aeroncache-http-javalin/
 helm --namespace default upgrade -i aeroncache-ws-javalin aeroncache-ws-javalin/
+helm --namespace default upgrade -i aeroncache-ui-nextjs aeroncache-ui-nextjs/
 ```
 
-This will result in a working cache-cluster with 3 pods, an instance of the HTTP interface running in a single pod as a statefulset and an
-instance of the websocket interface also running in a single pod as a statefulset.
-
+This will result in a cache-cluster with 3 pods, an instance of the HTTP interface running in a single pod as a statefulset and an
+instance of the websocket interface also running in a single pod as a statefulset. The UI should also be running as a replicaset with an LB.
 
 ## Subscribe to Multiple Caches over Websocket
 

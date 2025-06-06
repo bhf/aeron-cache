@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: aeroncache-ui-nextjs
+  labels:
+    run: aeroncache-ui-nextjs
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+        - name: aeroncache-ui-nextjs
+          image: docker.io/library/aeroncache-ui-nextjs
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          env:
+            - name: AERON_CACHE_API
+              value: "http://aeroncache-http-javalin-0:7070/api/v1"
+            - name: AERON_CACHE_WS_API
+              value: ws:aeroncache-ws-javalin-0:7071
+            - name: JAEGER
+              value: http://jaeger:16686
+            - name: PROMETHEUS
+              value: http://prometheus:9090
