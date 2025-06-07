@@ -13,6 +13,8 @@ import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
 
 /**
+ * Use this to publish the requests pre-encoded into the format expected by Aeron Cache.
+ *
  * A basic message publisher with no duty cycle. Simply
  * polls on the egress based on the method being called by the user.
  */

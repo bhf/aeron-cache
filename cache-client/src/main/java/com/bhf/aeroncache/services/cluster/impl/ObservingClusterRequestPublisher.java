@@ -4,6 +4,7 @@ import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cluster.ClusterRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterRequestPublisher;
+import com.bhf.aeroncache.services.cache.CacheResponseHandler;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import io.aeron.cluster.client.AeronCluster;
@@ -24,7 +25,7 @@ import java.util.function.Consumer;
  */
 @RequiredArgsConstructor
 @Log4j2
-public class ObservingClusterRequestPublisher implements ClusterRequestPublisher, ClusterRequestConsumingPublisher {
+public class ObservingClusterRequestPublisher implements ClusterRequestPublisher, ClusterRequestConsumingPublisher, CacheResponseHandler {
 
     private final ClusterMessagePublisher publisher;
     private final List<IdentifiableConsumer<String, CreateCacheResult<ReusableLong>>> createCacheObservers = new CopyOnWriteArrayList<>();
@@ -348,12 +349,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
 
-    /**
-     * Handle a message indicating the value of a get operation on a particular key
-     * and delegate it to any relevant consumer.
-     *
-     * @param getCacheEntryResult The result of getting something from the cache.
-     */
+    @Override
     public void handleCacheEntryResult(GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult) {
         var targetId = getCacheEntryResult.getRequestId();
         getCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntryResult));
@@ -363,12 +359,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         }
     }
 
-    /**
-     * Handle a message indicating the values of an entire cache
-     * and delegate it to any relevant consumer.
-     *
-     * @param getCacheEntriesResult The result of getting all items from the cache.
-     */
+    @Override
     public void handleAllCacheEntries(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult) {
         var targetId = getCacheEntriesResult.getRequestId();
         getCacheEntriesObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntriesResult));
@@ -378,12 +369,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         }
     }
 
-    /**
-     * Handle a message indicating a cache has been created and delegate it
-     * to any relevant consumer.
-     *
-     * @param createCacheResult The result of creating a cache.
-     */
+    @Override
     public void handleCacheCreated(CreateCacheResult<ReusableLong> createCacheResult) {
         var targetId = createCacheResult.getRequestId();
         createCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(createCacheResult));
@@ -393,12 +379,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         }
     }
 
-    /**
-     * Handle a message indicating a cache entry has been created and delegate it
-     * to any relevant consumer.
-     *
-     * @param addCacheEntryResult The result of adding an entry to the cache.
-     */
+    @Override
     public void handleCacheEntryCreated(AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult) {
         var targetId = addCacheEntryResult.getRequestId();
         addCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(addCacheEntryResult));
@@ -409,12 +390,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
 
     }
 
-    /**
-     * Handle a message indicating a cache entry has been removed and delegate it
-     * to any relevant consumer.
-     *
-     * @param removeCacheEntryResult The result of a cache entry removal.
-     */
+    @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult) {
         var targetId = removeCacheEntryResult.getRequestId();
         removeCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(removeCacheEntryResult));
@@ -424,12 +400,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         }
     }
 
-    /**
-     * Handle a message indicating a cache has been cleared and delegate it
-     * to any relevant consumer.
-     *
-     * @param clearCacheResult The result of clearing a cache.
-     */
+    @Override
     public void handleCacheCleared(ClearCacheResult<ReusableLong> clearCacheResult) {
         var targetId = clearCacheResult.getRequestId();
         clearCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(clearCacheResult));
@@ -439,12 +410,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         }
     }
 
-    /**
-     * Handle a message indicating a cache has been deleted and delegate it
-     * to any relevant consumer.
-     *
-     * @param deleteCacheResult The result of deleting a cache.
-     */
+    @Override
     public void handleCacheDeleted(DeleteCacheResult<ReusableLong> deleteCacheResult) {
         var targetId = deleteCacheResult.getRequestId();
         deleteCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(deleteCacheResult));
@@ -454,23 +420,14 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         }
     }
 
-    /**
-     * Handle a message with all cache stats, delegating it
-     * to any relevant consumer.
-     *
-     * @param statsResult The result of getting all cache stats.
-     */
+    @Override
     public void handleAllCacheStats(CacheStatsResult<ReusableLong> statsResult) {
         var targetId = statsResult.getRequestId();
         allCacheStatsObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(statsResult));
         allCacheStatsObservers.removeIf(p -> p.getId().equals(targetId));
     }
 
-    /**
-     * Handle a message about a subscription request to a cache.
-     *
-     * @param cacheSubscriptionResult The result of subscribing to a cache.
-     */
+    @Override
     public void handleCacheSubscribeResponse(CacheSubscriptionResult<ReusableLong> cacheSubscriptionResult) {
         var targetId = cacheSubscriptionResult.getRequestId();
         log.info("Got cache subscribe response on requestId {}", targetId);
@@ -478,11 +435,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         cacheSubscribeObservers.removeIf(p -> p.getId().equals(targetId));
     }
 
-    /**
-     * Handle a message about an unsubscribe request to a cache.
-     *
-     * @param cacheUnsubscribeResult The result of unsubscribing to a cache.
-     */
+    @Override
     public void handleCacheUnsubscribeResponse(CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult) {
         var targetId = cacheUnsubscribeResult.getRequestId();
         log.info("Got cache unsubscribe response on requestId {}", targetId);
@@ -490,6 +443,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
         cacheUnsubscribeObservers.removeIf(p -> p.getId().equals(targetId));
     }
 
+    @Override
     public void handleCacheEntryUpdated(CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult) {
 
     }
