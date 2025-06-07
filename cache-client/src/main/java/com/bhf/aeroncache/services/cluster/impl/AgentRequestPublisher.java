@@ -7,7 +7,7 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 /**
- * Publish various cache requests onto a {@link org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer} to
+ * Publish various pre-encoded cache requests onto a {@link org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer} to
  * be processed by an {@link org.agrona.concurrent.Agent} in an {@link org.agrona.concurrent.AgentRunner}.
  */
 @RequiredArgsConstructor
