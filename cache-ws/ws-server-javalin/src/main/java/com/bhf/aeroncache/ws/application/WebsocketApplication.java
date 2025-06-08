@@ -2,7 +2,7 @@ package com.bhf.aeroncache.ws.application;
 
 import com.bhf.aeroncache.services.cluster.AeronCacheListener;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
-import com.bhf.aeroncache.services.cluster.impl.AgentRequestPublisher;
+import com.bhf.aeroncache.services.cluster.impl.AgentClusterMessagePublisher;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
@@ -62,7 +62,7 @@ public class WebsocketApplication {
         try {
             ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             System.out.println("Starting AeronCache Cluster Interface");
-            subscriptionService = new CacheSubscriptionService(new AgentRequestPublisher(rb));
+            subscriptionService = new CacheSubscriptionService(new AgentClusterMessagePublisher(rb));
             client = new AeronCacheListener();
             client.setCacheResultsCallbacks(subscriptionService);
 
