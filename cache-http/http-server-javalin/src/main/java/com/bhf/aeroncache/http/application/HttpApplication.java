@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.http.application;
 
+import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
@@ -16,7 +17,6 @@ import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
-import io.aeron.cluster.client.AeronCluster;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
@@ -32,6 +32,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
@@ -43,7 +44,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 @Log4j2
 public class HttpApplication {
@@ -55,7 +55,7 @@ public class HttpApplication {
     private static final String READINESS = "/readiness/";
     private static AeronCacheListener client;
     private static ObservingClusterRequestPublisher observingPublisher;
-    private static AeronCluster cluster;
+    private static AeronCache cluster;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
 
@@ -90,13 +90,30 @@ public class HttpApplication {
             }
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
-            cluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client);
+            var aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client);
+
+            cluster = new AeronCache() {
+                @Override
+                public void sendKeepAlive() {
+                    aeronCluster.sendKeepAlive();
+                }
+
+                @Override
+                public int pollEgress() {
+                    return aeronCluster.pollEgress();
+                }
+
+                @Override
+                public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                    return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
+                }
+            };
 
             System.out.println("Building cluster agent");
             var idleStrategy = new BackoffIdleStrategy();
             ClusterClientAgent agent = new ClusterClientAgent(cluster, rb, idleStrategy);
-            var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(cluster);
-            var errorCounter = ClusterUtils.getAgentErrorCounter(cluster);
+            var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
+            var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster);
             AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(runner);
@@ -147,6 +164,7 @@ public class HttpApplication {
 
     /**
      * Used to establish a performance baseline for POST requests.
+     *
      * @param ctx
      */
     private static void postActionBaseline(Context ctx) {
@@ -155,6 +173,7 @@ public class HttpApplication {
 
     /**
      * Used to establish a performance baseline for GET requests.
+     *
      * @param ctx
      */
     private static void getActionBaseline(Context ctx) {
@@ -214,7 +233,7 @@ public class HttpApplication {
         log.info("Got request to get all cache details");
         List<CacheDetails> cacheDetails = new ArrayList<>();
         for (Long l : allCaches) {
-            var itemCount = cacheToSize.getOrDefault(l,0L);
+            var itemCount = cacheToSize.getOrDefault(l, 0L);
             cacheDetails.add(new CacheDetails(l, itemCount));
         }
         context.json(cacheDetails);
@@ -542,6 +561,7 @@ public class HttpApplication {
     /**
      * Use the current span and trace Ids to build a requestId to
      * be sent to the Aeron Cache cluster.
+     *
      * @param ctx
      * @return
      */

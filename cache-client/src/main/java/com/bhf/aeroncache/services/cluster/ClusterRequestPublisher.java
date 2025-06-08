@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.services.cluster;
 
-import io.aeron.cluster.client.AeronCluster;
+import com.bhf.aeroncache.AeronCache;
+
 
 /**
  * Encapsulates requests we want to send to the AeronCache cluster.
@@ -13,7 +14,7 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache to create.
      */
-    void sendCreateCache(AeronCluster cluster, String requestId, long cacheId);
+    void sendCreateCache(AeronCache cluster, String requestId, long cacheId);
 
     /**
      * Send a message to create a cache instance, block
@@ -23,7 +24,7 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache to create.
      */
-    void sendCreateCacheBlocking(AeronCluster cluster, String requestId, long cacheId);
+    void sendCreateCacheBlocking(AeronCache cluster, String requestId, long cacheId);
 
     /**
      * Send a message to add a cache entry in a non-blocking manner.
@@ -34,7 +35,7 @@ public interface ClusterRequestPublisher {
      * @param key       The key to use.
      * @param value     The value to use.
      */
-    void addCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key, String value);
+    void addCacheEntry(AeronCache cluster, String requestId, long cacheId, String key, String value);
 
     /**
      * Send a message to add a cache entry and block
@@ -46,7 +47,7 @@ public interface ClusterRequestPublisher {
      * @param key       The key to use.
      * @param value     The value to use.
      */
-    void addCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key, String value);
+    void addCacheEntryBlocking(AeronCache cluster, String requestId, long cacheId, String key, String value);
 
     /**
      * Send a message to get a cache entry.
@@ -56,7 +57,7 @@ public interface ClusterRequestPublisher {
      * @param cacheId   The ID of the cache we're adding too.
      * @param key       The key to use.
      */
-    void getCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key);
+    void getCacheEntry(AeronCache cluster, String requestId, long cacheId, String key);
 
     /**
      * Send a message to get a cache entry synchronously.
@@ -66,7 +67,7 @@ public interface ClusterRequestPublisher {
      * @param cacheId   The ID of the cache we're adding too.
      * @param key       The key to use.
      */
-    void getCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key);
+    void getCacheEntryBlocking(AeronCache cluster, String requestId, long cacheId, String key);
 
     /**
      * Send a message to clear a cache.
@@ -75,7 +76,7 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache we're clearing out.
      */
-    void clearCache(AeronCluster cluster, String requestId, long cacheId);
+    void clearCache(AeronCache cluster, String requestId, long cacheId);
 
     /**
      * Send a message to clear a cache. Blocks until it gets a response.
@@ -84,7 +85,7 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache we're clearing out.
      */
-    void clearCacheBlocking(AeronCluster cluster, String requestId, long cacheId);
+    void clearCacheBlocking(AeronCache cluster, String requestId, long cacheId);
 
     /**
      * Send a message to delete a cache.
@@ -93,7 +94,7 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache we're deleting.
      */
-    void deleteCache(AeronCluster cluster, String requestId, long cacheId);
+    void deleteCache(AeronCache cluster, String requestId, long cacheId);
 
     /**
      * Send a message to delete a cache in a blocking manner.
@@ -102,7 +103,7 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache we're deleting.
      */
-    void deleteCacheBlocking(AeronCluster cluster, String requestId, long cacheId);
+    void deleteCacheBlocking(AeronCache cluster, String requestId, long cacheId);
 
     /**
      * Send a message to remove a cache entry.
@@ -112,7 +113,7 @@ public interface ClusterRequestPublisher {
      * @param cacheId   The ID of the cache we're removing an entry from.
      * @param key       The key of the entry we're removing.
      */
-    void removeCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key);
+    void removeCacheEntry(AeronCache cluster, String requestId, long cacheId, String key);
 
     /**
      * Send a message to remove a cache entry in a blocking manner.
@@ -122,7 +123,7 @@ public interface ClusterRequestPublisher {
      * @param cacheId   The ID of the cache we're removing an entry from.
      * @param key       The key of the entry we're removing.
      */
-    void removeCacheEntryBlocking(AeronCluster cluster, String requestId, long cacheId, String key);
+    void removeCacheEntryBlocking(AeronCache cluster, String requestId, long cacheId, String key);
 
     /**
      * Send a message to get all cache entries.
@@ -131,7 +132,7 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache we're removing an entry from.
      */
-    void getCacheEntries(AeronCluster cluster, String requestId, long cacheId);
+    void getCacheEntries(AeronCache cluster, String requestId, long cacheId);
 
     /**
      * Send a message to get all cache entries in a blocking manner.
@@ -140,7 +141,7 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache we're removing an entry from.
      */
-    void getCacheEntriesBlocking(AeronCluster cluster, String requestId, long cacheId);
+    void getCacheEntriesBlocking(AeronCache cluster, String requestId, long cacheId);
 
     /**
      * Send a message to get all cache stats from the cluster.
@@ -148,7 +149,7 @@ public interface ClusterRequestPublisher {
      * @param cluster   The Aeron Cluster instance to use.
      * @param requestId The Id of this request.
      */
-    void getAllCacheStats(AeronCluster cluster, String requestId);
+    void getAllCacheStats(AeronCache cluster, String requestId);
 
     /**
      * Send a message to get all cache stats from the cluster in a blocking manner.
@@ -156,7 +157,7 @@ public interface ClusterRequestPublisher {
      * @param cluster   The Aeron Cluster instance to use.
      * @param requestId The Id of this request.
      */
-    void getAllCacheStatsBlocking(AeronCluster cluster, String requestId);
+    void getAllCacheStatsBlocking(AeronCache cluster, String requestId);
 
     /**
      * Send a request to subscribe to cache updates.
@@ -165,7 +166,7 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The cache to subscribe too.
      */
-    void sendCacheSubscribe(AeronCluster cluster, String requestId, long cacheId);
+    void sendCacheSubscribe(AeronCache cluster, String requestId, long cacheId);
 
     /**
      * Send a request to subscribe to cache updates in a blocking manner.
@@ -174,7 +175,7 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The cache to subscribe too.
      */
-    void sendCacheSubscribeBlocking(AeronCluster cluster, String requestId, long cacheId);
+    void sendCacheSubscribeBlocking(AeronCache cluster, String requestId, long cacheId);
 
     /**
      * Send a request to unsubscribe to cache updates.
@@ -183,7 +184,7 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The cache to unsubscribe too.
      */
-    void sendCacheUnsubscribe(AeronCluster cluster, String requestId, long cacheId);
+    void sendCacheUnsubscribe(AeronCache cluster, String requestId, long cacheId);
 
     /**
      * Send a request to unsubscribe to cache updates in a blocking manner.
@@ -192,5 +193,5 @@ public interface ClusterRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The cache to unsubscribe too.
      */
-    void sendCacheUnsubscribeBlocking(AeronCluster cluster, String requestId, long cacheId);
+    void sendCacheUnsubscribeBlocking(AeronCache cluster, String requestId, long cacheId);
 }

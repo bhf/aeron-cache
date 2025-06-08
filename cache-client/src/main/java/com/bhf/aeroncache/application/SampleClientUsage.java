@@ -1,11 +1,13 @@
 package com.bhf.aeroncache.application;
 
+import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.services.cluster.AeronCacheListener;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
+import org.agrona.MutableDirectBuffer;
 
 import java.util.Arrays;
 import java.util.List;
@@ -56,7 +58,7 @@ public class SampleClientUsage {
      * @param cluster   The Aeron Cluster.
      * @param publisher
      */
-    private static void sendMessagesToCache(AeronCacheListener client, AeronCluster cluster, ObservingClusterRequestPublisher publisher) {
+    private static void sendMessagesToCache(AeronCacheListener client, AeronCache cluster, ObservingClusterRequestPublisher publisher) {
         var cacheId = System.currentTimeMillis();
 
         System.out.println("Sending request to create cache " + cacheId);
@@ -106,8 +108,25 @@ public class SampleClientUsage {
                                 .ingressChannel("aeron:udp")
                                 .ingressEndpoints(ingressEndpoints))) {
 
+            AeronCache aeronCache = new AeronCache() {
+                @Override
+                public void sendKeepAlive() {
+                    aeronCluster.sendKeepAlive();
+                }
+
+                @Override
+                public int pollEgress() {
+                    return aeronCluster.pollEgress();
+                }
+
+                @Override
+                public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                    return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
+                }
+            };
+
             while (true) {
-                sendMessagesToCache(client, aeronCluster, observingPublisher);
+                sendMessagesToCache(client, aeronCache, observingPublisher);
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {

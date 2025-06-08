@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.ws.application;
 
+import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.services.cluster.AeronCacheListener;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.AgentClusterMessagePublisher;
@@ -8,7 +9,6 @@ import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
 import com.bhf.aeroncache.ws.services.subscriptions.CacheSubscriptionService;
-import io.aeron.cluster.client.AeronCluster;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
@@ -25,6 +25,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
@@ -47,7 +48,7 @@ public class WebsocketApplication {
     private static final String MULTI_SUB_API_PREFIX = "/api/ws/v1/caches/";
     private static AeronCacheListener client;
     private static CacheSubscriptionService subscriptionService;
-    private static AeronCluster cluster;
+    private static AeronCache cluster;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
 
@@ -79,13 +80,30 @@ public class WebsocketApplication {
             }
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
-            cluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client);
+            var aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client);
+
+            cluster = new AeronCache() {
+                @Override
+                public void sendKeepAlive() {
+                    aeronCluster.sendKeepAlive();
+                }
+
+                @Override
+                public int pollEgress() {
+                    return aeronCluster.pollEgress();
+                }
+
+                @Override
+                public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                    return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
+                }
+            };
 
             System.out.println("Building cluster agent");
             var idleStrategy = new BackoffIdleStrategy();
             ClusterClientAgent agent = new ClusterClientAgent(cluster, rb, idleStrategy);
-            var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(cluster);
-            var errorCounter = ClusterUtils.getAgentErrorCounter(cluster);
+            var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
+            var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster);
             AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(runner);

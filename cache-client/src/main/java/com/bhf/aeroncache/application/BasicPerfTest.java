@@ -1,11 +1,13 @@
 package com.bhf.aeroncache.application;
 
+import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.services.cluster.AeronCacheListener;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
+import org.agrona.MutableDirectBuffer;
 
 import java.util.*;
 
@@ -51,6 +53,7 @@ public class BasicPerfTest {
     }
 
     static int c = 0;
+
     /**
      * Send messages to the cache cluster.
      *
@@ -60,7 +63,7 @@ public class BasicPerfTest {
      * @param cacheId      The ID of the cache we're testing against.
      * @param payloadValue
      */
-    private static void sendMessagesToCache(AeronCacheListener client, AeronCluster cluster, ObservingClusterRequestPublisher publisher, int cacheId, String payloadValue) {
+    private static void sendMessagesToCache(AeronCacheListener client, AeronCache cluster, ObservingClusterRequestPublisher publisher, int cacheId, String payloadValue) {
         var ts = System.currentTimeMillis();
         var requestId = String.valueOf(c++);
         lastSent = ts;
@@ -94,9 +97,26 @@ public class BasicPerfTest {
                                 .ingressChannel("aeron:udp")
                                 .ingressEndpoints(ingressEndpoints))) {
 
+            AeronCache aeronCache = new AeronCache() {
+                @Override
+                public void sendKeepAlive() {
+                    aeronCluster.sendKeepAlive();
+                }
+
+                @Override
+                public int pollEgress() {
+                    return aeronCluster.pollEgress();
+                }
+
+                @Override
+                public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                    return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
+                }
+            };
+
             var cacheId = 808;
             System.out.println("Sending request to create cache " + cacheId);
-            observingPublisher.sendCreateCacheBlocking(aeronCluster, UUID.randomUUID().toString(), cacheId);
+            observingPublisher.sendCreateCacheBlocking(aeronCache, UUID.randomUUID().toString(), cacheId);
 
             var totalToSend = 10_000;
             var payloadSizes = new Integer[]{5};
@@ -106,10 +126,10 @@ public class BasicPerfTest {
 
             for (int payloadSize : payloadSizes) {
                 var payloadValue = getPayloadValue(payloadSize);
-                System.out.println("Using payload value "+payloadValue);
+                System.out.println("Using payload value " + payloadValue);
 
                 while (count < totalToSend) {
-                    sendMessagesToCache(client, aeronCluster, observingPublisher, cacheId, payloadValue);
+                    sendMessagesToCache(client, aeronCache, observingPublisher, cacheId, payloadValue);
                 }
 
                 double tally = 0;
@@ -131,8 +151,8 @@ public class BasicPerfTest {
                 sb.append(mean);
                 payloadSizeToDistro.put(payloadSize, sb);
 
-                lastSent=0;
-                count=0;
+                lastSent = 0;
+                count = 0;
                 samples.clear();
             }
         }

@@ -3,7 +3,7 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
-import io.aeron.cluster.client.AeronCluster;
+import com.bhf.aeroncache.AeronCache;
 
 import java.util.function.Consumer;
 
@@ -21,7 +21,7 @@ public interface ClusterRequestConsumingPublisher {
      * @param consumer  The consumer of the result.
      * @param requestId The request ID.
      */
-    void sendCreateCacheBlocking(AeronCluster cluster, long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer, String requestId);
+    void sendCreateCacheBlocking(AeronCache cluster, long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer, String requestId);
 
     /**
      * Send a message to add a cache entry in a blocking manner.
@@ -33,7 +33,7 @@ public interface ClusterRequestConsumingPublisher {
      * @param c         The consumer that will handle the result.
      * @param requestId The request ID.
      */
-    void addCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c, String requestId);
+    void addCacheEntryBlocking(AeronCache cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c, String requestId);
 
     /**
      * Send a message to get a cache entry in a blocking manner.
@@ -44,7 +44,7 @@ public interface ClusterRequestConsumingPublisher {
      * @param c         The consumer to handle the result.
      * @param requestId The request ID.
      */
-    void getCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c, String requestId);
+    void getCacheEntryBlocking(AeronCache cluster, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c, String requestId);
 
     /**
      * Send a message to delete a cache in a blocking manner.
@@ -53,7 +53,7 @@ public interface ClusterRequestConsumingPublisher {
      * @param cacheId   The ID of the cache we're deleting.
      * @param requestId The request ID.
      */
-    void deleteCacheBlocking(AeronCluster cluster, long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer, String requestId);
+    void deleteCacheBlocking(AeronCache cluster, long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer, String requestId);
 
     /**
      * Send a message to remove a cache entry in a blocking manner.
@@ -64,7 +64,7 @@ public interface ClusterRequestConsumingPublisher {
      * @param c         The consumer that will handle the result.
      * @param requestId The request ID.
      */
-    void removeCacheEntryBlocking(AeronCluster cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c, String requestId);
+    void removeCacheEntryBlocking(AeronCache cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c, String requestId);
 
     /**
      * Send a message to clear a cache in a blocking manner.
@@ -74,7 +74,7 @@ public interface ClusterRequestConsumingPublisher {
      * @param c         The consumer that will handle the result.
      * @param requestId The request ID.
      */
-    void clearCacheBlocking(AeronCluster cluster, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c, String requestId);
+    void clearCacheBlocking(AeronCache cluster, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c, String requestId);
 
     /**
      * Send a message to get all cache items.
@@ -84,7 +84,7 @@ public interface ClusterRequestConsumingPublisher {
      * @param c         The consumer that will handle the result.
      * @param requestId The request ID.
      */
-    void getCacheEntriesBlocking(AeronCluster cluster, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c, String requestId);
+    void getCacheEntriesBlocking(AeronCache cluster, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c, String requestId);
 
     /**
      * Send a message to get all cache stats.
@@ -93,7 +93,7 @@ public interface ClusterRequestConsumingPublisher {
      * @param c         The consumer that will handle the result.
      * @param requestId The request ID.
      */
-    void getAllCacheStatsBlocking(AeronCluster cluster, Consumer<CacheStatsResult<ReusableLong>> c, String requestId);
+    void getAllCacheStatsBlocking(AeronCache cluster, Consumer<CacheStatsResult<ReusableLong>> c, String requestId);
 
     /**
      * Send a message to subscribe to cache updates.
@@ -103,7 +103,7 @@ public interface ClusterRequestConsumingPublisher {
      * @param c         The consumer that will handle the result.
      * @param requestId The request ID.
      */
-    void sendCacheSubscribeBlocking(AeronCluster cluster, long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c, String requestId);
+    void sendCacheSubscribeBlocking(AeronCache cluster, long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c, String requestId);
 
     /**
      * Send a message to unsubscribe to cache updates.
@@ -113,5 +113,5 @@ public interface ClusterRequestConsumingPublisher {
      * @param c         The consumer that will handle the result.
      * @param requestId The request ID.
      */
-    void sendCacheUnsubscribeBlocking(AeronCluster cluster, long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c, String requestId);
+    void sendCacheUnsubscribeBlocking(AeronCache cluster, long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c, String requestId);
 }

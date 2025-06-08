@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.http.application;
 
+import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
@@ -34,6 +35,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
@@ -100,9 +102,26 @@ public class HttpRBApplication {
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
             cluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client);
 
+            var aeronCache = new AeronCache() {
+                @Override
+                public void sendKeepAlive() {
+                    cluster.sendKeepAlive();
+                }
+
+                @Override
+                public int pollEgress() {
+                    return cluster.pollEgress();
+                }
+
+                @Override
+                public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                    return cluster.offer(msgBuffer, msgBufferOffset, i);
+                }
+            };
+
             System.out.println("Building cluster agent");
             var idleStrategy = new BackoffIdleStrategy();
-            CacheClientAgent agent = new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher());
+            CacheClientAgent agent = new CacheClientAgent(aeronCache, rb, idleStrategy, new ClusterMessagePublisher());
             var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(cluster);
             var errorCounter = ClusterUtils.getAgentErrorCounter(cluster);
             AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
