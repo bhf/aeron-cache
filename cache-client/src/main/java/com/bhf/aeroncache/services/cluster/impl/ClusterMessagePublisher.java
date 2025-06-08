@@ -22,9 +22,7 @@ import org.agrona.concurrent.IdleStrategy;
 @Log4j2
 public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
-    public static final int BASE_TRY_CLAIM_SIZE = 512;
     private final MutableDirectBuffer msgBuffer = new ExpandableDirectByteBuffer();
-    private boolean useTryClaim = false;
 
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
@@ -49,25 +47,10 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
     @Override
     public void sendCreateCache(AeronCluster cluster, String requestId, long cacheId) {
-        var msgBuffer = this.msgBuffer;
-        var msgBufferOffset = 0;
-        BufferClaim bufferClaim = null;
-
-        if (useTryClaim) {
-            bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE, bufferClaim);
-            msgBuffer = bufferClaim.buffer();
-            msgBufferOffset = bufferClaim.offset();
-        }
-
-        createCacheEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
+        createCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId)
                 .requestId(requestId);
-        publishCreateCache(cluster, createCacheEncoder, headerEncoder, msgBuffer, msgBufferOffset);
-
-        if (bufferClaim != null) {
-            bufferClaim.commit();
-        }
+        publishCreateCache(cluster, createCacheEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent create cache request on cache {} with request Id {}", cacheId, requestId);
     }
 
@@ -96,27 +79,12 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
     @Override
     public void addCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key, String value) {
-        var msgBuffer = this.msgBuffer;
-        var msgBufferOffset = 0;
-        BufferClaim bufferClaim = null;
-
-        if (useTryClaim) {
-            bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE*2, bufferClaim);
-            msgBuffer = bufferClaim.buffer();
-            msgBufferOffset = bufferClaim.offset();
-        }
-
-        addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
+        addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId)
                 .requestId(requestId)
                 .key(key)
                 .entryValue(value);
-        publishAddCachEntry(cluster, addCacheEntryEncoder, headerEncoder, msgBuffer, msgBufferOffset);
-
-        if (bufferClaim != null) {
-            bufferClaim.commit();
-        }
+        publishAddCachEntry(cluster, addCacheEntryEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent add cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
 
@@ -144,24 +112,9 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
     @Override
     public void getCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key) {
-        var msgBuffer = this.msgBuffer;
-        var msgBufferOffset = 0;
-        BufferClaim bufferClaim = null;
-
-        if (useTryClaim) {
-            bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE, bufferClaim);
-            msgBuffer = bufferClaim.buffer();
-            msgBufferOffset = bufferClaim.offset();
-        }
-
-        getCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
+        getCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).key(key).requestId(requestId);
-        publishGetCacheEntry(cluster, getCacheEntryEncoder, headerEncoder, msgBuffer, msgBufferOffset);
-
-        if (bufferClaim != null) {
-            bufferClaim.commit();
-        }
+        publishGetCacheEntry(cluster, getCacheEntryEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent get cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
 
@@ -189,24 +142,9 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
     @Override
     public void clearCache(AeronCluster cluster, String requestId, long cacheId) {
-        var msgBuffer = this.msgBuffer;
-        var msgBufferOffset = 0;
-        BufferClaim bufferClaim = null;
-
-        if (useTryClaim) {
-            bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE, bufferClaim);
-            msgBuffer = bufferClaim.buffer();
-            msgBufferOffset = bufferClaim.offset();
-        }
-
-        clearCacheEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
+        clearCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
-        publishClearCache(cluster, clearCacheEncoder, headerEncoder, msgBuffer, msgBufferOffset);
-
-        if (bufferClaim != null) {
-            bufferClaim.commit();
-        }
+        publishClearCache(cluster, clearCacheEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent clear cache request on cache {} with request Id {}", cacheId, requestId);
     }
 
@@ -234,24 +172,9 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
     @Override
     public void deleteCache(AeronCluster cluster, String requestId, long cacheId) {
-        var msgBuffer = this.msgBuffer;
-        var msgBufferOffset = 0;
-        BufferClaim bufferClaim = null;
-
-        if (useTryClaim) {
-            bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE, bufferClaim);
-            msgBuffer = bufferClaim.buffer();
-            msgBufferOffset = bufferClaim.offset();
-        }
-
-        deleteCacheEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
+        deleteCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
-        publishDeleteCache(cluster, deleteCacheEncoder, headerEncoder, msgBuffer, msgBufferOffset);
-
-        if (bufferClaim != null) {
-            bufferClaim.commit();
-        }
+        publishDeleteCache(cluster, deleteCacheEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent delete cache request on cache {} with request Id {}", cacheId, requestId);
     }
 
@@ -279,24 +202,9 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
     @Override
     public void removeCacheEntry(AeronCluster cluster, String requestId, long cacheId, String key) {
-        var msgBuffer = this.msgBuffer;
-        var msgBufferOffset = 0;
-        BufferClaim bufferClaim = null;
-
-        if (useTryClaim) {
-            bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE, bufferClaim);
-            msgBuffer = bufferClaim.buffer();
-            msgBufferOffset = bufferClaim.offset();
-        }
-
-        removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
+        removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).key(key).requestId(requestId);
-        publishRemoveCacheEntry(cluster, removeCacheEntryEncoder, headerEncoder, msgBuffer, msgBufferOffset);
-
-        if (bufferClaim != null) {
-            bufferClaim.commit();
-        }
+        publishRemoveCacheEntry(cluster, removeCacheEntryEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent remove cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
 
@@ -324,24 +232,9 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
     @Override
     public void getCacheEntries(AeronCluster cluster, String requestId, long cacheId) {
-        var msgBuffer = this.msgBuffer;
-        var msgBufferOffset = 0;
-        BufferClaim bufferClaim = null;
-
-        if (useTryClaim) {
-            bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE, bufferClaim);
-            msgBuffer = bufferClaim.buffer();
-            msgBufferOffset = bufferClaim.offset();
-        }
-
-        getAllCacheEntriesEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
+        getAllCacheEntriesEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
-        publishGetAllCacheEntries(cluster, getAllCacheEntriesEncoder, headerEncoder, msgBuffer, msgBufferOffset);
-
-        if (bufferClaim != null) {
-            bufferClaim.commit();
-        }
+        publishGetAllCacheEntries(cluster, getAllCacheEntriesEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent get cache content request on cache {} with request Id {}", cacheId, requestId);
     }
 
@@ -375,24 +268,9 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
     @Override
     public void sendCacheSubscribe(AeronCluster cluster, String requestId, long cacheId) {
-        var msgBuffer = this.msgBuffer;
-        var msgBufferOffset = 0;
-        BufferClaim bufferClaim = null;
-
-        if (useTryClaim) {
-            bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE, bufferClaim);
-            msgBuffer = bufferClaim.buffer();
-            msgBufferOffset = bufferClaim.offset();
-        }
-
-        cacheSubscriptionRequestEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
+        cacheSubscriptionRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
-        publishCacheSubscribe(cluster, cacheSubscriptionRequestEncoder, headerEncoder, msgBuffer, msgBufferOffset);
-
-        if (bufferClaim != null) {
-            bufferClaim.commit();
-        }
+        publishCacheSubscribe(cluster, cacheSubscriptionRequestEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent cache subscription request on cache {} with request Id {}", cacheId, requestId);
     }
 
@@ -420,24 +298,9 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
     @Override
     public void sendCacheUnsubscribe(AeronCluster cluster, String requestId, long cacheId) {
-        var msgBuffer = this.msgBuffer;
-        var msgBufferOffset = 0;
-        BufferClaim bufferClaim = null;
-
-        if (useTryClaim) {
-            bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE, bufferClaim);
-            msgBuffer = bufferClaim.buffer();
-            msgBufferOffset = bufferClaim.offset();
-        }
-
-        cacheUnsubscribeRequestEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
+        cacheUnsubscribeRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
-        publishCacheUnsubscribe(cluster, cacheUnsubscribeRequestEncoder, headerEncoder, msgBuffer, msgBufferOffset);
-
-        if (bufferClaim != null) {
-            bufferClaim.commit();
-        }
+        publishCacheUnsubscribe(cluster, cacheUnsubscribeRequestEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent cache unsubscribe request on cache {} with request Id {}", cacheId, requestId);
     }
 
@@ -450,24 +313,9 @@ public class ClusterMessagePublisher implements ClusterRequestPublisher {
 
     @Override
     public void getAllCacheStats(AeronCluster cluster, String requestId) {
-        var msgBuffer = this.msgBuffer;
-        var msgBufferOffset = 0;
-        BufferClaim bufferClaim = null;
-
-        if (useTryClaim) {
-            bufferClaim = new BufferClaim();
-            cluster.tryClaim(BASE_TRY_CLAIM_SIZE, bufferClaim);
-            msgBuffer = bufferClaim.buffer();
-            msgBufferOffset = bufferClaim.offset();
-        }
-
-        getCacheStatsEncoder.wrapAndApplyHeader(msgBuffer, msgBufferOffset, headerEncoder)
+        getCacheStatsEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .requestId(requestId);
-        publishGetAllCacheStats(cluster, getCacheStatsEncoder, headerEncoder, msgBuffer, msgBufferOffset);
-
-        if (bufferClaim != null) {
-            bufferClaim.commit();
-        }
+        publishGetAllCacheStats(cluster, getCacheStatsEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent request to get all cache with request Id {}", requestId);
     }
 
