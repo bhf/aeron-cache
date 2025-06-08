@@ -3,7 +3,7 @@ package com.bhf.aeroncache.application;
 import java.util.concurrent.Executors;
 
 /**
- * Launch a 3 node cluster.
+ * Launch a 3 node dev cluster.
  */
 public class ClusterLauncher {
     public static void main(String[] args) {
