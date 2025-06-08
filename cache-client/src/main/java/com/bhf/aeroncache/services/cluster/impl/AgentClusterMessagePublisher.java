@@ -11,7 +11,7 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
  * be processed by an {@link org.agrona.concurrent.Agent} in an {@link org.agrona.concurrent.AgentRunner}.
  */
 @RequiredArgsConstructor
-public class AgentRequestPublisher extends ClusterMessagePublisher {
+public class AgentClusterMessagePublisher extends ClusterMessagePublisher {
 
     final ManyToOneRingBuffer rb;
 
