@@ -10,6 +10,8 @@ import org.agrona.concurrent.ringbuffer.RingBuffer;
 
 import java.util.concurrent.Executors;
 
+import static com.bhf.aeroncache.services.cache.impl.CacheRequestMessageTypes.*;
+
 /**
  * Publish Aeron Cache requests into a {@link RingBuffer} to be processed by the
  * {@link org.agrona.concurrent.AgentRunner}.
@@ -17,18 +19,6 @@ import java.util.concurrent.Executors;
 @RequiredArgsConstructor
 @Log4j2
 public class AgentCacheRequestPublisher implements CacheRequestPublisher {
-
-    private static final int HEARTBEAT = 0;
-    private static final int CREATE_CACHE_MSG_ID = 1;
-    private static final int ADD_CACHE_ENTRY_MSG_ID = 2;
-    private static final int GET_CACHE_ENTRY_MSG_ID = 3;
-    private static final int CLEAR_CACHE_MSG_ID = 4;
-    private static final int DELETE_CACHE_MSG_ID = 5;
-    private static final int GET_CACHE_ENTRIES_MSG_ID = 6;
-    private static final int SUBSCRIBE_TO_CACHE_MSG_ID = 7;
-    private static final int UNSUBSCRIBE_TO_CACHE_MSG_ID = 8;
-    private static final int GET_CACHE_STATS_MSG_ID = 9;
-    private static final int REMOVE_CACHE_ENTRY_MSG_ID = 10;
 
     public static void main(String[] args) {
         RingBuffer rb = RingBufferUtils.buildRingbuffer(1024);
