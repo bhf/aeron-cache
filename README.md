@@ -175,6 +175,9 @@ __hyperfoil__ - Some basic hyperfoil tests
 
 ![img.png](docs/images/cluster-flow2.png)
 
+### Client Flow
+
+![img_1.png](docs/images/client-flow.png)
 
 
 ## Future Work
