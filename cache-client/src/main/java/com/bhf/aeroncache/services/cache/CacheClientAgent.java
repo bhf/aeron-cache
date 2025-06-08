@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache;
 
+import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
-import io.aeron.cluster.client.AeronCluster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.concurrent.Agent;
@@ -25,7 +25,7 @@ import static com.bhf.aeroncache.services.cache.impl.CacheRequestMessageTypes.*;
 @RequiredArgsConstructor
 public class CacheClientAgent implements Agent {
 
-    final AeronCluster cluster;
+    final AeronCache cluster;
     final ManyToOneRingBuffer rb;
     final IdleStrategy idleStrategy;
     final ClusterMessagePublisher publisher;
@@ -144,7 +144,7 @@ public class CacheClientAgent implements Agent {
         });
     }
 
-    private void handleKeepAlive(AeronCluster cluster) {
+    private void handleKeepAlive(AeronCache cluster) {
         long now = System.currentTimeMillis();
 
         if (now > lastKeepAlive + KEEPALIVE_INTERVAL) {
