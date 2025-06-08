@@ -8,7 +8,7 @@ import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
 import com.bhf.aeroncache.services.cluster.AeronCacheListener;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
-import com.bhf.aeroncache.services.cluster.impl.AgentRequestPublisher;
+import com.bhf.aeroncache.services.cluster.impl.AgentClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
@@ -43,6 +43,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 @Log4j2
 public class HttpApplication {
@@ -69,7 +70,7 @@ public class HttpApplication {
         try {
             ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             System.out.println("Starting AeronCache Cluster Interface");
-            observingPublisher = new ObservingClusterRequestPublisher(new AgentRequestPublisher(rb));
+            observingPublisher = new ObservingClusterRequestPublisher(new AgentClusterMessagePublisher(rb));
             client = new AeronCacheListener();
             client.setCacheResultsCallbacks(observingPublisher);
 
