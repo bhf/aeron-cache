@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.services.cache.CacheResponseHandler;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
@@ -29,7 +30,7 @@ import java.util.function.Consumer;
 public class AeronCacheListener implements EgressListener {
 
     @Setter
-    private ObservingClusterRequestPublisher cacheResultsCallbacks;
+    private CacheResponseHandler cacheResultsCallbacks;
 
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
