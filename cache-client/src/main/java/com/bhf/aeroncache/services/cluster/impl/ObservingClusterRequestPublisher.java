@@ -3,16 +3,16 @@ package com.bhf.aeroncache.services.cluster.impl;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.services.cache.CacheResponseHandler;
+import com.bhf.aeroncache.services.cache.impl.CacheResponseCallbackHandler;
+import com.bhf.aeroncache.services.cache.impl.CacheResponseObservers;
 import com.bhf.aeroncache.services.cluster.ClusterRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterRequestPublisher;
-import com.bhf.aeroncache.services.cache.CacheResponseHandler;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
@@ -28,53 +28,36 @@ import java.util.function.Consumer;
 public class ObservingClusterRequestPublisher implements ClusterRequestPublisher, ClusterRequestConsumingPublisher, CacheResponseHandler, BlockingClusterRequestPublisher {
 
     private final ClusterMessagePublisher publisher;
-    private final List<IdentifiableConsumer<String, CreateCacheResult<ReusableLong>>> createCacheObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, AddCacheEntryResult<ReusableLong, ReusableString>>> addCacheEntryObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>>> getCacheEntryObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, DeleteCacheResult<ReusableLong>>> deleteCacheObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, RemoveCacheEntryResult<ReusableLong, ReusableString>>> removeCacheEntryObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, ClearCacheResult<ReusableLong>>> clearCacheObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>>> getCacheEntriesObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, CacheStatsResult<ReusableLong>>> allCacheStatsObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, CacheSubscriptionResult<ReusableLong>>> cacheSubscribeObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, CacheUnsubscribeResult<ReusableLong>>> cacheUnsubscribeObservers = new CopyOnWriteArrayList<>();
-
-
-    private Consumer<CreateCacheResult<ReusableLong>> createCacheConsumer;
-    private Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> addCacheEntryConsumer;
-    private Consumer<ClearCacheResult<ReusableLong>> clearCacheConsumer;
-    private Consumer<DeleteCacheResult<ReusableLong>> deleteCacheConsumer;
-    private Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> removeCacheEntryConsumer;
-    private Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> getCacheEntryConsumer;
-    private Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> getCacheEntriesConsumer;
+    private final CacheResponseObservers cacheResponseObservers = new CacheResponseObservers();
+    private final CacheResponseCallbackHandler callbackHandler = new CacheResponseCallbackHandler(cacheResponseObservers);
 
     public ObservingClusterRequestPublisher onCreateCache(Consumer<CreateCacheResult<ReusableLong>> c) {
-        createCacheConsumer = c;
+        cacheResponseObservers.setCreateCacheConsumer(c);
         return this;
     }
 
     public ObservingClusterRequestPublisher onAddCacheEntry(Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c) {
-        addCacheEntryConsumer = c;
+        cacheResponseObservers.setAddCacheEntryConsumer(c);
         return this;
     }
 
     public ObservingClusterRequestPublisher onClearCache(Consumer<ClearCacheResult<ReusableLong>> c) {
-        clearCacheConsumer = c;
+        cacheResponseObservers.setClearCacheConsumer(c);
         return this;
     }
 
     public ObservingClusterRequestPublisher onDeleteCache(Consumer<DeleteCacheResult<ReusableLong>> c) {
-        deleteCacheConsumer = c;
+        cacheResponseObservers.setDeleteCacheConsumer(c);
         return this;
     }
 
     public ObservingClusterRequestPublisher onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c) {
-        removeCacheEntryConsumer = c;
+        cacheResponseObservers.setRemoveCacheEntryConsumer(c);
         return this;
     }
 
     public ObservingClusterRequestPublisher onGetCacheEntry(Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c) {
-        getCacheEntryConsumer = c;
+        cacheResponseObservers.setGetCacheEntryConsumer(c);
         return this;
     }
 
@@ -90,18 +73,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
 
     @Override
     public void sendCreateCacheBlocking(AeronCache cluster, long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer, String requestId) {
-        createCacheObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(CreateCacheResult<ReusableLong> ReusableLongCreateCacheResult) {
-                consumer.accept(ReusableLongCreateCacheResult);
-            }
-        });
-
+        cacheResponseObservers.sendCreateCache(cacheId, consumer, requestId);
         publisher.sendCreateCache(cluster, requestId, cacheId);
     }
 
@@ -116,19 +88,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void addCacheEntryBlocking(AeronCache cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> consumer, String requestId) {
-        addCacheEntryObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult) {
-                consumer.accept(addCacheEntryResult);
-            }
-        });
-
+    public void addCacheEntryBlocking(AeronCache cluster, long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c, String requestId) {
+        cacheResponseObservers.addCacheEntry(cacheId, key, value, c, requestId);
         publisher.addCacheEntry(cluster, requestId, cacheId, key, value);
     }
 
@@ -143,19 +104,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void getCacheEntryBlocking(AeronCache cluster, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> consumer, String requestId) {
-        getCacheEntryObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult) {
-                consumer.accept(getCacheEntryResult);
-            }
-        });
-
+    public void getCacheEntryBlocking(AeronCache cluster, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c, String requestId) {
+        cacheResponseObservers.getCacheEntry(cacheId, key, c, requestId);
         publisher.getCacheEntry(cluster, requestId, cacheId, key);
     }
 
@@ -171,18 +121,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
 
     @Override
     public void clearCacheBlocking(AeronCache cluster, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c, String requestId) {
-        clearCacheObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(ClearCacheResult<ReusableLong> clearCacheEntryResult) {
-                c.accept(clearCacheEntryResult);
-            }
-        });
-
+        cacheResponseObservers.clearCache(cacheId, c, requestId);
         publisher.clearCache(cluster, requestId, cacheId);
     }
 
@@ -198,18 +137,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
 
     @Override
     public void deleteCacheBlocking(AeronCache cluster, long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer, String requestId) {
-        deleteCacheObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(DeleteCacheResult<ReusableLong> deleteCacheEntryResult) {
-                consumer.accept(deleteCacheEntryResult);
-            }
-        });
-
+        cacheResponseObservers.deleteCache(cacheId, consumer, requestId);
         publisher.deleteCache(cluster, requestId, cacheId);
     }
 
@@ -224,19 +152,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void removeCacheEntryBlocking(AeronCache cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> consumer, String requestId) {
-        removeCacheEntryObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult) {
-                consumer.accept(removeCacheEntryResult);
-            }
-        });
-
+    public void removeCacheEntryBlocking(AeronCache cluster, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c, String requestId) {
+        cacheResponseObservers.removeCacheEntry(cacheId, key, c, requestId);
         publisher.removeCacheEntry(cluster, requestId, cacheId, key);
     }
 
@@ -251,19 +168,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void getCacheEntriesBlocking(AeronCache cluster, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> consumer, String requestId) {
-        getCacheEntriesObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult) {
-                consumer.accept(getCacheEntriesResult);
-            }
-        });
-
+    public void getCacheEntriesBlocking(AeronCache cluster, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c, String requestId) {
+        cacheResponseObservers.getCacheEntries(cacheId, c, requestId);
         publisher.getCacheEntries(cluster, requestId, cacheId);
     }
 
@@ -278,19 +184,8 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
     }
 
     @Override
-    public void getAllCacheStatsBlocking(AeronCache cluster, Consumer<CacheStatsResult<ReusableLong>> consumer, String requestId) {
-        allCacheStatsObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(CacheStatsResult<ReusableLong> getCacheStatsResult) {
-                consumer.accept(getCacheStatsResult);
-            }
-        });
-
+    public void getAllCacheStatsBlocking(AeronCache cluster, Consumer<CacheStatsResult<ReusableLong>> c, String requestId) {
+        cacheResponseObservers.getAllCacheStats(c, requestId);
         publisher.getAllCacheStats(cluster, requestId);
     }
 
@@ -306,18 +201,7 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
 
     @Override
     public void sendCacheSubscribeBlocking(AeronCache cluster, long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c, String requestId) {
-        cacheSubscribeObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(CacheSubscriptionResult<ReusableLong> subscriptionResult) {
-                c.accept(subscriptionResult);
-            }
-        });
-
+        cacheResponseObservers.sendCacheSubscribe(cacheId, c, requestId);
         publisher.sendCacheSubscribe(cluster, requestId, cacheId);
     }
 
@@ -333,118 +217,63 @@ public class ObservingClusterRequestPublisher implements ClusterRequestPublisher
 
     @Override
     public void sendCacheUnsubscribeBlocking(AeronCache cluster, long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c, String requestId) {
-        cacheUnsubscribeObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(CacheUnsubscribeResult<ReusableLong> subscriptionResult) {
-                c.accept(subscriptionResult);
-            }
-        });
-
+        cacheResponseObservers.sendCacheUnsubscribe(cacheId, c, requestId);
         publisher.sendCacheUnsubscribe(cluster, requestId, cacheId);
     }
 
 
     @Override
     public void handleCacheEntryResult(GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult) {
-        var targetId = getCacheEntryResult.getRequestId();
-        getCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntryResult));
-        getCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
-        if (getCacheEntryConsumer != null) {
-            getCacheEntryConsumer.accept(getCacheEntryResult);
-        }
+        callbackHandler.handleCacheEntryResult(getCacheEntryResult);
     }
 
     @Override
     public void handleAllCacheEntries(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult) {
-        var targetId = getCacheEntriesResult.getRequestId();
-        getCacheEntriesObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntriesResult));
-        getCacheEntriesObservers.removeIf(p -> p.getId().equals(targetId));
-        if (getCacheEntriesConsumer != null) {
-            getCacheEntriesConsumer.accept(getCacheEntriesResult);
-        }
+        callbackHandler.handleAllCacheEntries(getCacheEntriesResult);
     }
 
     @Override
     public void handleCacheCreated(CreateCacheResult<ReusableLong> createCacheResult) {
-        var targetId = createCacheResult.getRequestId();
-        createCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(createCacheResult));
-        createCacheObservers.removeIf(p -> p.getId().equals(targetId));
-        if (createCacheConsumer != null) {
-            createCacheConsumer.accept(createCacheResult);
-        }
+        callbackHandler.handleCacheCreated(createCacheResult);
     }
 
     @Override
     public void handleCacheEntryCreated(AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult) {
-        var targetId = addCacheEntryResult.getRequestId();
-        addCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(addCacheEntryResult));
-        addCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
-        if (addCacheEntryConsumer != null) {
-            addCacheEntryConsumer.accept(addCacheEntryResult);
-        }
-
+        callbackHandler.handleCacheEntryCreated(addCacheEntryResult);
     }
 
     @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult) {
-        var targetId = removeCacheEntryResult.getRequestId();
-        removeCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(removeCacheEntryResult));
-        removeCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
-        if (removeCacheEntryConsumer != null) {
-            removeCacheEntryConsumer.accept(removeCacheEntryResult);
-        }
+        callbackHandler.handleCacheEntryRemoved(removeCacheEntryResult);
     }
 
     @Override
     public void handleCacheCleared(ClearCacheResult<ReusableLong> clearCacheResult) {
-        var targetId = clearCacheResult.getRequestId();
-        clearCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(clearCacheResult));
-        clearCacheObservers.removeIf(p -> p.getId().equals(targetId));
-        if (clearCacheConsumer != null) {
-            clearCacheConsumer.accept(clearCacheResult);
-        }
+        callbackHandler.handleCacheCleared(clearCacheResult);
     }
 
     @Override
     public void handleCacheDeleted(DeleteCacheResult<ReusableLong> deleteCacheResult) {
-        var targetId = deleteCacheResult.getRequestId();
-        deleteCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(deleteCacheResult));
-        deleteCacheObservers.removeIf(p -> p.getId().equals(targetId));
-        if (deleteCacheConsumer != null) {
-            deleteCacheConsumer.accept(deleteCacheResult);
-        }
+        callbackHandler.handleCacheDeleted(deleteCacheResult);
     }
 
     @Override
     public void handleAllCacheStats(CacheStatsResult<ReusableLong> statsResult) {
-        var targetId = statsResult.getRequestId();
-        allCacheStatsObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(statsResult));
-        allCacheStatsObservers.removeIf(p -> p.getId().equals(targetId));
+        callbackHandler.handleAllCacheStats(statsResult);
     }
 
     @Override
     public void handleCacheSubscribeResponse(CacheSubscriptionResult<ReusableLong> cacheSubscriptionResult) {
-        var targetId = cacheSubscriptionResult.getRequestId();
-        log.info("Got cache subscribe response on requestId {}", targetId);
-        cacheSubscribeObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(cacheSubscriptionResult));
-        cacheSubscribeObservers.removeIf(p -> p.getId().equals(targetId));
+        callbackHandler.handleCacheSubscribeResponse(cacheSubscriptionResult);
     }
 
     @Override
     public void handleCacheUnsubscribeResponse(CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult) {
-        var targetId = cacheUnsubscribeResult.getRequestId();
-        log.info("Got cache unsubscribe response on requestId {}", targetId);
-        cacheUnsubscribeObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(cacheUnsubscribeResult));
-        cacheUnsubscribeObservers.removeIf(p -> p.getId().equals(targetId));
+        callbackHandler.handleCacheUnsubscribeResponse(cacheUnsubscribeResult);
     }
 
     @Override
     public void handleCacheEntryUpdated(CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult) {
-
+        callbackHandler.handleCacheEntryUpdated(cacheEntryUpdateResult);
     }
 }

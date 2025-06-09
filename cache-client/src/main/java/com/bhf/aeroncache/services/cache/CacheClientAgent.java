@@ -10,7 +10,7 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.bhf.aeroncache.services.cache.impl.CacheRequestMessageTypes.*;
+import static com.bhf.aeroncache.domain.CacheRequestMessageTypes.*;
 
 /**
  * An {@link Agent} implementation of an AeronCache Client that is run

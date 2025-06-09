@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.services.cache.impl;
+package com.bhf.aeroncache.domain;
 
 public class CacheRequestMessageTypes {
 

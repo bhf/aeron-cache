@@ -12,8 +12,6 @@ import com.bhf.aeroncache.types.ReusableString;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
@@ -29,53 +27,37 @@ import java.util.function.Consumer;
 public class ObservingCacheRequestPublisher implements CacheRequestPublisher, CacheRequestConsumingPublisher, CacheResponseHandler {
 
     private final CacheRequestPublisher rbPublisher;
-    private final List<IdentifiableConsumer<String, CreateCacheResult<ReusableLong>>> createCacheObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, AddCacheEntryResult<ReusableLong, ReusableString>>> addCacheEntryObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>>> getCacheEntryObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, DeleteCacheResult<ReusableLong>>> deleteCacheObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, RemoveCacheEntryResult<ReusableLong, ReusableString>>> removeCacheEntryObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, ClearCacheResult<ReusableLong>>> clearCacheObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>>> getCacheEntriesObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, CacheStatsResult<ReusableLong>>> allCacheStatsObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, CacheSubscriptionResult<ReusableLong>>> cacheSubscribeObservers = new CopyOnWriteArrayList<>();
-    private final List<IdentifiableConsumer<String, CacheUnsubscribeResult<ReusableLong>>> cacheUnsubscribeObservers = new CopyOnWriteArrayList<>();
+    private final CacheResponseObservers cacheResponseObservers = new CacheResponseObservers();
+    private final CacheResponseCallbackHandler cacheResponseHandler = new CacheResponseCallbackHandler(cacheResponseObservers);
 
-
-    private Consumer<CreateCacheResult<ReusableLong>> createCacheConsumer;
-    private Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> addCacheEntryConsumer;
-    private Consumer<ClearCacheResult<ReusableLong>> clearCacheConsumer;
-    private Consumer<DeleteCacheResult<ReusableLong>> deleteCacheConsumer;
-    private Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> removeCacheEntryConsumer;
-    private Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> getCacheEntryConsumer;
-    private Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> getCacheEntriesConsumer;
 
     public ObservingCacheRequestPublisher onCreateCache(Consumer<CreateCacheResult<ReusableLong>> c) {
-        createCacheConsumer = c;
+        cacheResponseObservers.createCacheConsumer = c;
         return this;
     }
 
     public ObservingCacheRequestPublisher onAddCacheEntry(Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c) {
-        addCacheEntryConsumer = c;
+        cacheResponseObservers.addCacheEntryConsumer = c;
         return this;
     }
 
     public ObservingCacheRequestPublisher onClearCache(Consumer<ClearCacheResult<ReusableLong>> c) {
-        clearCacheConsumer = c;
+        cacheResponseObservers.clearCacheConsumer = c;
         return this;
     }
 
     public ObservingCacheRequestPublisher onDeleteCache(Consumer<DeleteCacheResult<ReusableLong>> c) {
-        deleteCacheConsumer = c;
+        cacheResponseObservers.deleteCacheConsumer = c;
         return this;
     }
 
     public ObservingCacheRequestPublisher onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c) {
-        removeCacheEntryConsumer = c;
+        cacheResponseObservers.removeCacheEntryConsumer = c;
         return this;
     }
 
     public ObservingCacheRequestPublisher onGetCacheEntry(Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c) {
-        getCacheEntryConsumer = c;
+        cacheResponseObservers.getCacheEntryConsumer = c;
         return this;
     }
 
@@ -86,18 +68,7 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void sendCreateCache(long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer, String requestId) {
-        createCacheObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(CreateCacheResult<ReusableLong> ReusableLongCreateCacheResult) {
-                consumer.accept(ReusableLongCreateCacheResult);
-            }
-        });
-
+        cacheResponseObservers.sendCreateCache(cacheId, consumer, requestId);
         rbPublisher.sendCreateCache(requestId, cacheId);
     }
 
@@ -109,18 +80,7 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void addCacheEntry(long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c, String requestId) {
-        addCacheEntryObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult) {
-                c.accept(addCacheEntryResult);
-            }
-        });
-
+        cacheResponseObservers.addCacheEntry(cacheId, key, value, c, requestId);
         rbPublisher.addCacheEntry(requestId, cacheId, key, value);
     }
 
@@ -131,17 +91,8 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void getCacheEntry(long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c, String requestId) {
-        getCacheEntryObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult) {
-                c.accept(getCacheEntryResult);
-            }
-        });
+        cacheResponseObservers.getCacheEntry(cacheId, key, c, requestId);
+        rbPublisher.getCacheEntry(requestId, cacheId, key);
     }
 
     @Override
@@ -151,18 +102,7 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void clearCache(long cacheId, Consumer<ClearCacheResult<ReusableLong>> c, String requestId) {
-        clearCacheObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(ClearCacheResult<ReusableLong> clearCacheEntryResult) {
-                c.accept(clearCacheEntryResult);
-            }
-        });
-
+        cacheResponseObservers.clearCache(cacheId, c, requestId);
         rbPublisher.clearCache(requestId, cacheId);
     }
 
@@ -173,18 +113,7 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void deleteCache(long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer, String requestId) {
-        deleteCacheObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(DeleteCacheResult<ReusableLong> deleteCacheEntryResult) {
-                consumer.accept(deleteCacheEntryResult);
-            }
-        });
-
+        cacheResponseObservers.deleteCache(cacheId, consumer, requestId);
         rbPublisher.deleteCache(requestId, cacheId);
     }
 
@@ -195,18 +124,7 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void removeCacheEntry(long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c, String requestId) {
-        removeCacheEntryObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult) {
-                c.accept(removeCacheEntryResult);
-            }
-        });
-
+        cacheResponseObservers.removeCacheEntry(cacheId, key, c, requestId);
         rbPublisher.removeCacheEntry(requestId, cacheId, key);
     }
 
@@ -217,18 +135,7 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void getCacheEntries(long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c, String requestId) {
-        getCacheEntriesObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult) {
-                c.accept(getCacheEntriesResult);
-            }
-        });
-
+        cacheResponseObservers.getCacheEntries(cacheId, c, requestId);
         rbPublisher.getCacheEntries(requestId, cacheId);
     }
 
@@ -239,18 +146,7 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void getAllCacheStats(Consumer<CacheStatsResult<ReusableLong>> c, String requestId) {
-        allCacheStatsObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(CacheStatsResult<ReusableLong> getCacheStatsResult) {
-                c.accept(getCacheStatsResult);
-            }
-        });
-
+        cacheResponseObservers.getAllCacheStats(c, requestId);
         rbPublisher.getAllCacheStats(requestId);
     }
 
@@ -261,18 +157,7 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void sendCacheSubscribe(long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c, String requestId) {
-        cacheSubscribeObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(CacheSubscriptionResult<ReusableLong> subscriptionResult) {
-                c.accept(subscriptionResult);
-            }
-        });
-
+        cacheResponseObservers.sendCacheSubscribe(cacheId, c, requestId);
         rbPublisher.sendCacheSubscribe(requestId, cacheId);
     }
 
@@ -283,18 +168,7 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void sendCacheUnsubscribe(long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c, String requestId) {
-        cacheUnsubscribeObservers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return requestId;
-            }
-
-            @Override
-            public void accept(CacheUnsubscribeResult<ReusableLong> subscriptionResult) {
-                c.accept(subscriptionResult);
-            }
-        });
-
+        cacheResponseObservers.sendCacheUnsubscribe(cacheId, c, requestId);
         rbPublisher.sendCacheUnsubscribe(requestId, cacheId);
     }
 
@@ -304,13 +178,9 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
      *
      * @param getCacheEntryResult The result of getting something from the cache.
      */
+    @Override
     public void handleCacheEntryResult(GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult) {
-        var targetId = getCacheEntryResult.getRequestId();
-        getCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntryResult));
-        getCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
-        if (getCacheEntryConsumer != null) {
-            getCacheEntryConsumer.accept(getCacheEntryResult);
-        }
+        cacheResponseHandler.handleCacheEntryResult(getCacheEntryResult);
     }
 
     /**
@@ -319,13 +189,9 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
      *
      * @param getCacheEntriesResult The result of getting all items from the cache.
      */
+    @Override
     public void handleAllCacheEntries(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult) {
-        var targetId = getCacheEntriesResult.getRequestId();
-        getCacheEntriesObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntriesResult));
-        getCacheEntriesObservers.removeIf(p -> p.getId().equals(targetId));
-        if (getCacheEntriesConsumer != null) {
-            getCacheEntriesConsumer.accept(getCacheEntriesResult);
-        }
+        cacheResponseHandler.handleAllCacheEntries(getCacheEntriesResult);
     }
 
     /**
@@ -334,13 +200,9 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
      *
      * @param createCacheResult The result of creating a cache.
      */
+    @Override
     public void handleCacheCreated(CreateCacheResult<ReusableLong> createCacheResult) {
-        var targetId = createCacheResult.getRequestId();
-        createCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(createCacheResult));
-        createCacheObservers.removeIf(p -> p.getId().equals(targetId));
-        if (createCacheConsumer != null) {
-            createCacheConsumer.accept(createCacheResult);
-        }
+        cacheResponseHandler.handleCacheCreated(createCacheResult);
     }
 
     /**
@@ -349,14 +211,10 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
      *
      * @param addCacheEntryResult The result of adding an entry to the cache.
      */
+    @Override
     public void handleCacheEntryCreated(AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult) {
-        var targetId = addCacheEntryResult.getRequestId();
-        addCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(addCacheEntryResult));
-        addCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
-        if (addCacheEntryConsumer != null) {
-            addCacheEntryConsumer.accept(addCacheEntryResult);
-        }
 
+        cacheResponseHandler.handleCacheEntryCreated(addCacheEntryResult);
     }
 
     /**
@@ -365,13 +223,9 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
      *
      * @param removeCacheEntryResult The result of a cache entry removal.
      */
+    @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult) {
-        var targetId = removeCacheEntryResult.getRequestId();
-        removeCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(removeCacheEntryResult));
-        removeCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
-        if (removeCacheEntryConsumer != null) {
-            removeCacheEntryConsumer.accept(removeCacheEntryResult);
-        }
+        cacheResponseHandler.handleCacheEntryRemoved(removeCacheEntryResult);
     }
 
     /**
@@ -380,13 +234,9 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
      *
      * @param clearCacheResult The result of clearing a cache.
      */
+    @Override
     public void handleCacheCleared(ClearCacheResult<ReusableLong> clearCacheResult) {
-        var targetId = clearCacheResult.getRequestId();
-        clearCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(clearCacheResult));
-        clearCacheObservers.removeIf(p -> p.getId().equals(targetId));
-        if (clearCacheConsumer != null) {
-            clearCacheConsumer.accept(clearCacheResult);
-        }
+        cacheResponseHandler.handleCacheCleared(clearCacheResult);
     }
 
     /**
@@ -395,13 +245,9 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
      *
      * @param deleteCacheResult The result of deleting a cache.
      */
+    @Override
     public void handleCacheDeleted(DeleteCacheResult<ReusableLong> deleteCacheResult) {
-        var targetId = deleteCacheResult.getRequestId();
-        deleteCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(deleteCacheResult));
-        deleteCacheObservers.removeIf(p -> p.getId().equals(targetId));
-        if (deleteCacheConsumer != null) {
-            deleteCacheConsumer.accept(deleteCacheResult);
-        }
+        cacheResponseHandler.handleCacheDeleted(deleteCacheResult);
     }
 
     /**
@@ -410,10 +256,9 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
      *
      * @param statsResult The result of getting all cache stats.
      */
+    @Override
     public void handleAllCacheStats(CacheStatsResult<ReusableLong> statsResult) {
-        var targetId = statsResult.getRequestId();
-        allCacheStatsObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(statsResult));
-        allCacheStatsObservers.removeIf(p -> p.getId().equals(targetId));
+        cacheResponseHandler.handleAllCacheStats(statsResult);
     }
 
     /**
@@ -421,11 +266,9 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
      *
      * @param cacheSubscriptionResult The result of subscribing to a cache.
      */
+    @Override
     public void handleCacheSubscribeResponse(CacheSubscriptionResult<ReusableLong> cacheSubscriptionResult) {
-        var targetId = cacheSubscriptionResult.getRequestId();
-        log.info("Got cache subscribe response on requestId {}", targetId);
-        cacheSubscribeObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(cacheSubscriptionResult));
-        cacheSubscribeObservers.removeIf(p -> p.getId().equals(targetId));
+        cacheResponseHandler.handleCacheSubscribeResponse(cacheSubscriptionResult);
     }
 
     /**
@@ -433,14 +276,14 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
      *
      * @param cacheUnsubscribeResult The result of unsubscribing to a cache.
      */
+    @Override
     public void handleCacheUnsubscribeResponse(CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult) {
-        var targetId = cacheUnsubscribeResult.getRequestId();
-        log.info("Got cache unsubscribe response on requestId {}", targetId);
-        cacheUnsubscribeObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(cacheUnsubscribeResult));
-        cacheUnsubscribeObservers.removeIf(p -> p.getId().equals(targetId));
+        cacheResponseHandler.handleCacheUnsubscribeResponse(cacheUnsubscribeResult);
     }
 
+    @Override
     public void handleCacheEntryUpdated(CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult) {
 
+        cacheResponseHandler.handleCacheEntryUpdated(cacheEntryUpdateResult);
     }
 }
