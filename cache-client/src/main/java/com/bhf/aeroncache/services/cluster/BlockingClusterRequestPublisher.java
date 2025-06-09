@@ -1,6 +1,7 @@
-package com.bhf.aeroncache.services.cluster.impl;
+package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 
 /**
  * Blocking versions of {@link ClusterMessagePublisher}'s public API.
