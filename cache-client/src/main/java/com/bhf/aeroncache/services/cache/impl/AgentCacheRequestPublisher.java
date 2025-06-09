@@ -10,7 +10,7 @@ import org.agrona.concurrent.ringbuffer.RingBuffer;
 
 import java.util.concurrent.Executors;
 
-import static com.bhf.aeroncache.services.cache.impl.CacheRequestMessageTypes.*;
+import static com.bhf.aeroncache.domain.CacheRequestMessageTypes.*;
 
 /**
  * Publish Aeron Cache requests into a {@link RingBuffer} to be processed by the
