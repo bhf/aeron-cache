@@ -25,7 +25,7 @@ import java.util.function.Consumer;
  */
 @RequiredArgsConstructor
 @Log4j2
-public class ObservingClusterRequestPublisher implements ClusterRequestPublisher, ClusterRequestConsumingPublisher, CacheResponseHandler {
+public class ObservingClusterRequestPublisher implements ClusterRequestPublisher, ClusterRequestConsumingPublisher, CacheResponseHandler, BlockingClusterRequestPublisher {
 
     private final ClusterMessagePublisher publisher;
     private final List<IdentifiableConsumer<String, CreateCacheResult<ReusableLong>>> createCacheObservers = new CopyOnWriteArrayList<>();
