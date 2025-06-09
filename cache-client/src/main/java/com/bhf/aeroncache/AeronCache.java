@@ -4,7 +4,7 @@ import org.agrona.MutableDirectBuffer;
 
 /**
  * Abstract out operations being done on {@link io.aeron.cluster.client.AeronCluster}
- * instances in order to support uncluster caches.
+ * instances in order to support non-clustered caches.
  */
 public interface AeronCache {
 
