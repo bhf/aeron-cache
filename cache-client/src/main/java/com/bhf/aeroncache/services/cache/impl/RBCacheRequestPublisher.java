@@ -1,16 +1,11 @@
 package com.bhf.aeroncache.services.cache.impl;
 
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
-import com.bhf.aeroncache.utils.RingBufferUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.MessageHandler;
 import org.agrona.concurrent.ringbuffer.RingBuffer;
 
-import java.util.concurrent.Executors;
-
-import static com.bhf.aeroncache.domain.CacheRequestMessageTypes.*;
+import static com.bhf.aeroncache.model.CacheRequestMessageTypes.*;
 
 /**
  * Publish Aeron Cache requests into a {@link RingBuffer} to be processed by the
@@ -18,133 +13,7 @@ import static com.bhf.aeroncache.domain.CacheRequestMessageTypes.*;
  */
 @RequiredArgsConstructor
 @Log4j2
-public class AgentCacheRequestPublisher implements CacheRequestPublisher {
-
-    public static void main(String[] args) {
-        RingBuffer rb = RingBufferUtils.buildRingbuffer(1024);
-        AgentCacheRequestPublisher publisher = new AgentCacheRequestPublisher(rb);
-
-        Executors.newSingleThreadExecutor().execute(new Runnable() {
-            @Override
-            public void run() {
-                int requestCount = 0;
-                long cacheId = 0L;
-                while (true) {
-                    cacheId++;
-                    String key = "someKey-" + cacheId + "-" + requestCount;
-                    String value = "someValue-" + cacheId + "-" + requestCount;
-                    publisher.sendCreateCache("requestId-" + requestCount, cacheId);
-                    requestCount++;
-                    publisher.addCacheEntry("requestId-" + requestCount, cacheId, key, value);
-                    requestCount++;
-                    publisher.getCacheEntry("requestId-" + requestCount, cacheId, key);
-                    requestCount++;
-                    publisher.clearCache("requestId-" + requestCount, cacheId);
-                    requestCount++;
-                    publisher.deleteCache("requestId-" + requestCount, cacheId);
-                    requestCount++;
-                    publisher.getCacheEntries("requestId-" + requestCount, cacheId);
-                    requestCount++;
-                    publisher.sendCacheSubscribe("requestId-" + requestCount, cacheId);
-                    requestCount++;
-                    publisher.sendCacheUnsubscribe("requestId-" + requestCount, cacheId);
-                    requestCount++;
-                    publisher.getAllCacheStats("requestId-" + requestCount);
-                    requestCount++;
-                    publisher.removeCacheEntry("requestId-"+requestCount, cacheId, key);
-
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-
-            }
-        });
-
-
-        while (true) {
-
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            rb.read(new MessageHandler() {
-                @Override
-                public void onMessage(final int msgTypeId, final MutableDirectBuffer buffer, final int index, final int length) {
-                    log.info("Got msg ID " + msgTypeId + " at index " + index + ", length=" + length);
-
-                    if (msgTypeId == CREATE_CACHE_MSG_ID) {
-                        var requestId = buffer.getStringUtf8(index);
-                        var cacheId = buffer.getLong(index + requestId.length() + 4);
-                        log.info("CREATE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
-                    }
-                    if (msgTypeId == ADD_CACHE_ENTRY_MSG_ID) {
-                        var requestId = buffer.getStringUtf8(index);
-                        var cumulativeReadPosition = index + (requestId.length() + 4);
-                        var cacheId = buffer.getLong(cumulativeReadPosition);
-                        cumulativeReadPosition += 8;
-                        var key = buffer.getStringUtf8(cumulativeReadPosition);
-                        cumulativeReadPosition += key.length() + 4;
-                        var value = buffer.getStringUtf8(cumulativeReadPosition);
-                        log.info("ADD CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", key=" + key + ", value=" + value);
-                    }
-                    if (msgTypeId == GET_CACHE_ENTRY_MSG_ID) {
-                        var requestId = buffer.getStringUtf8(index);
-                        var cumulativeReadPosition = index + (requestId.length() + 4);
-                        var cacheId = buffer.getLong(cumulativeReadPosition);
-                        cumulativeReadPosition += 8;
-                        var key = buffer.getStringUtf8(cumulativeReadPosition);
-                        log.info("GET CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", to get key=" + key);
-                    }
-                    if (msgTypeId == CLEAR_CACHE_MSG_ID) {
-                        var requestId = buffer.getStringUtf8(index);
-                        var cacheId = buffer.getLong(index + requestId.length() + 4);
-                        log.info("CLEAR CACHE Request has ID " + requestId + ", to clear on cache ID " + cacheId);
-                    }
-                    if (msgTypeId == DELETE_CACHE_MSG_ID) {
-                        var requestId = buffer.getStringUtf8(index);
-                        var cumulativeReadPosition = index + (requestId.length() + 4);
-                        var cacheId = buffer.getLong(cumulativeReadPosition);
-                        log.info("DELETE CACHE Request has ID "+requestId+", to delete cache ID "+cacheId);
-                    }
-                    if (msgTypeId == GET_CACHE_ENTRIES_MSG_ID) {
-                        var requestId = buffer.getStringUtf8(index);
-                        var cumulativeReadPosition = index + (requestId.length() + 4);
-                        var cacheId = buffer.getLong(cumulativeReadPosition);
-                        log.info("GET CACHE ENTRIES Request has ID "+requestId+", on cache ID "+cacheId);
-                    }
-                    if (msgTypeId == SUBSCRIBE_TO_CACHE_MSG_ID) {
-                        var requestId = buffer.getStringUtf8(index);
-                        var cumulativeReadPosition = index + (requestId.length() + 4);
-                        var cacheId = buffer.getLong(cumulativeReadPosition);
-                        log.info("SUBSCRIBE CACHE Request has ID "+requestId+", on cache ID "+cacheId);
-                    }
-                    if (msgTypeId == UNSUBSCRIBE_TO_CACHE_MSG_ID) {
-                        var requestId = buffer.getStringUtf8(index);
-                        var cumulativeReadPosition = index + (requestId.length() + 4);
-                        var cacheId = buffer.getLong(cumulativeReadPosition);
-                        log.info("UNSUBSCRIBE CACHE Request has ID "+requestId+", on cache ID "+cacheId);
-                    }
-                    if (msgTypeId == GET_CACHE_STATS_MSG_ID) {
-                        var requestId = buffer.getStringUtf8(index);
-                        log.info("GET CACHE STATS Request has ID "+requestId);
-                    }
-                    if (msgTypeId == REMOVE_CACHE_ENTRY_MSG_ID) {
-                        var requestId = buffer.getStringUtf8(index);
-                        var cumulativeReadPosition = index + (requestId.length() + 4);
-                        var cacheId = buffer.getLong(cumulativeReadPosition);
-                        cumulativeReadPosition += 8;
-                        var key = buffer.getStringUtf8(cumulativeReadPosition);
-                        log.info("REMOVE CACHE ENTRY Request has ID " + requestId + ", cache ID " + cacheId + ", remove key=" + key);
-                    }
-                }
-            });
-
-        }
-    }
+public class RBCacheRequestPublisher implements CacheRequestPublisher {
 
     final RingBuffer rb;
 

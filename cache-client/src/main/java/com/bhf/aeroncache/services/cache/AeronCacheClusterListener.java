@@ -1,9 +1,7 @@
-package com.bhf.aeroncache.services.cluster;
+package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.services.cache.CacheResponseHandler;
-import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
@@ -17,17 +15,14 @@ import org.agrona.DirectBuffer;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
 
-import java.util.function.Consumer;
-
 
 /**
- * Client for connecting to the cluster and executing actions
- * against the cache. Results of actions are handled by a {@link Consumer} for
- * each type of result.
+ * Decode SBE messages related to cache requests and pass the result
+ * {@link com.bhf.aeroncache.annotations.Flyweight} to the {@link CacheResponseHandler}.
  */
 @Setter
 @Log4j2
-public class AeronCacheListener implements EgressListener {
+public class AeronCacheClusterListener implements EgressListener {
 
     @Setter
     private CacheResponseHandler cacheResultsCallbacks;
@@ -61,9 +56,6 @@ public class AeronCacheListener implements EgressListener {
     private final CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult = new CacheUnsubscribeResult<>(SupplierUtils.longSupplier.get());
     private final CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult = new CacheEntryUpdateResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void onMessage(
             final long clusterSessionId,
@@ -157,7 +149,7 @@ public class AeronCacheListener implements EgressListener {
 
     /**
      * Handle a cache created event by decoding it and delegating the
-     * result to the {@link ObservingClusterRequestPublisher}.
+     * result to the {@link CacheResponseHandler}.
      *
      * @param buffer The buffer to decode from.
      * @param offset The offset at which to start decoding.

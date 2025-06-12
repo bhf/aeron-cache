@@ -7,10 +7,16 @@ import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
-import com.bhf.aeroncache.services.cluster.AeronCacheListener;
+import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
+import com.bhf.aeroncache.services.cache.CacheClientAgent;
+import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
+import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
+import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
+import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
-import com.bhf.aeroncache.services.cluster.impl.AgentClusterMessagePublisher;
+import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
+import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.ClusterUtils;
@@ -53,8 +59,9 @@ public class HttpApplication {
     private static final String API_PREFIX = "/api/v1/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
-    private static AeronCacheListener client;
-    private static ObservingClusterRequestPublisher observingPublisher;
+    private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
+    private static AeronCacheClusterListener client;
+    private static ObservingCacheRequestPublisher observingPublisher;
     private static AeronCache cluster;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
@@ -70,8 +77,22 @@ public class HttpApplication {
         try {
             ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             System.out.println("Starting AeronCache Cluster Interface");
-            observingPublisher = new ObservingClusterRequestPublisher(new AgentClusterMessagePublisher(rb));
-            client = new AeronCacheListener();
+
+            if (PRE_ENCODE_CACHE_REQUESTS) {
+                // We encode the SBE messages before dropping them onto an Agrona RB for
+                // sending directly to the cluster
+                CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cluster, rb);
+                BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cluster);
+                observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher, blockingRequestPublisher);
+            } else {
+                // Drop normalised cache requests onto an Agrona RB for encoding
+                // to SBE on the Agent thread
+                CacheRequestPublisher rbPublisher = new RBCacheRequestPublisher(rb);
+                observingPublisher = new ObservingCacheRequestPublisher(rbPublisher);
+            }
+
+
+            client = new AeronCacheClusterListener();
             client.setCacheResultsCallbacks(observingPublisher);
 
             var podName = System.getenv("POD_ADDRESS");
@@ -109,9 +130,12 @@ public class HttpApplication {
                 }
             };
 
-            System.out.println("Building cluster agent");
+            System.out.println("Building cluster agent for http service");
             var idleStrategy = new BackoffIdleStrategy();
-            ClusterClientAgent agent = new ClusterClientAgent(cluster, rb, idleStrategy);
+            var agent = PRE_ENCODE_CACHE_REQUESTS ?
+                    new ClusterClientAgent(cluster, rb, idleStrategy) :
+                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster));
+
             var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
             var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster);
             AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
@@ -186,7 +210,7 @@ public class HttpApplication {
         try {
             var requestId = getRequestId(ctx);
             CompletableFuture<CacheStats> future = new CompletableFuture<>();
-            CompletableFuture.runAsync(() -> observingPublisher.getAllCacheStatsBlocking(cluster, c -> {
+            CompletableFuture.runAsync(() -> observingPublisher.getAllCacheStats(c -> {
                 log.info("Got cache stats, requestId {}", c.getRequestId());
                 allCaches.clear();
                 int totalOps = statsTracker.getTotalOpsCount().get();
@@ -298,7 +322,7 @@ public class HttpApplication {
 
             var requestId = getRequestId(ctx);
             CompletableFuture<DeleteCacheResponse> future = new CompletableFuture<>();
-            CompletableFuture.runAsync(() -> observingPublisher.deleteCacheBlocking(cluster, Long.parseLong(cacheId), c -> {
+            CompletableFuture.runAsync(() -> observingPublisher.deleteCache(Long.parseLong(cacheId), c -> {
                 var deletedCacheId = c.getCacheId();
                 log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
                 var response = new DeleteCacheResponse(deletedCacheId.value(), c.getStatus());
@@ -339,7 +363,7 @@ public class HttpApplication {
 
             var requestId = getRequestId(ctx);
             CompletableFuture<DeleteItemResponse> future = new CompletableFuture<>();
-            CompletableFuture.runAsync(() -> observingPublisher.removeCacheEntryBlocking(cluster, cacheId, key, c -> {
+            CompletableFuture.runAsync(() -> observingPublisher.removeCacheEntry(cacheId, key, c -> {
                 log.info("Got delete item response from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
                 var response = new DeleteItemResponse(c.getCacheId().value(), c.getKey().value(), c.getStatus());
                 future.complete(response);
@@ -375,7 +399,7 @@ public class HttpApplication {
 
             var requestId = getRequestId(ctx);
             CompletableFuture<ClearCacheResponse> future = new CompletableFuture<>();
-            CompletableFuture.runAsync(() -> observingPublisher.clearCacheBlocking(cluster, cacheId, c -> {
+            CompletableFuture.runAsync(() -> observingPublisher.clearCache(cacheId, c -> {
                 log.info("Got clear cache response from cluster on cacheId {}", c.getCacheId());
                 var response = new ClearCacheResponse(cacheId, c.getStatus());
                 future.complete(response);
@@ -408,7 +432,7 @@ public class HttpApplication {
 
             var requestId = getRequestId(ctx);
             CompletableFuture<GetItemResponse> future = new CompletableFuture<>();
-            CompletableFuture.runAsync(() -> observingPublisher.getCacheEntryBlocking(cluster, cacheId, key, c -> {
+            CompletableFuture.runAsync(() -> observingPublisher.getCacheEntry(cacheId, key, c -> {
                 log.info("Get item response from cluster on cacheId {}, key {}, value {}", c.getCacheId(), c.getEntryKey(), c.getEntryValue());
                 var noCache = c.getStatus() == OperationStatus.UNKNOWN_CACHE;
                 var response = noCache ?
@@ -443,7 +467,7 @@ public class HttpApplication {
 
             var requestId = getRequestId(ctx);
             CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
-            CompletableFuture.runAsync(() -> observingPublisher.addCacheEntryBlocking(cluster, request.cacheId(), request.key(), request.value(), c -> {
+            CompletableFuture.runAsync(() -> observingPublisher.addCacheEntry(request.cacheId(), request.key(), request.value(), c -> {
                 var cacheId = c.getCacheId();
                 log.info("Got put item response from cluster on cacheId {}", cacheId);
                 var response = new PutItemResponse(cacheId.getValue(), request.key(), c.getStatus());
@@ -480,7 +504,7 @@ public class HttpApplication {
             var requestId = getRequestId(ctx);
 
             CompletableFuture<CreateCacheResponse> future = new CompletableFuture<>();
-            CompletableFuture.runAsync(() -> observingPublisher.sendCreateCacheBlocking(cluster, request.cacheId(), c -> {
+            CompletableFuture.runAsync(() -> observingPublisher.sendCreateCache(request.cacheId(), c -> {
                 var cacheId = c.getCacheId();
                 log.info("Got create cache response from cluster on cacheId {}", cacheId);
                 var response = new CreateCacheResponse(cacheId.getValue(), c.getStatus());
@@ -518,7 +542,7 @@ public class HttpApplication {
 
             var requestId = getRequestId(ctx);
             CompletableFuture<GetCacheResponse> future = new CompletableFuture<>();
-            CompletableFuture.runAsync(() -> observingPublisher.getCacheEntriesBlocking(cluster, cacheId, c -> {
+            CompletableFuture.runAsync(() -> observingPublisher.getCacheEntries(cacheId, c -> {
                 log.info("Get cache content response from cluster on cacheId {}", c.getCacheId());
                 var noCache = c.getStatus() == OperationStatus.UNKNOWN_CACHE;
                 var response = noCache ?

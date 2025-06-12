@@ -1,14 +1,17 @@
 package com.bhf.aeroncache.ws.application;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.services.cluster.AeronCacheListener;
+import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
+import com.bhf.aeroncache.services.cache.CacheClientAgent;
+import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
+import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
-import com.bhf.aeroncache.services.cluster.impl.AgentClusterMessagePublisher;
+import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
+import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
-import com.bhf.aeroncache.ws.services.subscriptions.CacheSubscriptionService;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
@@ -46,8 +49,9 @@ public class WebsocketApplication {
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final String MULTI_SUB_API_PREFIX = "/api/ws/v1/caches/";
-    private static AeronCacheListener client;
-    private static CacheSubscriptionService subscriptionService;
+    private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
+    private static AeronCacheClusterListener client;
+    private static CacheSubscriptionRequestPublisher subscriptionService;
     private static AeronCache cluster;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
@@ -63,8 +67,20 @@ public class WebsocketApplication {
         try {
             ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             System.out.println("Starting AeronCache Cluster Interface");
-            subscriptionService = new CacheSubscriptionService(new AgentClusterMessagePublisher(rb));
-            client = new AeronCacheListener();
+
+            if (PRE_ENCODE_CACHE_REQUESTS) {
+                // We encode the SBE messages before dropping them onto an Agrona RB for
+                // sending directly to the cluster
+                var requestPublisher = new RBClusterMessagePublisher(cluster, rb);
+                subscriptionService = new CacheSubscriptionRequestPublisher(requestPublisher);
+            } else {
+                // Drop normalised cache requests onto an Agrona RB for encoding
+                // to SBE on the Agent thread
+                CacheRequestPublisher rbPublisher = new RBCacheRequestPublisher(rb);
+                subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
+            }
+
+            client = new AeronCacheClusterListener();
             client.setCacheResultsCallbacks(subscriptionService);
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
@@ -99,9 +115,12 @@ public class WebsocketApplication {
                 }
             };
 
-            System.out.println("Building cluster agent");
+            System.out.println("Building cluster agent for websocket service");
             var idleStrategy = new BackoffIdleStrategy();
-            ClusterClientAgent agent = new ClusterClientAgent(cluster, rb, idleStrategy);
+            var agent = PRE_ENCODE_CACHE_REQUESTS ?
+                    new ClusterClientAgent(cluster, rb, idleStrategy) :
+                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster));
+
             var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
             var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster);
             AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
@@ -145,6 +164,7 @@ public class WebsocketApplication {
 
     /**
      * Setup websocket for subscriptions to a single cache.
+     *
      * @param wsConfig
      */
     private static void handleSingleCacheWs(WsConfig wsConfig) {
@@ -156,6 +176,7 @@ public class WebsocketApplication {
 
     /**
      * Setup websocket for subscriptions to multiple caches.
+     *
      * @param wsConfig
      */
     private static void handleMultiCacheWs(WsConfig wsConfig) {

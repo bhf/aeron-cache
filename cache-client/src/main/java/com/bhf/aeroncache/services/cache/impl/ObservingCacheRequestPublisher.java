@@ -172,110 +172,52 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
         rbPublisher.sendCacheUnsubscribe(requestId, cacheId);
     }
 
-    /**
-     * Handle a message indicating the value of a get operation on a particular key
-     * and delegate it to any relevant consumer.
-     *
-     * @param getCacheEntryResult The result of getting something from the cache.
-     */
     @Override
     public void handleCacheEntryResult(GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult) {
         cacheResponseHandler.handleCacheEntryResult(getCacheEntryResult);
     }
 
-    /**
-     * Handle a message indicating the values of an entire cache
-     * and delegate it to any relevant consumer.
-     *
-     * @param getCacheEntriesResult The result of getting all items from the cache.
-     */
     @Override
     public void handleAllCacheEntries(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult) {
         cacheResponseHandler.handleAllCacheEntries(getCacheEntriesResult);
     }
 
-    /**
-     * Handle a message indicating a cache has been created and delegate it
-     * to any relevant consumer.
-     *
-     * @param createCacheResult The result of creating a cache.
-     */
     @Override
     public void handleCacheCreated(CreateCacheResult<ReusableLong> createCacheResult) {
         cacheResponseHandler.handleCacheCreated(createCacheResult);
     }
 
-    /**
-     * Handle a message indicating a cache entry has been created and delegate it
-     * to any relevant consumer.
-     *
-     * @param addCacheEntryResult The result of adding an entry to the cache.
-     */
     @Override
     public void handleCacheEntryCreated(AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult) {
 
         cacheResponseHandler.handleCacheEntryCreated(addCacheEntryResult);
     }
 
-    /**
-     * Handle a message indicating a cache entry has been removed and delegate it
-     * to any relevant consumer.
-     *
-     * @param removeCacheEntryResult The result of a cache entry removal.
-     */
     @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult) {
         cacheResponseHandler.handleCacheEntryRemoved(removeCacheEntryResult);
     }
 
-    /**
-     * Handle a message indicating a cache has been cleared and delegate it
-     * to any relevant consumer.
-     *
-     * @param clearCacheResult The result of clearing a cache.
-     */
     @Override
     public void handleCacheCleared(ClearCacheResult<ReusableLong> clearCacheResult) {
         cacheResponseHandler.handleCacheCleared(clearCacheResult);
     }
 
-    /**
-     * Handle a message indicating a cache has been deleted and delegate it
-     * to any relevant consumer.
-     *
-     * @param deleteCacheResult The result of deleting a cache.
-     */
     @Override
     public void handleCacheDeleted(DeleteCacheResult<ReusableLong> deleteCacheResult) {
         cacheResponseHandler.handleCacheDeleted(deleteCacheResult);
     }
 
-    /**
-     * Handle a message with all cache stats, delegating it
-     * to any relevant consumer.
-     *
-     * @param statsResult The result of getting all cache stats.
-     */
     @Override
     public void handleAllCacheStats(CacheStatsResult<ReusableLong> statsResult) {
         cacheResponseHandler.handleAllCacheStats(statsResult);
     }
 
-    /**
-     * Handle a message about a subscription request to a cache.
-     *
-     * @param cacheSubscriptionResult The result of subscribing to a cache.
-     */
     @Override
     public void handleCacheSubscribeResponse(CacheSubscriptionResult<ReusableLong> cacheSubscriptionResult) {
         cacheResponseHandler.handleCacheSubscribeResponse(cacheSubscriptionResult);
     }
 
-    /**
-     * Handle a message about an unsubscribe request to a cache.
-     *
-     * @param cacheUnsubscribeResult The result of unsubscribing to a cache.
-     */
     @Override
     public void handleCacheUnsubscribeResponse(CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult) {
         cacheResponseHandler.handleCacheUnsubscribeResponse(cacheUnsubscribeResult);
@@ -283,7 +225,6 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void handleCacheEntryUpdated(CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult) {
-
         cacheResponseHandler.handleCacheEntryUpdated(cacheEntryUpdateResult);
     }
 }

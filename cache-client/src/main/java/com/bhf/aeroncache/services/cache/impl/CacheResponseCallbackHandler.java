@@ -12,12 +12,6 @@ import lombok.extern.log4j.Log4j2;
 public class CacheResponseCallbackHandler implements CacheResponseHandler {
     private final CacheResponseObservers observerGroup;
 
-    /**
-     * Handle a message indicating the value of a get operation on a particular key
-     * and delegate it to any relevant consumer.
-     *
-     * @param getCacheEntryResult The result of getting something from the cache.
-     */
     @Override
     public void handleCacheEntryResult(GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult) {
         var targetId = getCacheEntryResult.getRequestId();
@@ -28,12 +22,6 @@ public class CacheResponseCallbackHandler implements CacheResponseHandler {
         }
     }
 
-    /**
-     * Handle a message indicating the values of an entire cache
-     * and delegate it to any relevant consumer.
-     *
-     * @param getCacheEntriesResult The result of getting all items from the cache.
-     */
     @Override
     public void handleAllCacheEntries(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult) {
         var targetId = getCacheEntriesResult.getRequestId();
@@ -44,12 +32,6 @@ public class CacheResponseCallbackHandler implements CacheResponseHandler {
         }
     }
 
-    /**
-     * Handle a message indicating a cache has been created and delegate it
-     * to any relevant consumer.
-     *
-     * @param createCacheResult The result of creating a cache.
-     */
     @Override
     public void handleCacheCreated(CreateCacheResult<ReusableLong> createCacheResult) {
         var targetId = createCacheResult.getRequestId();
@@ -60,12 +42,6 @@ public class CacheResponseCallbackHandler implements CacheResponseHandler {
         }
     }
 
-    /**
-     * Handle a message indicating a cache entry has been created and delegate it
-     * to any relevant consumer.
-     *
-     * @param addCacheEntryResult The result of adding an entry to the cache.
-     */
     @Override
     public void handleCacheEntryCreated(AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult) {
         var targetId = addCacheEntryResult.getRequestId();
@@ -77,12 +53,6 @@ public class CacheResponseCallbackHandler implements CacheResponseHandler {
 
     }
 
-    /**
-     * Handle a message indicating a cache entry has been removed and delegate it
-     * to any relevant consumer.
-     *
-     * @param removeCacheEntryResult The result of a cache entry removal.
-     */
     @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult) {
         var targetId = removeCacheEntryResult.getRequestId();
@@ -93,12 +63,6 @@ public class CacheResponseCallbackHandler implements CacheResponseHandler {
         }
     }
 
-    /**
-     * Handle a message indicating a cache has been cleared and delegate it
-     * to any relevant consumer.
-     *
-     * @param clearCacheResult The result of clearing a cache.
-     */
     @Override
     public void handleCacheCleared(ClearCacheResult<ReusableLong> clearCacheResult) {
         var targetId = clearCacheResult.getRequestId();
@@ -109,12 +73,6 @@ public class CacheResponseCallbackHandler implements CacheResponseHandler {
         }
     }
 
-    /**
-     * Handle a message indicating a cache has been deleted and delegate it
-     * to any relevant consumer.
-     *
-     * @param deleteCacheResult The result of deleting a cache.
-     */
     @Override
     public void handleCacheDeleted(DeleteCacheResult<ReusableLong> deleteCacheResult) {
         var targetId = deleteCacheResult.getRequestId();
@@ -125,12 +83,6 @@ public class CacheResponseCallbackHandler implements CacheResponseHandler {
         }
     }
 
-    /**
-     * Handle a message with all cache stats, delegating it
-     * to any relevant consumer.
-     *
-     * @param statsResult The result of getting all cache stats.
-     */
     @Override
     public void handleAllCacheStats(CacheStatsResult<ReusableLong> statsResult) {
         var targetId = statsResult.getRequestId();
@@ -138,11 +90,6 @@ public class CacheResponseCallbackHandler implements CacheResponseHandler {
         observerGroup.allCacheStatsObservers.removeIf(p -> p.getId().equals(targetId));
     }
 
-    /**
-     * Handle a message about a subscription request to a cache.
-     *
-     * @param cacheSubscriptionResult The result of subscribing to a cache.
-     */
     @Override
     public void handleCacheSubscribeResponse(CacheSubscriptionResult<ReusableLong> cacheSubscriptionResult) {
         var targetId = cacheSubscriptionResult.getRequestId();
@@ -151,11 +98,6 @@ public class CacheResponseCallbackHandler implements CacheResponseHandler {
         observerGroup.cacheSubscribeObservers.removeIf(p -> p.getId().equals(targetId));
     }
 
-    /**
-     * Handle a message about an unsubscribe request to a cache.
-     *
-     * @param cacheUnsubscribeResult The result of unsubscribing to a cache.
-     */
     @Override
     public void handleCacheUnsubscribeResponse(CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult) {
         var targetId = cacheUnsubscribeResult.getRequestId();
