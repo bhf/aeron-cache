@@ -1,13 +1,18 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.services.cluster.AeronCacheListener;
+import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
+import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
+import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
+import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
+import com.bhf.aeroncache.utils.RingBufferUtils;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.util.*;
 
@@ -42,7 +47,7 @@ public class BasicPerfTest {
         return sb.toString();
     }
 
-    static void addConsumers(AeronCacheListener client, ObservingClusterRequestPublisher observingPublisher) {
+    static void addConsumers(AeronCacheClusterListener client, ObservingClusterRequestPublisher observingPublisher) {
         observingPublisher
                 .onAddCacheEntry(c -> {
                     long now = System.currentTimeMillis();
@@ -63,11 +68,11 @@ public class BasicPerfTest {
      * @param cacheId      The ID of the cache we're testing against.
      * @param payloadValue
      */
-    private static void sendMessagesToCache(AeronCacheListener client, AeronCache cluster, ObservingClusterRequestPublisher publisher, int cacheId, String payloadValue) {
+    private static void sendMessagesToCache(AeronCacheClusterListener client, AeronCache cluster, ObservingClusterRequestPublisher publisher, int cacheId, String payloadValue) {
         var ts = System.currentTimeMillis();
         var requestId = String.valueOf(c++);
         lastSent = ts;
-        publisher.addCacheEntryBlocking(cluster, requestId, cacheId, "key1", payloadValue);
+        publisher.addCacheEntryBlocking(requestId, cacheId, "key1", payloadValue);
     }
 
     public static void main(String[] args) {
@@ -77,16 +82,13 @@ public class BasicPerfTest {
         System.out.println("EGRESS_IP: " + egressIP);
         final var ingressEndpoints = ingressEndpoints(Arrays.asList(hostnames));
 
-        final var client = new AeronCacheListener();
-        var observingPublisher = new ObservingClusterRequestPublisher(new ClusterMessagePublisher());
-        client.setCacheResultsCallbacks(observingPublisher);
-        addConsumers(client, observingPublisher);
+        final var client = new AeronCacheClusterListener();
 
         Map<Integer, StringBuilder> payloadSizeToDistro = new TreeMap<>();
 
         try (
                 MediaDriver mediaDriver = MediaDriver.launchEmbedded(new MediaDriver.Context()
-                        .threadingMode(ThreadingMode.SHARED)
+                        .threadingMode(ThreadingMode.DEDICATED)
                         .dirDeleteOnStart(true)
                         .dirDeleteOnShutdown(true));
                 AeronCluster aeronCluster = AeronCluster.connect(
@@ -114,12 +116,20 @@ public class BasicPerfTest {
                 }
             };
 
+            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
+            CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(aeronCache, rb);
+            BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(aeronCache);
+            var observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher, blockingRequestPublisher);
+
+            client.setCacheResultsCallbacks(observingPublisher);
+            addConsumers(client, observingPublisher);
+
             var cacheId = 808;
             System.out.println("Sending request to create cache " + cacheId);
-            observingPublisher.sendCreateCacheBlocking(aeronCache, UUID.randomUUID().toString(), cacheId);
+            observingPublisher.sendCreateCacheBlocking(UUID.randomUUID().toString(), cacheId);
 
             var totalToSend = 10_000;
-            var payloadSizes = new Integer[]{5};
+            var payloadSizes = new Integer[]{25, 50, 100, 200, 400};
             //var payloadSizes = new Integer[]{5, 10, 25, 50, 100, 200, 400, 1000};
             //var payloadSizes = new Integer[]{2000, 5000, 10000};
             //var payloadSizes = new Integer[]{20000, 50000, 100000};

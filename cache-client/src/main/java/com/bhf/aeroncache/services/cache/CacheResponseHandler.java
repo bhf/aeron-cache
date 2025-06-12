@@ -86,5 +86,10 @@ public interface CacheResponseHandler {
      */
     void handleCacheUnsubscribeResponse(CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult);
 
+    /**
+     * Handle a message about a cache entry being updated.
+     *
+     * @param cacheEntryUpdateResult The entry update details.
+     */
     void handleCacheEntryUpdated(CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult);
 }

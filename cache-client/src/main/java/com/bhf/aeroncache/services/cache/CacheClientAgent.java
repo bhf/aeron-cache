@@ -10,7 +10,7 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.bhf.aeroncache.domain.CacheRequestMessageTypes.*;
+import static com.bhf.aeroncache.model.CacheRequestMessageTypes.*;
 
 /**
  * An {@link Agent} implementation of an AeronCache Client that is run
@@ -20,6 +20,9 @@ import static com.bhf.aeroncache.domain.CacheRequestMessageTypes.*;
  * <p>
  * A good option when you're worried about head of line blocking on
  * the client publishing side (you do any SBE encoding and logic on this Agent thread).
+ * <p>
+ * Allows for having multiple client side publishing threads publishing to a
+ * {@link ManyToOneRingBuffer} instance.
  */
 @Log4j2
 @RequiredArgsConstructor
@@ -61,14 +64,14 @@ public class CacheClientAgent implements Agent {
 
     private void processInboundMessages(ManyToOneRingBuffer rb) {
         rb.read((msgTypeId, buffer, index, length) -> {
-            log.info("Got msg ID " + msgTypeId + " at index " + index + ", length=" + length);
+            log.debug("Got msg ID " + msgTypeId + " at index " + index + ", length=" + length);
 
             switch (msgTypeId) {
                 case CREATE_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cacheId = buffer.getLong(index + requestId.length() + 4);
-                    log.info("CREATE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
-                    publisher.sendCreateCache(cluster, requestId, cacheId);
+                    log.debug("CREATE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
+                    publisher.sendCreateCache(requestId, cacheId);
                 }
                 case ADD_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
@@ -78,8 +81,8 @@ public class CacheClientAgent implements Agent {
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
                     cumulativeReadPosition += key.length() + 4;
                     var value = buffer.getStringUtf8(cumulativeReadPosition);
-                    log.info("ADD CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", key=" + key + ", value=" + value);
-                    publisher.addCacheEntry(cluster, requestId, cacheId, key, value);
+                    log.debug("ADD CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", key=" + key + ", value=" + value);
+                    publisher.addCacheEntry(requestId, cacheId, key, value);
                 }
                 case GET_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
@@ -87,47 +90,47 @@ public class CacheClientAgent implements Agent {
                     var cacheId = buffer.getLong(cumulativeReadPosition);
                     cumulativeReadPosition += 8;
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
-                    log.info("GET CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", to get key=" + key);
-                    publisher.getCacheEntry(cluster, requestId, cacheId, key);
+                    log.debug("GET CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", to get key=" + key);
+                    publisher.getCacheEntry(requestId, cacheId, key);
                 }
                 case CLEAR_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cacheId = buffer.getLong(index + requestId.length() + 4);
-                    log.info("CLEAR CACHE Request has ID " + requestId + ", to clear on cache ID " + cacheId);
-                    publisher.clearCache(cluster, requestId, cacheId);
+                    log.debug("CLEAR CACHE Request has ID " + requestId + ", to clear on cache ID " + cacheId);
+                    publisher.clearCache(requestId, cacheId);
                 }
                 case DELETE_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
                     var cacheId = buffer.getLong(cumulativeReadPosition);
-                    log.info("DELETE CACHE Request has ID " + requestId + ", to delete cache ID " + cacheId);
-                    publisher.deleteCache(cluster, requestId, cacheId);
+                    log.debug("DELETE CACHE Request has ID " + requestId + ", to delete cache ID " + cacheId);
+                    publisher.deleteCache(requestId, cacheId);
                 }
                 case GET_CACHE_ENTRIES_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
                     var cacheId = buffer.getLong(cumulativeReadPosition);
-                    log.info("GET CACHE ENTRIES Request has ID " + requestId + ", on cache ID " + cacheId);
-                    publisher.getCacheEntries(cluster, requestId, cacheId);
+                    log.debug("GET CACHE ENTRIES Request has ID " + requestId + ", on cache ID " + cacheId);
+                    publisher.getCacheEntries(requestId, cacheId);
                 }
                 case SUBSCRIBE_TO_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
                     var cacheId = buffer.getLong(cumulativeReadPosition);
-                    log.info("SUBSCRIBE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
-                    publisher.sendCacheSubscribe(cluster, requestId, cacheId);
+                    log.debug("SUBSCRIBE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
+                    publisher.sendCacheSubscribe(requestId, cacheId);
                 }
                 case UNSUBSCRIBE_TO_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
                     var cacheId = buffer.getLong(cumulativeReadPosition);
-                    log.info("UNSUBSCRIBE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
-                    publisher.sendCacheUnsubscribe(cluster, requestId, cacheId);
+                    log.debug("UNSUBSCRIBE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
+                    publisher.sendCacheUnsubscribe(requestId, cacheId);
                 }
                 case GET_CACHE_STATS_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    log.info("GET CACHE STATS Request has ID " + requestId);
-                    publisher.getAllCacheStats(cluster, requestId);
+                    log.debug("GET CACHE STATS Request has ID " + requestId);
+                    publisher.getAllCacheStats(requestId);
                 }
                 case REMOVE_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
@@ -135,8 +138,8 @@ public class CacheClientAgent implements Agent {
                     var cacheId = buffer.getLong(cumulativeReadPosition);
                     cumulativeReadPosition += 8;
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
-                    log.info("REMOVE CACHE ENTRY Request has ID " + requestId + ", cache ID " + cacheId + ", remove key=" + key);
-                    publisher.removeCacheEntry(cluster, requestId, cacheId, key);
+                    log.debug("REMOVE CACHE ENTRY Request has ID " + requestId + ", cache ID " + cacheId + ", remove key=" + key);
+                    publisher.removeCacheEntry(requestId, cacheId, key);
                 }
                 default -> log.warn("Got unknown msgType: {} processing inbound client cache requests", msgTypeId);
             }

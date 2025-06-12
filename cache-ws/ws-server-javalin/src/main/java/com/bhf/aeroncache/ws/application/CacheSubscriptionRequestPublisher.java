@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.ws.services.subscriptions;
+package com.bhf.aeroncache.ws.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.consumer.IdentifiableConsumer;
@@ -8,8 +8,8 @@ import com.bhf.aeroncache.models.results.CacheEntryUpdateResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.DeleteCacheResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
-import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
-import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
+import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
+import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import io.javalin.websocket.WsCloseStatus;
@@ -22,17 +22,119 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
-/**
- * Manage subscriptions to Aeron Cache updates and send these
- * to connected websockets as {@link CacheUpdateEvent}s.
- */
 @Log4j2
-public class CacheSubscriptionService extends ObservingClusterRequestPublisher {
+public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPublisher implements WebsocketStatusHandler, CacheSubscriptions  {
 
     private final Map<Long, List<IdentifiableConsumer<String, CacheUpdateEvent>>> cacheSubscriptions = new ConcurrentHashMap<>();
 
-    public CacheSubscriptionService(ClusterMessagePublisher publisher) {
-        super(publisher);
+    public CacheSubscriptionRequestPublisher(CacheRequestPublisher rbPublisher) {
+        super(rbPublisher);
+    }
+
+
+    /**
+     * Subscribe to cache update.
+     *
+     * @param cluster     The cluster to use.
+     * @param wsContext   The websocket context.
+     * @param cacheId     The cache to subscribe too.
+     * @param wsSessionId The websocket session ID.
+     * @param requestId   The request ID.
+     * @param consumer    The consumer of {@link CacheUpdateEvent}.
+     */
+    @Override
+    public void subscribeToCache(AeronCache cluster, WsContext wsContext, long cacheId, String wsSessionId, String requestId, Consumer<CacheUpdateEvent> consumer) {
+        List<IdentifiableConsumer<String, CacheUpdateEvent>> currentSubscribers;
+        if (cacheSubscriptions.containsKey(cacheId)) {
+            currentSubscribers = cacheSubscriptions.get(cacheId);
+        } else {
+            currentSubscribers = new CopyOnWriteArrayList<>();
+            cacheSubscriptions.put(cacheId, currentSubscribers);
+            log.info("Sending request to cluster to subscribe to cache {}", cacheId);
+            sendCacheSubscriptionRequest(cluster, requestId, cacheId, wsContext);
+        }
+
+        currentSubscribers.add(new IdentifiableConsumer<>() {
+            @Override
+            public String getId() {
+                return wsSessionId;
+            }
+
+            @Override
+            public void accept(CacheUpdateEvent cacheUpdateEvent) {
+                consumer.accept(cacheUpdateEvent);
+            }
+        });
+    }
+
+    /**
+     * Send a request to the cluster to subscribe to cache updates.
+     *
+     * @param cluster   The cluster to use.
+     * @param requestId The request ID.
+     * @param cacheId   The ID of the cache we want to subscribe too on the cluster side.
+     */
+    private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, long cacheId, WsContext wsContext) {
+        sendCacheSubscribe(cacheId, subscriptionResult -> {
+            if (subscriptionResult.getStatus() != OperationStatus.SUCCESS) {
+                var errorMsg = STR."Couldn't subscribe to cache \{cacheId}, status=\{subscriptionResult.getStatus()}";
+                log.warn(errorMsg);
+                wsContext.closeSession(WsCloseStatus.SERVER_ERROR, errorMsg);
+            }
+        }, requestId);
+    }
+
+    /**
+     * Send a request to the cluster to unsubscribe to cache updated.
+     *
+     * @param cluster   The cluster to use.
+     * @param requestId The request ID.
+     * @param cacheId   The ID of the cache we want to unsubscribe too on the cluster side.
+     */
+    private void sendCacheUnsubscribeRequest(AeronCache cluster, String requestId, long cacheId) {
+        sendCacheUnsubscribe(cacheId, unsubscribeResult -> {
+            if (unsubscribeResult.getStatus() != OperationStatus.SUCCESS) {
+                log.warn("Couldn't unsubscribe from cache {}, request ID {}", cacheId, requestId);
+            } else {
+                var wsSubscriptions = cacheSubscriptions.remove(cacheId);
+                if (wsSubscriptions != null) {
+                    log.info("Removed {} subscriptions to cacheId {}", wsSubscriptions.size(), cacheId);
+                }
+            }
+        }, requestId);
+    }
+
+    @Override
+    public void handleWsError(AeronCache cluster, String requestId, String wsSessionId) {
+        removeWsSession(cluster, requestId, wsSessionId);
+    }
+
+    @Override
+    public void handleWsClosed(AeronCache cluster, String requestId, String wsSessionId) {
+        removeWsSession(cluster, requestId, wsSessionId);
+    }
+
+    /**
+     * Remove associated websocket session. If this causes the number of subscriptions
+     * to the cache to hit 0, then unsubscribe to cache updates by sending a message
+     * to the cluster.
+     *
+     * @param cluster     The cluster to use.
+     * @param requestId   The request ID.
+     * @param wsSessionId The websocket session we want to remove.
+     */
+    private void removeWsSession(AeronCache cluster, String requestId, String wsSessionId) {
+        cacheSubscriptions.forEach((cacheId, wsConsumers) -> {
+            var removed = wsConsumers.removeIf(p -> p.getId().equals(wsSessionId));
+            if (removed) {
+                log.info("Removed websocket session ID: {} subscription to cacheId: {}", wsSessionId, cacheId);
+                if (wsConsumers.isEmpty()) {
+                    log.info("Removed last websocket client subscription on cacheId: {}", cacheId);
+                    sendCacheUnsubscribeRequest(cluster, requestId, cacheId);
+                    cacheSubscriptions.remove(cacheId);
+                }
+            }
+        });
     }
 
     @Override
@@ -85,123 +187,4 @@ public class CacheSubscriptionService extends ObservingClusterRequestPublisher {
             subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, cacheEntryUpdateResult.getRequestId())));
         }
     }
-
-    /**
-     * Subscribe to cache update.
-     *
-     * @param cluster     The cluster to use.
-     * @param wsContext   The websocket context.
-     * @param cacheId     The cache to subscribe too.
-     * @param wsSessionId The websocket session ID.
-     * @param requestId   The request ID.
-     * @param consumer    The consumer of {@link CacheUpdateEvent}.
-     */
-    public void subscribeToCache(AeronCache cluster, WsContext wsContext, long cacheId, String wsSessionId, String requestId, Consumer<CacheUpdateEvent> consumer) {
-        List<IdentifiableConsumer<String, CacheUpdateEvent>> currentSubscribers;
-        if (cacheSubscriptions.containsKey(cacheId)) {
-            currentSubscribers = cacheSubscriptions.get(cacheId);
-        } else {
-            currentSubscribers = new CopyOnWriteArrayList<>();
-            cacheSubscriptions.put(cacheId, currentSubscribers);
-            log.info("Sending request to cluster to subscribe to cache {}", cacheId);
-            sendCacheSubscriptionRequest(cluster, requestId, cacheId, wsContext);
-        }
-
-        currentSubscribers.add(new IdentifiableConsumer<>() {
-            @Override
-            public String getId() {
-                return wsSessionId;
-            }
-
-            @Override
-            public void accept(CacheUpdateEvent cacheUpdateEvent) {
-                consumer.accept(cacheUpdateEvent);
-            }
-        });
-    }
-
-    /**
-     * Send a request to the cluster to subscribe to cache updates.
-     *
-     * @param cluster   The cluster to use.
-     * @param requestId The request ID.
-     * @param cacheId   The ID of the cache we want to subscribe too on the cluster side.
-     */
-    private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, long cacheId, WsContext wsContext) {
-        sendCacheSubscribeBlocking(cluster, cacheId, subscriptionResult -> {
-            if (subscriptionResult.getStatus() != OperationStatus.SUCCESS) {
-                var errorMsg = STR."Couldn't subscribe to cache \{cacheId}, status=\{subscriptionResult.getStatus()}";
-                log.warn(errorMsg);
-                wsContext.closeSession(WsCloseStatus.SERVER_ERROR, errorMsg);
-            }
-        }, requestId);
-    }
-
-    /**
-     * Send a request to the cluster to unsubscribe to cache updated.
-     *
-     * @param cluster   The cluster to use.
-     * @param requestId The request ID.
-     * @param cacheId   The ID of the cache we want to unsubscribe too on the cluster side.
-     */
-    private void sendCacheUnsubscribeRequest(AeronCache cluster, String requestId, long cacheId) {
-        sendCacheUnsubscribeBlocking(cluster, cacheId, unsubscribeResult -> {
-            if (unsubscribeResult.getStatus() != OperationStatus.SUCCESS) {
-                log.warn("Couldn't unsubscribe from cache {}, request ID {}", cacheId, requestId);
-            } else {
-                var wsSubscriptions = cacheSubscriptions.remove(cacheId);
-                if (wsSubscriptions != null) {
-                    log.info("Removed {} subscriptions to cacheId {}", wsSubscriptions.size(), cacheId);
-                }
-            }
-        }, requestId);
-    }
-
-    /**
-     * Handle a websocket error. Removes any associated consumer
-     * and cancels cache side subscriptions if necessary.
-     *
-     * @param cluster     The cluster to use.
-     * @param requestId   The request ID.
-     * @param wsSessionId The websocket session ID.
-     */
-    public void handleWsError(AeronCache cluster, String requestId, String wsSessionId) {
-        removeWsSession(cluster, requestId, wsSessionId);
-    }
-
-    /**
-     * Handle a websocket closing. Removes any associated consumer
-     * * and cancels cache side subscriptions if necessary.
-     *
-     * @param cluster     The cluster to use.
-     * @param requestId   The request ID.
-     * @param wsSessionId The websocket session ID.
-     */
-    public void handleWsClosed(AeronCache cluster, String requestId, String wsSessionId) {
-        removeWsSession(cluster, requestId, wsSessionId);
-    }
-
-    /**
-     * Remove associated websocket session. If this causes the number of subscriptions
-     * to the cache to hit 0, then unsubscribe to cache updates by sending a message
-     * to the cluster.
-     *
-     * @param cluster     The cluster to use.
-     * @param requestId   The request ID.
-     * @param wsSessionId The websocket session we want to remove.
-     */
-    private void removeWsSession(AeronCache cluster, String requestId, String wsSessionId) {
-        cacheSubscriptions.forEach((cacheId, wsConsumers) -> {
-            var removed = wsConsumers.removeIf(p -> p.getId().equals(wsSessionId));
-            if (removed) {
-                log.info("Removed websocket session ID: {} subscription to cacheId: {}", wsSessionId, cacheId);
-                if (wsConsumers.isEmpty()) {
-                    log.info("Removed last websocket client subscription on cacheId: {}", cacheId);
-                    sendCacheUnsubscribeRequest(cluster, requestId, cacheId);
-                    cacheSubscriptions.remove(cacheId);
-                }
-            }
-        });
-    }
-
 }
