@@ -1,9 +1,10 @@
 plugins {
     application
+    alias(libs.plugins.jmh)
     alias(libs.plugins.shadow)
 }
 
-project.setProperty("mainClassName", "com.bhf.aeroncache.application.SampleClientUsage")
+project.setProperty("mainClassName", "com.bhf.aeroncache.application.BasicPerfTest")
 
 dependencies {
     implementation(project(":cache-messages-sbe"))
@@ -16,4 +17,10 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+jmh {
+    warmupIterations = 1
+    iterations = 5
+    fork = 1
 }

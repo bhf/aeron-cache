@@ -10,104 +10,61 @@ import lombok.extern.log4j.Log4j2;
 @RequiredArgsConstructor
 @Log4j2
 public class CacheResponseCallbackHandler implements CacheResponseHandler {
-    private final CacheResponseObservers observerGroup;
+    private final CacheResponseHandler observerGroup;
 
     @Override
     public void handleCacheEntryResult(GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult) {
-        var targetId = getCacheEntryResult.getRequestId();
-        observerGroup.getCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntryResult));
-        observerGroup.getCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
-        if (observerGroup.getCacheEntryConsumer != null) {
-            observerGroup.getCacheEntryConsumer.accept(getCacheEntryResult);
-        }
+        observerGroup.handleCacheEntryResult(getCacheEntryResult);
     }
 
     @Override
     public void handleAllCacheEntries(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult) {
-        var targetId = getCacheEntriesResult.getRequestId();
-        observerGroup.getCacheEntriesObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntriesResult));
-        observerGroup.getCacheEntriesObservers.removeIf(p -> p.getId().equals(targetId));
-        if (observerGroup.getCacheEntriesConsumer != null) {
-            observerGroup.getCacheEntriesConsumer.accept(getCacheEntriesResult);
-        }
+        observerGroup.handleAllCacheEntries(getCacheEntriesResult);
     }
 
     @Override
     public void handleCacheCreated(CreateCacheResult<ReusableLong> createCacheResult) {
-        var targetId = createCacheResult.getRequestId();
-        observerGroup.createCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(createCacheResult));
-        observerGroup.createCacheObservers.removeIf(p -> p.getId().equals(targetId));
-        if (observerGroup.createCacheConsumer != null) {
-            observerGroup.createCacheConsumer.accept(createCacheResult);
-        }
+        observerGroup.handleCacheCreated(createCacheResult);
     }
 
     @Override
     public void handleCacheEntryCreated(AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult) {
-        var targetId = addCacheEntryResult.getRequestId();
-        observerGroup.addCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(addCacheEntryResult));
-        observerGroup.addCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
-        if (observerGroup.addCacheEntryConsumer != null) {
-            observerGroup.addCacheEntryConsumer.accept(addCacheEntryResult);
-        }
+        observerGroup.handleCacheEntryCreated(addCacheEntryResult);
 
     }
 
     @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult) {
-        var targetId = removeCacheEntryResult.getRequestId();
-        observerGroup.removeCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(removeCacheEntryResult));
-        observerGroup.removeCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
-        if (observerGroup.removeCacheEntryConsumer != null) {
-            observerGroup.removeCacheEntryConsumer.accept(removeCacheEntryResult);
-        }
+        observerGroup.handleCacheEntryRemoved(removeCacheEntryResult);
     }
 
     @Override
     public void handleCacheCleared(ClearCacheResult<ReusableLong> clearCacheResult) {
-        var targetId = clearCacheResult.getRequestId();
-        observerGroup.clearCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(clearCacheResult));
-        observerGroup.clearCacheObservers.removeIf(p -> p.getId().equals(targetId));
-        if (observerGroup.clearCacheConsumer != null) {
-            observerGroup.clearCacheConsumer.accept(clearCacheResult);
-        }
+        observerGroup.handleCacheCleared(clearCacheResult);
     }
 
     @Override
     public void handleCacheDeleted(DeleteCacheResult<ReusableLong> deleteCacheResult) {
-        var targetId = deleteCacheResult.getRequestId();
-        observerGroup.deleteCacheObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(deleteCacheResult));
-        observerGroup.deleteCacheObservers.removeIf(p -> p.getId().equals(targetId));
-        if (observerGroup.deleteCacheConsumer != null) {
-            observerGroup.deleteCacheConsumer.accept(deleteCacheResult);
-        }
+        observerGroup.handleCacheDeleted(deleteCacheResult);
     }
 
     @Override
     public void handleAllCacheStats(CacheStatsResult<ReusableLong> statsResult) {
-        var targetId = statsResult.getRequestId();
-        observerGroup.allCacheStatsObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(statsResult));
-        observerGroup.allCacheStatsObservers.removeIf(p -> p.getId().equals(targetId));
+        observerGroup.handleAllCacheStats(statsResult);
     }
 
     @Override
     public void handleCacheSubscribeResponse(CacheSubscriptionResult<ReusableLong> cacheSubscriptionResult) {
-        var targetId = cacheSubscriptionResult.getRequestId();
-        log.info("Got cache subscribe response on requestId {}", targetId);
-        observerGroup.cacheSubscribeObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(cacheSubscriptionResult));
-        observerGroup.cacheSubscribeObservers.removeIf(p -> p.getId().equals(targetId));
+        observerGroup.handleCacheSubscribeResponse(cacheSubscriptionResult);
     }
 
     @Override
     public void handleCacheUnsubscribeResponse(CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult) {
-        var targetId = cacheUnsubscribeResult.getRequestId();
-        log.info("Got cache unsubscribe response on requestId {}", targetId);
-        observerGroup.cacheUnsubscribeObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(cacheUnsubscribeResult));
-        observerGroup.cacheUnsubscribeObservers.removeIf(p -> p.getId().equals(targetId));
+        observerGroup.handleCacheUnsubscribeResponse(cacheUnsubscribeResult);
     }
 
     @Override
     public void handleCacheEntryUpdated(CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult) {
-
+        observerGroup.handleCacheEntryUpdated(cacheEntryUpdateResult);
     }
 }

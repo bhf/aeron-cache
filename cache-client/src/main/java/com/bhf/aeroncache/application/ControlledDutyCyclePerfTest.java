@@ -19,9 +19,11 @@ import java.util.*;
 import static com.bhf.aeroncache.application.ClusterNodeApplication.calculatePort;
 
 /**
- * A basic request response perf test.
+ * A basic request-response roundtrip perf test. Controls the duty cycle itself
+ * and polls on the cluster directly, waiting for the response before
+ * continuing to send more requests to Aeron Cache.
  */
-public class BasicPerfTest {
+public class ControlledDutyCyclePerfTest {
 
     static long lastSent = 0;
     static int count = 0;
@@ -129,7 +131,7 @@ public class BasicPerfTest {
             observingPublisher.sendCreateCacheBlocking(UUID.randomUUID().toString(), cacheId);
 
             var totalToSend = 10_000;
-            var payloadSizes = new Integer[]{25, 50, 100, 200, 400};
+            var payloadSizes = new Integer[]{5, 10, 25, 100, 200};
             //var payloadSizes = new Integer[]{5, 10, 25, 50, 100, 200, 400, 1000};
             //var payloadSizes = new Integer[]{2000, 5000, 10000};
             //var payloadSizes = new Integer[]{20000, 50000, 100000};

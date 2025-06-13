@@ -5,6 +5,7 @@ import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.CacheRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.CacheResponseHandler;
+import com.bhf.aeroncache.services.cache.ConsumingResponseHandler;
 import com.bhf.aeroncache.services.cluster.ClusterRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.types.ReusableLong;
@@ -27,37 +28,36 @@ import java.util.function.Consumer;
 public class ObservingCacheRequestPublisher implements CacheRequestPublisher, CacheRequestConsumingPublisher, CacheResponseHandler {
 
     private final CacheRequestPublisher rbPublisher;
-    private final CacheResponseObservers cacheResponseObservers = new CacheResponseObservers();
+    private final ConsumingResponseHandler cacheResponseObservers = new CacheResponseMapObservers();
     private final CacheResponseCallbackHandler cacheResponseHandler = new CacheResponseCallbackHandler(cacheResponseObservers);
 
-
     public ObservingCacheRequestPublisher onCreateCache(Consumer<CreateCacheResult<ReusableLong>> c) {
-        cacheResponseObservers.createCacheConsumer = c;
+        cacheResponseObservers.setCreateCacheConsumer(c);
         return this;
     }
 
     public ObservingCacheRequestPublisher onAddCacheEntry(Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c) {
-        cacheResponseObservers.addCacheEntryConsumer = c;
+        cacheResponseObservers.setAddCacheEntryConsumer(c);
         return this;
     }
 
     public ObservingCacheRequestPublisher onClearCache(Consumer<ClearCacheResult<ReusableLong>> c) {
-        cacheResponseObservers.clearCacheConsumer = c;
+        cacheResponseObservers.setClearCacheConsumer(c);
         return this;
     }
 
     public ObservingCacheRequestPublisher onDeleteCache(Consumer<DeleteCacheResult<ReusableLong>> c) {
-        cacheResponseObservers.deleteCacheConsumer = c;
+        cacheResponseObservers.setDeleteCacheConsumer(c);
         return this;
     }
 
     public ObservingCacheRequestPublisher onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c) {
-        cacheResponseObservers.removeCacheEntryConsumer = c;
+        cacheResponseObservers.setRemoveCacheEntryConsumer(c);
         return this;
     }
 
     public ObservingCacheRequestPublisher onGetCacheEntry(Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c) {
-        cacheResponseObservers.getCacheEntryConsumer = c;
+        cacheResponseObservers.setGetCacheEntryConsumer(c);
         return this;
     }
 
@@ -189,7 +189,6 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
 
     @Override
     public void handleCacheEntryCreated(AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult) {
-
         cacheResponseHandler.handleCacheEntryCreated(addCacheEntryResult);
     }
 
