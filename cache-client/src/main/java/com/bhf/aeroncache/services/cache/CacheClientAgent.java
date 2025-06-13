@@ -8,8 +8,6 @@ import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import static com.bhf.aeroncache.model.CacheRequestMessageTypes.*;
 
 /**
@@ -32,7 +30,7 @@ public class CacheClientAgent implements Agent {
     final ManyToOneRingBuffer rb;
     final IdleStrategy idleStrategy;
     final ClusterMessagePublisher publisher;
-    final AtomicBoolean isEnabled = new AtomicBoolean(true);
+    volatile boolean isEnabled = true;
     private final int KEEPALIVE_INTERVAL = 200;
     long lastKeepAlive = 0;
 
@@ -52,7 +50,7 @@ public class CacheClientAgent implements Agent {
      */
     @Override
     public int doWork() throws Exception {
-        while (isEnabled.get()) {
+        while (isEnabled) {
             handleKeepAlive(cluster);
             processInboundMessages(rb);
             cluster.pollEgress();
