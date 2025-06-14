@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cluster;
 
-import com.bhf.aeroncache.encoders.CacheRequestEncoder;
-import com.bhf.aeroncache.encoders.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.CacheResponseDecoder;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.requests.CreateCacheRequestDetails;
 import com.bhf.aeroncache.models.results.CreateCacheResult;

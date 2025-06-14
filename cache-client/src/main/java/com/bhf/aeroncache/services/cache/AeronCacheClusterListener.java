@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.services.cache;
 
-import com.bhf.aeroncache.encoders.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.CacheResponseDecoder;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.types.ReusableLong;

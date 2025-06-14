@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.encoders;
+package com.bhf.aeroncache.codecs;
 
 import com.bhf.aeroncache.messages.*;
 import org.agrona.MutableDirectBuffer;
