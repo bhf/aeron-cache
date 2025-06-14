@@ -12,7 +12,6 @@ public class CacheRequestEncoder {
         encoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId)
                 .requestId(requestId);
-
         return encoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
@@ -22,21 +21,18 @@ public class CacheRequestEncoder {
                 .requestId(requestId)
                 .key(key)
                 .entryValue(value);
-
         return encoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
     public static int encodeGetCacheEntry(GetCacheEntryEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, long cacheId, String key) {
         encoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).key(key).requestId(requestId);
-
         return encoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
     public static int encodeClearCache(ClearCacheEncoder clearCacheEncoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, long cacheId) {
         clearCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
-
         return clearCacheEncoder.encodedLength()+headerEncoder.encodedLength();
     }
 
