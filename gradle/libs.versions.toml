@@ -27,6 +27,7 @@ junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
 mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-junit = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 javalin = { module = "io.javalin:javalin", version.ref = "javalin" }
 restassured = { module = "io.rest-assured:rest-assured", version.ref = "restassured"}
 jackson-core = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson"}

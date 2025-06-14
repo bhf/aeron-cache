@@ -18,6 +18,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.junit.params)
     testImplementation(libs.mockito)
+    testImplementation(libs.mockito.junit)
 }
 
 tasks.test {

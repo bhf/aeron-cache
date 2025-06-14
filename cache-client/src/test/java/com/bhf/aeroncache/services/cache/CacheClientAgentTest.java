@@ -8,31 +8,35 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mockito;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.mockito.Mockito.verify;
 
+@ExtendWith(MockitoExtension.class)
 class CacheClientAgentTest {
     private static final long MAX_SBE_LONG = Long.MAX_VALUE;
     private static final long MIN_SBE_LONG = -Long.MAX_VALUE;
     
     CacheClientAgent sut;
+
+    @Mock
     AeronCache cluster;
+    @Mock
     IdleStrategy idleStrategy;
+    @Mock
     ClusterMessagePublisher publisher;
     ManyToOneRingBuffer rb;
 
     @BeforeEach
     void setup() {
-        cluster = Mockito.mock(AeronCache.class);
-        idleStrategy = Mockito.mock(IdleStrategy.class);
-        publisher = Mockito.mock(ClusterMessagePublisher.class);
         rb = RingBufferUtils.buildRingbuffer(4096);
         sut = new CacheClientAgent(cluster, rb, idleStrategy, publisher);
     }
