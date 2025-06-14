@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.encoders.CacheRequestEncoder;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
@@ -47,13 +48,10 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void sendCreateCache(String requestId, long cacheId) {
-        createCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId)
-                .requestId(requestId);
+        CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder, msgBuffer, requestId, cacheId);
         publishCreateCache(createCacheEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent create cache request on cache {} with request Id {}", cacheId, requestId);
     }
-
 
     /**
      * Publish the request to create a new cache on the cluster.
