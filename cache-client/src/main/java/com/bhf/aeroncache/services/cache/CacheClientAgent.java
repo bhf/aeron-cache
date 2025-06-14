@@ -51,13 +51,17 @@ public class CacheClientAgent implements Agent {
     @Override
     public int doWork() throws Exception {
         while (isEnabled) {
-            handleKeepAlive(cluster);
-            processInboundMessages(rb);
-            cluster.pollEgress();
-            idleStrategy.idle();
+            runSingleCycle();
         }
 
         return 0;
+    }
+
+    protected void runSingleCycle() {
+        handleKeepAlive(cluster);
+        processInboundMessages(rb);
+        cluster.pollEgress();
+        idleStrategy.idle();
     }
 
     private void processInboundMessages(ManyToOneRingBuffer rb) {
