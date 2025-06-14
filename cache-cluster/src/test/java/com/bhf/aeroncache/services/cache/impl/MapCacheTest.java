@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cache.impl;
 
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
@@ -22,7 +23,8 @@ class MapCacheTest {
 
     @BeforeEach
     void setup() {
-        cache = new MapCache<>(SupplierUtils.longSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.hashmapSupplier);
+        cache = new MapCache<>(SupplierUtils.longSupplier, SupplierUtils.stringSupplier,
+                SupplierUtils.stringSupplier, SupplierUtils.hashmapSupplier);
     }
 
     /**
@@ -42,7 +44,7 @@ class MapCacheTest {
     }
 
     @ParameterizedTest
-    @DisplayName("Should return added key and value")
+    @DisplayName("Should return added key and value and update cache stats")
     @MethodSource("provideTestAddParams")
     void testAdd(String key, String value) {
         // Arrange
@@ -58,6 +60,8 @@ class MapCacheTest {
         // Assert
         assertEquals(value, cache.cache.get(reusableKey).value());
         assertEquals(key, result.getEntryKey().value());
+        assertEquals(1, cache.getCacheStats().addedCount);
+        assertEquals(1, cache.getCacheStats().size);
     }
 
     /**
@@ -72,7 +76,7 @@ class MapCacheTest {
     }
 
     @ParameterizedTest
-    @DisplayName("Should get a known value from specified key")
+    @DisplayName("Should get a known value from seeded key")
     @ValueSource(strings = {"key1"})
     void testGet(String key) {
         // Arrange
@@ -81,7 +85,6 @@ class MapCacheTest {
         reusableKey.copyFrom(key);
 
         // Act
-        cache.add(reusableKey, value);
         var getResult = cache.get(reusableKey);
 
         // Assert
@@ -90,7 +93,22 @@ class MapCacheTest {
     }
 
     @ParameterizedTest
-    @DisplayName("Should remove a known key-value using specified key")
+    @DisplayName("Should get unknown key status when key is not in the cache")
+    @ValueSource(strings = {"unknownKey"})
+    void testGetUnknownKey(String key) {
+        // Arrange
+        var reusableKey = new ReusableString();
+        reusableKey.copyFrom(key);
+
+        // Act
+        var getResult = cache.get(reusableKey);
+
+        // Assert
+        assertEquals(OperationStatus.UNKNOWN_KEY, getResult.getStatus());
+    }
+
+    @ParameterizedTest
+    @DisplayName("Should remove a known key-value and update cache stats")
     @ValueSource(strings = {"key1"})
     void testRemove(String key) {
         // Arrange
@@ -103,6 +121,8 @@ class MapCacheTest {
 
         // Assert
         assertEquals(key, removeResult.getKey().value());
+        assertEquals(1, cache.getCacheStats().removedCount);
+        assertEquals(0, cache.getCacheStats().size);
     }
 
     @Test
@@ -117,6 +137,17 @@ class MapCacheTest {
         // Assert
         assertNotNull(clearResult);
         assertEquals(0, cache.cache.size());
+        assertEquals(1, cache.getCacheStats().clearedCount);
+    }
+
+    @Test
+    @DisplayName("Should return non null cache when getting all entries")
+    void testReturnsCacheInstance() {
+        // Act
+        var allEntries = cache.getAllEntries();
+
+        // Assert
+        assertNotNull(allEntries);
     }
 
 }

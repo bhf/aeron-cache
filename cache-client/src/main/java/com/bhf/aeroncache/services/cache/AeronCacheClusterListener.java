@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cache;
 
+import com.bhf.aeroncache.encoders.CacheResponseDecoder;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.types.ReusableLong;
@@ -155,15 +156,8 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheCreated(DirectBuffer buffer, int offset) {
-        cacheCreatedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = cacheCreatedDecoder.cacheId();
-        var requestId = cacheCreatedDecoder.requestId();
-        var status = cacheCreatedDecoder.status();
-        log.info("Created cache {}, requestId: {}, status {}", cacheId, requestId, status);
-        createCacheResult.clear();
-        createCacheResult.getCacheId().copyFrom(cacheId);
-        createCacheResult.setRequestId(requestId);
-        createCacheResult.setStatus(status);
+        CacheResponseDecoder.decodeCacheCreated(createCacheResult, cacheCreatedDecoder, headerDecoder, buffer, offset);
+        log.info("Created cache {}, requestId: {}, status {}", createCacheResult.getCacheId(), createCacheResult.getRequestId(), createCacheResult.getStatus());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheCreated(createCacheResult);
