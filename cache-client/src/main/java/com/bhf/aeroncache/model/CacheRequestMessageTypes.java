@@ -1,5 +1,10 @@
 package com.bhf.aeroncache.model;
 
+/**
+ * Message types for the {@link org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer}
+ * that is processed by the {@link com.bhf.aeroncache.services.cache.CacheClientAgent} or
+ * another {@link org.agrona.concurrent.Agent}.
+ */
 public class CacheRequestMessageTypes {
 
     public static final int HEARTBEAT = 0;
