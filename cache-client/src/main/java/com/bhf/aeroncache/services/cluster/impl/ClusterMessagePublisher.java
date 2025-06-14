@@ -76,11 +76,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void addCacheEntry(String requestId, long cacheId, String key, String value) {
-        addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId)
-                .requestId(requestId)
-                .key(key)
-                .entryValue(value);
+        CacheRequestEncoder.encodeAddCacheEntry(addCacheEntryEncoder, headerEncoder, msgBuffer, requestId, cacheId, key, value);
         publishAddCachEntry(addCacheEntryEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent add cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
@@ -108,8 +104,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void getCacheEntry(String requestId, long cacheId, String key) {
-        getCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key).requestId(requestId);
+        CacheRequestEncoder.encodeGetCacheEntry(getCacheEntryEncoder, headerEncoder, msgBuffer, requestId, cacheId, key);
         publishGetCacheEntry(getCacheEntryEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent get cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
@@ -137,8 +132,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void clearCache(String requestId, long cacheId) {
-        clearCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).requestId(requestId);
+        CacheRequestEncoder.encodeClearCache(clearCacheEncoder, headerEncoder, msgBuffer, requestId, cacheId);
         publishClearCache(clearCacheEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent clear cache request on cache {} with request Id {}", cacheId, requestId);
     }
@@ -166,8 +160,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void deleteCache(String requestId, long cacheId) {
-        deleteCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).requestId(requestId);
+        CacheRequestEncoder.encodeDeleteCache(deleteCacheEncoder, headerEncoder, msgBuffer, requestId, cacheId);
         publishDeleteCache(deleteCacheEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent delete cache request on cache {} with request Id {}", cacheId, requestId);
     }
@@ -195,8 +188,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void removeCacheEntry(String requestId, long cacheId, String key) {
-        removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key).requestId(requestId);
+        CacheRequestEncoder.encodeRemoveCacheEntry(removeCacheEntryEncoder, headerEncoder, msgBuffer, requestId, cacheId, key);
         publishRemoveCacheEntry(removeCacheEntryEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent remove cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
@@ -224,8 +216,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void getCacheEntries(String requestId, long cacheId) {
-        getAllCacheEntriesEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).requestId(requestId);
+        CacheRequestEncoder.encodeGetCacheEntries(getAllCacheEntriesEncoder, headerEncoder, msgBuffer, requestId, cacheId);
         publishGetAllCacheEntries(getAllCacheEntriesEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent get cache content request on cache {} with request Id {}", cacheId, requestId);
     }
@@ -259,8 +250,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void sendCacheSubscribe(String requestId, long cacheId) {
-        cacheSubscriptionRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).requestId(requestId);
+        CacheRequestEncoder.encodeCacheSubscribe(cacheSubscriptionRequestEncoder, headerEncoder, msgBuffer, requestId, cacheId);
         publishCacheSubscribe(cacheSubscriptionRequestEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent cache subscription request on cache {} with request Id {}", cacheId, requestId);
     }
@@ -288,8 +278,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void sendCacheUnsubscribe(String requestId, long cacheId) {
-        cacheUnsubscribeRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).requestId(requestId);
+        CacheRequestEncoder.encodeCacheUnsubscribe(cacheUnsubscribeRequestEncoder, headerEncoder, msgBuffer, requestId, cacheId);
         publishCacheUnsubscribe(cacheUnsubscribeRequestEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent cache unsubscribe request on cache {} with request Id {}", cacheId, requestId);
     }
@@ -303,8 +292,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void getAllCacheStats(String requestId) {
-        getCacheStatsEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .requestId(requestId);
+        CacheRequestEncoder.encodeGetAllCacheStats(getCacheStatsEncoder, headerEncoder, msgBuffer, requestId);
         publishGetAllCacheStats(getCacheStatsEncoder, headerEncoder, msgBuffer, 0);
         log.info("Sent request to get all cache with request Id {}", requestId);
     }
