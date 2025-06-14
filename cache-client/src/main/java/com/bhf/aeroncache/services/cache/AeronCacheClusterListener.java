@@ -93,19 +93,10 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheEntryResult(DirectBuffer buffer, int offset) {
-        getCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheID = getCacheEntryDecoder.cacheId();
-        var status = getCacheEntryDecoder.status();
-        var key = getCacheEntryDecoder.key();
-        var value = getCacheEntryDecoder.value();
-        var requestId = getCacheEntryDecoder.requestId();
-        log.info("Got cache entry result from cache {} with key {}, value: {}, requestId: {}, status {}", cacheID, key, value, requestId, status);
-        getCacheEntryResult.clear();
-        getCacheEntryResult.getCacheId().copyFrom(cacheID);
-        getCacheEntryResult.getEntryKey().copyFrom(key);
-        getCacheEntryResult.getEntryValue().copyFrom(value);
-        getCacheEntryResult.setRequestId(requestId);
-        getCacheEntryResult.setStatus(status);
+        CacheResponseDecoder.decodeGetCacheEntryResult(getCacheEntryDecoder, headerDecoder, getCacheEntryResult, buffer, offset);
+        log.info("Got cache entry result from cache {} with key {}, value: {}, requestId: {}, status {}",
+                getCacheEntryResult.getCacheId(), getCacheEntryResult.getEntryKey(), getCacheEntryResult.getEntryValue(),
+                getCacheEntryResult.getRequestId(), getCacheEntryResult.getStatus());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryResult(getCacheEntryResult);
@@ -119,29 +110,9 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleAllCacheEntriesResult(DirectBuffer buffer, int offset) {
-        allCacheEntriesResultDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheID = allCacheEntriesResultDecoder.cacheId();
-        var status = allCacheEntriesResultDecoder.status();
-        var eob = allCacheEntriesResultDecoder.endOfBatch();
-
-        getCacheEntriesResult.clear();
-        getCacheEntriesResult.getCacheId().copyFrom(cacheID);
-        getCacheEntriesResult.setStatus(status);
-
-        // process group of key-value from the decoder directly into the flyweight
-
-        for (AllCacheEntriesResultDecoder.ItemsDecoder item : allCacheEntriesResultDecoder.items()) {
-            var key = new ReusableString();
-            var value = new ReusableString();
-            key.copyFrom(item.key());
-            value.copyFrom(item.value());
-            getCacheEntriesResult.getValues().put(key, value);
-            log.info("Got key: {}, value: {}", key, value);
-        }
-
-        var requestId = allCacheEntriesResultDecoder.requestId();
-        getCacheEntriesResult.setRequestId(requestId);
-        log.info("Got cache content result from cache {}, requestId: {}, status {}", cacheID, requestId, status);
+        CacheResponseDecoder.decodeAllCacheEntriesResult(allCacheEntriesResultDecoder, headerDecoder, getCacheEntriesResult, buffer, offset);
+        log.info("Got cache content result from cache {}, requestId: {}, status {}",
+                getCacheEntriesResult.getCacheId(), getCacheEntriesResult.getRequestId(), getCacheEntriesResult.getStatus());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleAllCacheEntries(getCacheEntriesResult);
@@ -157,7 +128,8 @@ public class AeronCacheClusterListener implements EgressListener {
      */
     private void handleCacheCreated(DirectBuffer buffer, int offset) {
         CacheResponseDecoder.decodeCacheCreated(createCacheResult, cacheCreatedDecoder, headerDecoder, buffer, offset);
-        log.info("Created cache {}, requestId: {}, status {}", createCacheResult.getCacheId(), createCacheResult.getRequestId(), createCacheResult.getStatus());
+        log.info("Created cache {}, requestId: {}, status {}",
+                createCacheResult.getCacheId(), createCacheResult.getRequestId(), createCacheResult.getStatus());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheCreated(createCacheResult);
@@ -171,18 +143,10 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheEntryCreated(DirectBuffer buffer, int offset) {
-        addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = addCacheEntryDecoder.cacheId();
-        var key = addCacheEntryDecoder.key();
-        var requestId = addCacheEntryDecoder.requestId();
-        var status = addCacheEntryDecoder.status();
-        log.info("Got cache entry created message for cache {} with key {}, requestId: {}, status {}", cacheId, key, requestId, status);
-        addCacheEntryResult.clear();
-        addCacheEntryResult.setEntryAdded(true);
-        addCacheEntryResult.getEntryKey().copyFrom(key);
-        addCacheEntryResult.getCacheId().copyFrom(cacheId);
-        addCacheEntryResult.setRequestId(requestId);
-        addCacheEntryResult.setStatus(status);
+        CacheResponseDecoder.decodeAddCacheEntryResult(addCacheEntryDecoder, headerDecoder, addCacheEntryResult, buffer, offset);
+        log.info("Got cache entry created message for cache {} with key {}, requestId: {}, status {}",
+                addCacheEntryResult.getCacheId(), addCacheEntryResult.getEntryKey(),
+                addCacheEntryResult.getRequestId(), addCacheEntryResult.getStatus());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryCreated(addCacheEntryResult);
@@ -196,17 +160,10 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheEntryRemoved(DirectBuffer buffer, int offset) {
-        cacheEntryRemovedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = cacheEntryRemovedDecoder.cacheId();
-        var key = cacheEntryRemovedDecoder.key();
-        var requestId = cacheEntryRemovedDecoder.requestId();
-        var status = cacheEntryRemovedDecoder.status();
-        log.info("Got cache entry removed for cache {} with key {}, requestId: {}, status {}", cacheId, key, requestId, status);
-        removeCacheEntryResult.clear();
-        removeCacheEntryResult.getKey().copyFrom(key);
-        removeCacheEntryResult.getCacheId().copyFrom(cacheId);
-        removeCacheEntryResult.setRequestId(requestId);
-        removeCacheEntryResult.setStatus(status);
+        CacheResponseDecoder.decodeCacheEntryRemoved(cacheEntryRemovedDecoder, headerDecoder, removeCacheEntryResult, buffer, offset);
+        log.info("Got cache entry removed for cache {} with key {}, requestId: {}, status {}",
+                removeCacheEntryResult.getCacheId(), removeCacheEntryResult.getKey(),
+                removeCacheEntryResult.getRequestId(), removeCacheEntryResult.getStatus());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryRemoved(removeCacheEntryResult);
@@ -220,15 +177,9 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheCleared(DirectBuffer buffer, int offset) {
-        cacheClearedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = cacheClearedDecoder.cacheId();
-        var requestId = cacheClearedDecoder.requestId();
-        var status = cacheClearedDecoder.status();
-        log.info("Got cache cleared on cache {}, requestId: {}, status: {}", cacheId, requestId, status);
-        clearCacheResult.clear();
-        clearCacheResult.getCacheId().copyFrom(cacheId);
-        clearCacheResult.setRequestId(requestId);
-        clearCacheResult.setStatus(status);
+        CacheResponseDecoder.decodeCacheCleared(cacheClearedDecoder, headerDecoder, clearCacheResult, buffer, offset);
+        log.info("Got cache cleared on cache {}, requestId: {}, status: {}",
+                clearCacheResult.getCacheId(), clearCacheResult.getRequestId(), clearCacheResult.getStatus());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheCleared(clearCacheResult);
@@ -242,15 +193,9 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheDeleted(DirectBuffer buffer, int offset) {
-        cacheDeletedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = cacheDeletedDecoder.cacheId();
-        var requestId = cacheDeletedDecoder.requestId();
-        var status = cacheDeletedDecoder.status();
-        log.info("Got cache deleted on cache {}, requestId: {}, status {}", cacheId, requestId, status);
-        deleteCacheResult.clear();
-        deleteCacheResult.getCacheId().copyFrom(cacheId);
-        deleteCacheResult.setRequestId(requestId);
-        deleteCacheResult.setStatus(status);
+        CacheResponseDecoder.decodeCacheDeleted(cacheDeletedDecoder, headerDecoder, deleteCacheResult, buffer, offset);
+        log.info("Got cache deleted on cache {}, requestId: {}, status {}",
+                deleteCacheResult.getCacheId(), deleteCacheResult.getRequestId(), deleteCacheResult.getStatus());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheDeleted(deleteCacheResult);
@@ -264,31 +209,8 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleAllCacheStatsResult(DirectBuffer buffer, int offset) {
-        allCacheStatsResultDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var status = allCacheStatsResultDecoder.status();
-        cacheStatsResult.clear();
-        cacheStatsResult.setOperationStatus(status);
-
-        for (AllCacheStatsResultDecoder.StatsDecoder item : allCacheStatsResultDecoder.stats()) {
-            var added = item.added();
-            var removed = item.removed();
-            var cleared = item.cleared();
-            var size = item.size();
-            var cacheId = item.cacheId();
-            var id = new ReusableLong();
-            id.copyFrom(cacheId);
-            var stats = new CacheStats<>(id);
-            stats.addedCount = added;
-            stats.removedCount = removed;
-            stats.clearedCount = cleared;
-            stats.size = size;
-            cacheStatsResult.getStats().add(stats);
-            log.info("Got cache: {}, added: {}, removed: {}, cleared: {}, size: {}", cacheId, added, removed, cleared, size);
-        }
-
-        var requestId = allCacheStatsResultDecoder.requestId();
-        cacheStatsResult.setRequestId(requestId);
-        log.info("Got cache stats result, requestId: {}", requestId);
+        CacheResponseDecoder.decodeAllCacheStatsResult(allCacheStatsResultDecoder, headerDecoder, cacheStatsResult, buffer, offset);
+        log.info("Got cache stats result, requestId: {}", cacheStatsResult.getRequestId());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleAllCacheStats(cacheStatsResult);
@@ -302,18 +224,9 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheSubscribeResult(DirectBuffer buffer, int offset) {
-        cacheSubscriptionResult.clear();
-        cacheSubscriptionResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-
-        var cacheId = cacheSubscriptionResponseDecoder.cacheId();
-        var status = cacheSubscriptionResponseDecoder.status();
-        var requestId = cacheSubscriptionResponseDecoder.requestId();
-
-        log.info("Got cache subscription result on cacheId {}, status {} requestId {}", cacheId, status, requestId);
-
-        cacheSubscriptionResult.getCacheId().copyFrom(cacheId);
-        cacheSubscriptionResult.setStatus(status);
-        cacheSubscriptionResult.setRequestId(requestId);
+        CacheResponseDecoder.decodeCacheSubscribeResult(cacheSubscriptionResponseDecoder, headerDecoder, cacheSubscriptionResult, buffer, offset);
+        log.info("Got cache subscription result on cacheId {}, status {} requestId {}",
+                cacheSubscriptionResult.getCacheId(), cacheSubscriptionResult.getStatus(), cacheSubscriptionResult.getRequestId());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheSubscribeResponse(cacheSubscriptionResult);
@@ -327,18 +240,9 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheUnsubscribeResult(DirectBuffer buffer, int offset) {
-        cacheUnsubscribeResult.clear();
-        cacheUnsubscribeResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-
-        var cacheId = cacheUnsubscribeResponseDecoder.cacheId();
-        var status = cacheUnsubscribeResponseDecoder.status();
-        var requestId = cacheUnsubscribeResponseDecoder.requestId();
-
-        log.info("Got cache unsubscribe result on cacheId {}, status {} requestId {}", cacheId, status, requestId);
-
-        cacheUnsubscribeResult.getCacheId().copyFrom(cacheId);
-        cacheUnsubscribeResult.setStatus(status);
-        cacheUnsubscribeResult.setRequestId(requestId);
+        CacheResponseDecoder.decodeCacheUnsubscribeResult(cacheUnsubscribeResponseDecoder, headerDecoder, cacheUnsubscribeResult, buffer, offset);
+        log.info("Got cache unsubscribe result on cacheId {}, status {} requestId {}",
+                cacheUnsubscribeResult.getCacheId(), cacheUnsubscribeResult.getStatus(), cacheUnsubscribeResult.getRequestId());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheUnsubscribeResponse(cacheUnsubscribeResult);
@@ -346,21 +250,10 @@ public class AeronCacheClusterListener implements EgressListener {
     }
 
     private void handleCacheEntryUpdated(DirectBuffer buffer, int offset) {
-        cacheEntryUpdateResult.clear();
-        cacheEntryUpdateDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-
-        var cacheId = cacheEntryUpdateDecoder.cacheId();
-        var key = cacheEntryUpdateDecoder.key();
-        var value = cacheEntryUpdateDecoder.value();
-        var requestId = cacheEntryUpdateDecoder.requestId();
-
-        log.info("Got cache entry updated on cacheId {}, key {} requestId {}", cacheId, key, requestId);
-
-        cacheEntryUpdateResult.getCacheId().copyFrom(cacheId);
-        cacheEntryUpdateResult.setRequestId(requestId);
-        cacheEntryUpdateResult.getKey().copyFrom(key);
-        cacheEntryUpdateResult.getValue().copyFrom(value);
-
+        CacheResponseDecoder.decodeCacheEntryUpdated(cacheEntryUpdateDecoder, headerDecoder, cacheEntryUpdateResult, buffer, offset);
+        log.info("Got cache entry updated on cacheId {}, key {} requestId {}",
+                cacheEntryUpdateResult.getCacheId(), cacheEntryUpdateResult.getKey(), cacheEntryUpdateResult.getRequestId());
+        
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryUpdated(cacheEntryUpdateResult);
         }
