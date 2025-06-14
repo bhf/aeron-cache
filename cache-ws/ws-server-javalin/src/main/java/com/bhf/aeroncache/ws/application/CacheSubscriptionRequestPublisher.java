@@ -75,13 +75,13 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
      * @param cacheId   The ID of the cache we want to subscribe too on the cluster side.
      */
     private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, long cacheId, WsContext wsContext) {
-        sendCacheSubscribe(cacheId, subscriptionResult -> {
+        sendCacheSubscribe(requestId, cacheId, subscriptionResult -> {
             if (subscriptionResult.getStatus() != OperationStatus.SUCCESS) {
                 var errorMsg = STR."Couldn't subscribe to cache \{cacheId}, status=\{subscriptionResult.getStatus()}";
                 log.warn(errorMsg);
                 wsContext.closeSession(WsCloseStatus.SERVER_ERROR, errorMsg);
             }
-        }, requestId);
+        });
     }
 
     /**
@@ -92,7 +92,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
      * @param cacheId   The ID of the cache we want to unsubscribe too on the cluster side.
      */
     private void sendCacheUnsubscribeRequest(AeronCache cluster, String requestId, long cacheId) {
-        sendCacheUnsubscribe(cacheId, unsubscribeResult -> {
+        sendCacheUnsubscribe(requestId, cacheId, unsubscribeResult -> {
             if (unsubscribeResult.getStatus() != OperationStatus.SUCCESS) {
                 log.warn("Couldn't unsubscribe from cache {}, request ID {}", cacheId, requestId);
             } else {
@@ -101,7 +101,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
                     log.info("Removed {} subscriptions to cacheId {}", wsSubscriptions.size(), cacheId);
                 }
             }
-        }, requestId);
+        });
     }
 
     @Override

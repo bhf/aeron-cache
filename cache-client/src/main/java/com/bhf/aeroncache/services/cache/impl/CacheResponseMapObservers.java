@@ -46,52 +46,52 @@ public class CacheResponseMapObservers implements ConsumingResponseHandler {
     }
 
     @Override
-    public void sendCreateCache(long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer, String requestId) {
+    public void sendCreateCache(String requestId, long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer) {
         createCacheObservers.put(requestId, consumer);
     }
 
     @Override
-    public void addCacheEntry(long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c, String requestId) {
+    public void addCacheEntry(String requestId, long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c) {
         addCacheEntryObservers.put(requestId, c);
     }
 
     @Override
-    public void getCacheEntry(long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c, String requestId) {
+    public void getCacheEntry(String requestId, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c) {
         getCacheEntryObservers.put(requestId, c);
     }
 
     @Override
-    public void deleteCache(long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer, String requestId) {
+    public void deleteCache(String requestId, long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer) {
         deleteCacheObservers.put(requestId, consumer);
     }
 
     @Override
-    public void removeCacheEntry(long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c, String requestId) {
+    public void removeCacheEntry(String requestId, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c) {
         removeCacheEntryObservers.put(requestId, c);
     }
 
     @Override
-    public void clearCache(long cacheId, Consumer<ClearCacheResult<ReusableLong>> c, String requestId) {
+    public void clearCache(String requestId, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c) {
         clearCacheObservers.put(requestId, c);
     }
 
     @Override
-    public void getCacheEntries(long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c, String requestId) {
+    public void getCacheEntries(String requestId, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c) {
         getCacheEntriesObservers.put(requestId, c);
     }
 
     @Override
-    public void getAllCacheStats(Consumer<CacheStatsResult<ReusableLong>> c, String requestId) {
+    public void getAllCacheStats(String requestId, Consumer<CacheStatsResult<ReusableLong>> c) {
         allCacheStatsObservers.put(requestId, c);
     }
 
     @Override
-    public void sendCacheSubscribe(long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c, String requestId) {
+    public void sendCacheSubscribe(String requestId, long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c) {
         cacheSubscribeObservers.put(requestId, c);
     }
 
     @Override
-    public void sendCacheUnsubscribe(long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c, String requestId) {
+    public void sendCacheUnsubscribe(String requestId, long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c) {
         cacheUnsubscribeObservers.put(requestId, c);
     }
 

@@ -67,8 +67,8 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
     }
 
     @Override
-    public void sendCreateCache(long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer, String requestId) {
-        cacheResponseObservers.sendCreateCache(cacheId, consumer, requestId);
+    public void sendCreateCache(String requestId, long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer) {
+        cacheResponseObservers.sendCreateCache(requestId, cacheId, consumer);
         rbPublisher.sendCreateCache(requestId, cacheId);
     }
 
@@ -79,8 +79,8 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
     }
 
     @Override
-    public void addCacheEntry(long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c, String requestId) {
-        cacheResponseObservers.addCacheEntry(cacheId, key, value, c, requestId);
+    public void addCacheEntry(String requestId, long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c) {
+        cacheResponseObservers.addCacheEntry(requestId, cacheId, key, value, c);
         rbPublisher.addCacheEntry(requestId, cacheId, key, value);
     }
 
@@ -90,8 +90,8 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
     }
 
     @Override
-    public void getCacheEntry(long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c, String requestId) {
-        cacheResponseObservers.getCacheEntry(cacheId, key, c, requestId);
+    public void getCacheEntry(String requestId, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c) {
+        cacheResponseObservers.getCacheEntry(requestId, cacheId, key, c);
         rbPublisher.getCacheEntry(requestId, cacheId, key);
     }
 
@@ -101,8 +101,8 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
     }
 
     @Override
-    public void clearCache(long cacheId, Consumer<ClearCacheResult<ReusableLong>> c, String requestId) {
-        cacheResponseObservers.clearCache(cacheId, c, requestId);
+    public void clearCache(String requestId, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c) {
+        cacheResponseObservers.clearCache(requestId, cacheId, c);
         rbPublisher.clearCache(requestId, cacheId);
     }
 
@@ -112,8 +112,8 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
     }
 
     @Override
-    public void deleteCache(long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer, String requestId) {
-        cacheResponseObservers.deleteCache(cacheId, consumer, requestId);
+    public void deleteCache(String requestId, long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer) {
+        cacheResponseObservers.deleteCache(requestId, cacheId, consumer);
         rbPublisher.deleteCache(requestId, cacheId);
     }
 
@@ -123,8 +123,8 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
     }
 
     @Override
-    public void removeCacheEntry(long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c, String requestId) {
-        cacheResponseObservers.removeCacheEntry(cacheId, key, c, requestId);
+    public void removeCacheEntry(String requestId, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c) {
+        cacheResponseObservers.removeCacheEntry(requestId, cacheId, key, c);
         rbPublisher.removeCacheEntry(requestId, cacheId, key);
     }
 
@@ -134,8 +134,8 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
     }
 
     @Override
-    public void getCacheEntries(long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c, String requestId) {
-        cacheResponseObservers.getCacheEntries(cacheId, c, requestId);
+    public void getCacheEntries(String requestId, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c) {
+        cacheResponseObservers.getCacheEntries(requestId, cacheId, c);
         rbPublisher.getCacheEntries(requestId, cacheId);
     }
 
@@ -145,8 +145,8 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
     }
 
     @Override
-    public void getAllCacheStats(Consumer<CacheStatsResult<ReusableLong>> c, String requestId) {
-        cacheResponseObservers.getAllCacheStats(c, requestId);
+    public void getAllCacheStats(String requestId, Consumer<CacheStatsResult<ReusableLong>> c) {
+        cacheResponseObservers.getAllCacheStats(requestId, c);
         rbPublisher.getAllCacheStats(requestId);
     }
 
@@ -156,8 +156,8 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
     }
 
     @Override
-    public void sendCacheSubscribe(long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c, String requestId) {
-        cacheResponseObservers.sendCacheSubscribe(cacheId, c, requestId);
+    public void sendCacheSubscribe(String requestId, long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c) {
+        cacheResponseObservers.sendCacheSubscribe(requestId, cacheId, c);
         rbPublisher.sendCacheSubscribe(requestId, cacheId);
     }
 
@@ -167,8 +167,8 @@ public class ObservingCacheRequestPublisher implements CacheRequestPublisher, Ca
     }
 
     @Override
-    public void sendCacheUnsubscribe(long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c, String requestId) {
-        cacheResponseObservers.sendCacheUnsubscribe(cacheId, c, requestId);
+    public void sendCacheUnsubscribe(String requestId, long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c) {
+        cacheResponseObservers.sendCacheUnsubscribe(requestId, cacheId, c);
         rbPublisher.sendCacheUnsubscribe(requestId, cacheId);
     }
 

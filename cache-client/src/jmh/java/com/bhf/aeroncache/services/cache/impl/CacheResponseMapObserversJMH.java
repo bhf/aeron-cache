@@ -33,7 +33,7 @@ public class CacheResponseMapObserversJMH {
             }
         };
 
-        sut.addCacheEntry(cacheId, key, value, consumer, requestId);
+        sut.addCacheEntry(requestId, cacheId, key, value, consumer);
 
         bh.consume(consumer);
     }

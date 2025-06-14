@@ -92,7 +92,7 @@ public class AsyncConsumerPerfTest {
 
     private static void runTest(ObservingCacheRequestPublisher observingPublisher) {
         Consumer<CreateCacheResult<ReusableLong>> consumer = result -> System.out.println("Created cache " + result.getCacheId() + ", status=" + result.getStatus());
-        observingPublisher.sendCreateCache(123L, consumer, UUID.randomUUID().toString());
+        observingPublisher.sendCreateCache(UUID.randomUUID().toString(), 123L, consumer);
 
         AtomicLong count = new AtomicLong();
         AtomicLong start = new AtomicLong();
@@ -115,7 +115,7 @@ public class AsyncConsumerPerfTest {
                     System.out.println(v + "," + per);
                 }
             };
-            observingPublisher.addCacheEntry(123L, UUID.randomUUID().toString(), UUID.randomUUID().toString(), addEntryConsumer, UUID.randomUUID().toString());
+            observingPublisher.addCacheEntry(UUID.randomUUID().toString(), 123L, UUID.randomUUID().toString(), UUID.randomUUID().toString(), addEntryConsumer);
         }
     }
 }
