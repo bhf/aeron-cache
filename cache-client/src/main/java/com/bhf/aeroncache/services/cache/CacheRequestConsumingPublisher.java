@@ -14,92 +14,92 @@ public interface CacheRequestConsumingPublisher {
      * Send a message to create a cache instance.
      * Passes the result to the Consumer.
      *
+     * @param requestId The request ID.
      * @param cacheId   The ID of the cache to create.
      * @param consumer  The consumer of the result.
-     * @param requestId The request ID.
      */
-    void sendCreateCache(long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer, String requestId);
+    void sendCreateCache(String requestId, long cacheId, Consumer<CreateCacheResult<ReusableLong>> consumer);
 
     /**
      * Send a message to add a cache entry.
      *
+     * @param requestId The request ID.
      * @param cacheId   The ID of the cache we're adding too.
      * @param key       The key to use.
      * @param value     The value to use.
      * @param c         The consumer that will handle the result.
-     * @param requestId The request ID.
      */
-    void addCacheEntry(long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c, String requestId);
+    void addCacheEntry(String requestId, long cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> c);
 
     /**
      * Send a message to get a cache entry.
      *
+     * @param requestId The request ID.
      * @param cacheId   The ID of the cache we're getting from.
      * @param key       The key to use.
      * @param c         The consumer to handle the result.
-     * @param requestId The request ID.
      */
-    void getCacheEntry(long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c, String requestId);
+    void getCacheEntry(String requestId, long cacheId, String key, Consumer<GetCacheEntryResult<ReusableLong, ReusableString, ReusableString>> c);
 
     /**
      * Send a message to delete a cache.
      *
-     * @param cacheId   The ID of the cache we're deleting.
      * @param requestId The request ID.
+     * @param cacheId   The ID of the cache we're deleting.
      */
-    void deleteCache(long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer, String requestId);
+    void deleteCache(String requestId, long cacheId, Consumer<DeleteCacheResult<ReusableLong>> consumer);
 
     /**
      * Send a message to remove a cache entry.
      *
+     * @param requestId The request ID.
      * @param cacheId   The ID of the cache we're removing an entry from.
      * @param key       The key of the entry we're removing.
      * @param c         The consumer that will handle the result.
-     * @param requestId The request ID.
      */
-    void removeCacheEntry(long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c, String requestId);
+    void removeCacheEntry(String requestId, long cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableLong, ReusableString>> c);
 
     /**
      * Send a message to clear a cache.
      *
+     * @param requestId The request ID.
      * @param cacheId   The ID of the cache we're clearing.
      * @param c         The consumer that will handle the result.
-     * @param requestId The request ID.
      */
-    void clearCache(long cacheId, Consumer<ClearCacheResult<ReusableLong>> c, String requestId);
+    void clearCache(String requestId, long cacheId, Consumer<ClearCacheResult<ReusableLong>> c);
 
     /**
      * Send a message to get all cache items.
      *
+     * @param requestId The request ID.
      * @param cacheId   The ID of the cache we're getting an entry from.
      * @param c         The consumer that will handle the result.
-     * @param requestId The request ID.
      */
-    void getCacheEntries(long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c, String requestId);
+    void getCacheEntries(String requestId, long cacheId, Consumer<GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString>> c);
 
     /**
      * Send a message to get all cache stats.
      *
-     * @param c         The consumer that will handle the result.
      * @param requestId The request ID.
+     * @param c         The consumer that will handle the result.
      */
-    void getAllCacheStats(Consumer<CacheStatsResult<ReusableLong>> c, String requestId);
+    void getAllCacheStats(String requestId, Consumer<CacheStatsResult<ReusableLong>> c);
 
     /**
      * Send a message to subscribe to cache updates.
      *
+     * @param requestId The request ID.
      * @param cacheId   The ID of the cache to subscribe too.
      * @param c         The consumer that will handle the result.
-     * @param requestId The request ID.
      */
-    void sendCacheSubscribe(long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c, String requestId);
+    void sendCacheSubscribe(String requestId, long cacheId, Consumer<CacheSubscriptionResult<ReusableLong>> c);
 
     /**
      * Send a message to unsubscribe to cache updates.
      *
+     * @param requestId The request ID.
      * @param cacheId   The ID of the cache to unsubscribe from.
      * @param c         The consumer that will handle the result.
-     * @param requestId The request ID.
      */
-    void sendCacheUnsubscribe(long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c, String requestId);
+    void sendCacheUnsubscribe(String requestId, long cacheId, Consumer<CacheUnsubscribeResult<ReusableLong>> c);
 }
