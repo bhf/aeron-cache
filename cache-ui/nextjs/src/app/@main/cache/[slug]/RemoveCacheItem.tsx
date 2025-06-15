@@ -16,7 +16,7 @@ interface RemoveCacheItemProps {
  * couldn't be removed.
  */
 function toasterAlert() {
-    let props = {title: "Error sending remove item request", description: "Couldn't remove item", actionLabel: "OK"};
+    const props = {title: "Error sending remove item request", description: "Couldn't remove item", actionLabel: "OK"};
 
     toast(props.title, {
         description: props.description,
@@ -31,7 +31,7 @@ function toasterAlert() {
  * Raise a toast that the action occurred successfully.
  */
 function toastSuccess() {
-    let props = {title: "Success", description: "Removed item", actionLabel: "OK"};
+    const props = {title: "Success", description: "Removed item", actionLabel: "OK"};
 
     toast.success(props.title, {
         description: props.description,
@@ -46,7 +46,7 @@ function toastSuccess() {
  * Raise a toast that the action failed.
  */
 function toastFailure(reason: string) {
-    let props = {title: "Error", description: "Failed to remove item: " + reason, actionLabel: "OK"};
+    const props = {title: "Error", description: "Failed to remove item: " + reason, actionLabel: "OK"};
 
     toast.error(props.title, {
         description: props.description,
