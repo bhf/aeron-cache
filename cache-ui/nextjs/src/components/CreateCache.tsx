@@ -29,7 +29,7 @@ export default function CreateCacheRequest() {
         if (!hasToastShown) {
             setHasToastShown(true);
             setFormSubmitted(false);
-            let props = {title: "Error Creating Cache", description: message, actionLabel: "OK"};
+            const props = {title: "Error Creating Cache", description: message, actionLabel: "OK"};
             toast(props.title, {
                 description: props.description,
                 action: {
@@ -52,7 +52,7 @@ export default function CreateCacheRequest() {
         if (!hasToastShown) {
             setHasToastShown(true);
             setFormSubmitted(false);
-            let props = {title: "Success", description: "Created cache", actionLabel: "OK"};
+            const props = {title: "Success", description: "Created cache", actionLabel: "OK"};
             toast.success(props.title, {
                 description: props.description,
                 action: {

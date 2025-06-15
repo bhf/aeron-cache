@@ -89,7 +89,7 @@ export async function deleteCacheRequest(cacheId: number) {
 
 /**
  * Clear a cache.
- * @param formData The form data with the params used to clear the cache.
+ * @param cacheId
  */
 export async function clearCacheRequest(cacheId: number) {
     logger.info("Clear cache request with id", cacheId)
@@ -147,7 +147,7 @@ export async function addItemToCacheRequest(formState: { message: string; error:
 
 /**
  * Remove an item from the cache.
- * @param formData The form data with the params used to remove the item from the cache.
+ * @param props
  */
 export async function removeItemFromCacheRequest(props: { cacheId: number, key: string }) {
     logger.info("Remove item request for cache with id " + props.cacheId + "on key " + props.key)

@@ -17,7 +17,7 @@ const logger = getLogger("ClearCache")
  * couldn't be cleared.
  */
 function toasterAlert() {
-    let props = {title: "Error sending clear cache request", description: "Couldn't clear cache", actionLabel: "OK"};
+    const props = {title: "Error sending clear cache request", description: "Couldn't clear cache", actionLabel: "OK"};
 
     toast(props.title, {
         description: props.description,
@@ -32,7 +32,7 @@ function toasterAlert() {
  * Raise a toast that the action occurred successfully.
  */
 function toastSuccess() {
-    let props = {title: "Success", description: "Cleared cache", actionLabel: "OK"};
+    const props = {title: "Success", description: "Cleared cache", actionLabel: "OK"};
 
     toast.success(props.title, {
         description: props.description,
@@ -47,7 +47,7 @@ function toastSuccess() {
  * Raise a toast that the action failed.
  */
 function toastFailure(reason: string) {
-    let props = {title: "Error", description: "Failed to clear cache: " + reason, actionLabel: "OK"};
+    const props = {title: "Error", description: "Failed to clear cache: " + reason, actionLabel: "OK"};
 
     toast.error(props.title, {
         description: props.description,
