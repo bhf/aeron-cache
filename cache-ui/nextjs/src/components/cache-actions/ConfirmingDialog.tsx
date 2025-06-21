@@ -18,7 +18,7 @@ interface ConfirmingDialogProps {
     cancelText: string
     actionText: string
     buttonText: string
-    action: () => Promise<never>
+    action: () => Promise<void>
 }
 
 /**
