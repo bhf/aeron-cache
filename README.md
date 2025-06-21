@@ -9,6 +9,17 @@ Includes HTTP and websocket interfaces with support for multi-cache joins over w
 Prometheus+cAdvisor and tracing with Jaeger+OTEL. 
 Containerized and deployable with ```docker compose``` or on Kubernetes via ```helm``` or ```kubectl```.
 
+
+
+https://github.com/user-attachments/assets/6f9a52bb-2251-42a0-8163-b8d8501e5c80
+
+
+
+
+https://github.com/user-attachments/assets/f0418dbc-2da5-477e-8b8b-cb783836d712
+
+
+
 ## How To Run
 
 ### Docker
