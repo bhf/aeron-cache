@@ -179,6 +179,11 @@ __hyperfoil__ - Some basic hyperfoil tests
 
 ![img_1.png](docs/images/client-flow.png)
 
+## Profiling
+
+![img.png](docs/images/profilingTelemetry.png)
+
+![img_1.png](docs/images/allocationTree.png)
 
 ## Future Work
 

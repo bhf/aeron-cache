@@ -1,10 +1,10 @@
 package com.bhf.aeroncache.application;
 
+import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
 import com.bhf.aeroncache.services.tracing.impl.OtelTracingService;
 import com.bhf.aeroncache.utils.DNSUtils;
-import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.CommonContext;
 import io.aeron.archive.Archive;
@@ -18,6 +18,7 @@ import io.aeron.driver.MinMulticastFlowControlSupplier;
 import io.aeron.driver.ThreadingMode;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.agrona.concurrent.NoOpLock;
 import org.agrona.concurrent.ShutdownSignalBarrier;
 
@@ -51,6 +52,7 @@ public class ClusterNodeApplication {
     private static final int TRANSFER_PORT_OFFSET = 5;
     private static final int LOG_CONTROL_PORT_OFFSET = 6;
     private static final int TERM_LENGTH = 64 * 1024;
+    private static final boolean USE_BUSY_SPIN_IDLE_FOR_CLUSTER_SERVICE = false;
 
     static int calculatePort(final int nodeId, final int offset) {
         return PORT_BASE + (nodeId * PORTS_PER_NODE) + offset;
@@ -189,6 +191,10 @@ public class ClusterNodeApplication {
                         .clusterDir(new File(baseDir, "cluster"))
                         .clusteredService(new SBEDecodingCacheClusterService(String.valueOf(nodeId), getTracingService(nodeId)))
                         .errorHandler(errorHandler("Clustered Service"));
+
+        if (USE_BUSY_SPIN_IDLE_FOR_CLUSTER_SERVICE) {
+            clusteredServiceContext.idleStrategySupplier(BusySpinIdleStrategy::new);
+        }
 
         System.out.println("Awaiting DNS Resolution");
         final List<String> hostAddresses = List.of(hostnames);
