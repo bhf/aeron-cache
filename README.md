@@ -143,15 +143,6 @@ To subscribe to cache updates on caches with IDs 808 and 333:
 ```bash
 uwsc http://localhost:7071/api/ws/v1/caches/808,333
 ```
-
-## UI
-
-![img.png](cache-ui/ui-main-page.png)
-
-![img.png](cache-ui/ui-cache-view.png)
-
-![img.png](cache-ui/ui-cache-ws.png)
-
 ## Structure
 
 __cache-client__ - An Aeron cluster based client for the cache.
