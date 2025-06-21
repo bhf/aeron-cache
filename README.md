@@ -2,7 +2,7 @@
 
 # Aeron Cache
 
-*__Hand crafted without LLMs or Agents.__*
+*__Written and designed without LLMs or Agents.__*
 
 A clustered cache built using Aeron, Agrona and SBE. UI with NextJS, Shadcn and Tailwind. 
 Includes HTTP and websocket interfaces with support for multi-cache joins over websocket. 
