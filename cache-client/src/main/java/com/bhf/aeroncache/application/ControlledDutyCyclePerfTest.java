@@ -52,7 +52,7 @@ public class ControlledDutyCyclePerfTest {
     static void addConsumers(AeronCacheClusterListener client, ObservingClusterRequestPublisher observingPublisher) {
         observingPublisher
                 .onAddCacheEntry(c -> {
-                    long now = System.currentTimeMillis();
+                    long now = System.nanoTime();
                     long dur = now - lastSent;
                     count++;
                     samples.add(dur);
@@ -71,7 +71,7 @@ public class ControlledDutyCyclePerfTest {
      * @param payloadValue
      */
     private static void sendMessagesToCache(AeronCacheClusterListener client, AeronCache cluster, ObservingClusterRequestPublisher publisher, int cacheId, String payloadValue) {
-        var ts = System.currentTimeMillis();
+        var ts = System.nanoTime();
         var requestId = String.valueOf(c++);
         lastSent = ts;
         publisher.addCacheEntryBlocking(requestId, cacheId, "key1", payloadValue);
