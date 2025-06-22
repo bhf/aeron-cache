@@ -95,8 +95,8 @@ public class AsyncConsumerPerfTest {
         observingPublisher.sendCreateCache(UUID.randomUUID().toString(), 123L, consumer);
 
         AtomicLong count = new AtomicLong();
-        AtomicLong start = new AtomicLong();
         AtomicLong errorCount = new AtomicLong();
+        AtomicLong start = new AtomicLong(System.currentTimeMillis());
 
         while (true) {
             Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> addEntryConsumer = reusableLongReusableStringAddCacheEntryResult -> {
