@@ -25,24 +25,12 @@ public class AddCacheEntryRequestDetails<I extends Reusable, K extends Reusable,
     final V value;
     final RequestId requestId = new RequestId();
 
-    public String getRequestId() {
+    public String getRequestId(){
         return requestId.getRequestId();
     }
 
     public void setRequestId(String requestId) {
         this.requestId.setRequestId(requestId);
-    }
-
-    public void setRequestIdLength(int rawBytesLength) {
-        this.requestId.setRawBytesLength(rawBytesLength);
-    }
-
-    public byte[] getRequestIdRawBytes() {
-        return this.requestId.getRawBytes();
-    }
-
-    public int getRequestIdLength() {
-        return this.requestId.getRawBytesLength();
     }
 
     /**
