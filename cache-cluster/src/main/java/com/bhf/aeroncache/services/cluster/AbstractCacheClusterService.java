@@ -21,7 +21,6 @@ import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -208,45 +207,38 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         V value = requestDetails.getValue();
-
-        if (log.isTraceEnabled()) {
-            try {
-                var readbleRequestId = new String(requestDetails.getRequestIdRawBytes(), "UTF-8");
-                log.trace("Got add cache entry request for cache id {}, key {}, value {}, request Id: {}", cacheId, key, value, readbleRequestId);
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
+        var requestId = requestDetails.getRequestId();
+        log.info("Got add cache entry request for cache id {}, key {}, value {}, request Id: {}", cacheId, key, value, requestId);
         var cache = cacheManager.getCache(cacheId);
 
         if (cache == null) {
-            handleMissingCacheOnAddEntry(session, buffer, offset, cacheId, key, value, requestDetails.getRequestIdRawBytes(), requestDetails.getRequestIdLength());
+            handleMissingCacheOnAddEntry(session, buffer, offset, cacheId, key, value, requestDetails.getRequestId());
             return;
         }
 
         var addCacheEntryResult = cache.add(key, value);
-        //addCacheEntryResult.setRequestId(requestId);
+        addCacheEntryResult.setRequestId(requestId);
         addCacheEntryResult.getCacheId().copyFrom(cacheId);
         log.info("Result for add entry, key: {}, status: {}, ", addCacheEntryResult.getEntryKey(), addCacheEntryResult.getStatus());
-        handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, buffer, offset, requestDetails.getRequestIdRawBytes(), requestDetails.getRequestIdLength());
+        handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, buffer, offset);
         tracingService.endAddCacheEntry(requestDetails);
     }
 
     /**
-     * @param session Session requesting the add entry operation.
-     * @param buffer  Buffer containing the message.
-     * @param offset  Offset in the buffer at which the message is encoded.
-     * @param cacheId The Cache ID.
-     * @param key     The key we tried to add the entry on.
-     * @param value   The value we tried to add against the key.
+     * @param session   Session requesting the add entry operation.
+     * @param buffer    Buffer containing the message.
+     * @param offset    Offset in the buffer at which the message is encoded.
+     * @param cacheId   The Cache ID.
+     * @param key       The key we tried to add the entry on.
+     * @param value     The value we tried to add against the key.
+     * @param requestId The original request ID.
      */
-    private void handleMissingCacheOnAddEntry(ClientSession session, DirectBuffer buffer, int offset, I cacheId, K key, V value, byte[] requestIdBytes, int requestIdLength) {
+    private void handleMissingCacheOnAddEntry(ClientSession session, DirectBuffer buffer, int offset, I cacheId, K key, V value, String requestId) {
         addEntryFailureResult.setStatus(OperationStatus.UNKNOWN_CACHE);
-        //addEntryFailureResult.setRequestId(requestId);
+        addEntryFailureResult.setRequestId(requestId);
         addEntryFailureResult.setCacheId(cacheId);
         log.info("Cache {} doesn't exist, tried to add on key key: {}", cacheId, addEntryFailureResult.getEntryKey());
-        handlePostAddCacheEntry(cacheId, key, value, addEntryFailureResult, session, buffer, offset, requestIdBytes, requestIdLength);
+        handlePostAddCacheEntry(cacheId, key, value, addEntryFailureResult, session, buffer, offset);
     }
 
     /**
@@ -471,10 +463,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param session             The client session.
      * @param buffer              The buffer from which the entry creation request was created.
      * @param offset              The offset from within the buffer to decode the original request from.
-     * @param requestIdBytes      A byte[] of the requestId.
-     * @param requestIdLength     The length of the requestId byte[].
      */
-    protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset, byte[] requestIdBytes, int requestIdLength);
+    protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
 
     /**
      * Get an entry from the cache, send out a CacheEntry message.
