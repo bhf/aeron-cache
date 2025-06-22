@@ -1,8 +1,17 @@
 package com.bhf.aeroncache.models;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class RequestId implements Reusable<RequestId>{
 
     private final StringBuilder sb = new StringBuilder();
+    @Getter
+    private final byte[] rawBytes = new byte[1024];
+
+    @Getter @Setter
+    private int rawBytesLength;
+
     @Override
     public void clear() {
         sb.setLength(0);
@@ -31,4 +40,5 @@ public class RequestId implements Reusable<RequestId>{
         clear();
         this.sb.append(requestId);
     }
+
 }
