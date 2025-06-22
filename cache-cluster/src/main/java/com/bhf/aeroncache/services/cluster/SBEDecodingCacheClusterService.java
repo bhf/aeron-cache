@@ -90,13 +90,14 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         addCacheEntryRequestDetails.clear();
         addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         long cacheId = addCacheEntryDecoder.cacheId();
-        var requestID = addCacheEntryDecoder.requestId();
+        var reqBytes = addCacheEntryRequestDetails.getRequestIdRawBytes();
+        int requestIdLength = addCacheEntryDecoder.getRequestId(reqBytes, 0, Integer.MAX_VALUE);
+        addCacheEntryRequestDetails.setRequestIdLength(requestIdLength);
         var key = addCacheEntryDecoder.key();
         var value = addCacheEntryDecoder.entryValue();
         addCacheEntryRequestDetails.getCacheId().copyFrom(cacheId);
         addCacheEntryRequestDetails.getKey().copyFrom(key);
         addCacheEntryRequestDetails.getValue().copyFrom(value);
-        addCacheEntryRequestDetails.setRequestId(requestID);
         return addCacheEntryRequestDetails;
     }
 
@@ -176,12 +177,13 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostAddCacheEntry(ReusableLong cacheId, ReusableString key, ReusableString value, AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostAddCacheEntry(ReusableLong cacheId, ReusableString key, ReusableString value, AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset, byte[] requestIdBytes, int requestIdLength) {
         entryCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         entryCreatedEncoder.cacheId(cacheId.getValue())
                 .status(addCacheEntryResult.getStatus())
                 .key(key.value())
-                .requestId(addCacheEntryResult.getRequestId());
+                //.requestId(addCacheEntryResult.getRequestId());
+                        .putRequestId(requestIdBytes, 0, requestIdLength);
         sendMessage(session, egressBuffer, entryCreatedEncoder.encodedLength() + headerEncoder.encodedLength());
         subscriptionService.handleEntryAdded(addCacheEntryResult, egressBuffer, key, value, entryCreatedEncoder, headerEncoder);
     }
