@@ -47,9 +47,9 @@ class CacheClientAgentTest {
     void shouldPublishCreateCacheRequest(String requestId, long cacheId) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
-        requestPublisher.sendCreateCache(requestId, cacheId);
 
         // Act
+        requestPublisher.sendCreateCache(requestId, cacheId);
         sut.runSingleCycle();
 
         // Assert
