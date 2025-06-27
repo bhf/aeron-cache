@@ -87,7 +87,7 @@ public class AsyncConsumerPerfTest {
             }
         };
 
-        var agent = new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()));
+        var agent = new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
         return agent;
     }
 
