@@ -134,8 +134,8 @@ public class HttpApplication {
             System.out.println("Building cluster agent for http service");
             var idleStrategy = new BackoffIdleStrategy();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
-                    new ClusterClientAgent(cluster, rb, idleStrategy) :
-                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()));
+                    new ClusterClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()), "AeronCache-ClusterClient-Agent") :
+                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
 
             var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
             var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster);

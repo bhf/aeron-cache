@@ -42,7 +42,7 @@ class CacheClientAgentTest {
     @BeforeEach
     void setup() {
         rb = RingBufferUtils.buildRingbuffer(4096);
-        sut = new CacheClientAgent(cluster, rb, idleStrategy, publisher);
+        sut = new CacheClientAgent(cluster, rb, idleStrategy, publisher, "AeronCache-CacheClient-Agent");
     }
 
     @Test
@@ -60,14 +60,14 @@ class CacheClientAgentTest {
     @DisplayName("Should send KeepAlive based on time")
     void shouldSendKeepAliveBasedOnTime() {
         // Arrange
-        sut.lastKeepAlive = 0;
+        sut.setLastKeepAlive(0);
 
         // Act
         sut.runSingleCycle();
 
         // Assert
         verify(cluster, atMostOnce()).sendKeepAlive();
-        assertTrue(sut.lastKeepAlive > 0);
+        assertTrue(sut.getLastKeepAlive() > 0);
     }
 
     @ParameterizedTest

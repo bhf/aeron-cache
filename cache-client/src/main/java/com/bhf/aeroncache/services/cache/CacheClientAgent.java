@@ -1,9 +1,8 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.services.AbstractClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.IdleStrategy;
@@ -24,50 +23,15 @@ import static com.bhf.aeroncache.model.CacheRequestMessageTypes.*;
  * {@link ManyToOneRingBuffer} instance.
  */
 @Log4j2
-@RequiredArgsConstructor
-public class CacheClientAgent implements Agent {
+public class CacheClientAgent extends AbstractClientAgent {
 
-    final AeronCache cluster;
-    final ManyToOneRingBuffer rb;
-    final IdleStrategy idleStrategy;
-    final ClusterMessagePublisher publisher;
-    volatile boolean isEnabled = true;
 
-    @Getter
-    private final int KEEPALIVE_INTERVAL = 200;
-    long lastKeepAlive = 0;
+    public CacheClientAgent(AeronCache cluster, ManyToOneRingBuffer rb, IdleStrategy idleStrategy, ClusterMessagePublisher publisher, String roleName) {
+        super(cluster, rb, idleStrategy, publisher, roleName);
+    }
 
     @Override
-    public void onStart() {
-        log.info("Starting cache client agent");
-        Agent.super.onStart();
-    }
-
-    /**
-     * The core duty cycle of the Agent. Checks the request queue
-     * for requests to be encoded for the cache, handles heartbeats
-     * and also polling the egress for messages from the cluster.
-     *
-     * @return
-     * @throws Exception
-     */
-    @Override
-    public int doWork() throws Exception {
-        while (isEnabled) {
-            runSingleCycle();
-        }
-
-        return 0;
-    }
-
-    protected void runSingleCycle() {
-        handleKeepAlive(cluster);
-        processInboundMessages(rb);
-        cluster.pollEgress();
-        idleStrategy.idle();
-    }
-
-    private void processInboundMessages(ManyToOneRingBuffer rb) {
+    public void processInboundMessages(ManyToOneRingBuffer rb) {
         rb.read((msgTypeId, buffer, index, length) -> {
             log.debug("Got msg ID " + msgTypeId + " at index " + index + ", length=" + length);
 
@@ -76,7 +40,7 @@ public class CacheClientAgent implements Agent {
                     var requestId = buffer.getStringUtf8(index);
                     var cacheId = buffer.getLong(index + requestId.length() + 4);
                     log.debug("CREATE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
-                    publisher.sendCreateCache(requestId, cacheId);
+                    getPublisher().sendCreateCache(requestId, cacheId);
                 }
                 case ADD_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
@@ -87,7 +51,7 @@ public class CacheClientAgent implements Agent {
                     cumulativeReadPosition += key.length() + 4;
                     var value = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("ADD CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", key=" + key + ", value=" + value);
-                    publisher.addCacheEntry(requestId, cacheId, key, value);
+                    getPublisher().addCacheEntry(requestId, cacheId, key, value);
                 }
                 case GET_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
@@ -96,46 +60,46 @@ public class CacheClientAgent implements Agent {
                     cumulativeReadPosition += 8;
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("GET CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", to get key=" + key);
-                    publisher.getCacheEntry(requestId, cacheId, key);
+                    getPublisher().getCacheEntry(requestId, cacheId, key);
                 }
                 case CLEAR_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cacheId = buffer.getLong(index + requestId.length() + 4);
                     log.debug("CLEAR CACHE Request has ID " + requestId + ", to clear on cache ID " + cacheId);
-                    publisher.clearCache(requestId, cacheId);
+                    getPublisher().clearCache(requestId, cacheId);
                 }
                 case DELETE_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
                     var cacheId = buffer.getLong(cumulativeReadPosition);
                     log.debug("DELETE CACHE Request has ID " + requestId + ", to delete cache ID " + cacheId);
-                    publisher.deleteCache(requestId, cacheId);
+                    getPublisher().deleteCache(requestId, cacheId);
                 }
                 case GET_CACHE_ENTRIES_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
                     var cacheId = buffer.getLong(cumulativeReadPosition);
                     log.debug("GET CACHE ENTRIES Request has ID " + requestId + ", on cache ID " + cacheId);
-                    publisher.getCacheEntries(requestId, cacheId);
+                    getPublisher().getCacheEntries(requestId, cacheId);
                 }
                 case SUBSCRIBE_TO_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
                     var cacheId = buffer.getLong(cumulativeReadPosition);
                     log.debug("SUBSCRIBE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
-                    publisher.sendCacheSubscribe(requestId, cacheId);
+                    getPublisher().sendCacheSubscribe(requestId, cacheId);
                 }
                 case UNSUBSCRIBE_TO_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
                     var cacheId = buffer.getLong(cumulativeReadPosition);
                     log.debug("UNSUBSCRIBE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
-                    publisher.sendCacheUnsubscribe(requestId, cacheId);
+                    getPublisher().sendCacheUnsubscribe(requestId, cacheId);
                 }
                 case GET_CACHE_STATS_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     log.debug("GET CACHE STATS Request has ID " + requestId);
-                    publisher.getAllCacheStats(requestId);
+                    getPublisher().getAllCacheStats(requestId);
                 }
                 case REMOVE_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
@@ -144,31 +108,11 @@ public class CacheClientAgent implements Agent {
                     cumulativeReadPosition += 8;
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("REMOVE CACHE ENTRY Request has ID " + requestId + ", cache ID " + cacheId + ", remove key=" + key);
-                    publisher.removeCacheEntry(requestId, cacheId, key);
+                    getPublisher().removeCacheEntry(requestId, cacheId, key);
                 }
                 default -> log.warn("Got unknown msgType: {} processing inbound client cache requests", msgTypeId);
             }
 
         });
-    }
-
-    private void handleKeepAlive(AeronCache cluster) {
-        long now = System.currentTimeMillis();
-
-        if (now > lastKeepAlive + KEEPALIVE_INTERVAL) {
-            cluster.sendKeepAlive();
-            lastKeepAlive = now;
-        }
-    }
-
-    @Override
-    public void onClose() {
-        log.info("Closing cluster client agent");
-        Agent.super.onClose();
-    }
-
-    @Override
-    public String roleName() {
-        return "AeronCache-CacheClient-Agent";
     }
 }
