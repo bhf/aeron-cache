@@ -3,6 +3,7 @@ package com.bhf.aeroncache.services.cluster.impl;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.messages.*;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 /**
@@ -17,7 +18,7 @@ public class RBClusterMessagePublisher extends ClusterMessagePublisher {
     final ManyToOneRingBuffer rb;
 
     public RBClusterMessagePublisher(AeronCache cluster, ManyToOneRingBuffer rb) {
-        super(cluster);
+        super(cluster, new BusySpinIdleStrategy());
         this.rb = rb;
     }
 
@@ -31,7 +32,7 @@ public class RBClusterMessagePublisher extends ClusterMessagePublisher {
     }
 
     @Override
-    public void publishCreateCache(CreateCacheEncoder createCache, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
+    void publishCreateCache(CreateCacheEncoder createCache, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
         var msgLength = createCache.encodedLength() + header.encodedLength();
         var index = rb.tryClaim(createCache.sbeTemplateId(), msgLength);
         var destBuffer = rb.buffer();

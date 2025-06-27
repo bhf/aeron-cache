@@ -53,8 +53,6 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
         cacheCreationResult.clear();
         cacheCreationResult.getCacheId().copyFrom(cacheId);
 
-        log.info("Known caches {}", caches.keySet());
-
         if (caches.containsKey(cacheId)) {
             cacheCreationResult.setStatus(OperationStatus.CACHE_EXISTS);
             return cacheCreationResult;

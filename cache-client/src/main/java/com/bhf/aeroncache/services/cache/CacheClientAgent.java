@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.concurrent.Agent;
@@ -31,12 +32,14 @@ public class CacheClientAgent implements Agent {
     final IdleStrategy idleStrategy;
     final ClusterMessagePublisher publisher;
     volatile boolean isEnabled = true;
+
+    @Getter
     private final int KEEPALIVE_INTERVAL = 200;
     long lastKeepAlive = 0;
 
     @Override
     public void onStart() {
-        log.info("Starting cluster client agent");
+        log.info("Starting cache client agent");
         Agent.super.onStart();
     }
 

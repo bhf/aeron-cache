@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.utils.RingBufferUtils;
@@ -8,6 +9,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -18,6 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,19 +45,45 @@ class CacheClientAgentTest {
         sut = new CacheClientAgent(cluster, rb, idleStrategy, publisher);
     }
 
+    @Test
+    @DisplayName("Should poll egress and idle as part of a single duty cycle")
+    void shouldPollEgressAndIdleInDutyCycle() {
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(cluster, atMostOnce()).pollEgress();
+        verify(idleStrategy, atMostOnce()).idle();
+    }
+
+    @Test
+    @DisplayName("Should send KeepAlive based on time")
+    void shouldSendKeepAliveBasedOnTime() {
+        // Arrange
+        sut.lastKeepAlive = 0;
+
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(cluster, atMostOnce()).sendKeepAlive();
+        assertTrue(sut.lastKeepAlive > 0);
+    }
+
     @ParameterizedTest
-    @DisplayName("Should publish create cache request via Publisher")
+    @HappyPath
+    @DisplayName("Should publish create cache request via Publisher only once")
     @MethodSource("provideCreateCacheParams")
     void shouldPublishCreateCacheRequest(String requestId, long cacheId) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
+        requestPublisher.sendCreateCache(requestId, cacheId);
 
         // Act
-        requestPublisher.sendCreateCache(requestId, cacheId);
         sut.runSingleCycle();
 
         // Assert
-        verify(publisher).sendCreateCache(requestId, cacheId);
+        verify(publisher, atMostOnce()).sendCreateCache(requestId, cacheId);
     }
 
     public static Stream<Arguments> provideCreateCacheParams() {

@@ -12,6 +12,7 @@ import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.util.*;
@@ -120,7 +121,7 @@ public class ControlledDutyCyclePerfTest {
 
             ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(aeronCache, rb);
-            BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(aeronCache);
+            BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(aeronCache, new BusySpinIdleStrategy());
             var observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher, blockingRequestPublisher);
 
             client.setCacheResultsCallbacks(observingPublisher);

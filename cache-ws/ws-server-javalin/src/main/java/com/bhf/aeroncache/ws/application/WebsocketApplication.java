@@ -31,6 +31,7 @@ import lombok.extern.log4j.Log4j2;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.BackoffIdleStrategy;
+import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
@@ -119,7 +120,7 @@ public class WebsocketApplication {
             var idleStrategy = new BackoffIdleStrategy();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
                     new ClusterClientAgent(cluster, rb, idleStrategy) :
-                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster));
+                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()));
 
             var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
             var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster);

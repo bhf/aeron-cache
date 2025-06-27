@@ -19,6 +19,7 @@ import io.aeron.cluster.client.AeronCluster;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.BackoffIdleStrategy;
+import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
@@ -86,7 +87,7 @@ public class AsyncConsumerPerfTest {
             }
         };
 
-        var agent = new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster));
+        var agent = new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()));
         return agent;
     }
 

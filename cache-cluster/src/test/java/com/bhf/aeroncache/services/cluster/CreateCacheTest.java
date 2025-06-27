@@ -14,6 +14,7 @@ import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
@@ -79,6 +80,29 @@ class CreateCacheTest {
         // Calling the tracing service is part of the public API of the SUT
         verify(tracingService, atMostOnce()).startCreateCacheRequest(any(CreateCacheRequestDetails.class));
         verify(tracingService, atMostOnce()).endCreateCacheRequest(any(CreateCacheRequestDetails.class));
+    }
+
+    @Test
+    @DisplayName("Should notify when cache already exists")
+    void shouldNotifyWhenCacheExists() {
+        // Arrange
+        ClientSession session = TestUtils.getMockedSession(responseBuffer);
+        var requestId = UUID.randomUUID().toString();
+        var cacheId = 123L;
+        var length = CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder,
+                requestBuffer, requestId, cacheId);
+
+        long ts = System.currentTimeMillis();
+        sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
+
+        // Act
+        length = CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder,
+                requestBuffer, requestId, cacheId);
+        sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
+        CacheResponseDecoder.decodeCacheCreated(result, cacheCreatedDecoder, headerDecoder, responseBuffer, 0);
+
+        // Assert
+        assertEquals(OperationStatus.CACHE_EXISTS, result.getStatus());
     }
 
 }
