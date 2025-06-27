@@ -41,6 +41,7 @@ import lombok.extern.log4j.Log4j2;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.BackoffIdleStrategy;
+import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
@@ -82,7 +83,7 @@ public class HttpApplication {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
                 // sending directly to the cluster
                 CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cluster, rb);
-                BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cluster);
+                BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy());
                 observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher, blockingRequestPublisher);
             } else {
                 // Drop normalised cache requests onto an Agrona RB for encoding
@@ -134,7 +135,7 @@ public class HttpApplication {
             var idleStrategy = new BackoffIdleStrategy();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
                     new ClusterClientAgent(cluster, rb, idleStrategy) :
-                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster));
+                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()));
 
             var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
             var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster);
