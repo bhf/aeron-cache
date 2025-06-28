@@ -15,14 +15,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.atMostOnce;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CacheClientAgentTest {
@@ -35,12 +35,12 @@ class CacheClientAgentTest {
     AeronCache cluster;
     @Mock
     IdleStrategy idleStrategy;
-    @Mock
     ClusterMessagePublisher publisher;
     ManyToOneRingBuffer rb;
 
     @BeforeEach
     void setup() {
+        publisher = Mockito.mock(ClusterMessagePublisher.class);
         rb = RingBufferUtils.buildRingbuffer(4096);
         sut = new CacheClientAgent(cluster, rb, idleStrategy, publisher, "AeronCache-CacheClient-Agent");
     }
@@ -83,7 +83,7 @@ class CacheClientAgentTest {
         sut.runSingleCycle();
 
         // Assert
-        verify(publisher, atMostOnce()).sendCreateCache(requestId, cacheId);
+        verify(sut.getPublisher(), times(1)).sendCreateCache(requestId, cacheId);
     }
 
     public static Stream<Arguments> provideCreateCacheParams() {
@@ -93,6 +93,229 @@ class CacheClientAgentTest {
                 Arguments.of("requestID", MAX_SBE_LONG),
                 Arguments.of("requestID", MIN_SBE_LONG),
                 Arguments.of(UUID.randomUUID().toString(), 123L));
+    }
+
+    @ParameterizedTest
+    @HappyPath
+    @DisplayName("Should publish add cache entry request via Publisher only once")
+    @MethodSource("provideAddCacheEntryParams")
+    void shouldPublishAddCacheEntryRequest(String requestId, long cacheId, String key, String value) {
+        // Arrange
+        RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
+        requestPublisher.addCacheEntry(requestId, cacheId, key, value);
+
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(publisher, times(1)).addCacheEntry(requestId, cacheId, key, value);
+    }
+
+    public static Stream<Arguments> provideAddCacheEntryParams() {
+        return Stream.of(
+                Arguments.of("", 1L, "key", "value"),
+                Arguments.of("requestID", -1L, "key", "value"),
+                Arguments.of("requestID", MAX_SBE_LONG, "key", "value"),
+                Arguments.of("requestID", MIN_SBE_LONG, "key", "value"),
+                Arguments.of(UUID.randomUUID().toString(), 123L, "key", "value"));
+    }
+
+    @ParameterizedTest
+    @HappyPath
+    @DisplayName("Should publish get cache entry request via Publisher only once")
+    @MethodSource("provideGetCacheEntryParams")
+    void shouldPublishGetCacheEntryRequest(String requestId, long cacheId, String key) {
+        // Arrange
+        RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
+        requestPublisher.getCacheEntry(requestId, cacheId, key);
+
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(publisher, times(1)).getCacheEntry(requestId, cacheId, key);
+    }
+
+    public static Stream<Arguments> provideGetCacheEntryParams() {
+        return Stream.of(
+                Arguments.of("", 1L, "key"),
+                Arguments.of("requestID", -1L, "key"),
+                Arguments.of("requestID", MAX_SBE_LONG, "key"),
+                Arguments.of("requestID", MIN_SBE_LONG, "key"),
+                Arguments.of(UUID.randomUUID().toString(), 123L, "key"));
+    }
+
+    @ParameterizedTest
+    @HappyPath
+    @DisplayName("Should publish clear cache request via Publisher only once")
+    @MethodSource("provideClearCacheParams")
+    void shouldPublishClearCacheRequest(String requestId, long cacheId) {
+        // Arrange
+        RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
+        requestPublisher.clearCache(requestId, cacheId);
+
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(publisher, times(1)).clearCache(requestId, cacheId);
+    }
+
+    public static Stream<Arguments> provideClearCacheParams() {
+        return Stream.of(
+                Arguments.of("", 1L),
+                Arguments.of("requestID", -1L),
+                Arguments.of("requestID", MAX_SBE_LONG),
+                Arguments.of("requestID", MIN_SBE_LONG),
+                Arguments.of(UUID.randomUUID().toString(), 123L));
+    }
+
+    @ParameterizedTest
+    @HappyPath
+    @DisplayName("Should publish delete cache request via Publisher only once")
+    @MethodSource("provideDeleteCacheParams")
+    void shouldPublishDeleteCacheRequest(String requestId, long cacheId) {
+        // Arrange
+        RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
+        requestPublisher.deleteCache(requestId, cacheId);
+
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(publisher, times(1)).deleteCache(requestId, cacheId);
+    }
+
+    public static Stream<Arguments> provideDeleteCacheParams() {
+        return Stream.of(
+                Arguments.of("", 1L),
+                Arguments.of("requestID", -1L),
+                Arguments.of("requestID", MAX_SBE_LONG),
+                Arguments.of("requestID", MIN_SBE_LONG),
+                Arguments.of(UUID.randomUUID().toString(), 123L));
+    }
+
+    @ParameterizedTest
+    @HappyPath
+    @DisplayName("Should publish get cache entries request via Publisher only once")
+    @MethodSource("provideGetEntriesParams")
+    void shouldPublishGetCacheEntriesRequest(String requestId, long cacheId) {
+        // Arrange
+        RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
+        requestPublisher.getCacheEntries(requestId, cacheId);
+
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(publisher, times(1)).getCacheEntries(requestId, cacheId);
+    }
+
+    public static Stream<Arguments> provideGetEntriesParams() {
+        return Stream.of(
+                Arguments.of("", 1L),
+                Arguments.of("requestID", -1L),
+                Arguments.of("requestID", MAX_SBE_LONG),
+                Arguments.of("requestID", MIN_SBE_LONG),
+                Arguments.of(UUID.randomUUID().toString(), 123L));
+    }
+
+    @ParameterizedTest
+    @HappyPath
+    @DisplayName("Should publish cache subscribe request via Publisher only once")
+    @MethodSource("provideCacheSubscribeParams")
+    void shouldPublishCacheSubscribeRequest(String requestId, long cacheId) {
+        // Arrange
+        RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
+        requestPublisher.sendCacheSubscribe(requestId, cacheId);
+
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(publisher, times(1)).sendCacheSubscribe(requestId, cacheId);
+    }
+
+    public static Stream<Arguments> provideCacheSubscribeParams() {
+        return Stream.of(
+                Arguments.of("", 1L),
+                Arguments.of("requestID", -1L),
+                Arguments.of("requestID", MAX_SBE_LONG),
+                Arguments.of("requestID", MIN_SBE_LONG),
+                Arguments.of(UUID.randomUUID().toString(), 123L));
+    }
+
+    @ParameterizedTest
+    @HappyPath
+    @DisplayName("Should publish cache unsubscribe request via Publisher only once")
+    @MethodSource("provideCacheUnsubscribeParams")
+    void shouldPublishCacheUnsubscribeRequest(String requestId, long cacheId) {
+        // Arrange
+        RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
+        requestPublisher.sendCacheUnsubscribe(requestId, cacheId);
+
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(publisher, times(1)).sendCacheUnsubscribe(requestId, cacheId);
+    }
+
+    public static Stream<Arguments> provideCacheUnsubscribeParams() {
+        return Stream.of(
+                Arguments.of("", 1L),
+                Arguments.of("requestID", -1L),
+                Arguments.of("requestID", MAX_SBE_LONG),
+                Arguments.of("requestID", MIN_SBE_LONG),
+                Arguments.of(UUID.randomUUID().toString(), 123L));
+    }
+
+    @ParameterizedTest
+    @HappyPath
+    @DisplayName("Should publish get cache stats request via Publisher only once")
+    @MethodSource("provideGetCacheStatsParams")
+    void shouldPublishGetCacheStatsRequest(String requestId) {
+        // Arrange
+        RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
+        requestPublisher.getAllCacheStats(requestId);
+
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(publisher, times(1)).getAllCacheStats(requestId);
+    }
+
+    public static Stream<Arguments> provideGetCacheStatsParams() {
+        return Stream.of(
+                Arguments.of(""),
+                Arguments.of("requestID"),
+                Arguments.of(UUID.randomUUID().toString()));
+    }
+
+    @ParameterizedTest
+    @HappyPath
+    @DisplayName("Should publish remove cache entry request via Publisher only once")
+    @MethodSource("provideRemoveCacheEntryParams")
+    void shouldPublishRemoveCacheEntryRequest(String requestId, long cacheId, String key) {
+        // Arrange
+        RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
+        requestPublisher.removeCacheEntry(requestId, cacheId, key);
+
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(publisher, times(1)).removeCacheEntry(requestId, cacheId, key);
+    }
+
+    public static Stream<Arguments> provideRemoveCacheEntryParams() {
+        return Stream.of(
+                Arguments.of("", 1L, "key"),
+                Arguments.of("requestID", -1L, "key"),
+                Arguments.of("requestID", MAX_SBE_LONG, "key"),
+                Arguments.of("requestID", MIN_SBE_LONG, "key"),
+                Arguments.of(UUID.randomUUID().toString(), 123L, "key"));
     }
 
 }
