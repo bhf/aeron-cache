@@ -21,7 +21,7 @@ import java.util.UUID;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class RBCacheRequestPublisherTest {
+class AddCacheEntryRBPublisherTest {
 
     RBCacheRequestPublisher sut;
 
@@ -35,28 +35,32 @@ class RBCacheRequestPublisherTest {
 
     @ParameterizedTest
     @NullSource
-    @DisplayName("Should throw NPE on null requestId without interacting with RingBuffer when creating cache")
+    @DisplayName("Should throw NPE on null requestId without interacting with RingBuffer when adding cache entry")
     void shouldThrowExceptionOnNullRequestId(String requestId) {
         // Arrange
         var cacheId = 123L;
+        var key = "someKey";
+        var value = "someValue";
 
         // Act + Assert
         Assertions.assertThrows(NullPointerException.class,
-                () -> sut.sendCreateCache(requestId, cacheId));
+                () -> sut.addCacheEntry(requestId, cacheId, key, value));
 
         verifyNoInteractions(rb);
     }
 
     @Test
-    @DisplayName("Should abort claim on RingBuffer on RuntimeException when creating cache")
+    @DisplayName("Should abort claim on RingBuffer on RuntimeException when adding cache entry")
     void shouldAbortOnRingBufferOnException() {
         // Arrange
         var cacheId = 123L;
+        var key = "someKey";
+        var value = "someValue";
         var requestId = UUID.randomUUID().toString();
         when(rb.buffer()).thenThrow(RuntimeException.class);
 
         // Act
-        sut.sendCreateCache(requestId, cacheId);
+        sut.addCacheEntry(requestId, cacheId, key, value);
 
         // Assert
         verify(rb, atMostOnce()).abort(intThat(isGreaterThanZero()));
@@ -64,16 +68,18 @@ class RBCacheRequestPublisherTest {
 
     @Test
     @HappyPath
-    @DisplayName("Should commit claim on RingBuffer when creating cache")
-    void shouldCommitClaimOnRBWhenCreatingCache() {
+    @DisplayName("Should commit claim on RingBuffer when adding cache entry")
+    void shouldCommitClaimOnRBWhenAddingCacheEntry() {
         // Arrange
         var cacheId = 123L;
+        var key = "someKey";
+        var value = "someValue";
         var requestId = UUID.randomUUID().toString();
         var mockBuffer = Mockito.mock(AtomicBuffer.class);
         when(rb.buffer()).thenReturn(mockBuffer);
 
         // Act
-        sut.sendCreateCache(requestId, cacheId);
+        sut.addCacheEntry(requestId, cacheId, key, value);
 
         // Assert
         verify(rb, atMostOnce()).commit(intThat(isGreaterThanZero()));
