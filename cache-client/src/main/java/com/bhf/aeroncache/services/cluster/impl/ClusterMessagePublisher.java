@@ -220,12 +220,6 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
     }
 
     @Override
-    public void getAllCacheStatsBlocking(String requestId) {
-        getAllCacheStats(requestId);
-        waitForResult(cluster);
-    }
-
-    @Override
     public void sendCacheSubscribeBlocking(String requestId, long cacheId) {
         sendCacheSubscribe(requestId, cacheId);
         waitForResult(cluster);
@@ -267,6 +261,12 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
     void publishCacheUnsubscribe(CacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
         var length = cacheUnsubscribeRequestEncoder.encodedLength() + header.encodedLength();
         publishToCache(msgBuffer, msgBufferOffset, length);
+    }
+
+    @Override
+    public void getAllCacheStatsBlocking(String requestId) {
+        getAllCacheStats(requestId);
+        waitForResult(cluster);
     }
 
     @Override
