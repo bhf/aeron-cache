@@ -1,16 +1,19 @@
 package com.bhf.aeroncache.services.cluster;
 
+import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
 import com.bhf.aeroncache.messages.*;
-import com.bhf.aeroncache.models.requests.CreateCacheRequestDetails;
-import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.requests.ClearCacheRequestDetails;
+import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.services.TestUtils;
+import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.logbuffer.Header;
+import org.agrona.AbstractMutableDirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,53 +27,54 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
- * Test decoding a create cache request. Uses a Detroit style for simplicity in
- * decoding the response buffer.
+ * Test decoding a clear cache request.
  */
-class CreateCacheTest {
+class ClearCacheTest {
 
     private static final long MAX_SBE_LONG = Long.MAX_VALUE;
     private static final long MIN_SBE_LONG = -Long.MAX_VALUE;
     private final Header header = new Header(0, 0);
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
-    private final CacheCreatedDecoder cacheCreatedDecoder = new CacheCreatedDecoder();
+    private final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
+    private final CacheClearedDecoder cacheClearedDecoder = new CacheClearedDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
-    private CreateCacheResult<ReusableLong> result;
+    private ClearCacheResult<ReusableLong> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
+    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
 
     @BeforeEach
     void setup() {
         tracingService = Mockito.mock(CacheTracingService.class);
         sut = new SBEDecodingCacheClusterService("node0", tracingService);
+        sut.subscriptionService = Mockito.mock(CacheSubscriptionService.class);
         responseBuffer = new ExpandableArrayBuffer();
         requestBuffer = new ExpandableArrayBuffer();
-        result = new CreateCacheResult<>(SupplierUtils.longSupplier.get());
+        result = new ClearCacheResult<>(SupplierUtils.longSupplier.get());
     }
 
-    /**
-     * Test creating a cache.
-     */
     @ParameterizedTest
-    @DisplayName("Should return correct details of created cache")
+    @DisplayName("Should return correct details of cleared cache")
     @ValueSource(longs = {0, MAX_SBE_LONG, MIN_SBE_LONG})
-    void testCreateCacheMessage(long cacheId) {
+    @HappyPath
+    void shouldClearKnownCache(long cacheId) {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
+        TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);
+
         var requestId = UUID.randomUUID().toString();
-        var length = CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder,
+        int length = CacheRequestEncoder.encodeClearCache(clearCacheEncoder, headerEncoder,
                 requestBuffer, requestId, cacheId);
 
         // Act
-        long ts = System.currentTimeMillis();
-        sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheCreated(result, cacheCreatedDecoder, headerDecoder, responseBuffer, 0);
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+        CacheResponseDecoder.decodeCacheCleared(cacheClearedDecoder, headerDecoder, result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -78,30 +82,35 @@ class CreateCacheTest {
         assertEquals(OperationStatus.SUCCESS, result.getStatus());
 
         // Calling the tracing service is part of the public API of the SUT
-        verify(tracingService, times(1)).startCreateCacheRequest(any(CreateCacheRequestDetails.class));
-        verify(tracingService, times(1)).endCreateCacheRequest(any(CreateCacheRequestDetails.class));
+        verify(tracingService, times(1)).startHandleClearCache(any(ClearCacheRequestDetails.class));
+        verify(tracingService, times(1)).endHandleClearCache(any(ClearCacheRequestDetails.class));
+
+        verify(sut.subscriptionService, times(1)).handleClearCache(
+                any(ClearCacheResult.class),
+                any(AbstractMutableDirectBuffer.class),
+                any(CacheClearedEncoder.class),
+                any(MessageHeaderEncoder.class));
     }
 
     @Test
-    @DisplayName("Should notify when cache already exists")
-    void shouldNotifyWhenCacheExists() {
+    @DisplayName("Should notify when cache is unknown")
+    void shouldNotifyWhenCacheUnknown() {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = 123L;
-        var length = CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder,
+        var length = CacheRequestEncoder.encodeClearCache(clearCacheEncoder, headerEncoder,
                 requestBuffer, requestId, cacheId);
-        long ts = System.currentTimeMillis();
-        sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
 
         // Act
-        length = CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheCreated(result, cacheCreatedDecoder, headerDecoder, responseBuffer, 0);
+        CacheResponseDecoder.decodeCacheCleared(cacheClearedDecoder, headerDecoder, result, responseBuffer, 0);
 
         // Assert
-        assertEquals(OperationStatus.CACHE_EXISTS, result.getStatus());
+        assertEquals(cacheId, result.getCacheId().value());
+        assertEquals(requestId, result.getRequestId());
+        assertEquals(OperationStatus.UNKNOWN_CACHE, result.getStatus());
     }
 
 }

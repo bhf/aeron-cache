@@ -1,10 +1,17 @@
-package com.bhf.aeroncache.services.cluster;
+package com.bhf.aeroncache.services;
 
+import com.bhf.aeroncache.codecs.CacheRequestEncoder;
+import com.bhf.aeroncache.messages.CreateCacheEncoder;
+import com.bhf.aeroncache.messages.MessageHeaderEncoder;
+import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import io.aeron.DirectBufferVector;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
+
+import java.util.UUID;
 
 public class TestUtils {
 
@@ -62,5 +69,25 @@ public class TestUtils {
                 return 0;
             }
         };
+    }
+
+    /**
+     * Create a cache.
+     * @param cacheId
+     * @param session
+     * @param createCacheEncoder
+     * @param headerEncoder
+     * @param requestBuffer
+     * @param sut
+     * @param header
+     */
+    public static void createCache(long cacheId, ClientSession session, CreateCacheEncoder createCacheEncoder,
+                                   MessageHeaderEncoder headerEncoder, MutableDirectBuffer requestBuffer,
+                                   SBEDecodingCacheClusterService sut, Header header) {
+        var requestId = UUID.randomUUID().toString();
+        var length = CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder,
+                requestBuffer, requestId, cacheId);
+        long ts = System.currentTimeMillis();
+        sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
     }
 }
