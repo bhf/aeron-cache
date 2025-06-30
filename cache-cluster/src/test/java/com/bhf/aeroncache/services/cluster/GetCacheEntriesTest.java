@@ -26,6 +26,7 @@ import org.mockito.Mockito;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -48,6 +49,7 @@ class GetCacheEntriesTest {
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
     private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
+    private final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
 
     @BeforeEach
     void setup() {
@@ -69,6 +71,17 @@ class GetCacheEntriesTest {
         TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);
 
         var requestId = UUID.randomUUID().toString();
+
+        // Add some items into the cache
+        int itemsToAdd = 10;
+        for (int i = 0; i < itemsToAdd; i++) {
+            var key = "key-"+i;
+            var value = "value-"+i;
+            var length = CacheRequestEncoder.encodeAddCacheEntry(addCacheEntryEncoder, headerEncoder,
+                    requestBuffer, requestId, cacheId, key, value);
+            sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+        }
+
         int length = CacheRequestEncoder.encodeGetCacheEntries(getAllCacheEntriesEncoder, headerEncoder,
                 requestBuffer, requestId, cacheId);
 
@@ -80,6 +93,17 @@ class GetCacheEntriesTest {
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
         assertEquals(OperationStatus.SUCCESS, result.getStatus());
+
+        var returnedCachedEntries = result.value().getValues();
+
+        for (int i = 0; i < itemsToAdd; i++) {
+            var expectedKey = new ReusableString();
+            expectedKey.copyFrom("key-" + i);
+            var expectedValue = new ReusableString();
+            expectedValue.copyFrom("value-" + i);
+            assertTrue(returnedCachedEntries.containsKey(expectedKey));
+            assertEquals(expectedValue, returnedCachedEntries.get(expectedKey));
+        }
 
         // Calling the tracing service is part of the public API of the SUT
         verify(tracingService, times(1)).startGetAllCacheEntries(any(GetAllCacheEntriesRequestDetails.class));
