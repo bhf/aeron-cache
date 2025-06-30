@@ -91,6 +91,8 @@ class GetCacheEntryTest {
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
         assertEquals(OperationStatus.SUCCESS, result.getStatus());
+        assertEquals(result.getEntryKey().value(), key);
+        assertEquals(result.getEntryValue().value(), value);
 
         // Calling the tracing service is part of the public API of the SUT
         verify(tracingService, times(1)).startGetCacheEntry(any(GetCacheEntryRequestDetails.class));
