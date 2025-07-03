@@ -21,8 +21,10 @@ version = "1.0-SNAPSHOT"
 
 dependencies {
     implementation(libs.sbetool)
-    testImplementation(platform("org.junit:junit-bom:5.9.1"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit)
+    testImplementation(libs.junit.params)
+    testImplementation(libs.mockito)
 }
 
 tasks.test {

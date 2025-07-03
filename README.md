@@ -187,9 +187,21 @@ __hyperfoil__ - Some basic hyperfoil tests
 
 ![img_1.png](docs/images/allocationTree.png)
 
+## Testing
+
+### Unit Tests
+There are approx 180 unit tests (including param variation) using JUnit and Mockito across both ```cache-cluster``` 
+and ```cache-client``` which exercise the main functionality.
+
+### JMH
+There are a handful of JMH tests in ```cache-cluster``` and in ```cache-client```.
+
+### HTTP API 
+There are approx 20 HTTP based integration tests (including param variation) using JUnit and 
+RestAssured in ```:cache-http:http-integration-tests``` which cover the main functionality offered by the HTTP API. 
+
 ## Future Work
 
-* Persisting and loading from an Image
 * Non-clustered mode (single node cache)
 * Industrialization and cache-ops
 
