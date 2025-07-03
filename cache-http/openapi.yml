@@ -18,7 +18,7 @@ paths:
   /api/v1/cache:
     post:
       tags:
-        - Create Cache
+        - CreateCache
       operationId: createCache
       requestBody:
         content:
@@ -42,7 +42,7 @@ paths:
   /api/v1/cache/{cacheId}:
     post:
       tags:
-        - Put Item in Cache
+        - PutItem
       operationId: putItem
       parameters:
         - name: cacheId
@@ -72,7 +72,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
-        - Delete Cache
+        - DeleteCache
       operationId: deleteCache
       parameters:
         - name: cacheId
@@ -97,7 +97,7 @@ paths:
   /api/v1/cache/{cacheId}/{key}:
     get:
       tags:
-        - Get Item from Cache
+        - GetItem
       operationId: getItem
       parameters:
         - name: cacheId
@@ -127,7 +127,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
-        - Delete Item from Cache
+        - DeleteItem
       operationId: deleteItem
       parameters:
         - name: cacheId
