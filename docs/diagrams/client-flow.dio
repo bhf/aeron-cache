@@ -33,10 +33,10 @@
                 <mxCell id="20" value="Cache Clients" style="rounded=0;whiteSpace=wrap;html=1;hachureGap=4;fontFamily=Helvetica;fontSize=20;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
                     <mxGeometry x="180" y="54" width="240" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="21" value="Cache Clients" style="rounded=0;whiteSpace=wrap;html=1;hachureGap=4;fontFamily=Helvetica;fontSize=20;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+                <mxCell id="21" value="Aeron Cache Clients" style="rounded=0;whiteSpace=wrap;html=1;hachureGap=4;fontFamily=Helvetica;fontSize=20;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
                     <mxGeometry x="190" y="64" width="240" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="23" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#FFD76A;" vertex="1" parent="1">
+                <mxCell id="23" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#F8DF9B;" vertex="1" parent="1">
                     <mxGeometry x="240" y="174" width="80" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="24" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#FFFFFF;shadow=1;" vertex="1" parent="1">
