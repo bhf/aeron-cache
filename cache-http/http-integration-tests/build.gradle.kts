@@ -11,6 +11,7 @@ dependencies {
     testImplementation("org.json:json:20240303")
     testImplementation("org.hamcrest:hamcrest:2.1")
     testImplementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+    testImplementation(project(":cache-common"))
 }
 
 tasks.test {

@@ -1,7 +1,9 @@
 package com.bhf.aeroncache.integration;
 
+import com.bhf.aeroncache.annotations.HappyPath;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import org.hamcrest.Matchers;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -15,7 +17,7 @@ import java.util.stream.Stream;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.comparesEqualTo;
 
-class CreateOperationsTest {
+class CreateCacheTests {
 
     private static final String CREATE_ENDPOINT = "/api/v1/cache/";
 
@@ -33,42 +35,48 @@ class CreateOperationsTest {
 
     @Test
     @DisplayName("Should create basic cache")
+    @HappyPath
     void shouldCreateBasicCache() {
         // Arrange
         var cacheId = 1;
-        JSONObject jsonObj = new JSONObject().put("cacheId", cacheId);
+        CacheTestUtils.deleteCache(cacheId);
+
+        JSONObject requestBody = new JSONObject().put("cacheId", cacheId);
 
         given()
-            .contentType(ContentType.JSON)
-            .accept(ContentType.JSON)
-            .body(jsonObj.toString())
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .body(requestBody.toString())
 
-        // Act
-        .when().post(CREATE_ENDPOINT)
+                // Act
+                .when().post(CREATE_ENDPOINT)
 
-        // Assert
-        .then().assertThat()
-            .statusCode(200)
-            .body("cacheId", comparesEqualTo(cacheId));
+                // Assert
+                .then().assertThat()
+                .statusCode(200)
+                .body("cacheId", comparesEqualTo(cacheId));
     }
 
     @ParameterizedTest
     @DisplayName("Should return status 400 for badly formed requests to create a cache")
     @MethodSource("provideBadParamsToCreateCache")
-    void shouldReturn400ForBadlyFormedCreateCacheRequest(String field, Object value){
-        var message = new JSONObject().put(field, value);
+    void shouldReturn400ForBadlyFormedCreateCacheRequest(String field, Object value) {
+        var requestBody = new JSONObject().put(field, value);
 
         given()
-            .contentType(ContentType.JSON)
-            .accept(ContentType.JSON)
-            .body(message.toString())
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .body(requestBody.toString())
 
-        // Act
-        .when().post(CREATE_ENDPOINT)
+                // Act
+                .when().post(CREATE_ENDPOINT)
 
-        // Assert
-        .then().assertThat()
-           .statusCode(400);
+                // Assert
+                .then().assertThat()
+                .statusCode(400)
+                .body("errorMsg", Matchers.notNullValue())
+                .body("helpMsg", Matchers.notNullValue())
+                .body("operationStatus", Matchers.notNullValue());
     }
 
 }
