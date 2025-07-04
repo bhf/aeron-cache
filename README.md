@@ -183,6 +183,8 @@ __hyperfoil__ - Some basic hyperfoil tests
 
 ## Profiling
 
+Adding entries in a tight loop:
+
 ![img.png](docs/images/profilingTelemetry.png)
 
 ![img_1.png](docs/images/allocationTree.png)
@@ -190,8 +192,13 @@ __hyperfoil__ - Some basic hyperfoil tests
 ## Testing
 
 ### Unit Tests
-There are approx 180 unit tests (including param variation) using JUnit and Mockito across both ```cache-cluster``` 
+There are >200 unit tests (including param variation) using JUnit and Mockito across both ```cache-cluster``` 
 and ```cache-client``` which exercise the main functionality.
+
+Core coverage > 70% (as of 4th July 2025)
+
+![img.png](docs/images/coverage-core.png)
+
 
 ### JMH
 There are a handful of JMH tests in ```cache-cluster``` and in ```cache-client```.
@@ -203,7 +210,7 @@ RestAssured in ```:cache-http:http-integration-tests``` which cover the main fun
 ## Future Work
 
 * Non-clustered mode (single node cache)
-* Distributed mode (data distributed across multiple single node caches)
+* Distributed mode (data distributed across multiple single node caches with a clustered backplane)
 * Industrialization and cache-ops
 
 https://sanjdev.atlassian.net/jira/software/projects/AC/boards/22
