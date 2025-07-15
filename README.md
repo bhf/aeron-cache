@@ -154,6 +154,8 @@ __cache-common__ - Common entities and classes used in cache implementations.
 
 __cache-http__ - REST interfaces around the cache-client.
 
+__cache-mcp__ - MCP interface using the Swagger spec with AutoMCP. 
+
 __cache-ws__ - Websocket interfaces around the cache-client.
 
 __cache-messages-sbe__ - Core SBE messages used by the cache.
