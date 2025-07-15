@@ -1,0 +1,325 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Aeron Cache HTTP API",
+    "description": "This API exposes endpoints to interact with Aeron Cache.",
+    "termsOfService": "https://www.github.com/bhf",
+    "contact": {
+      "name": "Sanjeev",
+      "url": "https://www.sanjeev.pages.dev",
+      "email": "na@na.com"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://choosealicense.com/licenses/mit/"
+    },
+    "version": "1.0"
+  },
+  "host": "localhost:7070",
+  "basePath": "/",
+  "schemes": [
+    "http"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/cache": {
+      "post": {
+        "summary": "Create a new cache",
+        "description": "Create a cache by specifying the cache Id in the request body",
+        "operationId": "createCache",
+        "tags": [
+          "CreateCache"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/CreateResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateRequest"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/cache/{cacheId}": {
+      "post": {
+        "summary": "Put an item into a cache",
+        "description": "Put an item on the specified key into the specified cache",
+        "operationId": "putItem",
+        "tags": [
+          "PutItem"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PutItemResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cacheId",
+            "in": "path",
+            "required": true,
+            "description": "The numeric ID of the cache",
+            "type": "integer"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PutItemRequest"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Delete a cache",
+        "description": "Delete the cache specified by it's Id",
+        "operationId": "deleteCache",
+        "tags": [
+          "DeleteCache"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/DeleteCacheResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cacheId",
+            "in": "path",
+            "required": true,
+            "description": "The numeric ID of the cache",
+            "type": "integer"
+          }
+        ]
+      }
+    },
+    "/api/v1/cache/{cacheId}/{key}": {
+      "get": {
+        "summary": "Get an item from a cache",
+        "description": "Get an item by it's key from the specified cache",
+        "operationId": "getItem",
+        "tags": [
+          "GetItem"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/GetItemResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cacheId",
+            "in": "path",
+            "required": true,
+            "description": "The numeric ID of the cache",
+            "type": "integer"
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "description": "The key of the item",
+            "type": "string"
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Delete an item from a cache",
+        "description": "Delete an item by it's key from the specified cache",
+        "operationId": "deleteItem",
+        "tags": [
+          "DeleteItem"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/DeleteItemResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cacheId",
+            "in": "path",
+            "required": true,
+            "description": "The numeric ID of the cache",
+            "type": "integer"
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "description": "The key of the item",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "errorMsg": {
+          "type": "string",
+          "example": "Details about the error that occurred"
+        },
+        "helpMsg": {
+          "type": "string",
+          "example": "A user friendly help message"
+        }
+      }
+    },
+    "CreateRequest": {
+      "type": "object",
+      "properties": {
+        "cacheId": {
+          "type": "integer",
+          "format": "int64",
+          "example": 1
+        }
+      }
+    },
+    "CreateResponse": {
+      "type": "object",
+      "properties": {
+        "cacheId": {
+          "type": "integer",
+          "format": "int64",
+          "example": 1
+        }
+      }
+    },
+    "PutItemRequest": {
+      "type": "object",
+      "properties": {
+        "cacheId": {
+          "type": "integer",
+          "format": "int64",
+          "example": 1
+        },
+        "key": {
+          "type": "string",
+          "example": "SomeRandomKey"
+        },
+        "value": {
+          "type": "string",
+          "example": "SomeRandomValue"
+        }
+      }
+    },
+    "PutItemResponse": {
+      "type": "object",
+      "properties": {
+        "cacheId": {
+          "type": "integer",
+          "format": "int64",
+          "example": 1
+        },
+        "key": {
+          "type": "string",
+          "example": "SomeRandomKey"
+        }
+      }
+    },
+    "DeleteCacheResponse": {
+      "type": "object",
+      "properties": {
+        "cacheId": {
+          "type": "integer",
+          "format": "int64",
+          "example": 1
+        }
+      }
+    },
+    "GetItemResponse": {
+      "type": "object",
+      "properties": {
+        "cacheId": {
+          "type": "integer",
+          "format": "int64",
+          "example": 1
+        },
+        "key": {
+          "type": "string",
+          "example": "SomeRandomKey"
+        },
+        "value": {
+          "type": "string",
+          "example": "SomeRandomValue"
+        }
+      }
+    },
+    "DeleteItemResponse": {
+      "type": "object",
+      "properties": {
+        "cacheId": {
+          "type": "integer",
+          "format": "int64",
+          "example": 1
+        },
+        "key": {
+          "type": "string",
+          "example": "SomeRandomKey"
+        }
+      }
+    }
+  },
+  "securityDefinitions": {}
+}

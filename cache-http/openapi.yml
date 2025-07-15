@@ -19,6 +19,8 @@ paths:
     post:
       tags:
         - CreateCache
+      summary: Create a new cache
+      description: Create a cache by specifying the cache Id in the request body
       operationId: createCache
       requestBody:
         content:
@@ -43,6 +45,8 @@ paths:
     post:
       tags:
         - PutItem
+      summary: Put an item into a cache
+      description: Put an item on the specified key into the specified cache
       operationId: putItem
       parameters:
         - name: cacheId
@@ -73,6 +77,8 @@ paths:
     delete:
       tags:
         - DeleteCache
+      summary: Delete a cache
+      description: Delete the cache specified by it's Id
       operationId: deleteCache
       parameters:
         - name: cacheId
@@ -98,6 +104,8 @@ paths:
     get:
       tags:
         - GetItem
+      summary: Get an item from a cache
+      description: Get an item by it's key from the specified cache
       operationId: getItem
       parameters:
         - name: cacheId
@@ -128,6 +136,8 @@ paths:
     delete:
       tags:
         - DeleteItem
+      summary: Delete an item from a cache
+      description: Delete an item by it's key from the specified cache
       operationId: deleteItem
       parameters:
         - name: cacheId
@@ -162,59 +172,74 @@ components:
       properties:
         errorMsg:
           type: string
+          example: 'Details about the error that occurred'
         helpMsg:
           type: string
+          example: 'A user friendly help message'
     CreateRequest:
       type: object
       properties:
         cacheId:
           type: integer
           format: int64
+          example: 1
     CreateResponse:
       type: object
       properties:
         cacheId:
           type: integer
           format: int64
+          example: 1
     PutItemRequest:
       type: object
       properties:
         cacheId:
           type: integer
           format: int64
+          example: 1
         key:
           type: string
+          example: 'SomeRandomKey'
         value:
           type: string
+          example: 'SomeRandomValue'
     PutItemResponse:
       type: object
       properties:
         cacheId:
           type: integer
           format: int64
+          example: 1
         key:
           type: string
+          example: 'SomeRandomKey'
     DeleteCacheResponse:
       type: object
       properties:
         cacheId:
           type: integer
           format: int64
+          example: 1
     GetItemResponse:
       type: object
       properties:
         cacheId:
           type: integer
           format: int64
+          example: 1
         key:
           type: string
+          example: 'SomeRandomKey'
         value:
           type: string
+          example: 'SomeRandomValue'
     DeleteItemResponse:
       type: object
       properties:
         cacheId:
           type: integer
           format: int64
+          example: 1
         key:
           type: string
+          example: 'SomeRandomKey'
