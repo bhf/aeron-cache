@@ -9,7 +9,7 @@ Includes HTTP and websocket interfaces with support for multi-cache joins over w
 Prometheus+cAdvisor and tracing with Jaeger+OTEL. 
 Containerized and deployable with ```docker compose``` or on Kubernetes via ```helm``` or ```kubectl```.
 
-MCP server via AutoMCP for use via LLMs and AI Agents.
+MCP server via AutoMCP for use with LLMs and AI Agents.
 
 
 
