@@ -1,5 +1,7 @@
 package com.bhf.aeroncache.services.cluster;
 
+import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
+import com.bhf.aeroncache.handlers.PublicationFailureHandler;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
@@ -60,6 +62,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
     final CacheSubscriptionResult<I> subscribeResult;
     final CacheUnsubscribeResult<I> unsubscribeResult;
+    private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
 
     protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, Supplier<Map<K, V>> mapSupplier, String nodeId, CacheTracingService tracingService) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(indexSupplier.get());
@@ -558,7 +561,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param len       The length of the message.
      */
     void sendMessage(final ClientSession session, MutableDirectBuffer msgBuffer, int len) {
-        while (session.offer(msgBuffer, 0, len) < 0) {
+        long offered = 0;
+        while ((offered = session.offer(msgBuffer, 0, len)) < 0) {
+            publicationFailureHandler.handleOfferFailure(offered);
             idleStrategy.idle();
         }
     }
