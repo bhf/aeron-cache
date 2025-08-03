@@ -112,7 +112,7 @@ public class HttpApplication {
             }
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
-            var aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client);
+            var aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient");
 
             cluster = new AeronCache() {
                 @Override
@@ -138,7 +138,7 @@ public class HttpApplication {
                     new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
 
             var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
-            var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster);
+            var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster, "HTTPClient");
             AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(runner);
