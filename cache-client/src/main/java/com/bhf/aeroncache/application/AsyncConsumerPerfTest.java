@@ -85,6 +85,11 @@ public class AsyncConsumerPerfTest {
             public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
                 return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
             }
+
+            @Override
+            public boolean isConnected() {
+                return !aeronCluster.isClosed();
+            }
         };
 
         var agent = new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");

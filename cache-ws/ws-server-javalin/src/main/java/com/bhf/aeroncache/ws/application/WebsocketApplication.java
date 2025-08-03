@@ -1,6 +1,9 @@
 package com.bhf.aeroncache.ws.application;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.http.responses.RequestErrorResponse;
+import com.bhf.aeroncache.messages.OperationStatus;
+import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
@@ -12,9 +15,11 @@ import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
+import io.aeron.cluster.client.AeronCluster;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
+import io.javalin.http.servlet.JavalinServletContext;
 import io.javalin.micrometer.MicrometerPlugin;
 import io.javalin.websocket.*;
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
@@ -114,6 +119,11 @@ public class WebsocketApplication {
                 public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
                     return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
                 }
+
+                @Override
+                public boolean isConnected() {
+                    return !aeronCluster.isClosed();
+                }
             };
 
             System.out.println("Building cluster agent for websocket service");
@@ -130,6 +140,10 @@ public class WebsocketApplication {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void addClusterErrorHandler(AeronCluster aeronCluster) {
+        aeronCluster.context().errorHandler(throwable -> clusterConnected.set(false));
     }
 
     /**
@@ -154,6 +168,7 @@ public class WebsocketApplication {
         var config = getHTTPConfig(micrometerPlugin);
 
         return Javalin.create(config)
+                .beforeMatched(WebsocketApplication::checkClusterConnectivity)
                 .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
                 .ws(API_PREFIX + "/{cacheId}", WebsocketApplication::handleSingleCacheWs)
                 .ws(MULTI_SUB_API_PREFIX + "/{cacheIds}", WebsocketApplication::handleMultiCacheWs)
@@ -161,6 +176,17 @@ public class WebsocketApplication {
                 .get(READINESS, WebsocketApplication::handleGetReadiness)
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
                 .start(PORT);
+    }
+
+    private static void checkClusterConnectivity(Context ctx) {
+        if (cluster == null || !cluster.isConnected()) {
+            log.warn("Cluster not connected");
+            ctx.status(HTTPStatusUtils.SERVICE_NOT_LIVE);
+            var errorResponse = new RequestErrorResponse("Cluster not connected", ErrorMessages.CHECK_ALL_VALUES,
+                    OperationStatus.ERROR);
+            ctx.json(errorResponse);
+            ((JavalinServletContext)ctx).getTasks().clear();
+        }
     }
 
     /**

@@ -117,6 +117,11 @@ public class ControlledDutyCyclePerfTest {
                 public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
                     return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
                 }
+
+                @Override
+                public boolean isConnected() {
+                    return !aeronCluster.isClosed();
+                }
             };
 
             ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
@@ -132,7 +137,7 @@ public class ControlledDutyCyclePerfTest {
             observingPublisher.sendCreateCacheBlocking(UUID.randomUUID().toString(), cacheId);
 
             var totalToSend = 10_000;
-            var payloadSizes = new Integer[]{5, 10, 25, 100, 200};
+            var payloadSizes = new Integer[]{5, 10, 25};
             //var payloadSizes = new Integer[]{5, 10, 25, 50, 100, 200, 400, 1000};
             //var payloadSizes = new Integer[]{2000, 5000, 10000};
             //var payloadSizes = new Integer[]{20000, 50000, 100000};
