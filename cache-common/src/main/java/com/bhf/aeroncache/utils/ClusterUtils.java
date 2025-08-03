@@ -50,10 +50,18 @@ public class ClusterUtils {
      */
     public static AeronCluster buildClusterConnection(String egressIP, String ingressEndpoints, EgressListener client, String alias) {
         System.out.println("Building cluster connection...");
-        MediaDriver mediaDriver = MediaDriver.launchEmbedded(new MediaDriver.Context()
+        MediaDriver mediaDriver = launchEmbeddedMediaDriver();
+        return buildClusterConnection(egressIP, ingressEndpoints, client, alias, mediaDriver);
+    }
+
+    public static MediaDriver launchEmbeddedMediaDriver() {
+        return MediaDriver.launchEmbedded(new MediaDriver.Context()
                 .threadingMode(ThreadingMode.SHARED)
                 .dirDeleteOnStart(true)
                 .dirDeleteOnShutdown(true));
+    }
+
+    public static AeronCluster buildClusterConnection(String egressIP, String ingressEndpoints, EgressListener client, String alias, MediaDriver mediaDriver) {
         return AeronCluster.connect(
                 new AeronCluster.Context()
                         .egressListener(client)
@@ -70,4 +78,5 @@ public class ClusterUtils {
     public static ErrorHandler getAgentRunnerErrorHandler(AeronCluster cluster) {
         return cluster.context().errorHandler();
     }
+
 }
