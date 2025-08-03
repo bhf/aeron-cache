@@ -24,6 +24,7 @@ import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
 import io.aeron.cluster.client.AeronCluster;
+import io.aeron.driver.MediaDriver;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
@@ -40,6 +41,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
+import org.agrona.CloseHelper;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.BackoffIdleStrategy;
@@ -70,6 +72,9 @@ public class HttpApplication {
     private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
 
     private static String tracingServiceName;
+    private static AgentRunner agentRunner;
+    private static AeronCluster aeronCluster;
+    private static MediaDriver mediaDriver;
 
     public static void main(String[] args) {
         System.out.println("Starting HTTP interface");
@@ -116,7 +121,8 @@ public class HttpApplication {
             }
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
-            var aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient");
+            mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
+            aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient");
             //addClusterErrorHandler(aeronCluster);
 
             cluster = new AeronCache() {
@@ -151,12 +157,18 @@ public class HttpApplication {
 
             var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
             var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster, "HTTPClient");
-            AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
+            agentRunner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
             clusterConnected.set(true);
-            AgentRunner.startOnThread(runner);
+            AgentRunner.startOnThread(agentRunner);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void shutdown() {
+        CloseHelper.close(agentRunner);
+        CloseHelper.close(mediaDriver);
+        CloseHelper.close(aeronCluster);
     }
 
     private static void addClusterErrorHandler(AeronCluster aeronCluster) {
@@ -212,7 +224,7 @@ public class HttpApplication {
             var errorResponse = new RequestErrorResponse("Cluster not connected", ErrorMessages.CHECK_ALL_VALUES,
                     OperationStatus.ERROR);
             ctx.json(errorResponse);
-            ((JavalinServletContext)ctx).getTasks().clear();
+            ((JavalinServletContext) ctx).getTasks().clear();
         }
     }
 
