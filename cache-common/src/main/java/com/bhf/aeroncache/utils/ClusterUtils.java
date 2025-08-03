@@ -48,7 +48,7 @@ public class ClusterUtils {
      *
      * @return An {@link AeronCluster} instance.
      */
-    public static AeronCluster buildClusterConnection(String egressIP, String ingressEndpoints, EgressListener client) {
+    public static AeronCluster buildClusterConnection(String egressIP, String ingressEndpoints, EgressListener client, String alias) {
         System.out.println("Building cluster connection...");
         MediaDriver mediaDriver = MediaDriver.launchEmbedded(new MediaDriver.Context()
                 .threadingMode(ThreadingMode.SHARED)
@@ -57,14 +57,14 @@ public class ClusterUtils {
         return AeronCluster.connect(
                 new AeronCluster.Context()
                         .egressListener(client)
-                        .egressChannel("aeron:udp?endpoint=" + egressIP + ":0")
+                        .egressChannel("aeron:udp?endpoint=" + egressIP + ":0|alias="+alias+"-ClusterEgress")
                         .aeronDirectoryName(mediaDriver.aeronDirectoryName())
                         .ingressChannel("aeron:udp")
                         .ingressEndpoints(ingressEndpoints));
     }
 
-    public static AtomicCounter getAgentErrorCounter(AeronCluster cluster) {
-        return cluster.context().aeron().addCounter(1, "AeronCacheAgent");
+    public static AtomicCounter getAgentErrorCounter(AeronCluster cluster, String alias) {
+        return cluster.context().aeron().addCounter(1, "AeronCacheAgent-"+alias);
     }
 
     public static ErrorHandler getAgentRunnerErrorHandler(AeronCluster cluster) {

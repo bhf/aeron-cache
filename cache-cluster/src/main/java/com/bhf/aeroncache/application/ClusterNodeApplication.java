@@ -157,17 +157,17 @@ public class ClusterNodeApplication {
                 .errorHandler(ClusterNodeApplication.errorHandler("Media Driver"));
 
         final AeronArchive.Context replicationArchiveContext = new AeronArchive.Context()
-                .controlResponseChannel("aeron:udp?endpoint=" + hostname + ":0");
+                .controlResponseChannel("aeron:udp?endpoint=" + hostname + ":0|alias=AeronCache-Archive-ControlResponse-"+nodeId);
 
         final Archive.Context archiveContext = new Archive.Context()
                 .aeronDirectoryName(aeronDirName)
                 .archiveDir(new File(baseDir, "archive"))
                 .controlChannel(udpChannel(nodeId, hostname, ARCHIVE_CONTROL_PORT_OFFSET))
                 .archiveClientContext(replicationArchiveContext)
-                .localControlChannel("aeron:ipc?term-length=64k")
+                .localControlChannel("aeron:ipc?term-length=64k|alias=AeronCache-Archive-LocalControl")
                 .recordingEventsEnabled(false)
                 .threadingMode(ArchiveThreadingMode.SHARED)
-                .replicationChannel("aeron:udp?endpoint=" + hostname + ":0");
+                .replicationChannel("aeron:udp?endpoint=" + hostname + ":0|alias=AeronCache-Archive-Replication-"+nodeId);
 
         final AeronArchive.Context aeronArchiveContext = new AeronArchive.Context()
                 .lock(NoOpLock.INSTANCE)
@@ -180,7 +180,7 @@ public class ClusterNodeApplication {
                 .clusterMemberId(nodeId)
                 .clusterMembers(clusterMembers(Arrays.asList(hostnames)))
                 .clusterDir(new File(baseDir, "cluster"))
-                .ingressChannel("aeron:udp?term-length=64k")
+                .ingressChannel("aeron:udp?term-length=64k|alias=AeronCache-Concensus-Ingress-"+nodeId)
                 .replicationChannel(logReplicationChannel(hostname))
                 .archiveContext(aeronArchiveContext.clone());
 

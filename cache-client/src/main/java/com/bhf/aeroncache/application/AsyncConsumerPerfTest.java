@@ -54,11 +54,11 @@ public class AsyncConsumerPerfTest {
         var hostArray = List.of(allHosts.split(","));
         var ingressEndpoints = ClusterUtils.ingressEndpoints(hostArray);
 
-        var aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client);
+        var aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "AsyncConsumerPerfTest");
 
         var agent = getCacheClientAgent(aeronCluster, rb, idleStrategy);
         var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
-        var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster);
+        var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster, "AsyncConsumerPerfTest");
         AgentRunner runner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
         AgentRunner.startOnThread(runner);
 
