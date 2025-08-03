@@ -122,7 +122,7 @@ public class HttpApplication {
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
             mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
-            aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient");
+            aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient", mediaDriver);
             //addClusterErrorHandler(aeronCluster);
 
             cluster = new AeronCache() {
