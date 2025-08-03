@@ -15,8 +15,11 @@ import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
+import io.aeron.Aeron;
+import io.aeron.RethrowingErrorHandler;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
+import io.aeron.logbuffer.FragmentHandler;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
@@ -36,10 +39,7 @@ import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.CloseHelper;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.AgentRunner;
-import org.agrona.concurrent.BackoffIdleStrategy;
-import org.agrona.concurrent.BusySpinIdleStrategy;
-import org.agrona.concurrent.YieldingIdleStrategy;
+import org.agrona.concurrent.*;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.io.File;
@@ -58,9 +58,10 @@ public class WebsocketApplication {
     private static final String READINESS = "/readiness/";
     private static final String MULTI_SUB_API_PREFIX = "/api/ws/v1/caches/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
+    private static final boolean CLUSTERED_MODE = true;
     private static AeronCacheClusterListener client;
     private static CacheSubscriptionRequestPublisher subscriptionService;
-    private static AeronCache cluster;
+    private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
 
@@ -83,7 +84,7 @@ public class WebsocketApplication {
             if (PRE_ENCODE_CACHE_REQUESTS) {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
                 // sending directly to the cluster
-                var requestPublisher = new RBClusterMessagePublisher(cluster, rb);
+                var requestPublisher = new RBClusterMessagePublisher(cache, rb);
                 subscriptionService = new CacheSubscriptionRequestPublisher(requestPublisher);
             } else {
                 // Drop normalised cache requests onto an Agrona RB for encoding
@@ -109,44 +110,123 @@ public class WebsocketApplication {
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
             mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
-            aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "WSClient", mediaDriver);
 
-            cluster = new AeronCache() {
-                @Override
-                public void sendKeepAlive() {
-                    aeronCluster.sendKeepAlive();
-                }
-
-                @Override
-                public int pollEgress() {
-                    return aeronCluster.pollEgress();
-                }
-
-                @Override
-                public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
-                    return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
-                }
-
-                @Override
-                public boolean isConnected() {
-                    return !aeronCluster.isClosed();
-                }
-            };
+            if (CLUSTERED_MODE) {
+                buildClusterConnection(egressIP, ingressEndpoints);
+            } else {
+                final Aeron.Context aeronCtx = new Aeron.Context()
+                        .aeronDirectoryName(mediaDriver.aeronDirectoryName());
+                final Aeron aeron = Aeron.connect(aeronCtx);
+                buildUnclusteredConnection(egressIP, ingressEndpoints, aeron);
+            }
 
             System.out.println("Building cluster agent for websocket service");
             var idleStrategy = new BackoffIdleStrategy();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
-                    new ClusterClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent") :
-                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
+                    new ClusterClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
+                            new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent") :
+                    new CacheClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
+                            new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
 
-            var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
-            var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster, "WSClient");
+            var errorHandler = aeronCluster != null ? ClusterUtils.getAgentRunnerErrorHandler(aeronCluster) :
+                    new RethrowingErrorHandler();
+            var errorCounter = aeronCluster != null ? ClusterUtils.getAgentErrorCounter(aeronCluster, "WSClient") :
+                    null;
             agentRunner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(agentRunner);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void buildUnclusteredConnection(String egressIP, String ingressEndpoints, Aeron aeron) {
+
+        var requestPublicationChannel = "aeron:udp?endpoint=localhost:7008|alias=AC-unclustered-requests";
+        int requestPublicationStream = 1;
+        var requestPublication = aeron.addPublication(requestPublicationChannel,
+                requestPublicationStream);
+
+        var responseSubscriptionChannel = "aeron:udp?endpoint=localhost:7007|alias=AC-unclustered-responses";
+        int responseSubscriptionStream = 2;
+        var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
+                responseSubscriptionStream);
+
+        cache = new AeronCache() {
+            @Override
+            public void sendKeepAlive() {
+            }
+
+            @Override
+            public int pollEgress() {
+                return 0;
+            }
+
+            @Override
+            public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                long res = 0;
+                while ((res = requestPublication.offer(msgBuffer, msgBufferOffset, i)) < 0) {
+                    aeron.context().idleStrategy().idle();
+                }
+                return res;
+            }
+
+            @Override
+            public boolean isConnected() {
+                return true;
+            }
+        };
+
+        FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
+                -> client.onMessage(header.sessionId(),
+                System.currentTimeMillis(),
+                buffer, offset, length, header);
+
+        Agent serverAgent = new Agent() {
+            @Override
+            public int doWork() throws Exception {
+                return responseSubscription.poll(egressFragmentHandler, Integer.MAX_VALUE);
+            }
+
+            @Override
+            public String roleName() {
+                return "AC-Unclustered-requests-listener";
+            }
+        };
+
+        final AgentRunner serverAgentRunner = new AgentRunner(aeron.context().idleStrategy(),
+                Throwable::printStackTrace,
+                null, serverAgent);
+
+        AgentRunner.startOnThread(serverAgentRunner);
+    }
+
+    private static void buildClusterConnection(String egressIP, String ingressEndpoints) {
+        aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient",
+                mediaDriver);
+        //addClusterErrorHandler(aeronCluster);
+
+        cache = new AeronCache() {
+            @Override
+            public void sendKeepAlive() {
+                aeronCluster.sendKeepAlive();
+            }
+
+            @Override
+            public int pollEgress() {
+                return aeronCluster.pollEgress();
+            }
+
+            @Override
+            public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
+            }
+
+            @Override
+            public boolean isConnected() {
+                return !aeronCluster.isClosed();
+            }
+        };
     }
 
     private static void shutdown() {
@@ -177,7 +257,8 @@ public class WebsocketApplication {
         new ProcessorMetrics().bindTo(registry);
         new DiskSpaceMetrics(new File(System.getProperty("user.dir"))).bindTo(registry);
 
-        MicrometerPlugin micrometerPlugin = new MicrometerPlugin(micrometerPluginConfig -> micrometerPluginConfig.registry = registry);
+        MicrometerPlugin micrometerPlugin =
+                new MicrometerPlugin(micrometerPluginConfig -> micrometerPluginConfig.registry = registry);
         var config = getHTTPConfig(micrometerPlugin);
 
         return Javalin.create(config)
@@ -192,13 +273,13 @@ public class WebsocketApplication {
     }
 
     private static void checkClusterConnectivity(Context ctx) {
-        if (cluster == null || !cluster.isConnected()) {
+        if (cache == null || !cache.isConnected()) {
             log.warn("Cluster not connected");
             ctx.status(HTTPStatusUtils.SERVICE_NOT_LIVE);
             var errorResponse = new RequestErrorResponse("Cluster not connected", ErrorMessages.CHECK_ALL_VALUES,
                     OperationStatus.ERROR);
             ctx.json(errorResponse);
-            ((JavalinServletContext)ctx).getTasks().clear();
+            ((JavalinServletContext) ctx).getTasks().clear();
         }
     }
 
@@ -227,17 +308,20 @@ public class WebsocketApplication {
     }
 
     private static void onWsMessage(WsMessageContext wsMessageContext) {
-        log.warn("Received message from websocket sessionId: {}, message: {}", wsMessageContext.sessionId(), wsMessageContext.message());
+        log.warn("Received message from websocket sessionId: {}, message: {}", wsMessageContext.sessionId(),
+                wsMessageContext.message());
     }
 
     private static void onWsError(WsErrorContext wsErrorContext) {
         log.warn("Got websocket error: {}", wsErrorContext);
-        subscriptionService.handleWsError(cluster, getRequestId(wsErrorContext.getUpgradeCtx$javalin()), wsErrorContext.sessionId());
+        subscriptionService.handleWsError(cache, getRequestId(wsErrorContext.getUpgradeCtx$javalin()),
+                wsErrorContext.sessionId());
     }
 
     private static void onWsClose(WsCloseContext wsCloseContext) {
         log.info("Websocket closed for sessionId: {}", wsCloseContext.sessionId());
-        subscriptionService.handleWsClosed(cluster, getRequestId(wsCloseContext.getUpgradeCtx$javalin()), wsCloseContext.sessionId());
+        subscriptionService.handleWsClosed(cache, getRequestId(wsCloseContext.getUpgradeCtx$javalin()),
+                wsCloseContext.sessionId());
     }
 
     /**
@@ -252,7 +336,8 @@ public class WebsocketApplication {
             var cacheId = Long.parseLong(wsConnectContext.pathParam("cacheId"));
             var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
             log.info("Subscription request for cacheId: {} on ws sessionId: {}", cacheId, wsConnectContext.sessionId());
-            subscriptionService.subscribeToCache(cluster, wsConnectContext, cacheId, wsConnectContext.sessionId(), requestId, wsConnectContext::send);
+            subscriptionService.subscribeToCache(cache, wsConnectContext, cacheId, wsConnectContext.sessionId(),
+                    requestId, wsConnectContext::send);
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();
             log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
@@ -274,8 +359,10 @@ public class WebsocketApplication {
             for (var c : caches) {
                 var cacheId = Long.parseLong(c);
                 var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-                log.info("Subscription request for cacheId: {} on ws sessionId: {}", cacheId, wsConnectContext.sessionId());
-                subscriptionService.subscribeToCache(cluster, wsConnectContext, cacheId, wsConnectContext.sessionId(), requestId, wsConnectContext::send);
+                log.info("Subscription request for cacheId: {} on ws sessionId: {}", cacheId,
+                        wsConnectContext.sessionId());
+                subscriptionService.subscribeToCache(cache, wsConnectContext, cacheId, wsConnectContext.sessionId(),
+                        requestId, wsConnectContext::send);
             }
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();

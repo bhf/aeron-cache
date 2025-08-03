@@ -23,8 +23,11 @@ import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
+import io.aeron.Aeron;
+import io.aeron.RethrowingErrorHandler;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
+import io.aeron.logbuffer.FragmentHandler;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
@@ -43,10 +46,7 @@ import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.CloseHelper;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.AgentRunner;
-import org.agrona.concurrent.BackoffIdleStrategy;
-import org.agrona.concurrent.BusySpinIdleStrategy;
-import org.agrona.concurrent.YieldingIdleStrategy;
+import org.agrona.concurrent.*;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.io.File;
@@ -65,9 +65,10 @@ public class HttpApplication {
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
+    private static final boolean CLUSTERED_MODE = true;
     private static AeronCacheClusterListener client;
     private static ObservingCacheRequestPublisher observingPublisher;
-    private static AeronCache cluster;
+    private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
 
@@ -89,8 +90,8 @@ public class HttpApplication {
             if (PRE_ENCODE_CACHE_REQUESTS) {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
                 // sending directly to the cluster
-                CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cluster, rb);
-                BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cluster,
+                CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cache, rb);
+                BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cache,
                         new BusySpinIdleStrategy());
                 observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher,
                         blockingRequestPublisher);
@@ -122,47 +123,124 @@ public class HttpApplication {
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
             mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
-            aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient", mediaDriver);
-            //addClusterErrorHandler(aeronCluster);
 
-            cluster = new AeronCache() {
-                @Override
-                public void sendKeepAlive() {
-                    aeronCluster.sendKeepAlive();
-                }
-
-                @Override
-                public int pollEgress() {
-                    return aeronCluster.pollEgress();
-                }
-
-                @Override
-                public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
-                    return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
-                }
-
-                @Override
-                public boolean isConnected() {
-                    return !aeronCluster.isClosed();
-                }
-            };
+            if (CLUSTERED_MODE) {
+                buildClusterConnection(egressIP, ingressEndpoints);
+            } else {
+                final Aeron.Context aeronCtx = new Aeron.Context()
+                        .aeronDirectoryName(mediaDriver.aeronDirectoryName());
+                final Aeron aeron = Aeron.connect(aeronCtx);
+                buildUnclusteredConnection(egressIP, ingressEndpoints, aeron);
+            }
 
             System.out.println("Building cluster agent for http service");
             var idleStrategy = new BackoffIdleStrategy();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
-                    new ClusterClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster,
+                    new ClusterClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
                             new BusySpinIdleStrategy()), "AeronCache-ClusterClient-Agent") :
-                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster,
+                    new CacheClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
                             new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
 
-            var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
-            var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster, "HTTPClient");
+            var errorHandler = aeronCluster != null ? ClusterUtils.getAgentRunnerErrorHandler(aeronCluster) :
+                    new RethrowingErrorHandler();
+            var errorCounter = aeronCluster != null ? ClusterUtils.getAgentErrorCounter(aeronCluster, "HTTPClient") :
+                    null;
             agentRunner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(agentRunner);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void buildUnclusteredConnection(String egressIP, String ingressEndpoints, Aeron aeron) {
+
+        var requestPublicationChannel = "aeron:udp?endpoint=localhost:8008|alias=AC-unclustered-requests";
+        int requestPublicationStream = 1;
+        var requestPublication = aeron.addPublication(requestPublicationChannel,
+                requestPublicationStream);
+
+        String responseSubscriptionChannel = "aeron:udp?endpoint=localhost:8007|alias=AC-unclustered-responses";
+        int responseSubscriptionStream = 2;
+        var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
+                responseSubscriptionStream);
+
+        cache = new AeronCache() {
+            @Override
+            public void sendKeepAlive() {
+            }
+
+            @Override
+            public int pollEgress() {
+                return 0;
+            }
+
+            @Override
+            public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                long res = 0;
+                while ((res = requestPublication.offer(msgBuffer, msgBufferOffset, i)) < 0) {
+                    aeron.context().idleStrategy().idle();
+                }
+                return res;
+            }
+
+            @Override
+            public boolean isConnected() {
+                return true;
+            }
+        };
+
+        AeronCacheClusterListener egressListener = client;
+        FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
+                -> egressListener.onMessage(header.sessionId(),
+                System.currentTimeMillis(),
+                buffer, offset, length, header);
+
+        Agent serverAgent = new Agent() {
+            @Override
+            public int doWork() throws Exception {
+                return responseSubscription.poll(egressFragmentHandler, Integer.MAX_VALUE);
+            }
+
+            @Override
+            public String roleName() {
+                return "AC-Unclustered-requests-listener";
+            }
+        };
+
+        final AgentRunner serverAgentRunner = new AgentRunner(aeron.context().idleStrategy(),
+                Throwable::printStackTrace,
+                null, serverAgent);
+
+        AgentRunner.startOnThread(serverAgentRunner);
+    }
+
+    private static void buildClusterConnection(String egressIP, String ingressEndpoints) {
+        aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient",
+                mediaDriver);
+        //addClusterErrorHandler(aeronCluster);
+
+        cache = new AeronCache() {
+            @Override
+            public void sendKeepAlive() {
+                aeronCluster.sendKeepAlive();
+            }
+
+            @Override
+            public int pollEgress() {
+                return aeronCluster.pollEgress();
+            }
+
+            @Override
+            public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
+            }
+
+            @Override
+            public boolean isConnected() {
+                return !aeronCluster.isClosed();
+            }
+        };
     }
 
     private static void shutdown() {
@@ -218,7 +296,7 @@ public class HttpApplication {
     }
 
     private static void checkClusterConnectivity(Context ctx) {
-        if (cluster == null || !cluster.isConnected()) {
+        if (cache == null || !cache.isConnected()) {
             log.warn("Cluster not connected");
             ctx.status(HTTPStatusUtils.SERVICE_NOT_LIVE);
             var errorResponse = new RequestErrorResponse("Cluster not connected", ErrorMessages.CHECK_ALL_VALUES,
