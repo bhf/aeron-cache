@@ -13,4 +13,6 @@ public interface AeronCache {
     int pollEgress();
 
     long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i);
+
+    boolean isConnected();
 }

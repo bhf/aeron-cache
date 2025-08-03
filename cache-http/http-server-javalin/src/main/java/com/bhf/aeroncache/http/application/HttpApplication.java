@@ -23,9 +23,11 @@ import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
+import io.aeron.cluster.client.AeronCluster;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
+import io.javalin.http.servlet.JavalinServletContext;
 import io.javalin.micrometer.MicrometerPlugin;
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
@@ -83,8 +85,10 @@ public class HttpApplication {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
                 // sending directly to the cluster
                 CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cluster, rb);
-                BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy());
-                observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher, blockingRequestPublisher);
+                BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cluster,
+                        new BusySpinIdleStrategy());
+                observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher,
+                        blockingRequestPublisher);
             } else {
                 // Drop normalised cache requests onto an Agrona RB for encoding
                 // to SBE on the Agent thread
@@ -113,6 +117,7 @@ public class HttpApplication {
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
             var aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient");
+            //addClusterErrorHandler(aeronCluster);
 
             cluster = new AeronCache() {
                 @Override
@@ -129,13 +134,20 @@ public class HttpApplication {
                 public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
                     return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
                 }
+
+                @Override
+                public boolean isConnected() {
+                    return !aeronCluster.isClosed();
+                }
             };
 
             System.out.println("Building cluster agent for http service");
             var idleStrategy = new BackoffIdleStrategy();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
-                    new ClusterClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()), "AeronCache-ClusterClient-Agent") :
-                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
+                    new ClusterClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster,
+                            new BusySpinIdleStrategy()), "AeronCache-ClusterClient-Agent") :
+                    new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster,
+                            new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
 
             var errorHandler = ClusterUtils.getAgentRunnerErrorHandler(aeronCluster);
             var errorCounter = ClusterUtils.getAgentErrorCounter(aeronCluster, "HTTPClient");
@@ -145,6 +157,10 @@ public class HttpApplication {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void addClusterErrorHandler(AeronCluster aeronCluster) {
+        aeronCluster.context().errorHandler(throwable -> clusterConnected.set(false));
     }
 
     /**
@@ -165,10 +181,12 @@ public class HttpApplication {
         new ProcessorMetrics().bindTo(registry);
         new DiskSpaceMetrics(new File(System.getProperty("user.dir"))).bindTo(registry);
 
-        MicrometerPlugin micrometerPlugin = new MicrometerPlugin(micrometerPluginConfig -> micrometerPluginConfig.registry = registry);
+        MicrometerPlugin micrometerPlugin =
+                new MicrometerPlugin(micrometerPluginConfig -> micrometerPluginConfig.registry = registry);
         var config = getHTTPConfig(micrometerPlugin);
 
         return Javalin.create(config)
+                .beforeMatched(HttpApplication::checkClusterConnectivity)
                 .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
                 .get(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleGetItemRequest)
@@ -185,6 +203,17 @@ public class HttpApplication {
                 .post("baselinePost", HttpApplication::postActionBaseline)
                 .get("baselineGet", HttpApplication::getActionBaseline)
                 .start(PORT);
+    }
+
+    private static void checkClusterConnectivity(Context ctx) {
+        if (cluster == null || !cluster.isConnected()) {
+            log.warn("Cluster not connected");
+            ctx.status(HTTPStatusUtils.SERVICE_NOT_LIVE);
+            var errorResponse = new RequestErrorResponse("Cluster not connected", ErrorMessages.CHECK_ALL_VALUES,
+                    OperationStatus.ERROR);
+            ctx.json(errorResponse);
+            ((JavalinServletContext)ctx).getTasks().clear();
+        }
     }
 
     /**
@@ -343,7 +372,8 @@ public class HttpApplication {
             var errorMsg = STR."Badly formed request to delete cache with Id: \{ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID, OperationStatus.ERROR);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID,
+                    OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -379,10 +409,12 @@ public class HttpApplication {
             ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
             ctx.json(response);
         } catch (Exception e) {
-            var errorMsg = STR."Badly formed request to delete item with key \{ctx.pathParam("key")} from cache with Id: \{ctx.pathParam("cacheId")}";
+            var errorMsg =
+                    STR."Badly formed request to delete item with key \{ctx.pathParam("key")} from cache with Id: \{ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID, OperationStatus.ERROR);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID,
+                    OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -434,11 +466,13 @@ public class HttpApplication {
             var requestId = getRequestId(ctx);
             CompletableFuture<GetItemResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.getCacheEntry(requestId, cacheId, key, c -> {
-                log.info("Get item response from cluster on cacheId {}, key {}, value {}", c.getCacheId(), c.getEntryKey(), c.getEntryValue());
+                log.info("Get item response from cluster on cacheId {}, key {}, value {}", c.getCacheId(),
+                        c.getEntryKey(), c.getEntryValue());
                 var noCache = c.getStatus() == OperationStatus.UNKNOWN_CACHE;
                 var response = noCache ?
                         new GetItemResponse(0, "NA", "NA", c.getStatus()) :
-                        new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(), c.getEntryValue().value(), c.getStatus());
+                        new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(),
+                                c.getEntryValue().value(), c.getStatus());
                 future.complete(response);
             }));
 
@@ -446,10 +480,12 @@ public class HttpApplication {
             ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
             ctx.json(response);
         } catch (Exception e) {
-            var errorMsg = STR."Badly formed request to get item with key \{ctx.pathParam("key")} from cache with Id: \{ctx.pathParam("cacheId")}";
+            var errorMsg =
+                    STR."Badly formed request to get item with key \{ctx.pathParam("key")} from cache with Id: \{ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID, OperationStatus.ERROR);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID,
+                    OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -468,12 +504,13 @@ public class HttpApplication {
 
             var requestId = getRequestId(ctx);
             CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
-            CompletableFuture.runAsync(() -> observingPublisher.addCacheEntry(requestId, request.cacheId(), request.key(), request.value(), c -> {
-                var cacheId = c.getCacheId();
-                log.info("Got put item response from cluster on cacheId {}", cacheId);
-                var response = new PutItemResponse(cacheId.getValue(), request.key(), c.getStatus());
-                future.complete(response);
-            }));
+            CompletableFuture.runAsync(() -> observingPublisher.addCacheEntry(requestId, request.cacheId(),
+                    request.key(), request.value(), c -> {
+                        var cacheId = c.getCacheId();
+                        log.info("Got put item response from cluster on cacheId {}", cacheId);
+                        var response = new PutItemResponse(cacheId.getValue(), request.key(), c.getStatus());
+                        future.complete(response);
+                    }));
 
             var response = future.get();
 
@@ -565,7 +602,8 @@ public class HttpApplication {
         }
     }
 
-    private static List<CacheItem> buildItemsList(GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> c) {
+    private static List<CacheItem> buildItemsList(GetAllCacheEntriesResult<ReusableLong, ReusableString,
+            ReusableString> c) {
         List<CacheItem> res = new ArrayList<>();
         c.getValues().forEach((key, value) -> {
             res.add(new CacheItem(key.value(), value.value()));
