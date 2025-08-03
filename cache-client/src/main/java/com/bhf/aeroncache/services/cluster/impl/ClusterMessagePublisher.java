@@ -2,6 +2,8 @@ package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
+import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
+import com.bhf.aeroncache.handlers.PublicationFailureHandler;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
@@ -22,8 +24,8 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     private final MutableDirectBuffer msgBuffer = new ExpandableDirectByteBuffer();
     private final AeronCache cluster;
-
     private final IdleStrategy idleStrategy;
+    private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
 
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
@@ -291,7 +293,9 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     void publishToCache(MutableDirectBuffer msgBuffer, int offset, int length) {
         idleStrategy.reset();
-        while (cluster.offer(msgBuffer, offset, length) < 0) {
+        long offered = 0;
+        while ((offered = cluster.offer(msgBuffer, offset, length)) < 0) {
+            publicationFailureHandler.handleOfferFailure(offered);
             idleStrategy.idle(cluster.pollEgress());
         }
     }
