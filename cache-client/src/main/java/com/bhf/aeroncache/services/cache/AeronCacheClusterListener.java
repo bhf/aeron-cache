@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
+import com.bhf.aeroncache.handlers.NoOpClusterSessionEventHandler;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.types.ReusableLong;
@@ -15,7 +16,7 @@ import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
-
+import com.bhf.aeroncache.handlers.ClusterSessionEventHandler;
 
 /**
  * Decode SBE messages related to cache requests and pass the result
@@ -56,6 +57,8 @@ public class AeronCacheClusterListener implements EgressListener {
     private final CacheSubscriptionResult<ReusableLong> cacheSubscriptionResult = new CacheSubscriptionResult<>(SupplierUtils.longSupplier.get());
     private final CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult = new CacheUnsubscribeResult<>(SupplierUtils.longSupplier.get());
     private final CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult = new CacheEntryUpdateResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
+
+    private final ClusterSessionEventHandler sessionEventHandler = new NoOpClusterSessionEventHandler();
 
     @Override
     public void onMessage(
@@ -273,6 +276,7 @@ public class AeronCacheClusterListener implements EgressListener {
         log.info(
                 "Got session event with correlationId " + correlationId + ", cluster session ID " + clusterSessionId +
                         " leader term ID " + leadershipTermId + ", leader member ID " + leaderMemberId + ", event code " + code + ", details " + detail);
+        sessionEventHandler.handleSessionEvent(correlationId, clusterSessionId, leadershipTermId, leaderMemberId, code, detail);
     }
 
     /**
@@ -286,6 +290,7 @@ public class AeronCacheClusterListener implements EgressListener {
             final String ingressEndpoints) {
         log.info("Got new cluster leader, leaderID " + leaderMemberId + ", leader term Id " + leadershipTermId + ", " +
                 "cluster session ID " + clusterSessionId + ", ingress endpoints " + ingressEndpoints);
+        sessionEventHandler.handleNewLeader(clusterSessionId, leadershipTermId, leaderMemberId, ingressEndpoints);
     }
 
 }
