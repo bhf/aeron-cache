@@ -49,7 +49,7 @@ export async function createCacheRequest(currentState: { message: string, error:
         logger.info("Got response from sending request to create cache ", content)
 
         if (rawResponse.status != 200) {
-            return {message: "Problem creating cache: " + content.operationStatus, error: true};
+            return {message: "Problem creating cache: " + content.errorMsg, error: true};
         }
 
         // revalidate the endpoint from which we get all available caches
