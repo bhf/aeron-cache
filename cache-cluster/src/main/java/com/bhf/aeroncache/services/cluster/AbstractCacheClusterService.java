@@ -129,6 +129,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cluster       with which the service can interact.
      * @param snapshotImage from which the service can load its archived state which can be null when no snapshot.
      */
+    @Override
     public void onStart(final Cluster cluster, final Image snapshotImage) {
         log.info("On start called on cluster service");
         this.cluster = cluster;
