@@ -58,7 +58,7 @@ public class WebsocketApplication {
     private static final String READINESS = "/readiness/";
     private static final String MULTI_SUB_API_PREFIX = "/api/ws/v1/caches/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
-    private static final boolean CLUSTERED_MODE = false;
+    private static final boolean CLUSTERED_MODE = true;
     private static AeronCacheClusterListener client;
     private static CacheSubscriptionRequestPublisher subscriptionService;
     private static AeronCache cache;

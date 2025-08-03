@@ -65,7 +65,7 @@ public class HttpApplication {
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
-    private static final boolean CLUSTERED_MODE = false;
+    private static final boolean CLUSTERED_MODE = true;
     private static AeronCacheClusterListener client;
     private static ObservingCacheRequestPublisher observingPublisher;
     private static AeronCache cache;
