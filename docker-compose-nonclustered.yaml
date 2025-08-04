@@ -66,42 +66,12 @@ services:
       internal_bus:
         ipv4_address: 172.16.202.2
     environment:
-      - CLUSTER_ADDRESSES=node0,node1,node2
       - CLUSTER_NODE=0
-      - CLUSTER_PORT_BASE=9000
       - OTEL_SERVICE_NAME=aeron-cache-cluster-node
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
-      - CACHE_MODE=RAFT
-  node1:
-    build:
-      context: cache-cluster
-    hostname: cluster1
-    shm_size: '1gb'
-    networks:
-      internal_bus:
-        ipv4_address: 172.16.202.3
-    environment:
-      - CLUSTER_ADDRESSES=node0,node1,node2
-      - CLUSTER_NODE=1
-      - CLUSTER_PORT_BASE=9000
-      - OTEL_SERVICE_NAME=aeron-cache-cluster-node
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
-      - CACHE_MODE=RAFT
-  node2:
-    build:
-      context: cache-cluster
-    hostname: cluster2
-    shm_size: '1gb'
-    networks:
-      internal_bus:
-        ipv4_address: 172.16.202.4
-    environment:
-      - CLUSTER_ADDRESSES=node0,node1,node2
-      - CLUSTER_NODE=2
-      - CLUSTER_PORT_BASE=9000
-      - OTEL_SERVICE_NAME=aeron-cache-cluster-node
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
-      - CACHE_MODE=RAFT
+      - CACHE_MODE=SINGLE
+      - HTTP_RESPONSE_PUB_HOST=cache-http-client
+      - WS_RESPONSE_PUB_HOST=cache-ws-client
   cache-http-client:
     shm_size: '1gb'
     build:
@@ -109,20 +79,18 @@ services:
       dockerfile: ./Dockerfile
     depends_on:
       - node0
-      - node1
-      - node2
     networks:
       internal_bus:
         ipv4_address: 172.16.202.5
     ports:
       - 7070:7070
     environment:
-      - CLUSTER_ADDRESSES=node0,node1,node2
-      - EGRESS_IP=172.16.202.5
       - OTEL_SERVICE_NAME=aeron-cache-http
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
       - OTEL_JAVAAGENT_LOGGING=none
-      - CACHE_MODE=RAFT
+      - CLUSTER_ADDRESSES=node0
+      - CACHE_MODE=SINGLE
+      - REQUEST_PUB_HOST=node0
   cache-ws-client:
     shm_size: '1gb'
     build:
@@ -130,28 +98,24 @@ services:
       dockerfile: ./Dockerfile
     depends_on:
       - node0
-      - node1
-      - node2
     networks:
       internal_bus:
         ipv4_address: 172.16.202.11
     ports:
       - 7071:7071
     environment:
-      - CLUSTER_ADDRESSES=node0,node1,node2
-      - EGRESS_IP=172.16.202.5
       - OTEL_SERVICE_NAME=aeron-cache-ws
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
       - OTEL_JAVAAGENT_LOGGING=none
-      - CACHE_MODE=RAFT
+      - CLUSTER_ADDRESSES=node0
+      - CACHE_MODE=SINGLE
+      - REQUEST_PUB_HOST=node0
   cache-ui:
     build:
       context: cache-ui/nextjs
       dockerfile: ./Dockerfile
     depends_on:
       - node0
-      - node1
-      - node2
       - cache-http-client
     networks:
       internal_bus:

@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-project.setProperty("mainClassName", "com.bhf.aeroncache.application.ClusterNodeApplication")
+project.setProperty("mainClassName", "com.bhf.aeroncache.application.CacheNodeApplication")
 
 dependencies {
     implementation(libs.aeron)

@@ -2,6 +2,7 @@ package com.bhf.aeroncache.application.unclustered;
 
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
+import com.bhf.aeroncache.utils.DNSUtils;
 import io.aeron.Aeron;
 import io.aeron.DirectBufferVector;
 import io.aeron.cluster.service.ClientSession;
@@ -16,6 +17,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SleepingIdleStrategy;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -41,12 +43,26 @@ public class SingleNodeApplication {
         Cluster cluster = getCluster(aeron);
         service.onStart(cluster, null);
 
-        final var httpRequests = "aeron:udp?endpoint=:8008|alias=AC-unclustered-http-requests";
-        final var wsRequests = "aeron:udp?endpoint=:7008|alias=AC-unclustered-ws-requests";
+        var hostname = DNSUtils.getThisHostName();
+        System.out.println("Single node cache hostname: "+hostname);
+
+        final var httpRequests = "aeron:udp?endpoint="+hostname+":8008|alias=AC-unclustered-http-requests";
+        final var wsRequests = "aeron:udp?endpoint="+hostname+":7008|alias=AC-unclustered-ws-requests";
         final int requestStream = 1;
 
         var httpResponseHost = System.getenv("HTTP_RESPONSE_PUB_HOST");
         var wsResponseHost = System.getenv("WS_RESPONSE_PUB_HOST");
+
+        System.out.println("HTTP Response host: "+httpResponseHost);
+        System.out.println("WS Response host: "+wsResponseHost);
+
+        final List<String> hostAddresses = List.of(httpResponseHost, wsResponseHost);
+
+        for (int i = 0; i < hostAddresses.size(); i++) {
+            DNSUtils.awaitDnsResolution(hostAddresses, i);
+        }
+
+        System.out.println("Finished DNS resolution on "+hostAddresses);
 
         final var httpResponses = "aeron:udp?endpoint="+httpResponseHost+":8007|alias=AC-unclustered-http-responses";
         final var wsResponses = "aeron:udp?endpoint="+wsResponseHost+":7007|alias=AC-unclustered-ws-responses";
