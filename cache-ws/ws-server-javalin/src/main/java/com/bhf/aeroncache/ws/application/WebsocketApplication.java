@@ -58,7 +58,6 @@ public class WebsocketApplication {
     private static final String READINESS = "/readiness/";
     private static final String MULTI_SUB_API_PREFIX = "/api/ws/v1/caches/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
-    private static final boolean CLUSTERED_MODE = true;
     private static AeronCacheClusterListener client;
     private static CacheSubscriptionRequestPublisher subscriptionService;
     private static AeronCache cache;
@@ -111,13 +110,19 @@ public class WebsocketApplication {
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
             mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
 
+            var cacheMode = System.getenv("CACHE_MODE");
+            final boolean CLUSTERED_MODE = cacheMode==null || cacheMode.toUpperCase().equals("RAFT");
+
+            System.out.println("Cache mode: "+cacheMode+", using clustered mode: "+CLUSTERED_MODE);
+
             if (CLUSTERED_MODE) {
                 buildClusterConnection(egressIP, ingressEndpoints);
             } else {
                 final Aeron.Context aeronCtx = new Aeron.Context()
                         .aeronDirectoryName(mediaDriver.aeronDirectoryName());
                 final Aeron aeron = Aeron.connect(aeronCtx);
-                buildUnclusteredConnection(egressIP, ingressEndpoints, aeron);
+                var requestPubHost = System.getenv("REQUEST_PUB_HOST");
+                buildUnclusteredConnection(aeron, requestPubHost);
             }
 
             System.out.println("Building cluster agent for websocket service");
@@ -140,14 +145,14 @@ public class WebsocketApplication {
         }
     }
 
-    private static void buildUnclusteredConnection(String egressIP, String ingressEndpoints, Aeron aeron) {
+    private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {
 
-        var requestPublicationChannel = "aeron:udp?endpoint=localhost:7008|alias=AC-unclustered-requests";
+        var requestPublicationChannel = "aeron:udp?endpoint="+requestPubHost+":7008|alias=AC-unclustered-requests";
         int requestPublicationStream = 1;
         var requestPublication = aeron.addPublication(requestPublicationChannel,
                 requestPublicationStream);
 
-        var responseSubscriptionChannel = "aeron:udp?endpoint=localhost:7007|alias=AC-unclustered-responses";
+        String responseSubscriptionChannel = "aeron:udp?endpoint=:7007|alias=AC-unclustered-responses";
         int responseSubscriptionStream = 2;
         var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
                 responseSubscriptionStream);
@@ -177,8 +182,9 @@ public class WebsocketApplication {
             }
         };
 
+        AeronCacheClusterListener egressListener = client;
         FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
-                -> client.onMessage(header.sessionId(),
+                -> egressListener.onMessage(header.sessionId(),
                 System.currentTimeMillis(),
                 buffer, offset, length, header);
 

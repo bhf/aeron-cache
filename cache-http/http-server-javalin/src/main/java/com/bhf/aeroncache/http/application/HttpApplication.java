@@ -65,7 +65,7 @@ public class HttpApplication {
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
-    private static final boolean CLUSTERED_MODE = true;
+
     private static AeronCacheClusterListener client;
     private static ObservingCacheRequestPublisher observingPublisher;
     private static AeronCache cache;
@@ -124,13 +124,19 @@ public class HttpApplication {
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
             mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
 
+            var cacheMode = System.getenv("CACHE_MODE");
+            final boolean CLUSTERED_MODE = cacheMode==null || cacheMode.toUpperCase().equals("RAFT");
+
+            System.out.println("Cache mode: "+cacheMode+", using clustered mode: "+CLUSTERED_MODE);
+
             if (CLUSTERED_MODE) {
                 buildClusterConnection(egressIP, ingressEndpoints);
             } else {
                 final Aeron.Context aeronCtx = new Aeron.Context()
                         .aeronDirectoryName(mediaDriver.aeronDirectoryName());
                 final Aeron aeron = Aeron.connect(aeronCtx);
-                buildUnclusteredConnection(egressIP, ingressEndpoints, aeron);
+                var requestPubHost = System.getenv("REQUEST_PUB_HOST");
+                buildUnclusteredConnection(aeron, requestPubHost);
             }
 
             System.out.println("Building cluster agent for http service");
@@ -153,14 +159,14 @@ public class HttpApplication {
         }
     }
 
-    private static void buildUnclusteredConnection(String egressIP, String ingressEndpoints, Aeron aeron) {
+    private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {
 
-        var requestPublicationChannel = "aeron:udp?endpoint=localhost:8008|alias=AC-unclustered-requests";
+        var requestPublicationChannel = "aeron:udp?endpoint="+requestPubHost+":8008|alias=AC-unclustered-requests";
         int requestPublicationStream = 1;
         var requestPublication = aeron.addPublication(requestPublicationChannel,
                 requestPublicationStream);
 
-        String responseSubscriptionChannel = "aeron:udp?endpoint=localhost:8007|alias=AC-unclustered-responses";
+        var responseSubscriptionChannel = "aeron:udp?endpoint=:8007|alias=AC-unclustered-responses";
         int responseSubscriptionStream = 2;
         var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
                 responseSubscriptionStream);

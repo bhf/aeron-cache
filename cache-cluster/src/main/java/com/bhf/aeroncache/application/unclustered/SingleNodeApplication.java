@@ -41,7 +41,20 @@ public class SingleNodeApplication {
         Cluster cluster = getCluster(aeron);
         service.onStart(cluster, null);
 
-        final UnclusteredServiceAgent serverAgent = new UnclusteredServiceAgent(aeron, service);
+        final var httpRequests = "aeron:udp?endpoint=:8008|alias=AC-unclustered-http-requests";
+        final var wsRequests = "aeron:udp?endpoint=:7008|alias=AC-unclustered-ws-requests";
+        final int requestStream = 1;
+
+        var httpResponseHost = System.getenv("HTTP_RESPONSE_PUB_HOST");
+        var wsResponseHost = System.getenv("WS_RESPONSE_PUB_HOST");
+
+        final var httpResponses = "aeron:udp?endpoint="+httpResponseHost+":8007|alias=AC-unclustered-http-responses";
+        final var wsResponses = "aeron:udp?endpoint="+wsResponseHost+":7007|alias=AC-unclustered-ws-responses";
+        final int responsesStream = 2;
+
+        final UnclusteredServiceAgent serverAgent = new UnclusteredServiceAgent(aeron, service, httpRequests,
+                wsRequests, requestStream,
+                httpResponses, wsResponses, responsesStream);
         final AgentRunner serverAgentRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace,
                 null, serverAgent);
         AgentRunner.startOnThread(serverAgentRunner);
