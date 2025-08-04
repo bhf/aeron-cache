@@ -17,18 +17,17 @@ import org.agrona.concurrent.Agent;
 @Log4j2
 public class UnclusteredServiceAgent implements Agent {
 
-    private static final String HTTP_SUBSCRIPTION_CHANNEL = "aeron:udp?endpoint=localhost:8008|alias=AC-unclustered" +
-            "-http-requests";
-    private static final String WS_SUBSCRIPTION_CHANNEL = "aeron:udp?endpoint=localhost:7008|alias=AC-unclustered-ws" +
-            "-requests";
-    private static final int SUBSCRIPTION_STREAM = 1;
-    private static final String HTTP_RESPONSE_CHANNEL = "aeron:udp?endpoint=localhost:8007|alias=AC-unclustered-http" +
-            "-responses";
-    private static final String WS_RESPONSE_CHANNEL = "aeron:udp?endpoint=localhost:7007|alias=AC-unclustered-ws" +
-            "-responses";
-    private static final int RESPONSE_STREAM = 2;
     private final Aeron aeron;
     private final SBEDecodingCacheClusterService service;
+
+    private final String httpRequestsChannel;
+    private final String wsRequestsChannel;
+    private final int requestsStream;
+
+    private final String httpResponseChannel;
+    private final String wsResponseChannel;
+    private final int responseStream;
+
     private Subscription httpRequestsSubscription;
     private Publication httpResponsePublication;
 
@@ -41,8 +40,8 @@ public class UnclusteredServiceAgent implements Agent {
     public void onStart() {
         log.info("Starting unclustered Aeron Cache");
 
-        httpRequestsSubscription = aeron.addSubscription(HTTP_SUBSCRIPTION_CHANNEL, SUBSCRIPTION_STREAM);
-        wsRequestsSubscription = aeron.addSubscription(WS_SUBSCRIPTION_CHANNEL, SUBSCRIPTION_STREAM);
+        httpRequestsSubscription = aeron.addSubscription(httpRequestsChannel, requestsStream);
+        wsRequestsSubscription = aeron.addSubscription(wsRequestsChannel, requestsStream);
         while (!httpRequestsSubscription.isConnected() && !wsRequestsSubscription.isConnected()) {
             aeron.context().idleStrategy().idle();
         }
@@ -50,8 +49,8 @@ public class UnclusteredServiceAgent implements Agent {
         log.info("Request subscription connected, http: {}, ws: {}", httpRequestsSubscription.isConnected(),
                 wsRequestsSubscription.isConnected());
 
-        httpResponsePublication = aeron.addPublication(HTTP_RESPONSE_CHANNEL, RESPONSE_STREAM);
-        wsResponsePublication = aeron.addPublication(WS_RESPONSE_CHANNEL, RESPONSE_STREAM);
+        httpResponsePublication = aeron.addPublication(httpResponseChannel, responseStream);
+        wsResponsePublication = aeron.addPublication(wsResponseChannel, responseStream);
         while (!httpResponsePublication.isConnected() && !wsResponsePublication.isConnected()) {
             aeron.context().idleStrategy().idle();
         }
