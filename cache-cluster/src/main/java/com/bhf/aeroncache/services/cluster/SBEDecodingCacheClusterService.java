@@ -231,7 +231,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .key(key.value())
                 .requestId(removeCacheEntryResult.getRequestId());
         sendMessage(session, egressBuffer, entryRemovedEncoder.encodedLength() + headerEncoder.encodedLength());
-        subscriptionService.handleEntryRemoved(removeCacheEntryResult, egressBuffer, entryRemovedEncoder, headerEncoder);
+        subscriptionService.handleEntryRemoved(removeCacheEntryResult, egressBuffer, entryRemovedEncoder, headerEncoder, session.id());
     }
 
     @Override
@@ -241,7 +241,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .status(clearCacheResult.getStatus())
                 .requestId(clearCacheResult.getRequestId());
         sendMessage(session, egressBuffer, cacheClearedEncoder.encodedLength() + headerEncoder.encodedLength());
-        subscriptionService.handleClearCache(clearCacheResult, egressBuffer, cacheClearedEncoder, headerEncoder);
+        subscriptionService.handleClearCache(clearCacheResult, egressBuffer, cacheClearedEncoder, headerEncoder, session.id());
     }
 
     @Override
@@ -251,7 +251,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .status(deleteCacheResult.getStatus())
                 .requestId(requestDetails.getRequestId());
         sendMessage(session, egressBuffer, cacheDeletedEncoder.encodedLength() + headerEncoder.encodedLength());
-        subscriptionService.handleDeleteCache(deleteCacheResult, egressBuffer, cacheDeletedEncoder, headerEncoder);
+        subscriptionService.handleDeleteCache(deleteCacheResult, egressBuffer, cacheDeletedEncoder, headerEncoder, session.id());
     }
 
     @Override

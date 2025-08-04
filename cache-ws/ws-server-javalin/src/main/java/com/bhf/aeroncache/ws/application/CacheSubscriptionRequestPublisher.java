@@ -54,6 +54,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
             sendCacheSubscriptionRequest(cluster, requestId, cacheId, wsContext);
         }
 
+        log.info("Adding subscription for cache {}, client session {}", cacheId, wsSessionId);
         currentSubscribers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {

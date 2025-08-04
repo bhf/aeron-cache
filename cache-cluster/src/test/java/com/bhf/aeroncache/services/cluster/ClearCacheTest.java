@@ -89,7 +89,8 @@ class ClearCacheTest {
                 any(ClearCacheResult.class),
                 any(AbstractMutableDirectBuffer.class),
                 any(CacheClearedEncoder.class),
-                any(MessageHeaderEncoder.class));
+                any(MessageHeaderEncoder.class),
+                session.id());
     }
 
     @Test
