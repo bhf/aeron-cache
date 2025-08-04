@@ -1,10 +1,7 @@
 package com.bhf.aeroncache.application.unclustered;
 
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
-import io.aeron.Aeron;
-import io.aeron.DirectBufferVector;
-import io.aeron.Publication;
-import io.aeron.Subscription;
+import io.aeron.*;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.FragmentHandler;
@@ -34,6 +31,7 @@ public class UnclusteredServiceAgent implements Agent {
     private Subscription wsRequestsSubscription;
     private Publication wsResponsePublication;
     private FragmentHandler fragmentHandler;
+    private FragmentAssembler assembler;
     private long msgCount = 0;
 
     @Override
@@ -61,6 +59,8 @@ public class UnclusteredServiceAgent implements Agent {
         ClientSession session = getClientSession();
         fragmentHandler = (buffer, offset, length, header) -> service.onSessionMessage(session,
                 msgCount++, buffer, offset, length, header);
+
+        assembler = new FragmentAssembler(fragmentHandler);
     }
 
     private ClientSession getClientSession() {
@@ -118,8 +118,8 @@ public class UnclusteredServiceAgent implements Agent {
 
     @Override
     public int doWork() throws Exception {
-        wsRequestsSubscription.poll(fragmentHandler, Integer.MAX_VALUE);
-        return httpRequestsSubscription.poll(fragmentHandler, Integer.MAX_VALUE);
+        wsRequestsSubscription.poll(assembler, Integer.MAX_VALUE);
+        return httpRequestsSubscription.poll(assembler, Integer.MAX_VALUE);
     }
 
     @Override
