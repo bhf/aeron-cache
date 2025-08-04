@@ -24,6 +24,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CacheSubscriptionServiceImplTest {
@@ -84,6 +85,7 @@ class CacheSubscriptionServiceImplTest {
     void shouldOfferToSessionOnValidCacheDeleteRequest() {
         // Arrange
         subscribeToCache();
+        when(session.id()).thenReturn(321L);
 
         // Act
         DeleteCacheResult<ReusableLong> requestDetails = new DeleteCacheResult<>(new ReusableLong());
@@ -91,7 +93,7 @@ class CacheSubscriptionServiceImplTest {
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheDeletedEncoder deleteEncoder = Mockito.mock(CacheDeletedEncoder.class);
         MessageHeaderEncoder headerEncoder = Mockito.mock(MessageHeaderEncoder.class);
-        sut.handleDeleteCache(requestDetails, egressBuffer, deleteEncoder, headerEncoder, session.id());
+        sut.handleDeleteCache(requestDetails, egressBuffer, deleteEncoder, headerEncoder, 0);
 
         // Assert
         verify(session).offer(any(MutableDirectBuffer.class), eq(0), anyInt());
@@ -103,6 +105,7 @@ class CacheSubscriptionServiceImplTest {
     void shouldOfferToSessionOnValidCacheClearRequest() {
         // Arrange
         subscribeToCache();
+        when(session.id()).thenReturn(321L);
 
         // Act
         ClearCacheResult<ReusableLong> requestDetails = new ClearCacheResult<>(new ReusableLong());
@@ -110,7 +113,7 @@ class CacheSubscriptionServiceImplTest {
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheClearedEncoder clearEncoder = Mockito.mock(CacheClearedEncoder.class);
         MessageHeaderEncoder headerEncoder = Mockito.mock(MessageHeaderEncoder.class);
-        sut.handleClearCache(requestDetails, egressBuffer, clearEncoder, headerEncoder, session.id());
+        sut.handleClearCache(requestDetails, egressBuffer, clearEncoder, headerEncoder, 0);
 
         // Assert
         verify(session).offer(any(MutableDirectBuffer.class), eq(0), anyInt());
@@ -122,6 +125,7 @@ class CacheSubscriptionServiceImplTest {
     void shouldOfferToSessionOnValidRemoveRequest() {
         // Arrange
         subscribeToCache();
+        when(session.id()).thenReturn(321L);
 
         // Act
         RemoveCacheEntryResult<ReusableLong, ReusableString> requestDetails =
@@ -130,7 +134,7 @@ class CacheSubscriptionServiceImplTest {
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheEntryRemovedEncoder entryRemovedEncoder = Mockito.mock(CacheEntryRemovedEncoder.class);
         MessageHeaderEncoder headerEncoder = Mockito.mock(MessageHeaderEncoder.class);
-        sut.handleEntryRemoved(requestDetails, egressBuffer, entryRemovedEncoder, headerEncoder, session.id());
+        sut.handleEntryRemoved(requestDetails, egressBuffer, entryRemovedEncoder, headerEncoder, 0);
 
         // Assert
         verify(session).offer(any(MutableDirectBuffer.class), eq(0), anyInt());

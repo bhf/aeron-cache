@@ -28,6 +28,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -100,7 +101,7 @@ class RemoveCacheEntryTest {
                 any(AbstractMutableDirectBuffer.class),
                 any(CacheEntryRemovedEncoder.class),
                 any(MessageHeaderEncoder.class),
-                session.id());
+                eq(session.id()));
     }
 
     @Test
