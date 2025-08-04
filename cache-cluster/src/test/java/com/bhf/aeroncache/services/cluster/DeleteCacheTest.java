@@ -89,7 +89,8 @@ class DeleteCacheTest {
                 any(DeleteCacheResult.class),
                 any(MutableDirectBuffer.class),
                 any(CacheDeletedEncoder.class),
-                any(MessageHeaderEncoder.class));
+                any(MessageHeaderEncoder.class),
+                session.id());
     }
 
     @Test

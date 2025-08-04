@@ -99,7 +99,8 @@ class RemoveCacheEntryTest {
                 any(RemoveCacheEntryResult.class),
                 any(AbstractMutableDirectBuffer.class),
                 any(CacheEntryRemovedEncoder.class),
-                any(MessageHeaderEncoder.class));
+                any(MessageHeaderEncoder.class),
+                session.id());
     }
 
     @Test

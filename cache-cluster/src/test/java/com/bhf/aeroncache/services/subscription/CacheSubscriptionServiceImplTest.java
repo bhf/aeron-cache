@@ -91,7 +91,7 @@ class CacheSubscriptionServiceImplTest {
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheDeletedEncoder deleteEncoder = Mockito.mock(CacheDeletedEncoder.class);
         MessageHeaderEncoder headerEncoder = Mockito.mock(MessageHeaderEncoder.class);
-        sut.handleDeleteCache(requestDetails, egressBuffer, deleteEncoder, headerEncoder);
+        sut.handleDeleteCache(requestDetails, egressBuffer, deleteEncoder, headerEncoder, session.id());
 
         // Assert
         verify(session).offer(any(MutableDirectBuffer.class), eq(0), anyInt());
@@ -110,7 +110,7 @@ class CacheSubscriptionServiceImplTest {
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheClearedEncoder clearEncoder = Mockito.mock(CacheClearedEncoder.class);
         MessageHeaderEncoder headerEncoder = Mockito.mock(MessageHeaderEncoder.class);
-        sut.handleClearCache(requestDetails, egressBuffer, clearEncoder, headerEncoder);
+        sut.handleClearCache(requestDetails, egressBuffer, clearEncoder, headerEncoder, session.id());
 
         // Assert
         verify(session).offer(any(MutableDirectBuffer.class), eq(0), anyInt());
@@ -130,7 +130,7 @@ class CacheSubscriptionServiceImplTest {
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheEntryRemovedEncoder entryRemovedEncoder = Mockito.mock(CacheEntryRemovedEncoder.class);
         MessageHeaderEncoder headerEncoder = Mockito.mock(MessageHeaderEncoder.class);
-        sut.handleEntryRemoved(requestDetails, egressBuffer, entryRemovedEncoder, headerEncoder);
+        sut.handleEntryRemoved(requestDetails, egressBuffer, entryRemovedEncoder, headerEncoder, session.id());
 
         // Assert
         verify(session).offer(any(MutableDirectBuffer.class), eq(0), anyInt());
