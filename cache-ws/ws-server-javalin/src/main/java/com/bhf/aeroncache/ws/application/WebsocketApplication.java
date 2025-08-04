@@ -152,7 +152,8 @@ public class WebsocketApplication {
         var requestPublication = aeron.addPublication(requestPublicationChannel,
                 requestPublicationStream);
 
-        String responseSubscriptionChannel = "aeron:udp?endpoint=:7007|alias=AC-unclustered-responses";
+        var hostname = DNSUtils.getThisHostName();
+        String responseSubscriptionChannel = "aeron:udp?endpoint="+hostname+":7007|alias=AC-unclustered-responses";
         int responseSubscriptionStream = 2;
         var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
                 responseSubscriptionStream);

@@ -14,7 +14,7 @@ public class ClusterLauncher {
             int finalI = i;
             pool.execute(() -> {
                 System.out.println("Launching cluster with node Id: " + finalI);
-                ClusterNodeApplication.main(new String[]{String.valueOf(finalI)});
+                CacheNodeApplication.main(new String[]{String.valueOf(finalI)});
             });
         }
     }

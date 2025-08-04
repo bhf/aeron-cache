@@ -17,7 +17,7 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.util.*;
 
-import static com.bhf.aeroncache.application.ClusterNodeApplication.calculatePort;
+import static com.bhf.aeroncache.application.CacheNodeApplication.calculatePort;
 
 /**
  * A basic request-response roundtrip perf test. Controls the duty cycle itself
@@ -41,7 +41,7 @@ public class ControlledDutyCyclePerfTest {
         for (int i = 0; i < hostnames.size(); i++) {
             sb.append(i).append('=');
             sb.append(hostnames.get(i)).append(':').append(
-                    calculatePort(i, ClusterNodeApplication.CLIENT_FACING_PORT_OFFSET));
+                    calculatePort(i, CacheNodeApplication.CLIENT_FACING_PORT_OFFSET));
             sb.append(',');
         }
 

@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.application;
 
+import com.bhf.aeroncache.application.unclustered.SingleNodeApplication;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
@@ -33,7 +34,7 @@ import static java.lang.Integer.parseInt;
  * {@link SBEDecodingCacheClusterService}.
  */
 @Log4j2
-public class ClusterNodeApplication {
+public class CacheNodeApplication {
     private static ErrorHandler errorHandler(final String context) {
         return
                 (Throwable throwable) ->
@@ -107,6 +108,20 @@ public class ClusterNodeApplication {
      * @param args passed to the process.
      */
     public static void main(final String[] args) {
+
+        var cacheMode = System.getenv("CACHE_MODE");
+        final boolean CLUSTERED_MODE = cacheMode == null || cacheMode.toUpperCase().equals("RAFT");
+
+        if (!CLUSTERED_MODE) {
+            System.out.println("Starting Aeron Cache server in non-clustered mode");
+            SingleNodeApplication.main(new String[]{});
+        } else {
+            System.out.println("Starting Aeron Cache server node in clustered mode");
+            startClusteredMode(args);
+        }
+    }
+
+    private static void startClusteredMode(String[] args) {
         int nodeId = -1;
         String[] hostnames = null;
 
@@ -154,10 +169,11 @@ public class ClusterNodeApplication {
                 .termBufferSparseFile(true)
                 .multicastFlowControlSupplier(new MinMulticastFlowControlSupplier())
                 .terminationHook(barrier::signal)
-                .errorHandler(ClusterNodeApplication.errorHandler("Media Driver"));
+                .errorHandler(CacheNodeApplication.errorHandler("Media Driver"));
 
         final AeronArchive.Context replicationArchiveContext = new AeronArchive.Context()
-                .controlResponseChannel("aeron:udp?endpoint=" + hostname + ":0|alias=AeronCache-Archive-ControlResponse-"+nodeId);
+                .controlResponseChannel("aeron:udp?endpoint=" + hostname + ":0|alias=AeronCache-Archive" +
+                        "-ControlResponse-" + nodeId);
 
         final Archive.Context archiveContext = new Archive.Context()
                 .aeronDirectoryName(aeronDirName)
@@ -167,7 +183,7 @@ public class ClusterNodeApplication {
                 .localControlChannel("aeron:ipc?term-length=64k|alias=AeronCache-Archive-LocalControl")
                 .recordingEventsEnabled(false)
                 .threadingMode(ArchiveThreadingMode.SHARED)
-                .replicationChannel("aeron:udp?endpoint=" + hostname + ":0|alias=AeronCache-Archive-Replication-"+nodeId);
+                .replicationChannel("aeron:udp?endpoint=" + hostname + ":0|alias=AeronCache-Archive-Replication-" + nodeId);
 
         final AeronArchive.Context aeronArchiveContext = new AeronArchive.Context()
                 .lock(NoOpLock.INSTANCE)
@@ -180,7 +196,7 @@ public class ClusterNodeApplication {
                 .clusterMemberId(nodeId)
                 .clusterMembers(clusterMembers(Arrays.asList(hostnames)))
                 .clusterDir(new File(baseDir, "cluster"))
-                .ingressChannel("aeron:udp?term-length=64k|alias=AeronCache-Concensus-Ingress-"+nodeId)
+                .ingressChannel("aeron:udp?term-length=64k|alias=AeronCache-Concensus-Ingress-" + nodeId)
                 .replicationChannel(logReplicationChannel(hostname))
                 .archiveContext(aeronArchiveContext.clone());
 
@@ -189,7 +205,8 @@ public class ClusterNodeApplication {
                         .aeronDirectoryName(aeronDirName)
                         .archiveContext(aeronArchiveContext.clone())
                         .clusterDir(new File(baseDir, "cluster"))
-                        .clusteredService(new SBEDecodingCacheClusterService(String.valueOf(nodeId), getTracingService(nodeId)))
+                        .clusteredService(new SBEDecodingCacheClusterService(String.valueOf(nodeId),
+                                getTracingService(nodeId)))
                         .errorHandler(errorHandler("Clustered Service"));
 
         if (USE_BUSY_SPIN_IDLE_FOR_CLUSTER_SERVICE) {
