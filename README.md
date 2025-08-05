@@ -215,8 +215,6 @@ RestAssured in ```:cache-http:http-integration-tests``` which cover the main fun
 
 ## Future Work
 
-* Non-clustered mode (single node cache)
-* Distributed mode (data distributed across multiple single node caches with a clustered backplane)
 * Industrialization and cache-ops
 
 https://sanjdev.atlassian.net/jira/software/projects/AC/boards/22
