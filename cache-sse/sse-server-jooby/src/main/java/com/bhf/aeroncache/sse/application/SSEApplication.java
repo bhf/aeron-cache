@@ -1,0 +1,315 @@
+package com.bhf.aeroncache.sse.application;
+
+import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
+import com.bhf.aeroncache.services.cache.CacheClientAgent;
+import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
+import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
+import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
+import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
+import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
+import com.bhf.aeroncache.utils.ClusterUtils;
+import com.bhf.aeroncache.utils.DNSUtils;
+import com.bhf.aeroncache.utils.RingBufferUtils;
+import io.aeron.Aeron;
+import io.aeron.RethrowingErrorHandler;
+import io.aeron.cluster.client.AeronCluster;
+import io.aeron.driver.MediaDriver;
+import io.aeron.logbuffer.FragmentHandler;
+import io.jooby.*;
+import io.jooby.exception.TypeMismatchException;
+import io.jooby.netty.NettyServer;
+import lombok.extern.log4j.Log4j2;
+import org.agrona.CloseHelper;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.*;
+import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+
+@Log4j2
+public class SSEApplication extends Jooby {
+
+    private static final int PORT = 7071;
+    private static final String API_PREFIX = "/api/sse/v1/cache/";
+    private static final String LIVENESS = "/liveness/";
+    private static final String READINESS = "/readiness/";
+    private static final String MULTI_SUB_API_PREFIX = "/api/sse/v1/caches/";
+    private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
+    private static AeronCacheClusterListener client;
+    private static CacheSubscriptionRequestPublisher subscriptionService;
+    private static AeronCache cache;
+    private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
+    private static String tracingServiceName;
+    private static AgentRunner agentRunner;
+    private static AeronCluster aeronCluster;
+    private static MediaDriver mediaDriver;
+
+    public static void main(final String[] args) {
+        System.out.println("Starting SSE interface");
+        tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
+
+        startHTTPServer(args);
+        setupCacheConnection();
+    }
+
+    {
+        sse(API_PREFIX + "{cacheId}", SSEApplication::handleSingleCacheSSE);
+        sse(MULTI_SUB_API_PREFIX + "{cacheIds}", SSEApplication::handleMultiCacheSSE);
+        get(LIVENESS, SSEApplication::handleGetLiveness);
+        get(READINESS, SSEApplication::handleGetReadiness);
+    }
+
+    private static Object handleGetReadiness(Context ctx) {
+        if (clusterConnected.get()) {
+            return ctx.send(StatusCode.OK);
+        } else {
+            return ctx.send(StatusCode.SERVICE_UNAVAILABLE);
+        }
+    }
+
+    private static Object handleGetLiveness(Context ctx) {
+        if (clusterConnected.get()) {
+            return ctx.send(StatusCode.OK);
+        } else {
+            return ctx.send(StatusCode.SERVICE_UNAVAILABLE);
+        }
+    }
+
+    private static void handleSingleCacheSSE(ServerSentEmitter serverSentEmitter) {
+        try {
+            var cacheId = serverSentEmitter.getContext().path("cacheId").longValue();
+            var requestId = UUID.randomUUID().toString();
+            log.info("Subscription request for cacheId: {} on SSE sessionId: {}", cacheId, serverSentEmitter.getId());
+
+            serverSentEmitter.onClose(() -> {
+                log.warn("Closed on " + serverSentEmitter.getId());
+                subscriptionService.handleSSEClosed(cache, requestId, serverSentEmitter.getId());
+            });
+
+            serverSentEmitter.keepAlive(60, TimeUnit.DAYS);
+
+            final Consumer<Void> subscriptionFailureHandler = _ ->
+                    serverSentEmitter.close();
+
+            final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
+                ServerSentMessage msg =
+                        new ServerSentMessage(cacheUpdateEvent)
+                                .setEvent(cacheUpdateEvent.eventType().toString())
+                                .setId(cacheUpdateEvent.requestId());
+                serverSentEmitter.send(msg);
+            };
+
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, serverSentEmitter.getId(),
+                    requestId, consumer);
+        } catch (TypeMismatchException e) {
+            log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
+        }
+    }
+
+    private static void handleMultiCacheSSE(ServerSentEmitter serverSentEmitter) {
+        var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
+        log.info("Got cache Ids: "+cacheIds);
+        String[] caches = cacheIds.split(",");
+        for (var c : caches) {
+            var cacheId = Long.parseLong(c);
+            var requestId = UUID.randomUUID().toString();
+            log.info("Subscription request for cacheId: {} on SSE sessionId: {}", cacheId,
+                    serverSentEmitter.getId());
+            final Consumer<Void> subscriptionFailureHandler = _ ->
+                    serverSentEmitter.close();
+
+            Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
+                ServerSentMessage msg =
+                        new ServerSentMessage(cacheUpdateEvent)
+                                .setEvent(cacheUpdateEvent.eventType().toString())
+                                .setId(cacheUpdateEvent.requestId());
+                serverSentEmitter.send(msg);
+            };
+
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, serverSentEmitter.getId(),
+                    requestId, consumer);
+        }
+    }
+
+    private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {
+
+        var requestPublicationChannel = "aeron:udp?endpoint=" + requestPubHost + ":7008|alias=AC-unclustered-requests";
+        int requestPublicationStream = 1;
+        var requestPublication = aeron.addPublication(requestPublicationChannel,
+                requestPublicationStream);
+
+        var hostname = DNSUtils.getThisHostName();
+        String responseSubscriptionChannel = "aeron:udp?endpoint=" + hostname + ":7007|alias=AC-unclustered-responses";
+        int responseSubscriptionStream = 2;
+        var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
+                responseSubscriptionStream);
+
+        cache = new AeronCache() {
+            @Override
+            public void sendKeepAlive() {
+            }
+
+            @Override
+            public int pollEgress() {
+                return 0;
+            }
+
+            @Override
+            public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                long res = 0;
+                while ((res = requestPublication.offer(msgBuffer, msgBufferOffset, i)) < 0) {
+                    aeron.context().idleStrategy().idle();
+                }
+                return res;
+            }
+
+            @Override
+            public boolean isConnected() {
+                return true;
+            }
+        };
+
+        AeronCacheClusterListener egressListener = client;
+        FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
+                -> egressListener.onMessage(header.sessionId(),
+                System.currentTimeMillis(),
+                buffer, offset, length, header);
+
+        Agent serverAgent = new Agent() {
+            @Override
+            public int doWork() throws Exception {
+                return responseSubscription.poll(egressFragmentHandler, Integer.MAX_VALUE);
+            }
+
+            @Override
+            public String roleName() {
+                return "AC-Unclustered-requests-listener";
+            }
+        };
+
+        final AgentRunner serverAgentRunner = new AgentRunner(aeron.context().idleStrategy(),
+                Throwable::printStackTrace,
+                null, serverAgent);
+
+        AgentRunner.startOnThread(serverAgentRunner);
+    }
+
+    private static void buildClusterConnection(String egressIP, String ingressEndpoints) {
+        aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient",
+                mediaDriver);
+        //addClusterErrorHandler(aeronCluster);
+
+        cache = new AeronCache() {
+            @Override
+            public void sendKeepAlive() {
+                aeronCluster.sendKeepAlive();
+            }
+
+            @Override
+            public int pollEgress() {
+                return aeronCluster.pollEgress();
+            }
+
+            @Override
+            public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
+            }
+
+            @Override
+            public boolean isConnected() {
+                return !aeronCluster.isClosed();
+            }
+        };
+    }
+
+    private static void shutdown() {
+        CloseHelper.close(agentRunner);
+        CloseHelper.close(mediaDriver);
+        CloseHelper.close(aeronCluster);
+    }
+
+    private static void addClusterErrorHandler(AeronCluster aeronCluster) {
+        aeronCluster.context().errorHandler(throwable -> clusterConnected.set(false));
+    }
+
+    private static void setupCacheConnection() {
+        try {
+            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
+            System.out.println("Starting AeronCache Cluster Interface");
+
+            if (PRE_ENCODE_CACHE_REQUESTS) {
+                // We encode the SBE messages before dropping them onto an Agrona RB for
+                // sending directly to the cluster
+                var requestPublisher = new RBClusterMessagePublisher(cache, rb);
+                subscriptionService = new CacheSubscriptionRequestPublisher(requestPublisher);
+            } else {
+                // Drop normalised cache requests onto an Agrona RB for encoding
+                // to SBE on the Agent thread
+                CacheRequestPublisher rbPublisher = new RBCacheRequestPublisher(rb);
+                subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
+            }
+
+            client = new AeronCacheClusterListener();
+            client.setCacheResultsCallbacks(subscriptionService);
+
+            var allHosts = System.getenv("CLUSTER_ADDRESSES");
+            System.out.println("CLUSTER_ADDRESSES=" + allHosts);
+
+            var egressIP = DNSUtils.getThisHostName();
+            var hostArray = List.of(allHosts.split(","));
+            var ingressEndpoints = ClusterUtils.ingressEndpoints(hostArray);
+
+            System.out.println("Awaiting DNS Resolution");
+            for (int i = 0; i < hostArray.size(); i++) {
+                DNSUtils.awaitDnsResolution(hostArray, i);
+            }
+
+            System.out.println("DNS Resolution Complete. Building cluster connection now.");
+            mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
+
+            var cacheMode = System.getenv("CACHE_MODE");
+            final boolean CLUSTERED_MODE = cacheMode == null || cacheMode.toUpperCase().equals("RAFT");
+
+            System.out.println("Cache mode: " + cacheMode + ", using clustered mode: " + CLUSTERED_MODE);
+
+            if (CLUSTERED_MODE) {
+                buildClusterConnection(egressIP, ingressEndpoints);
+            } else {
+                final Aeron.Context aeronCtx = new Aeron.Context()
+                        .aeronDirectoryName(mediaDriver.aeronDirectoryName());
+                final Aeron aeron = Aeron.connect(aeronCtx);
+                var requestPubHost = System.getenv("REQUEST_PUB_HOST");
+                buildUnclusteredConnection(aeron, requestPubHost);
+            }
+
+            System.out.println("Building cluster agent for SSE service");
+            var idleStrategy = new BackoffIdleStrategy();
+            var agent = PRE_ENCODE_CACHE_REQUESTS ?
+                    new ClusterClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
+                            new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent") :
+                    new CacheClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
+                            new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
+
+            var errorHandler = aeronCluster != null ? ClusterUtils.getAgentRunnerErrorHandler(aeronCluster) :
+                    new RethrowingErrorHandler();
+            var errorCounter = aeronCluster != null ? ClusterUtils.getAgentErrorCounter(aeronCluster, "SSEClient") :
+                    null;
+            agentRunner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
+            clusterConnected.set(true);
+            AgentRunner.startOnThread(agentRunner);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void startHTTPServer(String[] args) {
+        runApp(args, new NettyServer(new ServerOptions().setPort(7072)), SSEApplication::new);
+    }
+
+}

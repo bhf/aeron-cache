@@ -5,7 +5,7 @@
 *__Written and designed without LLMs or AI Agents.__*
 
 A clustered cache built using Aeron, Agrona and SBE. UI with NextJS, Shadcn and Tailwind. 
-Includes HTTP and websocket interfaces with support for multi-cache joins over websocket. 
+Includes HTTP, WS and SSE interfaces with support for multi-cache joins over WS and SSE. 
 Prometheus+cAdvisor and tracing with Jaeger+OTEL. 
 Containerized and deployable with ```docker compose``` or on Kubernetes via ```helm``` or ```kubectl```.
 
@@ -158,6 +158,8 @@ __cache-http__ - REST interfaces around the cache-client.
 __cache-mcp__ - MCP interface using the Swagger spec with AutoMCP. 
 
 __cache-ws__ - Websocket interfaces around the cache-client.
+
+__cache-sse__ - SSE interfaces around the cache-client.
 
 __cache-messages-sbe__ - Core SBE messages used by the cache.
 

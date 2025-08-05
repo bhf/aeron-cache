@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: aeroncache-sse
+  namespace: default
+  labels:
+    app.kubernetes.io/name: aeroncache-sse
+    app.kubernetes.io/instance: aeroncache-sse
+spec:
+  replicas: 1
+  podManagementPolicy: Parallel
+  serviceName: aeroncache-sse
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: aeroncache-sse
+      app.kubernetes.io/instance: aeroncache-sse
+  template:
+    metadata:
+      annotations:
+        {}
+      labels:
+        app.kubernetes.io/name: aeroncache-sse
+        app.kubernetes.io/instance: aeroncache-sse
+    spec:
+      serviceAccountName: aeroncache-sse
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+          name: shm
+      containers:
+        - name: aeroncache-sse
+          image: docker.io/library/aeroncache-sse-jooby
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 7071
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: shm
+          env:
+            - name: POD_ADDRESS
+              value: 127.0.0.1
+          envFrom:
+            - configMapRef:
+                name: aeroncache-sse-config
