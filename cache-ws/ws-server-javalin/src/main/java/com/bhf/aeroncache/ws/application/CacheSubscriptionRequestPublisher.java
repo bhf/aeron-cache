@@ -12,8 +12,6 @@ import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
-import io.javalin.websocket.WsCloseStatus;
-import io.javalin.websocket.WsContext;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
@@ -36,14 +34,14 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
      * Subscribe to cache update.
      *
      * @param cluster     The cluster to use.
-     * @param wsContext   The websocket context.
+     * @param subscriptionFailureHandler   The handler for subscription failures.
      * @param cacheId     The cache to subscribe too.
      * @param wsSessionId The websocket session ID.
      * @param requestId   The request ID.
      * @param consumer    The consumer of {@link CacheUpdateEvent}.
      */
     @Override
-    public void subscribeToCache(AeronCache cluster, WsContext wsContext, long cacheId, String wsSessionId, String requestId, Consumer<CacheUpdateEvent> consumer) {
+    public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, long cacheId, String wsSessionId, String requestId, Consumer<CacheUpdateEvent> consumer) {
         List<IdentifiableConsumer<String, CacheUpdateEvent>> currentSubscribers;
         if (cacheSubscriptions.containsKey(cacheId)) {
             currentSubscribers = cacheSubscriptions.get(cacheId);
@@ -51,7 +49,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
             currentSubscribers = new CopyOnWriteArrayList<>();
             cacheSubscriptions.put(cacheId, currentSubscribers);
             log.info("Sending request to cluster to subscribe to cache {}", cacheId);
-            sendCacheSubscriptionRequest(cluster, requestId, cacheId, wsContext);
+            sendCacheSubscriptionRequest(cluster, requestId, cacheId, subscriptionFailureHandler);
         }
 
         log.info("Adding subscription for cache {}, client session {}", cacheId, wsSessionId);
@@ -75,12 +73,12 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
      * @param requestId The request ID.
      * @param cacheId   The ID of the cache we want to subscribe too on the cluster side.
      */
-    private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, long cacheId, WsContext wsContext) {
+    private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, long cacheId, Consumer<Void> subscriptionFailureHandler) {
         sendCacheSubscribe(requestId, cacheId, subscriptionResult -> {
             if (subscriptionResult.getStatus() != OperationStatus.SUCCESS) {
                 var errorMsg = STR."Couldn't subscribe to cache \{cacheId}, status=\{subscriptionResult.getStatus()}";
                 log.warn(errorMsg);
-                wsContext.closeSession(WsCloseStatus.SERVER_ERROR, errorMsg);
+                subscriptionFailureHandler.accept(null);
             }
         });
     }

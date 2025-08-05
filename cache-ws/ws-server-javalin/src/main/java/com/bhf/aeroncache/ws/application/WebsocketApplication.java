@@ -343,7 +343,10 @@ public class WebsocketApplication {
             var cacheId = Long.parseLong(wsConnectContext.pathParam("cacheId"));
             var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
             log.info("Subscription request for cacheId: {} on ws sessionId: {}", cacheId, wsConnectContext.sessionId());
-            subscriptionService.subscribeToCache(cache, wsConnectContext, cacheId, wsConnectContext.sessionId(),
+
+            final Consumer<Void> subscriptionFailureHandler = _ ->
+                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, wsConnectContext.sessionId(),
                     requestId, wsConnectContext::send);
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();
@@ -368,7 +371,10 @@ public class WebsocketApplication {
                 var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
                 log.info("Subscription request for cacheId: {} on ws sessionId: {}", cacheId,
                         wsConnectContext.sessionId());
-                subscriptionService.subscribeToCache(cache, wsConnectContext, cacheId, wsConnectContext.sessionId(),
+                final Consumer<Void> subscriptionFailureHandler = _ ->
+                        wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
+
+                subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, wsConnectContext.sessionId(),
                         requestId, wsConnectContext::send);
             }
         } catch (NumberFormatException e) {
@@ -432,7 +438,7 @@ public class WebsocketApplication {
      * @return A requestId
      */
     private static String getRequestId(Context ctx) {
-        return tracingServiceName != null ? getTraceBasedRequestId(ctx) : UUID.randomUUID().toString();
+        return tracingServiceName != null && ctx != null ? getTraceBasedRequestId(ctx) : UUID.randomUUID().toString();
     }
 
     /**
