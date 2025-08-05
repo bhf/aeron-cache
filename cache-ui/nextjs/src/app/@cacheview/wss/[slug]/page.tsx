@@ -1,4 +1,4 @@
-import WebsocketTerminal from "@/app/@main/wss/[slug]/websocket-terminal";
+import WebsocketTerminal from "@/app/@cacheview/wss/[slug]/websocket-terminal";
 import {getWebsocketURL} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
 

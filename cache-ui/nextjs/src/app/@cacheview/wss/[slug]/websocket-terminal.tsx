@@ -2,7 +2,7 @@
 
 import {useEffect, useState} from "react";
 import {useParams} from "next/navigation";
-import Terminal from "@/app/@main/wss/[slug]/terminal";
+import Terminal from "@/app/@cacheview/wss/[slug]/terminal";
 import {getLogger} from "@/lib/loggingUtil";
 
 /**

@@ -12,11 +12,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({
-                                       children, dashboard, main
+                                       children, dashboard, main, cacheview
                                    }: Readonly<{
     children: React.ReactNode,
     dashboard: React.ReactNode,
-    main: React.ReactNode
+    main: React.ReactNode,
+    cacheview: React.ReactNode,
 }>) {
 
     function header() {
@@ -43,9 +44,14 @@ export default function RootLayout({
         <html lang="en">
         <body>
         {header()}
-        <div className="pl-2 pt-3">
-            {dashboard}
-            {main}
+        <div className="grid grid-cols-1 md:grid-cols-2 h-full min-h-screen">
+            <div className="pl-2 pt-3">
+                {dashboard}
+                {main}
+            </div>
+            <div className="pl-2 pt-3">
+                {cacheview}
+            </div>
         </div>
         <Toaster/>
         </body>

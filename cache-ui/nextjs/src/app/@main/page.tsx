@@ -54,7 +54,7 @@ export default async function Page() {
     return (
         <div>
             <div className="pt-4">
-                <div className="pb-6 px-6 md:w-1/2">
+                <div className="pb-6 px-6">
                     <Card className={"shadow-lg"}>
                         <CardHeader>
                             <CardTitle>Create Cache</CardTitle>
@@ -65,7 +65,7 @@ export default async function Page() {
                         </CardContent>
                     </Card>
                 </div>
-                <div className="pb-6 px-6 md:w-1/2">
+                <div className="pb-6 px-6">
                     <Card className={"shadow-lg"}>
                         <CardHeader>
                             <CardTitle>All Caches</CardTitle>
