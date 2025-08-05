@@ -6,8 +6,8 @@ import {getCacheAPIURI} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
 import {JSX, Suspense} from "react";
 import {Skeleton} from "@/components/ui/skeleton";
-import {DeleteCache} from "@/app/@main/cache/[slug]/DeleteCache";
-import {ClearCache} from "@/app/@main/cache/[slug]/ClearCache";
+import {DeleteCache} from "@/app/@cacheview/cache/[slug]/DeleteCache";
+import {ClearCache} from "@/app/@cacheview/cache/[slug]/ClearCache";
 
 const logger = getLogger("CachePage")
 
@@ -92,7 +92,7 @@ export default async function Page({
     const cacheId = Number.parseInt(slug);
 
     return (
-        <div className={"pl-6"}>
+        <div className={"pl-3 pr-6"}>
             <div className={"text-2xl pb-4 justify-between space-x-2"} data-testid="deleteClear">
                 <p>{"Cache ID: " + cacheId}</p>
                 <div className={"py-1 justify-between space-x-2"} data-testid="deleteClear">
@@ -102,13 +102,13 @@ export default async function Page({
             </div>
 
             <div className={"pb-1 justify-between space-y-6"} data-testid="deleteClear">
-                <Card className="pt-5 pb-2 px-2 md:w-1/3 shadow-lg">
+                <Card className="pt-5 pb-2 px-2 shadow-lg">
                     <div data-testid="addItem">
                         <CardTitle>Add Item</CardTitle>
                         <AddItemRequest cacheId={cacheId}/>
                     </div>
                 </Card>
-                <Card className="pt-5 pb-2 px-2 md:w-1/3 shadow-lg">
+                <Card className="pt-5 pb-2 px-2 shadow-lg">
                     <div data-testid="cacheItems">
                         <Suspense fallback={<SkeletonLoading/>}>
                             <CacheItemsTable cacheId={cacheId}/>
