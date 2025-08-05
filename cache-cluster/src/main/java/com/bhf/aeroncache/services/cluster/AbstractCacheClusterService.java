@@ -574,7 +574,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      *
      * @param snapshotPublication to which the state should be recorded.
      */
+    @Override
     public void onTakeSnapshot(final ExclusivePublication snapshotPublication) {
+        log.info("Got request to take snapshot");
         cacheManager.takeSnapshot(snapshotPublication);
     }
 
@@ -585,6 +587,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param snapshotImage The snapshot image.
      */
     private void loadSnapshot(final Cluster cluster, final Image snapshotImage) {
+        log.info("Got request to load snapshot");
         cacheManager.loadSnapshot(snapshotImage);
     }
 

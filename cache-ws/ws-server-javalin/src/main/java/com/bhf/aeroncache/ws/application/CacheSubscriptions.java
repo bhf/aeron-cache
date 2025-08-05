@@ -7,5 +7,6 @@ import io.javalin.websocket.WsContext;
 import java.util.function.Consumer;
 
 public interface CacheSubscriptions {
-    void subscribeToCache(AeronCache cluster, WsContext wsContext, long cacheId, String wsSessionId, String requestId, Consumer<CacheUpdateEvent> consumer);
+    void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, long cacheId,
+                          String wsSessionId, String requestId, Consumer<CacheUpdateEvent> consumer);
 }
