@@ -1,5 +1,5 @@
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
-import {SearchCodeIcon, ZapIcon} from "lucide-react";
+import {SearchCodeIcon, SendIcon, ZapIcon} from "lucide-react";
 
 export default async function Page() {
 
@@ -24,17 +24,27 @@ export default async function Page() {
                                             <SearchCodeIcon size={20}/>
                                         </div>
                                         <div>
-                                            Click to view a cache.
+                                            Click to view and interact with a cache.
                                         </div>
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="flex flex-row space-x-2">
+                                    <div className="flex flex-row space-x-2 mb-2">
                                         <div>
                                             <ZapIcon size={20}/>
                                         </div>
                                         <div>
-                                            Click to stream via websockets.
+                                            Click to stream using Websockets.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="flex flex-row space-x-2 mb-2">
+                                        <div>
+                                            <SendIcon size={20}/>
+                                        </div>
+                                        <div>
+                                            Click to stream using SSE.
                                         </div>
                                     </div>
                                 </div>

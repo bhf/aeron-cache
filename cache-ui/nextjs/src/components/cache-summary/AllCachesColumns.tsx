@@ -3,7 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 import { CacheInfo } from "@/lib/types";
-import { SearchCodeIcon, ZapIcon } from "lucide-react";
+import {SearchCodeIcon, SendIcon, ZapIcon} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -14,7 +14,7 @@ import {
 export const allCachesColumns: ColumnDef<CacheInfo>[] = [
   {
     accessorKey: "cacheId",
-    header: "CacheId",
+    header: "Cache ID",
   },
   {
     accessorKey: "itemCount",
@@ -27,6 +27,7 @@ export const allCachesColumns: ColumnDef<CacheInfo>[] = [
       const cacheId = row.getValue("cacheId");
       const editCache = "/cache/" + cacheId;
       const cacheWs = "/wss/" + cacheId;
+      const cacheSse = "/sse/" + cacheId;
 
       return (
         <div className={"flex space-x-2"}>
@@ -51,6 +52,19 @@ export const allCachesColumns: ColumnDef<CacheInfo>[] = [
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Websockets</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </Link>
+
+          <Link href={cacheSse}>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SendIcon size={20} />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>SSE</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
