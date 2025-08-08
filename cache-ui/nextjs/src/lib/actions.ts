@@ -30,6 +30,10 @@ export async function getWebsocketURL() {
     return process.env.AERON_CACHE_WS_API ? process.env.AERON_CACHE_WS_API : "ws:localhost:5000";
 }
 
+export async function getSSEURL() {
+    return process.env.AERON_CACHE_SSE_API ? process.env.AERON_CACHE_SSE_API : "localhost:7072";
+}
+
 /**
  * Create a cache.
  * @param currentState

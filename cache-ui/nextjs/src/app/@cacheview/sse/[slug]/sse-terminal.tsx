@@ -9,31 +9,36 @@ import {getLogger} from "@/lib/loggingUtil";
  * @param props
  */
 
-const logger = getLogger("WSTerminalClient")
+const logger = getLogger("SSETerminalClient")
 
-export default function WebsocketTerminal(props: { url: any }) {
+export default function SseTerminal(props: { url: any }) {
     const [messages, setMessages] = useState<string[]>([]);
 
-    let webSocket: WebSocket;
+    let sseEventSource: EventSource;
     if (typeof window !== "undefined") {
         const params = useParams();
         logger.info("Connecting to " + props.url + " on cacheId: " + params.slug);
-        webSocket = new WebSocket(`${props.url}/api/ws/v1/cache/` + params.slug);
+        sseEventSource = new EventSource(`${props.url}/api/sse/v1/cache/` + params.slug);
     }
 
     useEffect(() => {
-        webSocket.onmessage = (event) => {
+        sseEventSource.onmessage = (event) => {
             logger.info("Received message", event.data);
             const key = event.data.requestId
-            const data = JSON.parse(event.data)
-            const keyedMsg = JSON.stringify({...data, key: key});
-            setMessages((prevMessages) => [...prevMessages, keyedMsg]);
+            try {
+                const data = JSON.parse(event.data)
+                const keyedMsg = JSON.stringify({...data, key: key});
+                setMessages((prevMessages) => [...prevMessages, keyedMsg]);
+            } catch (e) {
+                const keyedMsg = JSON.stringify({data: event.data, key: key});
+                setMessages((prevMessages) => [...prevMessages, keyedMsg]);
+            }
         };
     }, []);
 
     useEffect(() => {
-        webSocket.onerror = (event) => {
-            const msg = "Websocket error occurred";
+        sseEventSource.onerror = () => {
+            const msg = "SSE error occurred";
             const key = Date.now()
             const keyedMsg = JSON.stringify({msg, key: key})
             logger.info(msg);
@@ -42,29 +47,19 @@ export default function WebsocketTerminal(props: { url: any }) {
     }, []);
 
     useEffect(() => {
-        webSocket.onopen = (event) => {
-            const msg = "Websocket connection opened"
+        sseEventSource.onopen = () => {
+            const msg = "SSE connection opened"
             const key = Date.now()
             const keyedMsg = JSON.stringify({msg, key: key})
             logger.info(msg);
             setMessages((prevMessages) => [...prevMessages, keyedMsg]);
         };
     }, []);
-
-    useEffect(() => {
-        webSocket.onclose = (event) => {
-            const msg = "Websocket connection closed"
-            const key = Date.now()
-            const keyedMsg = JSON.stringify({msg, key: key})
-            logger.info(msg);
-            setMessages((prevMessages) => [...prevMessages, keyedMsg]);
-        };
-    }, []);
-
 
     return (
         <div>
             <Terminal messages={messages}></Terminal>
         </div>
     );
+
 }
