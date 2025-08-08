@@ -12,6 +12,9 @@ import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import io.aeron.Aeron;
 import io.aeron.RethrowingErrorHandler;
 import io.aeron.cluster.client.AeronCluster;
@@ -52,6 +55,7 @@ public class SSEApplication extends Jooby {
     private static AgentRunner agentRunner;
     private static AeronCluster aeronCluster;
     private static MediaDriver mediaDriver;
+    private static final ObjectWriter writer = new ObjectMapper().writer();
 
     public static void main(final String[] args) {
         System.out.println("Starting SSE interface");
@@ -103,7 +107,12 @@ public class SSEApplication extends Jooby {
                     serverSentEmitter.close();
 
             final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
-                serverSentEmitter.send("message", cacheUpdateEvent);
+                try {
+                    final var res = writer.writeValueAsString(cacheUpdateEvent);
+                    serverSentEmitter.send("message", res);
+                } catch (JsonProcessingException e) {
+                    log.error("Error trying to convert cache update event to JSON", e);
+                }
             };
 
             subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, serverSentEmitter.getId(),
@@ -112,6 +121,7 @@ public class SSEApplication extends Jooby {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
         }
     }
+
 
     private static void handleMultiCacheSSE(ServerSentEmitter serverSentEmitter) {
         var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
