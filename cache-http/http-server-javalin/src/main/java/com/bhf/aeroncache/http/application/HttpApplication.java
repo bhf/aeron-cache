@@ -166,7 +166,8 @@ public class HttpApplication {
         var requestPublication = aeron.addPublication(requestPublicationChannel,
                 requestPublicationStream);
 
-        var responseSubscriptionChannel = "aeron:udp?endpoint=:8007|alias=AC-unclustered-responses";
+        var hostname = DNSUtils.getThisHostName();
+        var responseSubscriptionChannel = "aeron:udp?endpoint="+hostname+":8007|alias=AC-unclustered-responses";
         int responseSubscriptionStream = 2;
         var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
                 responseSubscriptionStream);

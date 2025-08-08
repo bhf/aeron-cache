@@ -19,10 +19,12 @@ public class UnclusteredServiceAgent implements Agent {
 
     private final String httpRequestsChannel;
     private final String wsRequestsChannel;
+    private final String sseRequestsChannel;
     private final int requestsStream;
 
     private final String httpResponseChannel;
     private final String wsResponseChannel;
+    private final String sseResponseChannel;
     private final int responseStream;
 
     private Subscription httpRequestsSubscription;
@@ -30,6 +32,10 @@ public class UnclusteredServiceAgent implements Agent {
 
     private Subscription wsRequestsSubscription;
     private Publication wsResponsePublication;
+
+    private Subscription sseRequestsSubscription;
+    private Publication sseResponsePublication;
+
     private FragmentHandler fragmentHandler;
     private FragmentAssembler assembler;
     private long msgCount = 0;
@@ -38,21 +44,11 @@ public class UnclusteredServiceAgent implements Agent {
     public void onStart() {
         log.info("Starting unclustered Aeron Cache");
 
-        httpRequestsSubscription = aeron.addSubscription(httpRequestsChannel, requestsStream);
-        wsRequestsSubscription = aeron.addSubscription(wsRequestsChannel, requestsStream);
-        while (!httpRequestsSubscription.isConnected() && !wsRequestsSubscription.isConnected()) {
-            aeron.context().idleStrategy().idle();
-        }
-
+        initialiseRequests();
         log.info("Request subscription connected, http: {}, ws: {}", httpRequestsSubscription.isConnected(),
                 wsRequestsSubscription.isConnected());
 
-        httpResponsePublication = aeron.addPublication(httpResponseChannel, responseStream);
-        wsResponsePublication = aeron.addPublication(wsResponseChannel, responseStream);
-        while (!httpResponsePublication.isConnected() && !wsResponsePublication.isConnected()) {
-            aeron.context().idleStrategy().idle();
-        }
-
+        initialiseResponses();
         log.info("Response publication connected, http: {}, ws: {}", httpResponsePublication.isConnected(),
                 wsResponsePublication.isConnected());
 
@@ -63,21 +59,54 @@ public class UnclusteredServiceAgent implements Agent {
         assembler = new FragmentAssembler(fragmentHandler);
     }
 
+    /**
+     * Initialise the response publications and wait for at least
+     * one of them to be connected so that we can send responses and stream.
+     */
+    private void initialiseResponses() {
+        httpResponsePublication = aeron.addPublication(httpResponseChannel, responseStream);
+        wsResponsePublication = aeron.addPublication(wsResponseChannel, responseStream);
+        sseResponsePublication = aeron.addPublication(sseResponseChannel, responseStream);
+
+        while (!httpResponsePublication.isConnected() && !wsResponsePublication.isConnected()
+                && !sseResponsePublication.isConnected()) {
+            aeron.context().idleStrategy().idle();
+        }
+    }
+
+    /**
+     * Initialise the request subscriptions and wait for at least
+     * one of them to be connected so that we can accept requests.
+     */
+    private void initialiseRequests() {
+        httpRequestsSubscription = aeron.addSubscription(httpRequestsChannel, requestsStream);
+        wsRequestsSubscription = aeron.addSubscription(wsRequestsChannel, requestsStream);
+        sseRequestsSubscription = aeron.addSubscription(sseRequestsChannel, requestsStream);
+
+        while (!httpRequestsSubscription.isConnected() && !wsRequestsSubscription.isConnected()
+                && !sseRequestsSubscription.isConnected()) {
+            aeron.context().idleStrategy().idle();
+        }
+    }
+
+    private Subscription currentlyPollingSubscription;
+    private Publication matchingResponsePublication;
+
     private ClientSession getClientSession() {
         return new ClientSession() {
             @Override
             public long id() {
-                return httpResponsePublication.sessionId();
+                return matchingResponsePublication.sessionId();
             }
 
             @Override
             public int responseStreamId() {
-                return httpResponsePublication.streamId();
+                return matchingResponsePublication.streamId();
             }
 
             @Override
             public String responseChannel() {
-                return httpResponsePublication.channel();
+                return matchingResponsePublication.channel();
             }
 
             @Override
@@ -88,38 +117,76 @@ public class UnclusteredServiceAgent implements Agent {
             @Override
             public void close() {
                 httpResponsePublication.close();
+                wsResponsePublication.close();
             }
 
             @Override
             public boolean isClosing() {
-                return httpResponsePublication.isClosed();
+                return currentlyPollingSubscription.isClosed();
             }
 
             @Override
             public long offer(DirectBuffer buffer, int offset, int length) {
-                while(wsResponsePublication.offer(buffer, offset, length)<0){
-                    aeron.context().idleStrategy().idle();
+                long responseCodeHttp = -10;
+                if (httpResponsePublication.isConnected()) {
+                    while ((responseCodeHttp = httpResponsePublication.offer(buffer, offset, length)) < 0) {
+                        aeron.context().idleStrategy().idle();
+                    }
                 }
 
-                return httpResponsePublication.offer(buffer, offset, length);
+                long responseCodeWs = -10;
+                if (wsResponsePublication.isConnected()) {
+                    while ((responseCodeWs = wsResponsePublication.offer(buffer, offset, length)) < 0) {
+                        aeron.context().idleStrategy().idle();
+                    }
+                }
+
+                long responseCodeSse = -10;
+                if (sseResponsePublication.isConnected()) {
+                    while ((responseCodeSse = sseResponsePublication.offer(buffer, offset, length)) < 0) {
+                        aeron.context().idleStrategy().idle();
+                    }
+                }
+
+                return responseCodeWs;
             }
 
             @Override
             public long offer(DirectBufferVector[] vectors) {
-                return httpResponsePublication.offer(vectors);
+                throw new UnsupportedOperationException();
             }
 
             @Override
             public long tryClaim(int length, BufferClaim bufferClaim) {
-                return httpResponsePublication.tryClaim(length, bufferClaim);
+                throw new UnsupportedOperationException();
             }
         };
     }
 
     @Override
     public int doWork() throws Exception {
-        wsRequestsSubscription.poll(assembler, Integer.MAX_VALUE);
-        return httpRequestsSubscription.poll(assembler, Integer.MAX_VALUE);
+
+        int res = 0;
+
+        if (wsRequestsSubscription.isConnected()) {
+            currentlyPollingSubscription = wsRequestsSubscription;
+            matchingResponsePublication = wsResponsePublication;
+            res = wsRequestsSubscription.poll(assembler, 10);
+        }
+
+        if (httpRequestsSubscription.isConnected()) {
+            currentlyPollingSubscription = httpRequestsSubscription;
+            matchingResponsePublication = httpResponsePublication;
+            res = httpRequestsSubscription.poll(assembler, 10);
+        }
+
+        if (sseRequestsSubscription.isConnected()) {
+            currentlyPollingSubscription = sseRequestsSubscription;
+            matchingResponsePublication = sseResponsePublication;
+            res = sseRequestsSubscription.poll(assembler, 10);
+        }
+
+        return res;
     }
 
     @Override

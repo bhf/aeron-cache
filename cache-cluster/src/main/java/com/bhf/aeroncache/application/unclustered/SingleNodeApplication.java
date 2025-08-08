@@ -48,15 +48,18 @@ public class SingleNodeApplication {
 
         final var httpRequests = "aeron:udp?endpoint="+hostname+":8008|alias=AC-unclustered-http-requests";
         final var wsRequests = "aeron:udp?endpoint="+hostname+":7008|alias=AC-unclustered-ws-requests";
+        final var sseRequests = "aeron:udp?endpoint="+hostname+":6008|alias=AC-unclustered-sse-requests";
         final int requestStream = 1;
 
         var httpResponseHost = System.getenv("HTTP_RESPONSE_PUB_HOST");
         var wsResponseHost = System.getenv("WS_RESPONSE_PUB_HOST");
+        var sseResponseHost = System.getenv("SSE_RESPONSE_PUB_HOST");
 
         System.out.println("HTTP Response host: "+httpResponseHost);
         System.out.println("WS Response host: "+wsResponseHost);
+        System.out.println("SSE Response host: "+sseResponseHost);
 
-        final List<String> hostAddresses = List.of(httpResponseHost, wsResponseHost);
+        final List<String> hostAddresses = List.of(httpResponseHost, wsResponseHost, sseResponseHost);
 
         for (int i = 0; i < hostAddresses.size(); i++) {
             DNSUtils.awaitDnsResolution(hostAddresses, i);
@@ -66,11 +69,12 @@ public class SingleNodeApplication {
 
         final var httpResponses = "aeron:udp?endpoint="+httpResponseHost+":8007|alias=AC-unclustered-http-responses";
         final var wsResponses = "aeron:udp?endpoint="+wsResponseHost+":7007|alias=AC-unclustered-ws-responses";
+        final var sseResponses = "aeron:udp?endpoint="+sseResponseHost+":6007|alias=AC-unclustered-sse-responses";
         final int responsesStream = 2;
 
         final UnclusteredServiceAgent serverAgent = new UnclusteredServiceAgent(aeron, service, httpRequests,
-                wsRequests, requestStream,
-                httpResponses, wsResponses, responsesStream);
+                wsRequests, sseRequests, requestStream,
+                httpResponses, wsResponses, sseResponses, responsesStream);
         final AgentRunner serverAgentRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace,
                 null, serverAgent);
         AgentRunner.startOnThread(serverAgentRunner);
