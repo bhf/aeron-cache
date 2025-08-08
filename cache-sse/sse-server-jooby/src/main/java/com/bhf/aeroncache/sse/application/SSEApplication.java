@@ -139,13 +139,13 @@ public class SSEApplication extends Jooby {
 
     private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {
 
-        var requestPublicationChannel = "aeron:udp?endpoint=" + requestPubHost + ":7008|alias=AC-unclustered-requests";
+        var requestPublicationChannel = "aeron:udp?endpoint=" + requestPubHost + ":6008|alias=AC-unclustered-requests";
         int requestPublicationStream = 1;
         var requestPublication = aeron.addPublication(requestPublicationChannel,
                 requestPublicationStream);
 
         var hostname = DNSUtils.getThisHostName();
-        String responseSubscriptionChannel = "aeron:udp?endpoint=" + hostname + ":7007|alias=AC-unclustered-responses";
+        String responseSubscriptionChannel = "aeron:udp?endpoint=" + hostname + ":6007|alias=AC-unclustered-responses";
         int responseSubscriptionStream = 2;
         var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
                 responseSubscriptionStream);

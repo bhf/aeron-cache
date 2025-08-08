@@ -20,8 +20,8 @@ export default function Terminal({messages}: TerminalProps) {
 
     return (
         <div
-            className="flex flex-col h-[500px] w-full max-w-3xl bg-[#1e1e1e] rounded-lg overflow-hidden font-mono text-white">
-            <div className="flex-1 overflow-auto p-4">
+            className="flex flex-col h-[800px] w-full max-w-3xl bg-[#1e1e1e] rounded-lg overflow-hidden font-mono text-white">
+            <div className="flex-1 overflow-auto p-2">
                 <div className="space-y-2">
                     {responses}
                     <div className="flex items-center gap-2">

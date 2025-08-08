@@ -192,7 +192,7 @@ public class WebsocketApplication {
         Agent serverAgent = new Agent() {
             @Override
             public int doWork() throws Exception {
-                return responseSubscription.poll(egressFragmentHandler, Integer.MAX_VALUE);
+                return responseSubscription.poll(egressFragmentHandler, 10);
             }
 
             @Override
@@ -209,7 +209,7 @@ public class WebsocketApplication {
     }
 
     private static void buildClusterConnection(String egressIP, String ingressEndpoints) {
-        aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient",
+        aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "WSClient",
                 mediaDriver);
         //addClusterErrorHandler(aeronCluster);
 
