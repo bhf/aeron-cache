@@ -118,6 +118,7 @@ public class UnclusteredServiceAgent implements Agent {
             public void close() {
                 httpResponsePublication.close();
                 wsResponsePublication.close();
+                sseResponsePublication.close();
             }
 
             @Override
@@ -127,21 +128,21 @@ public class UnclusteredServiceAgent implements Agent {
 
             @Override
             public long offer(DirectBuffer buffer, int offset, int length) {
-                long responseCodeHttp = -10;
+                long responseCodeHttp = 0;
                 if (httpResponsePublication.isConnected()) {
                     while ((responseCodeHttp = httpResponsePublication.offer(buffer, offset, length)) < 0) {
                         aeron.context().idleStrategy().idle();
                     }
                 }
 
-                long responseCodeWs = -10;
+                long responseCodeWs = 0;
                 if (wsResponsePublication.isConnected()) {
                     while ((responseCodeWs = wsResponsePublication.offer(buffer, offset, length)) < 0) {
                         aeron.context().idleStrategy().idle();
                     }
                 }
 
-                long responseCodeSse = -10;
+                long responseCodeSse = 0;
                 if (sseResponsePublication.isConnected()) {
                     while ((responseCodeSse = sseResponsePublication.offer(buffer, offset, length)) < 0) {
                         aeron.context().idleStrategy().idle();

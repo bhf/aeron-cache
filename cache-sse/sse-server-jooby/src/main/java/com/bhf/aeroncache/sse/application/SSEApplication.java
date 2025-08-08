@@ -19,6 +19,9 @@ import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.FragmentHandler;
 import io.jooby.*;
 import io.jooby.exception.TypeMismatchException;
+import io.jooby.handler.Cors;
+import io.jooby.handler.CorsHandler;
+import io.jooby.jackson.JacksonModule;
 import io.jooby.netty.NettyServer;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.CloseHelper;
@@ -59,6 +62,8 @@ public class SSEApplication extends Jooby {
     }
 
     {
+        install(new JacksonModule());
+        use(new CorsHandler(new Cors().setOrigin("http://localhost:3000")));
         sse(API_PREFIX + "{cacheId}", SSEApplication::handleSingleCacheSSE);
         sse(MULTI_SUB_API_PREFIX + "{cacheIds}", SSEApplication::handleMultiCacheSSE);
         get(LIVENESS, SSEApplication::handleGetLiveness);
@@ -98,11 +103,7 @@ public class SSEApplication extends Jooby {
                     serverSentEmitter.close();
 
             final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
-                ServerSentMessage msg =
-                        new ServerSentMessage(cacheUpdateEvent)
-                                .setEvent(cacheUpdateEvent.eventType().toString())
-                                .setId(cacheUpdateEvent.requestId());
-                serverSentEmitter.send(msg);
+                serverSentEmitter.send("message", cacheUpdateEvent);
             };
 
             subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, serverSentEmitter.getId(),
@@ -124,12 +125,8 @@ public class SSEApplication extends Jooby {
             final Consumer<Void> subscriptionFailureHandler = _ ->
                     serverSentEmitter.close();
 
-            Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
-                ServerSentMessage msg =
-                        new ServerSentMessage(cacheUpdateEvent)
-                                .setEvent(cacheUpdateEvent.eventType().toString())
-                                .setId(cacheUpdateEvent.requestId());
-                serverSentEmitter.send(msg);
+            final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
+                serverSentEmitter.send("message", cacheUpdateEvent);
             };
 
             subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, serverSentEmitter.getId(),
