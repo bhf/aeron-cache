@@ -17,6 +17,7 @@ opentelemetry = "1.49.0"
 micrometer = "1.14.6"
 micrometer-javalin = "6.6.0"
 lmax-disruptor = "3.4.2"
+jooby = "4.0.4"
 
 [libraries]
 log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
@@ -38,6 +39,9 @@ opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporte
 micrometer-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer"}
 micrometer-javalin = { module = "io.javalin:javalin-micrometer", version.ref = "micrometer-javalin"}
 lmax-disruptor = { module = "com.lmax:disruptor", version.ref = "lmax-disruptor"}
+jooby-kotlin = { module = "io.jooby:jooby-kotlin", version.ref = "jooby"}
+jooby-netty = { module = "io.jooby:jooby-netty", version.ref = "jooby"}
+jooby-jackson = { module = "io.jooby:jooby-jackson", version.ref = "jooby"}
 
 [plugins]
 sbegenerator = { id = "com.github.vontikov.sbe-generator-plugin", version.ref = "sbegenerator" }

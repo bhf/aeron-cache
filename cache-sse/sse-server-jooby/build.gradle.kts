@@ -21,9 +21,9 @@ dependencies {
     implementation(libs.opentelemetry.api)
     implementation(libs.opentelemetry.sdk)
     implementation(libs.opentelemetry.exporter.otlp)
-    implementation("io.jooby:jooby-kotlin:4.0.4")
-    implementation("io.jooby:jooby-netty:4.0.3")
-    implementation("io.jooby:jooby-jackson:4.0.5")
+    implementation(libs.jooby.kotlin)
+    implementation(libs.jooby.netty)
+    implementation(libs.jooby.jackson)
 
     agent("io.opentelemetry.javaagent:opentelemetry-javaagent:2.15.0")
     extension("io.opentelemetry.contrib:opentelemetry-samplers:1.46.0-alpha") {
