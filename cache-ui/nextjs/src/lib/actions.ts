@@ -31,7 +31,7 @@ export async function getWebsocketURL() {
 }
 
 export async function getSSEURL(): Promise<string> {
-    return process.env.AERON_CACHE_SSE_API ? process.env.AERON_CACHE_SSE_API : "localhost:7072";
+    return process.env.AERON_CACHE_SSE_API ? process.env.AERON_CACHE_SSE_API : "http://localhost:7072";
 }
 
 /**
