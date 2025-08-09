@@ -11,16 +11,19 @@ Containerized and deployable with ```docker compose``` or on Kubernetes via ```h
 
 MCP server via AutoMCP for use with LLMs and AI Agents.
 
-
-
 https://github.com/user-attachments/assets/6f9a52bb-2251-42a0-8163-b8d8501e5c80
-
-
-
 
 https://github.com/user-attachments/assets/f0418dbc-2da5-477e-8b8b-cb783836d712
 
-
+* [How To Run - Docker](#docker)
+* [How To Run - Minikube](#minikube)
+* [How To Run - K8s/Helm](#helm-charts)
+* [Multi-cache Subscriptions](#subscribe-to-multiple-caches)
+* [Project Structure](#structure)
+* [Overview](#overview)
+* [Profiling](#profiling)
+* [Testing](#testing)
+* [Roadmap](#future-work)
 
 ## How To Run
 
@@ -52,6 +55,10 @@ cache-ui-1              |  ✓ Starting...
 * Jaeger tracing on localhost:16686
 * Prometheus on localhost:9090
 * cAdvisor on localhost:8080
+
+You can also spin up a single node cache by using ```docker-compose-nonclustered.yaml```
+
+[Top](#aeron-cache)
 
 ### Minikube
 
@@ -121,6 +128,8 @@ optimus@optimus-lab:~/Workspaces/aeron-cache/cache-ui$ kubectl logs aeroncache-u
 
 ```
 
+[Top](#aeron-cache)
+
 ### Helm Charts
 
 In ```/k8s/helm/``` there are some Helm charts which are a work in progress (missing ancillary telemetry services and awaiting DNS resolution for UI readiness probe).
@@ -138,13 +147,25 @@ helm --namespace default upgrade -i aeroncache-ui-nextjs aeroncache-ui-nextjs/
 This will result in a cache-cluster with 3 pods, an instance of the HTTP interface running in a single pod as a statefulset and an
 instance of the websocket interface also running in a single pod as a statefulset. The UI should also be running as a replicaset with an LB.
 
-## Subscribe to Multiple Caches over Websocket
+[Top](#aeron-cache)
+
+## Subscribe to Multiple Caches
 
 To subscribe to cache updates on caches with IDs 808 and 333:
+
 
 ```bash
 uwsc http://localhost:7071/api/ws/v1/caches/808,333
 ```
+
+You can also do this over SSE:
+
+```bash
+http://localhost:7072/api/sse/v1/caches/808,333
+```
+
+[Top](#aeron-cache)
+
 ## Structure
 
 __cache-client__ - An Aeron cluster based client for the cache.
@@ -171,7 +192,7 @@ __k8s__ - Helm charts and other K8s resources (work in progress)
 
 __hyperfoil__ - Some basic hyperfoil tests
 
-
+[Top](#aeron-cache)
 
 ## Overview
 
@@ -187,6 +208,8 @@ __hyperfoil__ - Some basic hyperfoil tests
 
 ![img_1.png](docs/images/client-flow.png)
 
+[Top](#aeron-cache)
+
 ## Profiling
 
 Adding entries in a tight loop:
@@ -194,6 +217,8 @@ Adding entries in a tight loop:
 ![img.png](docs/images/profilingTelemetry.png)
 
 ![img_1.png](docs/images/allocationTree.png)
+
+[Top](#aeron-cache)
 
 ## Testing
 
@@ -213,8 +238,12 @@ There are a handful of JMH tests in ```cache-cluster``` and in ```cache-client``
 There are approx 20 HTTP based integration tests (including param variation) using JUnit and 
 RestAssured in ```:cache-http:http-integration-tests``` which cover the main functionality offered by the HTTP API. 
 
+[Top](#aeron-cache)
+
 ## Future Work
 
 * Industrialization and cache-ops
 
 https://sanjdev.atlassian.net/jira/software/projects/AC/boards/22
+
+[Top](#aeron-cache)
