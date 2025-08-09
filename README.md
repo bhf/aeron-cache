@@ -3,12 +3,12 @@
 
 *__Written and designed without LLMs or AI Agents.__*
 
-A clustered cache built using Aeron, Agrona and SBE. UI with NextJS, Shadcn and Tailwind. 
+A key value store built using Aeron, Agrona and SBE. RAFT clustered by default. UI with NextJS, Shadcn and Tailwind. 
 Includes HTTP, WS and SSE interfaces with support for multi-cache joins over WS and SSE. 
 Prometheus+cAdvisor and tracing with Jaeger+OTEL. 
 Containerized and deployable with ```docker compose``` or on Kubernetes via ```helm``` or ```kubectl```.
 
-MCP server via AutoMCP for use with LLMs and AI Agents.
+Includes an MCP server to power your Agentic AI and LLM workflows.
 
 https://github.com/user-attachments/assets/6f9a52bb-2251-42a0-8163-b8d8501e5c80
 
