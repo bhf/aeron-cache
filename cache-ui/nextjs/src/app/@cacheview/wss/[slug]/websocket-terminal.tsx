@@ -51,7 +51,7 @@ export default function WebsocketTerminal(props: { url: any }) {
 
     return (
         <div>
-            <Terminal messages={messages} isConnected></Terminal>
+            <Terminal messages={messages} isConnected={isConnected}></Terminal>
         </div>
     );
 }
