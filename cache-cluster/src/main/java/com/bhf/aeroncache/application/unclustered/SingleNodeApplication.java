@@ -27,7 +27,6 @@ import java.util.function.Consumer;
 public class SingleNodeApplication {
 
     public static void main(String[] args) {
-        final IdleStrategy idleStrategy = new SleepingIdleStrategy();
 
         final MediaDriver.Context mediaDriverCtx = new MediaDriver.Context()
                 .dirDeleteOnStart(true)
@@ -75,6 +74,7 @@ public class SingleNodeApplication {
         final UnclusteredServiceAgent serverAgent = new UnclusteredServiceAgent(aeron, service, httpRequests,
                 wsRequests, sseRequests, requestStream,
                 httpResponses, wsResponses, sseResponses, responsesStream);
+        final IdleStrategy idleStrategy = SingleNodeIdleStrategies.unclusteredAgentIdleStrategy;
         final AgentRunner serverAgentRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace,
                 null, serverAgent);
         AgentRunner.startOnThread(serverAgentRunner);

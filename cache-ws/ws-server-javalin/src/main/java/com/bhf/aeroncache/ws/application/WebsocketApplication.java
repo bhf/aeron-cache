@@ -126,18 +126,20 @@ public class WebsocketApplication {
             }
 
             System.out.println("Building cluster agent for websocket service");
-            var idleStrategy = new BackoffIdleStrategy();
+            var clusterClientAgentIdleStrategy = WsIdleStrategies.clusterClientAgentIdleStrategy;
+            var clusterMessagePublisherIdleStrategy = WsIdleStrategies.clusterMessagePublisherIdleStrategy;
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
-                    new ClusterClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
-                            new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent") :
-                    new CacheClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
-                            new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
+                    new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
+                            clusterMessagePublisherIdleStrategy), "AeronCache-CacheClient-Agent") :
+                    new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
+                            clusterMessagePublisherIdleStrategy), "AeronCache-CacheClient-Agent");
 
             var errorHandler = aeronCluster != null ? ClusterUtils.getAgentRunnerErrorHandler(aeronCluster) :
                     new RethrowingErrorHandler();
             var errorCounter = aeronCluster != null ? ClusterUtils.getAgentErrorCounter(aeronCluster, "WSClient") :
                     null;
-            agentRunner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
+            final IdleStrategy agentRunnerIdleStrategy = WsIdleStrategies.agentRunnerIdleStrategy;
+            agentRunner = new AgentRunner(agentRunnerIdleStrategy, errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(agentRunner);
         } catch (Exception e) {
@@ -201,7 +203,8 @@ public class WebsocketApplication {
             }
         };
 
-        final AgentRunner serverAgentRunner = new AgentRunner(aeron.context().idleStrategy(),
+        IdleStrategy unclusteredAgentIdleStrategy = WsIdleStrategies.unclusteredAgentIdleStrategy;
+        final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy,
                 Throwable::printStackTrace,
                 null, serverAgent);
 
