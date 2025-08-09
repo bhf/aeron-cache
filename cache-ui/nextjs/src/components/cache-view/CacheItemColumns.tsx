@@ -3,10 +3,10 @@
 import {ColumnDef} from "@tanstack/react-table"
 import {CacheInfo} from "@/lib/types";
 import {RemoveCacheItem} from "@/app/@cacheview/cache/[slug]/RemoveCacheItem";
+import CopyToClipboard from "@/components/cache-view/CopyToClipboard";
 
 
-
-export function getCacheItemColumns(cacheId: number):ColumnDef<CacheInfo>[] {
+export function getCacheItemColumns(cacheId: number): ColumnDef<CacheInfo>[] {
     return [
         {
             accessorKey: "key",
@@ -19,11 +19,16 @@ export function getCacheItemColumns(cacheId: number):ColumnDef<CacheInfo>[] {
         {
             id: "actions",
             header: "Actions",
-            cell: ({ row }) => {
+            cell: ({row}) => {
                 const itemKey = row.getValue("key")
+                const itemValue = row.getValue("value")
 
                 return (
-                    <RemoveCacheItem cacheId={cacheId} itemKey={itemKey as string}></RemoveCacheItem>
+                    <div>
+                        <RemoveCacheItem cacheId={cacheId} itemKey={itemKey as string}></RemoveCacheItem>asd
+                        <CopyToClipboard value={itemValue as string} tooltip={"Copy Value"} element={"Value"}></CopyToClipboard>
+                        <CopyToClipboard value={itemKey as string} tooltip={"Copy Key"} element={"Value"}></CopyToClipboard>
+                    </div>
                 )
             },
         },
@@ -48,12 +53,21 @@ export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
     {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => {
+        cell: ({row}) => {
             const itemKey = row.getValue("key")
             const cacheId = row.getValue("cacheId")
+            const itemValue = row.getValue("value")
 
             return (
-                    <RemoveCacheItem cacheId={cacheId as number} itemKey={itemKey as string}></RemoveCacheItem>
+                <div className={"flex flex-row space-x-2 mb-2"}>
+                    <div className={"pr-5"}>
+                        <RemoveCacheItem cacheId={cacheId as number} itemKey={itemKey as string}></RemoveCacheItem>
+                    </div>
+                    <CopyToClipboard value={itemKey as string} tooltip={"Copy Key"} element={"Key"}></CopyToClipboard>
+                    <CopyToClipboard value={itemValue as string} tooltip={"Copy Value"}
+                                     element={"Value"}></CopyToClipboard>
+
+                </div>
             )
         },
     },

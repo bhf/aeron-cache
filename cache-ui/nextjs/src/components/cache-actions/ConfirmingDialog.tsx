@@ -9,7 +9,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import {DeleteIcon, RecycleIcon, Trash2Icon} from "lucide-react";
+import {RecycleIcon, Trash2Icon, XIcon} from "lucide-react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,} from "@/components/ui/tooltip"
 
 interface ConfirmingDialogProps {
@@ -39,7 +39,7 @@ export function ConfirmingDialog(props: ConfirmingDialogProps) {
         actionTriggerElement = <RecycleIcon className="size-5"/>
     }
     else if (isRemove) {
-        actionTriggerElement = <DeleteIcon className="size-5"/>
+        actionTriggerElement = <XIcon className="size-5"/>
     }
 
     const isCacheAction = isDelete || isClear || isRemove;
