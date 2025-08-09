@@ -144,6 +144,28 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
       - OTEL_JAVAAGENT_LOGGING=none
       - CACHE_MODE=RAFT
+  cache-sse-client:
+    shm_size: '1gb'
+    build:
+      context: cache-sse/sse-server-jooby
+      dockerfile: ./Dockerfile
+    depends_on:
+      - node0
+      - node1
+      - node2
+    networks:
+      internal_bus:
+        ipv4_address: 172.16.202.12
+    ports:
+      - 7072:7072
+    environment:
+      - CLUSTER_ADDRESSES=node0,node1,node2
+      - EGRESS_IP=172.16.202.5
+      - OTEL_SERVICE_NAME=aeron-cache-ws
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_JAVAAGENT_LOGGING=none
+      - CACHE_MODE=RAFT
+      - REQUEST_PUB_HOST=node0
   cache-ui:
     build:
       context: cache-ui/nextjs

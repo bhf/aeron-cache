@@ -72,6 +72,7 @@ services:
       - CACHE_MODE=SINGLE
       - HTTP_RESPONSE_PUB_HOST=cache-http-client
       - WS_RESPONSE_PUB_HOST=cache-ws-client
+      - SSE_RESPONSE_PUB_HOST=cache-sse-client
   cache-http-client:
     shm_size: '1gb'
     build:
@@ -105,6 +106,25 @@ services:
       - 7071:7071
     environment:
       - OTEL_SERVICE_NAME=aeron-cache-ws
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_JAVAAGENT_LOGGING=none
+      - CLUSTER_ADDRESSES=node0
+      - CACHE_MODE=SINGLE
+      - REQUEST_PUB_HOST=node0
+  cache-sse-client:
+    shm_size: '1gb'
+    build:
+      context: cache-sse/sse-server-jooby
+      dockerfile: ./Dockerfile
+    depends_on:
+      - node0
+    networks:
+      internal_bus:
+        ipv4_address: 172.16.202.12
+    ports:
+      - 7072:7072
+    environment:
+      - OTEL_SERVICE_NAME=aeron-cache-sse
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
       - OTEL_JAVAAGENT_LOGGING=none
       - CLUSTER_ADDRESSES=node0
