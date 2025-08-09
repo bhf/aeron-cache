@@ -1,8 +1,10 @@
 interface TerminalProps {
-    messages?: string[]
+    messages?: string[],
+    isConnected?: boolean,
+    errorMsg?: string | null
 }
 
-export default function Terminal({messages}: TerminalProps) {
+export default function Terminal({messages, isConnected, errorMsg}: TerminalProps) {
 
     let responses
     if (messages) {

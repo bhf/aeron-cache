@@ -30,7 +30,7 @@ export async function getWebsocketURL() {
     return process.env.AERON_CACHE_WS_API ? process.env.AERON_CACHE_WS_API : "ws:localhost:5000";
 }
 
-export async function getSSEURL() {
+export async function getSSEURL(): Promise<string> {
     return process.env.AERON_CACHE_SSE_API ? process.env.AERON_CACHE_SSE_API : "localhost:7072";
 }
 
@@ -58,8 +58,8 @@ export async function createCacheRequest(currentState: { message: string, error:
 
         // revalidate the endpoint from which we get all available caches
         revalidateTag("AllCaches")
-        revalidatePath(await getCacheAPIURI()+"/stats")
-        revalidatePath(await getCacheAPIURI()+"/caches")
+        revalidatePath(await getCacheAPIURI() + "/stats")
+        revalidatePath(await getCacheAPIURI() + "/caches")
 
         return {message: "Successfully created cache", error: false};
     } catch (err) {
@@ -83,8 +83,8 @@ export async function deleteCacheRequest(cacheId: number) {
         );
         const content = await rawResponse.json();
         logger.info("Got response from sending request to delete cache ", content)
-        revalidatePath(await getCacheAPIURI()+"/stats")
-        revalidatePath(await getCacheAPIURI()+"/caches")
+        revalidatePath(await getCacheAPIURI() + "/stats")
+        revalidatePath(await getCacheAPIURI() + "/caches")
         return content
     } catch (err) {
         logger.error("Error whilst sending request to delete cache ", err);
@@ -106,7 +106,7 @@ export async function clearCacheRequest(cacheId: number) {
         );
         const content = await rawResponse.json();
         logger.info("Got response from sending request to clear cache ", content)
-        revalidatePath(await getCacheAPIURI()+"/stats")
+        revalidatePath(await getCacheAPIURI() + "/stats")
         return content
     } catch (err) {
         logger.error("Error whilst sending request to clear cache ", err);
@@ -140,7 +140,7 @@ export async function addItemToCacheRequest(formState: { message: string; error:
 
         // revalidate the endpoint from which we get this cache's data
         revalidateTag("Cache-" + cacheId)
-        revalidatePath(await getCacheAPIURI()+"/stats")
+        revalidatePath(await getCacheAPIURI() + "/stats")
 
         return {message: "Successfully added item", error: false};
     } catch (err) {
@@ -165,7 +165,7 @@ export async function removeItemFromCacheRequest(props: { cacheId: number, key: 
         );
         const content = await rawResponse.json();
         logger.info("Got response from sending request to remove item on key " + props.key + ", response:" + content)
-        revalidatePath(await getCacheAPIURI()+"/stats")
+        revalidatePath(await getCacheAPIURI() + "/stats")
         return content
     } catch (err) {
         logger.error("Error whilst sending request to remove item ", err);
