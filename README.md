@@ -3,7 +3,7 @@
 
 *__Written and designed without LLMs or AI Agents.__*
 
-A key value store built using Aeron, Agrona and SBE. RAFT clustered by default. UI with NextJS, Shadcn and Tailwind. 
+A key value store built using Aeron, Agrona and SBE. RAFT clustered and fast by default. UI with NextJS, Shadcn and Tailwind. 
 Includes HTTP, WS and SSE interfaces with support for multi-cache joins over WS and SSE. 
 Prometheus+cAdvisor and tracing with Jaeger+OTEL. 
 Containerized and deployable with ```docker compose``` or on Kubernetes via ```helm``` or ```kubectl```.
