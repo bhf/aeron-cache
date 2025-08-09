@@ -200,7 +200,8 @@ public class SSEApplication extends Jooby {
             }
         };
 
-        final AgentRunner serverAgentRunner = new AgentRunner(aeron.context().idleStrategy(),
+        IdleStrategy unclusteredAgentIdleStrategy = SSEIdleStrategies.unclusteredAgentIdleStrategy;
+        final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy,
                 Throwable::printStackTrace,
                 null, serverAgent);
 
@@ -296,18 +297,20 @@ public class SSEApplication extends Jooby {
             }
 
             System.out.println("Building cluster agent for SSE service");
-            var idleStrategy = new BackoffIdleStrategy();
+            var clusterClientAgentIdleStrategy = SSEIdleStrategies.clusterClientAgentIdleStrategy;
+            var clusterMessagePublisherIdleStrategy = SSEIdleStrategies.clusterMessagePublisherIdleStrategy;
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
-                    new ClusterClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
-                            new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent") :
-                    new CacheClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
-                            new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
+                    new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
+                            clusterMessagePublisherIdleStrategy), "AeronCache-CacheClient-Agent") :
+                    new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
+                            clusterMessagePublisherIdleStrategy), "AeronCache-CacheClient-Agent");
 
             var errorHandler = aeronCluster != null ? ClusterUtils.getAgentRunnerErrorHandler(aeronCluster) :
                     new RethrowingErrorHandler();
             var errorCounter = aeronCluster != null ? ClusterUtils.getAgentErrorCounter(aeronCluster, "SSEClient") :
                     null;
-            agentRunner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
+            final IdleStrategy agentRunnerIdleStrategy = SSEIdleStrategies.agentRunnerIdleStrategy;
+            agentRunner = new AgentRunner(agentRunnerIdleStrategy, errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(agentRunner);
         } catch (Exception e) {

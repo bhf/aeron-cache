@@ -84,15 +84,16 @@ public class HttpApplication {
         var app = startHTTPServer();
 
         try {
-            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
+            final ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             System.out.println("Starting AeronCache Cluster Interface");
 
             if (PRE_ENCODE_CACHE_REQUESTS) {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
                 // sending directly to the cluster
                 CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cache, rb);
+
                 BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cache,
-                        new BusySpinIdleStrategy());
+                        HttpIdleStrategies.blockingPublisherIdleStrategy);
                 observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher,
                         blockingRequestPublisher);
             } else {
@@ -140,18 +141,20 @@ public class HttpApplication {
             }
 
             System.out.println("Building cluster agent for http service");
-            var idleStrategy = new BackoffIdleStrategy();
+            var clusterClientAgentIdleStrategy = HttpIdleStrategies.clusterClientAgentIdleStrategy;
+            var clusterMessagePublisherIdleStrategy = HttpIdleStrategies.clusterMessagePublisherIdleStrategy;
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
-                    new ClusterClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
-                            new BusySpinIdleStrategy()), "AeronCache-ClusterClient-Agent") :
-                    new CacheClientAgent(cache, rb, idleStrategy, new ClusterMessagePublisher(cache,
-                            new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
+                    new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
+                            clusterMessagePublisherIdleStrategy), "AeronCache-ClusterClient-Agent") :
+                    new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
+                            clusterMessagePublisherIdleStrategy), "AeronCache-CacheClient-Agent");
 
             var errorHandler = aeronCluster != null ? ClusterUtils.getAgentRunnerErrorHandler(aeronCluster) :
                     new RethrowingErrorHandler();
             var errorCounter = aeronCluster != null ? ClusterUtils.getAgentErrorCounter(aeronCluster, "HTTPClient") :
                     null;
-            agentRunner = new AgentRunner(new YieldingIdleStrategy(), errorHandler, errorCounter, agent);
+            final IdleStrategy agentRunnerIdleStrategy = HttpIdleStrategies.agentRunnerIdleStrategy;
+            agentRunner = new AgentRunner(agentRunnerIdleStrategy, errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(agentRunner);
         } catch (Exception e) {
@@ -215,7 +218,8 @@ public class HttpApplication {
             }
         };
 
-        final AgentRunner serverAgentRunner = new AgentRunner(aeron.context().idleStrategy(),
+        IdleStrategy unclusteredAgentIdleStrategy = HttpIdleStrategies.unclusteredAgentIdleStrategy;
+        final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy,
                 Throwable::printStackTrace,
                 null, serverAgent);
 
