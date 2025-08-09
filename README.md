@@ -1,6 +1,5 @@
-![img.png](docs/images/header.png)
-
 # Aeron Cache
+![img.png](docs/images/header.png)
 
 *__Written and designed without LLMs or AI Agents.__*
 
