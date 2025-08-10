@@ -185,7 +185,7 @@ public final class AllCacheStatsResultEncoder
             final int limit = parentMessage.limit();
             initialLimit = limit;
             parentMessage.limit(limit + HEADER_SIZE);
-            buffer.putShort(limit + 0, (short)40, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putShort(limit + 0, (short)32, java.nio.ByteOrder.LITTLE_ENDIAN);
             buffer.putShort(limit + 2, (short)count, java.nio.ByteOrder.LITTLE_ENDIAN);
         }
 
@@ -228,7 +228,7 @@ public final class AllCacheStatsResultEncoder
 
         public static int sbeBlockLength()
         {
-            return 40;
+            return 32;
         }
 
         public static int addedId()
@@ -444,19 +444,9 @@ public final class AllCacheStatsResultEncoder
             return 25;
         }
 
-        public static int cacheIdSinceVersion()
+        public static String cacheIdCharacterEncoding()
         {
-            return 0;
-        }
-
-        public static int cacheIdEncodingOffset()
-        {
-            return 32;
-        }
-
-        public static int cacheIdEncodingLength()
-        {
-            return 8;
+            return "UTF-8";
         }
 
         public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
@@ -469,27 +459,69 @@ public final class AllCacheStatsResultEncoder
             return "";
         }
 
-        public static long cacheIdNullValue()
+        public static int cacheIdHeaderLength()
         {
-            return -9223372036854775808L;
+            return 4;
         }
 
-        public static long cacheIdMinValue()
+        public StatsEncoder putCacheId(final DirectBuffer src, final int srcOffset, final int length)
         {
-            return -9223372036854775807L;
-        }
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
 
-        public static long cacheIdMaxValue()
-        {
-            return 9223372036854775807L;
-        }
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putBytes(limit + headerLength, src, srcOffset, length);
 
-        public StatsEncoder cacheId(final long value)
-        {
-            buffer.putLong(offset + 32, value, java.nio.ByteOrder.LITTLE_ENDIAN);
             return this;
         }
 
+        public StatsEncoder putCacheId(final byte[] src, final int srcOffset, final int length)
+        {
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+            return this;
+        }
+
+        public StatsEncoder cacheId(final String value)
+        {
+            final byte[] bytes;
+            try
+            {
+                bytes = null == value || value.isEmpty() ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes("UTF-8");
+            }
+            catch (final java.io.UnsupportedEncodingException ex)
+            {
+                throw new RuntimeException(ex);
+            }
+
+            final int length = bytes.length;
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putBytes(limit + headerLength, bytes, 0, length);
+
+            return this;
+        }
     }
 
     public static int requestIdId()

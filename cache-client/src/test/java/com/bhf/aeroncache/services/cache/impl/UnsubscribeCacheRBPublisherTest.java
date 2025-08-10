@@ -38,7 +38,7 @@ class UnsubscribeCacheRBPublisherTest {
     @DisplayName("Should throw NPE on null requestId without interacting with RingBuffer when unsubscribing too cache")
     void shouldThrowExceptionOnNullRequestId(String requestId) {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
 
         // Act + Assert
         Assertions.assertThrows(NullPointerException.class,
@@ -51,7 +51,7 @@ class UnsubscribeCacheRBPublisherTest {
     @DisplayName("Should abort claim on RingBuffer on RuntimeException when unsubscribing too cache")
     void shouldAbortOnRingBufferOnException() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         when(rb.buffer()).thenThrow(RuntimeException.class);
 
@@ -67,7 +67,7 @@ class UnsubscribeCacheRBPublisherTest {
     @DisplayName("Should commit claim on RingBuffer when unsubscribing too cache")
     void shouldCommitClaimOnRBWhenUnsubscribingCache() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         var mockBuffer = Mockito.mock(AtomicBuffer.class);
         when(rb.buffer()).thenReturn(mockBuffer);

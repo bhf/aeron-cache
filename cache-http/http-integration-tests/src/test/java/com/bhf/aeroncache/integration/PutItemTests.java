@@ -19,8 +19,8 @@ import static io.restassured.RestAssured.given;
 class PutItemTests {
 
     private static final String PUT_ITEM_ENDPOINT = "/api/v1/cache/";
-    private static final int KNOWN_CACHE_ID = 1;
-    private static final int UNKNOWN_CACHE_ID = 123;
+    private static final String KNOWN_CACHE_ID = "1";
+    private static final String UNKNOWN_CACHE_ID = "123";
     private static final String KNOWN_KEY = "SomeKey";
     private static final String KNOWN_VALUE = "SomeValue";
 
@@ -33,8 +33,7 @@ class PutItemTests {
 
     public static Stream<Arguments> provideBadParamsToPutItem() {
         return Stream.of(
-                Arguments.of("wrongFieldName", 1),
-                Arguments.of("cacheId", "not a number"));
+                Arguments.of("wrongFieldName", 1));
     }
 
     @ParameterizedTest

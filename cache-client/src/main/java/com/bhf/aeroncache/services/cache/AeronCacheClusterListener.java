@@ -1,10 +1,10 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
+import com.bhf.aeroncache.handlers.ClusterSessionEventHandler;
 import com.bhf.aeroncache.handlers.NoOpClusterSessionEventHandler;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.client.EgressListener;
@@ -16,7 +16,6 @@ import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
-import com.bhf.aeroncache.handlers.ClusterSessionEventHandler;
 
 /**
  * Decode SBE messages related to cache requests and pass the result
@@ -46,17 +45,17 @@ public class AeronCacheClusterListener implements EgressListener {
     private final CacheUnsubscribeResponseDecoder cacheUnsubscribeResponseDecoder = new CacheUnsubscribeResponseDecoder();
     private final CacheEntryUpdateDecoder cacheEntryUpdateDecoder = new CacheEntryUpdateDecoder();
 
-    private final CreateCacheResult<ReusableLong> createCacheResult = new CreateCacheResult<>(SupplierUtils.longSupplier.get());
-    private final AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult = new AddCacheEntryResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get());
-    private final ClearCacheResult<ReusableLong> clearCacheResult = new ClearCacheResult<>(SupplierUtils.longSupplier.get());
-    private final DeleteCacheResult<ReusableLong> deleteCacheResult = new DeleteCacheResult<>(SupplierUtils.longSupplier.get());
-    private final RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult = new RemoveCacheEntryResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get());
-    private final GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult = new GetCacheEntryResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
-    private final GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult = new GetAllCacheEntriesResult<>(SupplierUtils.longSupplier.get());
-    private final CacheStatsResult<ReusableLong> cacheStatsResult = new CacheStatsResult<>();
-    private final CacheSubscriptionResult<ReusableLong> cacheSubscriptionResult = new CacheSubscriptionResult<>(SupplierUtils.longSupplier.get());
-    private final CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult = new CacheUnsubscribeResult<>(SupplierUtils.longSupplier.get());
-    private final CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult = new CacheEntryUpdateResult<>(SupplierUtils.longSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
+    private final CreateCacheResult<ReusableString> createCacheResult = new CreateCacheResult<>(SupplierUtils.stringSupplier.get());
+    private final AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult = new AddCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
+    private final ClearCacheResult<ReusableString> clearCacheResult = new ClearCacheResult<>(SupplierUtils.stringSupplier.get());
+    private final DeleteCacheResult<ReusableString> deleteCacheResult = new DeleteCacheResult<>(SupplierUtils.stringSupplier.get());
+    private final RemoveCacheEntryResult<ReusableString, ReusableString> removeCacheEntryResult = new RemoveCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
+    private final GetCacheEntryResult<ReusableString, ReusableString, ReusableString> getCacheEntryResult = new GetCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
+    private final GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> getCacheEntriesResult = new GetAllCacheEntriesResult<>(SupplierUtils.stringSupplier.get());
+    private final CacheStatsResult<ReusableString> cacheStatsResult = new CacheStatsResult<>();
+    private final CacheSubscriptionResult<ReusableString> cacheSubscriptionResult = new CacheSubscriptionResult<>(SupplierUtils.stringSupplier.get());
+    private final CacheUnsubscribeResult<ReusableString> cacheUnsubscribeResult = new CacheUnsubscribeResult<>(SupplierUtils.stringSupplier.get());
+    private final CacheEntryUpdateResult<ReusableString, ReusableString, ReusableString> cacheEntryUpdateResult = new CacheEntryUpdateResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
 
     private final ClusterSessionEventHandler sessionEventHandler = new NoOpClusterSessionEventHandler();
 

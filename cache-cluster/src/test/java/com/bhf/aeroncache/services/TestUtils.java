@@ -81,7 +81,7 @@ public class TestUtils {
      * @param sut
      * @param header
      */
-    public static void createCache(long cacheId, ClientSession session, CreateCacheEncoder createCacheEncoder,
+    public static void createCache(String cacheId, ClientSession session, CreateCacheEncoder createCacheEncoder,
                                    MessageHeaderEncoder headerEncoder, MutableDirectBuffer requestBuffer,
                                    SBEDecodingCacheClusterService sut, Header header) {
         var requestId = UUID.randomUUID().toString();

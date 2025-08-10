@@ -42,7 +42,7 @@ class RemoveEntryPublisherTest {
     @DisplayName("Should correctly encode remove entry request and offer to cluster")
     void shouldEncodeRemvoveEntryRequestAndOfferToCluster() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         var key = "someKey";
 
@@ -73,7 +73,7 @@ class RemoveEntryPublisherTest {
     @DisplayName("Should poll egress pending blocking remove entry request")
     void shouldPollEgressAndIdlePendingRemoveEntryRequest() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         var key = "someKey";
         when(cluster.pollEgress()).thenReturn(1);

@@ -10,5 +10,5 @@ import java.util.List;
  * @param operationStatus The status of the operation.
  * @param items The items in the cache.
  */
-public record GetCacheResponse(long cacheId, OperationStatus operationStatus, List<CacheItem> items) {
+public record GetCacheResponse(String cacheId, OperationStatus operationStatus, List<CacheItem> items) {
 }

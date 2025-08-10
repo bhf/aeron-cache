@@ -29,7 +29,7 @@ class CacheResponseMapObserversTest {
     void shouldCallExistingObserversForCacheEntryResult() {
         // Arrange
         var requestId = UUID.randomUUID().toString();
-        long cacheId = 123L;
+        var cacheId = "123L";
         var key = "someKey";
         var resultConsumer = Mockito.mock(Consumer.class);
         sut.getCacheEntry(requestId, cacheId, key, resultConsumer);
@@ -55,7 +55,7 @@ class CacheResponseMapObserversTest {
     void shouldCallExistingObserversForCacheEntriesResult() {
         // Arrange
         var requestId = UUID.randomUUID().toString();
-        long cacheId = 123L;
+        var cacheId = "123L";
         var resultConsumer = Mockito.mock(Consumer.class);
         sut.getCacheEntries(requestId, cacheId, resultConsumer);
         sut.getCacheEntriesConsumer = resultConsumer;
@@ -80,7 +80,7 @@ class CacheResponseMapObserversTest {
     void shouldCallExistingObserversForCacheCreatedResult() {
         // Arrange
         var requestId = UUID.randomUUID().toString();
-        long cacheId = 123L;
+        var cacheId = "123L";
         var resultConsumer = Mockito.mock(Consumer.class);
         sut.sendCreateCache(requestId, cacheId, resultConsumer);
         sut.createCacheConsumer = resultConsumer;
@@ -105,7 +105,7 @@ class CacheResponseMapObserversTest {
     void shouldCallExistingObserversForCacheEntryCreatedResult() {
         // Arrange
         var requestId = UUID.randomUUID().toString();
-        long cacheId = 123L;
+        var cacheId = "123L";
         var resultConsumer = Mockito.mock(Consumer.class);
         sut.addCacheEntry(requestId, cacheId, "someKey", "someValue", resultConsumer);
         sut.addCacheEntryConsumer = resultConsumer;
@@ -130,7 +130,7 @@ class CacheResponseMapObserversTest {
     void shouldCallExistingObserversForCacheEntryRemovedResult() {
         // Arrange
         var requestId = UUID.randomUUID().toString();
-        long cacheId = 123L;
+        var cacheId = "123L";
         var resultConsumer = Mockito.mock(Consumer.class);
         sut.removeCacheEntry(requestId, cacheId, "someKey", resultConsumer);
         sut.removeCacheEntryConsumer = resultConsumer;
@@ -155,7 +155,7 @@ class CacheResponseMapObserversTest {
     void shouldCallExistingObserversForCacheClearedResult() {
         // Arrange
         var requestId = UUID.randomUUID().toString();
-        long cacheId = 123L;
+        var cacheId = "123L";
         var resultConsumer = Mockito.mock(Consumer.class);
         sut.clearCache(requestId, cacheId, resultConsumer);
         sut.clearCacheConsumer = resultConsumer;
@@ -180,7 +180,7 @@ class CacheResponseMapObserversTest {
     void shouldCallExistingObserversForCacheDeletedResult() {
         // Arrange
         var requestId = UUID.randomUUID().toString();
-        long cacheId = 123L;
+        var cacheId = "123L";
         var resultConsumer = Mockito.mock(Consumer.class);
         sut.deleteCache(requestId, cacheId, resultConsumer);
         sut.deleteCacheConsumer = resultConsumer;
@@ -228,7 +228,7 @@ class CacheResponseMapObserversTest {
         // Arrange
         var requestId = UUID.randomUUID().toString();
         var resultConsumer = Mockito.mock(Consumer.class);
-        var cacheId = 123L;
+        var cacheId = "123L";
         sut.sendCacheSubscribe(requestId, cacheId, resultConsumer);
 
         var result = Mockito.mock(CacheSubscriptionResult.class);
@@ -251,7 +251,7 @@ class CacheResponseMapObserversTest {
         // Arrange
         var requestId = UUID.randomUUID().toString();
         var resultConsumer = Mockito.mock(Consumer.class);
-        var cacheId = 123L;
+        var cacheId = "123L";
         sut.sendCacheUnsubscribe(requestId, cacheId, resultConsumer);
 
         var result = Mockito.mock(CacheUnsubscribeResult.class);

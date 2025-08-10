@@ -20,7 +20,7 @@ public class CacheTestUtils {
      *
      * @param cacheId The ID of the cache to create.
      */
-    public static void createCache(int cacheId) {
+    public static void createCache(String cacheId) {
         JSONObject jsonObj = new JSONObject().put("cacheId", cacheId);
         given()
                 .contentType(ContentType.JSON)
@@ -36,7 +36,7 @@ public class CacheTestUtils {
      * @param key     The key to add the item against.
      * @param value   The value to add.
      */
-    public static void addItem(int cacheId, String key, String value) {
+    public static void addItem(String cacheId, String key, String value) {
         JSONObject jsonObj = new JSONObject()
                 .put("cacheId", cacheId)
                 .put("key", key)
@@ -56,7 +56,7 @@ public class CacheTestUtils {
      * @param cacheId The cache from which to remove the item.
      * @param key     The key of the item to be removed.
      */
-    public static void removeItem(int cacheId, String key) {
+    public static void removeItem(String cacheId, String key) {
         given()
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
@@ -68,7 +68,7 @@ public class CacheTestUtils {
      *
      * @param cacheId THe cache to be deleted.
      */
-    public static void deleteCache(int cacheId) {
+    public static void deleteCache(String cacheId) {
         JSONObject jsonObj = new JSONObject().put("cacheId", cacheId);
         given()
                 .contentType(ContentType.JSON)

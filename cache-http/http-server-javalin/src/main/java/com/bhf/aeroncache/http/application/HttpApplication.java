@@ -18,7 +18,6 @@ import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
-import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
@@ -47,7 +46,9 @@ import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.CloseHelper;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentRunner;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.io.File;
@@ -354,7 +355,7 @@ public class HttpApplication {
                     totalCaches++;
                     totalItems += x.size;
                     allCaches.add(x.getCacheId().value());
-                    cacheToSize.put(x.getCacheId().getValue(), x.size);
+                    cacheToSize.put(x.getCacheId().value(), x.size);
                 }
 
                 var statsTrackerStats = statsTracker.getCacheStats();
@@ -376,8 +377,8 @@ public class HttpApplication {
         }
     }
 
-    final static HashSet<Long> allCaches = new HashSet<>();
-    final static Map<Long, Long> cacheToSize = new ConcurrentHashMap<>();
+    final static HashSet<String> allCaches = new HashSet<>();
+    final static Map<String, Long> cacheToSize = new ConcurrentHashMap<>();
 
     /**
      * Handle getting details of available caches. Currently only
@@ -388,7 +389,7 @@ public class HttpApplication {
     private static void handleGetCachesRequest(Context context) {
         log.info("Got request to get all cache details");
         List<CacheDetails> cacheDetails = new ArrayList<>();
-        for (Long l : allCaches) {
+        for (var l : allCaches) {
             var itemCount = cacheToSize.getOrDefault(l, 0L);
             cacheDetails.add(new CacheDetails(l, itemCount));
         }
@@ -454,7 +455,7 @@ public class HttpApplication {
 
             var requestId = getRequestId(ctx);
             CompletableFuture<DeleteCacheResponse> future = new CompletableFuture<>();
-            CompletableFuture.runAsync(() -> observingPublisher.deleteCache(requestId, Long.parseLong(cacheId), c -> {
+            CompletableFuture.runAsync(() -> observingPublisher.deleteCache(requestId, cacheId, c -> {
                 var deletedCacheId = c.getCacheId();
                 log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
                 var response = new DeleteCacheResponse(deletedCacheId.value(), c.getStatus());
@@ -474,7 +475,7 @@ public class HttpApplication {
             var errorMsg = STR."Badly formed request to delete cache with Id: \{ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID,
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
                     OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
@@ -489,7 +490,7 @@ public class HttpApplication {
      */
     private static void handleDeleteItemRequest(Context ctx) {
         try {
-            var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
+            var cacheId = ctx.pathParam("cacheId");
             var key = ctx.pathParam("key");
             log.info("Got delete item request on cacheId {}, key {}",
                     cacheId, key);
@@ -515,7 +516,7 @@ public class HttpApplication {
                     STR."Badly formed request to delete item with key \{ctx.pathParam("key")} from cache with Id: \{ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID,
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
                     OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
@@ -529,7 +530,7 @@ public class HttpApplication {
      */
     private static void handleClearCacheRequest(Context ctx) {
         try {
-            var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
+            var cacheId = ctx.pathParam("cacheId");
             log.info("Got clear request on cacheId {}", cacheId);
 
             var requestId = getRequestId(ctx);
@@ -560,7 +561,7 @@ public class HttpApplication {
      */
     private static void handleGetItemRequest(Context ctx) {
         try {
-            var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
+            var cacheId = ctx.pathParam("cacheId");
             var key = ctx.pathParam("key");
             log.info("Got get item request on cacheId {}, key {}",
                     cacheId, key);
@@ -572,7 +573,7 @@ public class HttpApplication {
                         c.getEntryKey(), c.getEntryValue());
                 var noCache = c.getStatus() == OperationStatus.UNKNOWN_CACHE;
                 var response = noCache ?
-                        new GetItemResponse(0, "NA", "NA", c.getStatus()) :
+                        new GetItemResponse("0", "NA", "NA", c.getStatus()) :
                         new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(),
                                 c.getEntryValue().value(), c.getStatus());
                 future.complete(response);
@@ -586,7 +587,7 @@ public class HttpApplication {
                     STR."Badly formed request to get item with key \{ctx.pathParam("key")} from cache with Id: \{ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.USE_NUMERIC_CACH_ID,
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
                     OperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
@@ -610,7 +611,7 @@ public class HttpApplication {
                     request.key(), request.value(), c -> {
                         var cacheId = c.getCacheId();
                         log.info("Got put item response from cluster on cacheId {}", cacheId);
-                        var response = new PutItemResponse(cacheId.getValue(), request.key(), c.getStatus());
+                        var response = new PutItemResponse(cacheId.value(), request.key(), c.getStatus());
                         future.complete(response);
                     }));
 
@@ -647,7 +648,7 @@ public class HttpApplication {
             CompletableFuture.runAsync(() -> observingPublisher.sendCreateCache(requestId, request.cacheId(), c -> {
                 var cacheId = c.getCacheId();
                 log.info("Got create cache response from cluster on cacheId {}", cacheId);
-                var response = new CreateCacheResponse(cacheId.getValue(), c.getStatus());
+                var response = new CreateCacheResponse(cacheId.value(), c.getStatus());
                 future.complete(response);
             }));
 
@@ -677,7 +678,7 @@ public class HttpApplication {
      */
     private static void handleGetCacheRequest(Context ctx) {
         try {
-            var cacheId = Long.parseLong(ctx.pathParam("cacheId"));
+            var cacheId = ctx.pathParam("cacheId");
             log.info("Got get cache content request on cacheId {}", cacheId);
 
             var requestId = getRequestId(ctx);
@@ -686,8 +687,8 @@ public class HttpApplication {
                 log.info("Get cache content response from cluster on cacheId {}", c.getCacheId());
                 var noCache = c.getStatus() == OperationStatus.UNKNOWN_CACHE;
                 var response = noCache ?
-                        new GetCacheResponse(0, OperationStatus.UNKNOWN_CACHE, List.of()) :
-                        new GetCacheResponse(0, c.getStatus(), buildItemsList(c));
+                        new GetCacheResponse("0", OperationStatus.UNKNOWN_CACHE, List.of()) :
+                        new GetCacheResponse("0", c.getStatus(), buildItemsList(c));
                 future.complete(response);
             }));
 
@@ -704,7 +705,7 @@ public class HttpApplication {
         }
     }
 
-    private static List<CacheItem> buildItemsList(GetAllCacheEntriesResult<ReusableLong, ReusableString,
+    private static List<CacheItem> buildItemsList(GetAllCacheEntriesResult<ReusableString, ReusableString,
             ReusableString> c) {
         List<CacheItem> res = new ArrayList<>();
         c.getValues().forEach((key, value) -> {

@@ -20,37 +20,37 @@ public class ObservingClusterRequestPublisher extends ObservingCacheRequestPubli
     }
 
     @Override
-    public void sendCreateCacheBlocking(String requestId, long cacheId) {
+    public void sendCreateCacheBlocking(String requestId, String cacheId) {
         blockingPublisher.sendCreateCacheBlocking(requestId, cacheId);
     }
 
     @Override
-    public void addCacheEntryBlocking(String requestId, long cacheId, String key, String value) {
+    public void addCacheEntryBlocking(String requestId, String cacheId, String key, String value) {
         blockingPublisher.addCacheEntryBlocking(requestId, cacheId, key, value);
     }
 
     @Override
-    public void getCacheEntryBlocking(String requestId, long cacheId, String key) {
+    public void getCacheEntryBlocking(String requestId, String cacheId, String key) {
         blockingPublisher.getCacheEntryBlocking(requestId, cacheId, key);
     }
 
     @Override
-    public void clearCacheBlocking(String requestId, long cacheId) {
+    public void clearCacheBlocking(String requestId, String cacheId) {
         blockingPublisher.clearCacheBlocking(requestId, cacheId);
     }
 
     @Override
-    public void deleteCacheBlocking(String requestId, long cacheId) {
+    public void deleteCacheBlocking(String requestId, String cacheId) {
         blockingPublisher.deleteCacheBlocking(requestId, cacheId);
     }
 
     @Override
-    public void removeCacheEntryBlocking(String requestId, long cacheId, String key) {
+    public void removeCacheEntryBlocking(String requestId, String cacheId, String key) {
         blockingPublisher.removeCacheEntryBlocking(requestId, cacheId, key);
     }
 
     @Override
-    public void getCacheEntriesBlocking(String requestId, long cacheId) {
+    public void getCacheEntriesBlocking(String requestId, String cacheId) {
         blockingPublisher.getCacheEntriesBlocking(requestId, cacheId);
     }
 
@@ -60,12 +60,12 @@ public class ObservingClusterRequestPublisher extends ObservingCacheRequestPubli
     }
 
     @Override
-    public void sendCacheSubscribeBlocking(String requestId, long cacheId) {
+    public void sendCacheSubscribeBlocking(String requestId, String cacheId) {
         blockingPublisher.sendCacheSubscribeBlocking(requestId, cacheId);
     }
 
     @Override
-    public void sendCacheUnsubscribeBlocking(String requestId, long cacheId) {
+    public void sendCacheUnsubscribeBlocking(String requestId, String cacheId) {
         blockingPublisher.sendCacheUnsubscribeBlocking(requestId, cacheId);
     }
 

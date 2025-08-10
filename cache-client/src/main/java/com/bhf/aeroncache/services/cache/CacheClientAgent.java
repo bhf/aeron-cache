@@ -38,15 +38,15 @@ public class CacheClientAgent extends AbstractClientAgent {
             switch (msgTypeId) {
                 case CREATE_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cacheId = buffer.getLong(index + requestId.length() + 4);
+                    var cacheId = buffer.getStringUtf8(index + requestId.length() + 4);
                     log.debug("CREATE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
                     getPublisher().sendCreateCache(requestId, cacheId);
                 }
                 case ADD_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
-                    var cacheId = buffer.getLong(cumulativeReadPosition);
-                    cumulativeReadPosition += 8;
+                    var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
+                    cumulativeReadPosition += cacheId.length() + 4;
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
                     cumulativeReadPosition += key.length() + 4;
                     var value = buffer.getStringUtf8(cumulativeReadPosition);
@@ -56,43 +56,43 @@ public class CacheClientAgent extends AbstractClientAgent {
                 case GET_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
-                    var cacheId = buffer.getLong(cumulativeReadPosition);
-                    cumulativeReadPosition += 8;
+                    var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
+                    cumulativeReadPosition += cacheId.length() + 4;
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("GET CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", to get key=" + key);
                     getPublisher().getCacheEntry(requestId, cacheId, key);
                 }
                 case CLEAR_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cacheId = buffer.getLong(index + requestId.length() + 4);
+                    var cacheId = buffer.getStringUtf8(index + requestId.length() + 4);
                     log.debug("CLEAR CACHE Request has ID " + requestId + ", to clear on cache ID " + cacheId);
                     getPublisher().clearCache(requestId, cacheId);
                 }
                 case DELETE_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
-                    var cacheId = buffer.getLong(cumulativeReadPosition);
+                    var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("DELETE CACHE Request has ID " + requestId + ", to delete cache ID " + cacheId);
                     getPublisher().deleteCache(requestId, cacheId);
                 }
                 case GET_CACHE_ENTRIES_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
-                    var cacheId = buffer.getLong(cumulativeReadPosition);
+                    var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("GET CACHE ENTRIES Request has ID " + requestId + ", on cache ID " + cacheId);
                     getPublisher().getCacheEntries(requestId, cacheId);
                 }
                 case SUBSCRIBE_TO_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
-                    var cacheId = buffer.getLong(cumulativeReadPosition);
+                    var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("SUBSCRIBE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
                     getPublisher().sendCacheSubscribe(requestId, cacheId);
                 }
                 case UNSUBSCRIBE_TO_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
-                    var cacheId = buffer.getLong(cumulativeReadPosition);
+                    var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("UNSUBSCRIBE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
                     getPublisher().sendCacheUnsubscribe(requestId, cacheId);
                 }
@@ -104,8 +104,8 @@ public class CacheClientAgent extends AbstractClientAgent {
                 case REMOVE_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
-                    var cacheId = buffer.getLong(cumulativeReadPosition);
-                    cumulativeReadPosition += 8;
+                    var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
+                    cumulativeReadPosition += cacheId.length() + 4;
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("REMOVE CACHE ENTRY Request has ID " + requestId + ", cache ID " + cacheId + ", remove key=" + key);
                     getPublisher().removeCacheEntry(requestId, cacheId, key);

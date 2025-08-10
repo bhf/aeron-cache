@@ -30,7 +30,9 @@ import io.jooby.netty.NettyServer;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.CloseHelper;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentRunner;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.util.List;
@@ -93,7 +95,7 @@ public class SSEApplication extends Jooby {
 
     private static void handleSingleCacheSSE(ServerSentEmitter serverSentEmitter) {
         try {
-            var cacheId = serverSentEmitter.getContext().path("cacheId").longValue();
+            var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
             var requestId = UUID.randomUUID().toString();
             log.info("Subscription request for cacheId: {} on SSE sessionId: {}", cacheId, serverSentEmitter.getId());
 
@@ -129,9 +131,8 @@ public class SSEApplication extends Jooby {
         log.info("Got cache Ids: "+cacheIds);
         String[] caches = cacheIds.split(",");
         for (var c : caches) {
-            var cacheId = Long.parseLong(c);
             var requestId = UUID.randomUUID().toString();
-            log.info("Subscription request for cacheId: {} on SSE sessionId: {}", cacheId,
+            log.info("Subscription request for cacheId: {} on SSE sessionId: {}", c,
                     serverSentEmitter.getId());
             final Consumer<Void> subscriptionFailureHandler = _ ->
                     serverSentEmitter.close();
@@ -140,7 +141,7 @@ public class SSEApplication extends Jooby {
                 serverSentEmitter.send("message", cacheUpdateEvent);
             };
 
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, serverSentEmitter.getId(),
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, serverSentEmitter.getId(),
                     requestId, consumer);
         }
     }

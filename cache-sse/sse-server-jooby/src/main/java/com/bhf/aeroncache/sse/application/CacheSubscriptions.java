@@ -6,6 +6,6 @@ import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import java.util.function.Consumer;
 
 public interface CacheSubscriptions {
-    void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, long cacheId,
+    void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, String cacheId,
                           String sseSessionId, String requestId, Consumer<CacheUpdateEvent> consumer);
 }

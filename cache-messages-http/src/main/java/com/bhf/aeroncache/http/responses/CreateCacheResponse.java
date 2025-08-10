@@ -7,6 +7,6 @@ import com.bhf.aeroncache.messages.OperationStatus;
  * @param cacheId The ID of the cache.
  * @param operationStatus The status of the operation.
  */
-public record CreateCacheResponse(long cacheId, OperationStatus operationStatus) {
+public record CreateCacheResponse(String cacheId, OperationStatus operationStatus) {
 
 }

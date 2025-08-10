@@ -19,8 +19,8 @@ import static io.restassured.RestAssured.given;
 class DeleteCacheTests {
 
     private static final String DELETE_CACHE_ENDPOINT = "/api/v1/cache/";
-    private static final int KNOWN_CACHE_ID = 1;
-    private static final int UNKNOWN_CACHE_ID = 123;
+    private static final String KNOWN_CACHE_ID = "1";
+    private static final String UNKNOWN_CACHE_ID = "123";
 
     @BeforeAll
     static void setup() {
@@ -90,8 +90,7 @@ class DeleteCacheTests {
 
     public static Stream<Arguments> provideBadParamsToDeleteCache() {
         return Stream.of(
-                Arguments.of("wrongFieldName", 1),
-                Arguments.of("cacheId", "not a number"));
+                Arguments.of("unknownField", "not a number"));
     }
 
 }

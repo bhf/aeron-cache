@@ -9,7 +9,7 @@ import com.bhf.aeroncache.models.results.CacheStatsResult;
 import com.bhf.aeroncache.services.TestUtils;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
-import com.bhf.aeroncache.types.ReusableLong;
+import com.bhf.aeroncache.types.ReusableString;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.logbuffer.Header;
 import org.agrona.ExpandableArrayBuffer;
@@ -32,8 +32,6 @@ import static org.mockito.Mockito.verify;
  */
 class GetCacheStatsTest {
 
-    private static final long MAX_SBE_LONG = Long.MAX_VALUE;
-    private static final long MIN_SBE_LONG = -Long.MAX_VALUE;
     private final Header header = new Header(0, 0);
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
@@ -41,7 +39,7 @@ class GetCacheStatsTest {
     private final AllCacheStatsResultDecoder allCacheStatsResultDecoder = new AllCacheStatsResultDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
-    private CacheStatsResult<ReusableLong> result;
+    private CacheStatsResult<ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
     private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
@@ -58,9 +56,9 @@ class GetCacheStatsTest {
 
     @ParameterizedTest
     @DisplayName("Should return cache stats for known caches")
-    @ValueSource(longs = {0, MAX_SBE_LONG, MIN_SBE_LONG})
+    @ValueSource(strings = {"testCacheId"})
     @HappyPath
-    void shouldGetEntriesFromKnownCache(long cacheId) {
+    void shouldGetEntriesFromKnownCache(String cacheId) {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);

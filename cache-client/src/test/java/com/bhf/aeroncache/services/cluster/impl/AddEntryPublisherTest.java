@@ -42,7 +42,7 @@ class AddEntryPublisherTest {
     @DisplayName("Should correctly encode add entry request and offer to cluster")
     void shouldEncodeAddEntryRequestAndOfferToCluster() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         var key = "someKey";
         var value = "someValue";
@@ -75,7 +75,7 @@ class AddEntryPublisherTest {
     @DisplayName("Should poll egress pending blocking add cache entry request")
     void shouldPollEgressAndIdlePendingAddCacheEntryRequest() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         var key = "someKey";
         var value = "someValue";

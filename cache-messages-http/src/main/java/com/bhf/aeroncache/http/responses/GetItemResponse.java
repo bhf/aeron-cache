@@ -10,5 +10,5 @@ import com.bhf.aeroncache.messages.OperationStatus;
  * @param value           The value of the item.
  * @param operationStatus The status of the operation.
  */
-public record GetItemResponse(long cacheId, String key, String value, OperationStatus operationStatus) {
+public record GetItemResponse(String cacheId, String key, String value, OperationStatus operationStatus) {
 }

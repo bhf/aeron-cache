@@ -8,14 +8,14 @@ import org.agrona.MutableDirectBuffer;
  */
 public class CacheRequestEncoder {
 
-    public static int encodeCreateCacheRequest(CreateCacheEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, long cacheId) {
+    public static int encodeCreateCacheRequest(CreateCacheEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, String cacheId) {
         encoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId)
                 .requestId(requestId);
         return encoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
-    public static int encodeAddCacheEntry(AddCacheEntryEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, long cacheId, String key, String value) {
+    public static int encodeAddCacheEntry(AddCacheEntryEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, String cacheId, String key, String value) {
         encoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId)
                 .requestId(requestId)
@@ -24,43 +24,43 @@ public class CacheRequestEncoder {
         return encoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
-    public static int encodeGetCacheEntry(GetCacheEntryEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, long cacheId, String key) {
+    public static int encodeGetCacheEntry(GetCacheEntryEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, String cacheId, String key) {
         encoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).key(key).requestId(requestId);
         return encoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
-    public static int encodeClearCache(ClearCacheEncoder clearCacheEncoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, long cacheId) {
+    public static int encodeClearCache(ClearCacheEncoder clearCacheEncoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, String cacheId) {
         clearCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         return clearCacheEncoder.encodedLength()+headerEncoder.encodedLength();
     }
 
-    public static int encodeDeleteCache(DeleteCacheEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, long cacheId) {
+    public static int encodeDeleteCache(DeleteCacheEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, String cacheId) {
         encoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         return encoder.encodedLength()+headerEncoder.encodedLength();
     }
 
-    public static int encodeRemoveCacheEntry(RemoveCacheEntryEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, long cacheId, String key) {
+    public static int encodeRemoveCacheEntry(RemoveCacheEntryEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, String cacheId, String key) {
         encoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).key(key).requestId(requestId);
         return encoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
-    public static int encodeGetCacheEntries(GetAllCacheEntriesEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, long cacheId) {
+    public static int encodeGetCacheEntries(GetAllCacheEntriesEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, String cacheId) {
         encoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         return encoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
-    public static int encodeCacheSubscribe(CacheSubscriptionRequestEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, long cacheId) {
+    public static int encodeCacheSubscribe(CacheSubscriptionRequestEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, String cacheId) {
         encoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         return encoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
-    public static int encodeCacheUnsubscribe(CacheUnsubscribeRequestEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, long cacheId) {
+    public static int encodeCacheUnsubscribe(CacheUnsubscribeRequestEncoder encoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, String requestId, String cacheId) {
         encoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         return encoder.encodedLength()+headerEncoder.encodedLength();

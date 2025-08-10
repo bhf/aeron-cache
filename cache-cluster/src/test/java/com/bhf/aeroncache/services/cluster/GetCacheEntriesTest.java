@@ -9,7 +9,6 @@ import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
 import com.bhf.aeroncache.services.TestUtils;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
-import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.ClientSession;
@@ -36,8 +35,6 @@ import static org.mockito.Mockito.verify;
  */
 class GetCacheEntriesTest {
 
-    private static final long MAX_SBE_LONG = Long.MAX_VALUE;
-    private static final long MIN_SBE_LONG = -Long.MAX_VALUE;
     private final Header header = new Header(0, 0);
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
@@ -45,7 +42,7 @@ class GetCacheEntriesTest {
     private final AllCacheEntriesResultDecoder allCacheEntriesResultDecoder = new AllCacheEntriesResultDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
-    private GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> result;
+    private GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
     private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
@@ -58,14 +55,14 @@ class GetCacheEntriesTest {
         sut.subscriptionService = Mockito.mock(CacheSubscriptionService.class);
         responseBuffer = new ExpandableArrayBuffer();
         requestBuffer = new ExpandableArrayBuffer();
-        result = new GetAllCacheEntriesResult<>(SupplierUtils.longSupplier.get());
+        result = new GetAllCacheEntriesResult<>(SupplierUtils.stringSupplier.get());
     }
 
     @ParameterizedTest
     @DisplayName("Should return entries from a known cache")
-    @ValueSource(longs = {0, MAX_SBE_LONG, MIN_SBE_LONG})
+    @ValueSource(strings = {"testCacheId"})
     @HappyPath
-    void shouldGetEntriesFromKnownCache(long cacheId) {
+    void shouldGetEntriesFromKnownCache(String cacheId) {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);
@@ -116,7 +113,7 @@ class GetCacheEntriesTest {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
-        var cacheId = 123L;
+        var cacheId = "123L";
         var length = CacheRequestEncoder.encodeGetCacheEntries(getAllCacheEntriesEncoder, headerEncoder,
                 requestBuffer, requestId, cacheId);
 

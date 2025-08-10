@@ -10,7 +10,7 @@ public interface CacheRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache to create.
      */
-    void sendCreateCache(String requestId, long cacheId);
+    void sendCreateCache(String requestId, String cacheId);
 
     /**
      * Send a message to add a cache entry in a non-blocking manner.
@@ -20,7 +20,7 @@ public interface CacheRequestPublisher {
      * @param key       The key to use.
      * @param value     The value to use.
      */
-    void addCacheEntry(String requestId, long cacheId, String key, String value);
+    void addCacheEntry(String requestId, String cacheId, String key, String value);
 
     /**
      * Send a message to get a cache entry.
@@ -29,7 +29,7 @@ public interface CacheRequestPublisher {
      * @param cacheId   The ID of the cache we're adding too.
      * @param key       The key to use.
      */
-    void getCacheEntry(String requestId, long cacheId, String key);
+    void getCacheEntry(String requestId, String cacheId, String key);
 
     /**
      * Send a message to clear a cache.
@@ -37,7 +37,7 @@ public interface CacheRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache we're clearing out.
      */
-    void clearCache(String requestId, long cacheId);
+    void clearCache(String requestId, String cacheId);
 
     /**
      * Send a message to delete a cache.
@@ -45,7 +45,7 @@ public interface CacheRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache we're deleting.
      */
-    void deleteCache(String requestId, long cacheId);
+    void deleteCache(String requestId, String cacheId);
 
     /**
      * Send a message to remove a cache entry.
@@ -54,7 +54,7 @@ public interface CacheRequestPublisher {
      * @param cacheId   The ID of the cache we're removing an entry from.
      * @param key       The key of the entry we're removing.
      */
-    void removeCacheEntry(String requestId, long cacheId, String key);
+    void removeCacheEntry(String requestId, String cacheId, String key);
 
     /**
      * Send a message to get all cache entries.
@@ -62,7 +62,7 @@ public interface CacheRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The ID of the cache we're removing an entry from.
      */
-    void getCacheEntries(String requestId, long cacheId);
+    void getCacheEntries(String requestId, String cacheId);
 
     /**
      * Send a message to get all cache stats from the cluster.
@@ -77,7 +77,7 @@ public interface CacheRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The cache to subscribe too.
      */
-    void sendCacheSubscribe(String requestId, long cacheId);
+    void sendCacheSubscribe(String requestId, String cacheId);
 
     /**
      * Send a request to unsubscribe to cache updates.
@@ -85,6 +85,6 @@ public interface CacheRequestPublisher {
      * @param requestId The Id of this request.
      * @param cacheId   The cache to unsubscribe too.
      */
-    void sendCacheUnsubscribe(String requestId, long cacheId);
+    void sendCacheUnsubscribe(String requestId, String cacheId);
 
 }

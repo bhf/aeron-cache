@@ -13,8 +13,8 @@ import static org.hamcrest.Matchers.comparesEqualTo;
 class GetItemTests {
 
     private static final String GET_ENDPOINT = "/api/v1/cache/";
-    private static final int KNOWN_CACHE_ID = 1;
-    private static final int UNKNOWN_CACHE_ID = 123;
+    private static final String KNOWN_CACHE_ID = "1";
+    private static final String UNKNOWN_CACHE_ID = "123";
     private static final String KNOWN_KEY = "SomeKey";
     private static final String KNOWN_VALUE = "SomeValue";
     private static final String UNKNOWN_KEY = "UNKNOWN_KEY";
@@ -80,7 +80,7 @@ class GetItemTests {
                 // Assert
                 .then().assertThat()
                 .statusCode(404)
-                .body("cacheId", comparesEqualTo(0))
+                .body("cacheId", comparesEqualTo("0"))
                 .body("key", comparesEqualTo("NA"))
                 .body("value", comparesEqualTo("NA"));
     }

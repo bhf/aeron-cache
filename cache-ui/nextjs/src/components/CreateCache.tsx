@@ -93,9 +93,8 @@ export default function CreateCacheRequest() {
                 <div className="grid gap-2">
                     <Input
                         id="cacheId"
-                        type="number"
-                        min={1}
-                        placeholder="Numeric cache ID"
+                        type="string"
+                        placeholder="Cache ID"
                         name="cacheId"
                         required
                     />

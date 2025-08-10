@@ -222,7 +222,7 @@ Adding entries in a tight loop:
 ## Testing
 
 ### Unit Tests
-There are >200 unit tests (including param variation) using JUnit and Mockito across both ```cache-cluster``` 
+There are a number of unit tests (including some param variation) using JUnit and Mockito across both ```cache-cluster``` 
 and ```cache-client``` which exercise the main functionality.
 
 Core coverage > 70% (as of 4th July 2025)

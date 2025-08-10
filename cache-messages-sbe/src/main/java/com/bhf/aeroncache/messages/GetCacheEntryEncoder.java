@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class GetCacheEntryEncoder
 {
-    public static final int BLOCK_LENGTH = 8;
+    public static final int BLOCK_LENGTH = 0;
     public static final int TEMPLATE_ID = 11;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -109,19 +109,9 @@ public final class GetCacheEntryEncoder
         return 1;
     }
 
-    public static int cacheIdSinceVersion()
+    public static String cacheIdCharacterEncoding()
     {
-        return 0;
-    }
-
-    public static int cacheIdEncodingOffset()
-    {
-        return 0;
-    }
-
-    public static int cacheIdEncodingLength()
-    {
-        return 8;
+        return "UTF-8";
     }
 
     public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
@@ -134,27 +124,69 @@ public final class GetCacheEntryEncoder
         return "";
     }
 
-    public static long cacheIdNullValue()
+    public static int cacheIdHeaderLength()
     {
-        return -9223372036854775808L;
+        return 4;
     }
 
-    public static long cacheIdMinValue()
+    public GetCacheEntryEncoder putCacheId(final DirectBuffer src, final int srcOffset, final int length)
     {
-        return -9223372036854775807L;
-    }
+        if (length > 1073741824)
+        {
+            throw new IllegalStateException("length > maxValue for type: " + length);
+        }
 
-    public static long cacheIdMaxValue()
-    {
-        return 9223372036854775807L;
-    }
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        parentMessage.limit(limit + headerLength + length);
+        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putBytes(limit + headerLength, src, srcOffset, length);
 
-    public GetCacheEntryEncoder cacheId(final long value)
-    {
-        buffer.putLong(offset + 0, value, java.nio.ByteOrder.LITTLE_ENDIAN);
         return this;
     }
 
+    public GetCacheEntryEncoder putCacheId(final byte[] src, final int srcOffset, final int length)
+    {
+        if (length > 1073741824)
+        {
+            throw new IllegalStateException("length > maxValue for type: " + length);
+        }
+
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        parentMessage.limit(limit + headerLength + length);
+        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+        return this;
+    }
+
+    public GetCacheEntryEncoder cacheId(final String value)
+    {
+        final byte[] bytes;
+        try
+        {
+            bytes = null == value || value.isEmpty() ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes("UTF-8");
+        }
+        catch (final java.io.UnsupportedEncodingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+
+        final int length = bytes.length;
+        if (length > 1073741824)
+        {
+            throw new IllegalStateException("length > maxValue for type: " + length);
+        }
+
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        parentMessage.limit(limit + headerLength + length);
+        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putBytes(limit + headerLength, bytes, 0, length);
+
+        return this;
+    }
 
     public static int keyId()
     {

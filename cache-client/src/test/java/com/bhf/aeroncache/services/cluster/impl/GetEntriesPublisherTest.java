@@ -42,7 +42,7 @@ class GetEntriesPublisherTest {
     @DisplayName("Should correctly encode get all entries request and offer to cluster")
     void shouldEncodeClearCacheRequestAndOfferToCluster() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
 
         try (MockedStatic<CacheRequestEncoder> encoder = Mockito.mockStatic(CacheRequestEncoder.class)) {
@@ -71,7 +71,7 @@ class GetEntriesPublisherTest {
     @DisplayName("Should poll egress pending get all cache entries request")
     void shouldPollEgressAndIdlePendingGetCacheEntryRequest() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         when(cluster.pollEgress()).thenReturn(1);
 

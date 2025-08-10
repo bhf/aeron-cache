@@ -40,7 +40,9 @@ import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.CloseHelper;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentRunner;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.io.File;
@@ -344,7 +346,7 @@ public class WebsocketApplication {
     private static void onSingleCacheConnect(WsConnectContext wsConnectContext) {
         try {
             wsConnectContext.enableAutomaticPings();
-            var cacheId = Long.parseLong(wsConnectContext.pathParam("cacheId"));
+            var cacheId = wsConnectContext.pathParam("cacheId");
             var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
             log.info("Subscription request for cacheId: {} on ws sessionId: {}", cacheId, wsConnectContext.sessionId());
 
@@ -371,14 +373,13 @@ public class WebsocketApplication {
             var cacheIds = wsConnectContext.pathParam("cacheIds");
             String[] caches = cacheIds.split(",");
             for (var c : caches) {
-                var cacheId = Long.parseLong(c);
                 var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-                log.info("Subscription request for cacheId: {} on ws sessionId: {}", cacheId,
+                log.info("Subscription request for cacheId: {} on ws sessionId: {}", c,
                         wsConnectContext.sessionId());
                 final Consumer<Void> subscriptionFailureHandler = _ ->
                         wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
 
-                subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, wsConnectContext.sessionId(),
+                subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, wsConnectContext.sessionId(),
                         requestId, wsConnectContext::send);
             }
         } catch (NumberFormatException e) {

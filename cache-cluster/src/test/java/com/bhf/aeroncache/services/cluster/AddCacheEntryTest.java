@@ -9,7 +9,6 @@ import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.services.TestUtils;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
-import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.ClientSession;
@@ -36,14 +35,12 @@ import static org.mockito.Mockito.verify;
  */
 class AddCacheEntryTest {
 
-    private static final long MAX_SBE_LONG = Long.MAX_VALUE;
-    private static final long MIN_SBE_LONG = -Long.MAX_VALUE;
     private final Header header = new Header(0, 0);
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
-    private AddCacheEntryResult<ReusableLong, ReusableString> result;
+    private AddCacheEntryResult<ReusableString, ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
     private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
@@ -57,15 +54,15 @@ class AddCacheEntryTest {
         sut.subscriptionService = Mockito.mock(CacheSubscriptionService.class);
         responseBuffer = new ExpandableArrayBuffer();
         requestBuffer = new ExpandableArrayBuffer();
-        result = new AddCacheEntryResult<>(SupplierUtils.longSupplier.get(),
+        result = new AddCacheEntryResult<>(SupplierUtils.stringSupplier.get(),
                 SupplierUtils.stringSupplier.get());
     }
 
     @ParameterizedTest
     @DisplayName("Should add entry to an existing cache")
-    @ValueSource(longs = {0, MAX_SBE_LONG, MIN_SBE_LONG})
+    @ValueSource(strings = {"testCacheId"})
     @HappyPath
-    void shouldAddToKnownCache(long cacheId) {
+    void shouldAddToKnownCache(String cacheId) {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var key = "someKey";
@@ -114,7 +111,7 @@ class AddCacheEntryTest {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
-        var cacheId = 123L;
+        var cacheId = "123L";
         var key = "someKey";
         var value = "someValue";
 
