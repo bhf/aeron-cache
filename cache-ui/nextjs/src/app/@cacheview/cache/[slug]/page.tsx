@@ -17,7 +17,7 @@ const headers = {
 }
 
 interface CacheItemsTableProps {
-    cacheId: number
+    cacheId: string
 }
 
 interface CacheItem {
