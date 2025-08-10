@@ -9,6 +9,7 @@ import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
+import com.bhf.aeroncache.sse.config.SSEIdleStrategies;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
@@ -200,7 +201,7 @@ public class SSEApplication extends Jooby {
             }
         };
 
-        IdleStrategy unclusteredAgentIdleStrategy = SSEIdleStrategies.unclusteredAgentIdleStrategy;
+        IdleStrategy unclusteredAgentIdleStrategy = SSEIdleStrategies.unclusteredAgentIdleStrategy.get();
         final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy,
                 Throwable::printStackTrace,
                 null, serverAgent);
@@ -297,8 +298,8 @@ public class SSEApplication extends Jooby {
             }
 
             System.out.println("Building cluster agent for SSE service");
-            var clusterClientAgentIdleStrategy = SSEIdleStrategies.clusterClientAgentIdleStrategy;
-            var clusterMessagePublisherIdleStrategy = SSEIdleStrategies.clusterMessagePublisherIdleStrategy;
+            var clusterClientAgentIdleStrategy = SSEIdleStrategies.clusterClientAgentIdleStrategy.get();
+            var clusterMessagePublisherIdleStrategy = SSEIdleStrategies.clusterMessagePublisherIdleStrategy.get();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
                     new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
                             clusterMessagePublisherIdleStrategy), "AeronCache-CacheClient-Agent") :
@@ -309,7 +310,7 @@ public class SSEApplication extends Jooby {
                     new RethrowingErrorHandler();
             var errorCounter = aeronCluster != null ? ClusterUtils.getAgentErrorCounter(aeronCluster, "SSEClient") :
                     null;
-            final IdleStrategy agentRunnerIdleStrategy = SSEIdleStrategies.agentRunnerIdleStrategy;
+            final IdleStrategy agentRunnerIdleStrategy = SSEIdleStrategies.agentRunnerIdleStrategy.get();
             agentRunner = new AgentRunner(agentRunnerIdleStrategy, errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(agentRunner);

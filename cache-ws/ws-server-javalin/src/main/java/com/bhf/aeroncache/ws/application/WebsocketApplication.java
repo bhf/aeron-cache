@@ -15,6 +15,7 @@ import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
+import com.bhf.aeroncache.ws.config.WsIdleStrategies;
 import io.aeron.Aeron;
 import io.aeron.RethrowingErrorHandler;
 import io.aeron.cluster.client.AeronCluster;
@@ -126,8 +127,8 @@ public class WebsocketApplication {
             }
 
             System.out.println("Building cluster agent for websocket service");
-            var clusterClientAgentIdleStrategy = WsIdleStrategies.clusterClientAgentIdleStrategy;
-            var clusterMessagePublisherIdleStrategy = WsIdleStrategies.clusterMessagePublisherIdleStrategy;
+            var clusterClientAgentIdleStrategy = WsIdleStrategies.clusterClientAgentIdleStrategy.get();
+            var clusterMessagePublisherIdleStrategy = WsIdleStrategies.clusterMessagePublisherIdleStrategy.get();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
                     new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
                             clusterMessagePublisherIdleStrategy), "AeronCache-CacheClient-Agent") :
@@ -138,7 +139,7 @@ public class WebsocketApplication {
                     new RethrowingErrorHandler();
             var errorCounter = aeronCluster != null ? ClusterUtils.getAgentErrorCounter(aeronCluster, "WSClient") :
                     null;
-            final IdleStrategy agentRunnerIdleStrategy = WsIdleStrategies.agentRunnerIdleStrategy;
+            final IdleStrategy agentRunnerIdleStrategy = WsIdleStrategies.agentRunnerIdleStrategy.get();
             agentRunner = new AgentRunner(agentRunnerIdleStrategy, errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(agentRunner);
@@ -203,7 +204,7 @@ public class WebsocketApplication {
             }
         };
 
-        IdleStrategy unclusteredAgentIdleStrategy = WsIdleStrategies.unclusteredAgentIdleStrategy;
+        IdleStrategy unclusteredAgentIdleStrategy = WsIdleStrategies.unclusteredAgentIdleStrategy.get();
         final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy,
                 Throwable::printStackTrace,
                 null, serverAgent);
