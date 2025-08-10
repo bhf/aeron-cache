@@ -74,7 +74,7 @@ public class SingleNodeApplication {
         final UnclusteredServiceAgent serverAgent = new UnclusteredServiceAgent(aeron, service, httpRequests,
                 wsRequests, sseRequests, requestStream,
                 httpResponses, wsResponses, sseResponses, responsesStream);
-        final IdleStrategy idleStrategy = SingleNodeIdleStrategies.unclusteredAgentIdleStrategy;
+        final IdleStrategy idleStrategy = SingleNodeIdleStrategies.unclusteredAgentIdleStrategy.get();
         final AgentRunner serverAgentRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace,
                 null, serverAgent);
         AgentRunner.startOnThread(serverAgentRunner);

@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.http.application;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
@@ -93,7 +94,7 @@ public class HttpApplication {
                 CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cache, rb);
 
                 BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cache,
-                        HttpIdleStrategies.blockingPublisherIdleStrategy);
+                        HttpIdleStrategies.blockingPublisherIdleStrategy.get());
                 observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher,
                         blockingRequestPublisher);
             } else {
@@ -141,8 +142,8 @@ public class HttpApplication {
             }
 
             System.out.println("Building cluster agent for http service");
-            var clusterClientAgentIdleStrategy = HttpIdleStrategies.clusterClientAgentIdleStrategy;
-            var clusterMessagePublisherIdleStrategy = HttpIdleStrategies.clusterMessagePublisherIdleStrategy;
+            var clusterClientAgentIdleStrategy = HttpIdleStrategies.clusterClientAgentIdleStrategy.get();
+            var clusterMessagePublisherIdleStrategy = HttpIdleStrategies.clusterMessagePublisherIdleStrategy.get();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
                     new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
                             clusterMessagePublisherIdleStrategy), "AeronCache-ClusterClient-Agent") :
@@ -153,7 +154,7 @@ public class HttpApplication {
                     new RethrowingErrorHandler();
             var errorCounter = aeronCluster != null ? ClusterUtils.getAgentErrorCounter(aeronCluster, "HTTPClient") :
                     null;
-            final IdleStrategy agentRunnerIdleStrategy = HttpIdleStrategies.agentRunnerIdleStrategy;
+            final IdleStrategy agentRunnerIdleStrategy = HttpIdleStrategies.agentRunnerIdleStrategy.get();
             agentRunner = new AgentRunner(agentRunnerIdleStrategy, errorHandler, errorCounter, agent);
             clusterConnected.set(true);
             AgentRunner.startOnThread(agentRunner);
@@ -218,7 +219,7 @@ public class HttpApplication {
             }
         };
 
-        IdleStrategy unclusteredAgentIdleStrategy = HttpIdleStrategies.unclusteredAgentIdleStrategy;
+        IdleStrategy unclusteredAgentIdleStrategy = HttpIdleStrategies.unclusteredAgentIdleStrategy.get();
         final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy,
                 Throwable::printStackTrace,
                 null, serverAgent);
