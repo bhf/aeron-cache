@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { getLogger } from "@/lib/loggingUtil";
 
 interface AddItemProps {
-  cacheId: number;
+  cacheId: string;
 }
 
 const logger = getLogger("AddItem");

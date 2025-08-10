@@ -89,7 +89,7 @@ export default async function Page({
 }) {
 
     const {slug} = await params
-    const cacheId = Number.parseInt(slug);
+    const cacheId = slug;
 
     return (
         <div className={"pl-3 pr-6"}>

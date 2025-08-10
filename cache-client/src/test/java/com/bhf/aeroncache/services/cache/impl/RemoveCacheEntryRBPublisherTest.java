@@ -38,7 +38,7 @@ class RemoveCacheEntryRBPublisherTest {
     @DisplayName("Should throw NPE on null requestId without interacting with RingBuffer when removing cache entry")
     void shouldThrowExceptionOnNullRequestId(String requestId) {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var key = "someKey";
 
         // Act + Assert
@@ -52,7 +52,7 @@ class RemoveCacheEntryRBPublisherTest {
     @DisplayName("Should abort claim on RingBuffer on RuntimeException when removing cache entry")
     void shouldAbortOnRingBufferOnException() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var key = "someKey";
         var requestId = UUID.randomUUID().toString();
         when(rb.buffer()).thenThrow(RuntimeException.class);
@@ -69,7 +69,7 @@ class RemoveCacheEntryRBPublisherTest {
     @DisplayName("Should commit claim on RingBuffer when removing cache entry")
     void shouldCommitClaimOnRBWhenRemovingCacheEntry() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var key = "someKey";
         var requestId = UUID.randomUUID().toString();
         var mockBuffer = Mockito.mock(AtomicBuffer.class);

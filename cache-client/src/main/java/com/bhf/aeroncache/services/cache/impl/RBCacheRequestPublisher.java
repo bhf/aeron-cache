@@ -18,8 +18,8 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
     final RingBuffer rb;
 
     @Override
-    public void sendCreateCache(String requestId, long cacheId) {
-        var desiredLength = (requestId.length() + 4) + 8;
+    public void sendCreateCache(String requestId, String cacheId) {
+        var desiredLength = (requestId.length() + 4) + (cacheId.length() + 4);
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
@@ -30,8 +30,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
             var buffer = rb.buffer();
             int writeCursor = claimIndex;
             writeCursor += buffer.putStringUtf8(writeCursor, requestId);
-            buffer.putLong(writeCursor, cacheId);
-            writeCursor += 8;
+            writeCursor += buffer.putStringUtf8(writeCursor, cacheId);
             log.trace("TOTAL WRITTEN=" + (writeCursor - claimIndex));
             rb.commit(claimIndex);
         } catch (Exception e) {
@@ -41,8 +40,8 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
     }
 
     @Override
-    public void addCacheEntry(String requestId, long cacheId, String key, String value) {
-        var desiredLength = (requestId.length() + 4) + 8 + (key.length() + 4) + (value.length() + 4);
+    public void addCacheEntry(String requestId, String cacheId, String key, String value) {
+        var desiredLength = (requestId.length() + 4) + (cacheId.length() + 4) + (key.length() + 4) + (value.length() + 4);
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
@@ -53,8 +52,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
             var buffer = rb.buffer();
             int writeCursor = claimIndex;
             writeCursor += buffer.putStringUtf8(writeCursor, requestId);
-            buffer.putLong(writeCursor, cacheId);
-            writeCursor += 8;
+            writeCursor += buffer.putStringUtf8(writeCursor, cacheId);
             writeCursor += buffer.putStringUtf8(writeCursor, key);
             writeCursor += buffer.putStringUtf8(writeCursor, value);
             log.trace("TOTAL WRITTEN BYTES=" + (writeCursor - claimIndex));
@@ -66,8 +64,8 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
     }
 
     @Override
-    public void getCacheEntry(String requestId, long cacheId, String key) {
-        var desiredLength = (requestId.length() + 4) + 8 + (key.length() + 4);
+    public void getCacheEntry(String requestId, String cacheId, String key) {
+        var desiredLength = (requestId.length() + 4) + (cacheId.length() + 4) + (key.length() + 4);
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
@@ -78,8 +76,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
             var buffer = rb.buffer();
             int writeCursor = claimIndex;
             writeCursor += buffer.putStringUtf8(writeCursor, requestId);
-            buffer.putLong(writeCursor, cacheId);
-            writeCursor += 8;
+            writeCursor += buffer.putStringUtf8(writeCursor, cacheId);
             writeCursor += buffer.putStringUtf8(writeCursor, key);
             log.trace("TOTAL WRITTEN BYTES=" + (writeCursor - claimIndex));
             rb.commit(claimIndex);
@@ -90,8 +87,8 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
     }
 
     @Override
-    public void clearCache(String requestId, long cacheId) {
-        var desiredLength = (requestId.length() + 4) + 8;
+    public void clearCache(String requestId, String cacheId) {
+        var desiredLength = (requestId.length() + 4) + (cacheId.length() + 4);
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
@@ -102,8 +99,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
             var buffer = rb.buffer();
             int writeCursor = claimIndex;
             writeCursor += buffer.putStringUtf8(writeCursor, requestId);
-            buffer.putLong(writeCursor, cacheId);
-            writeCursor += 8;
+            writeCursor += buffer.putStringUtf8(writeCursor, cacheId);
             log.trace("TOTAL WRITTEN=" + (writeCursor - claimIndex));
             rb.commit(claimIndex);
         } catch (Exception e) {
@@ -113,8 +109,8 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
     }
 
     @Override
-    public void deleteCache(String requestId, long cacheId) {
-        var desiredLength = (requestId.length() + 4) + 8;
+    public void deleteCache(String requestId, String cacheId) {
+        var desiredLength = (requestId.length() + 4) + (cacheId.length() + 4);
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
@@ -125,8 +121,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
             var buffer = rb.buffer();
             int writeCursor = claimIndex;
             writeCursor += buffer.putStringUtf8(writeCursor, requestId);
-            buffer.putLong(writeCursor, cacheId);
-            writeCursor += 8;
+            writeCursor += buffer.putStringUtf8(writeCursor, cacheId);
             log.trace("TOTAL WRITTEN=" + (writeCursor - claimIndex));
             rb.commit(claimIndex);
         } catch (Exception e) {
@@ -137,8 +132,8 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
 
 
     @Override
-    public void removeCacheEntry(String requestId, long cacheId, String key) {
-        var desiredLength = (requestId.length() + 4) + 8 + (key.length() + 4);
+    public void removeCacheEntry(String requestId, String cacheId, String key) {
+        var desiredLength = (requestId.length() + 4) + (cacheId.length() + 4) + (key.length() + 4);
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
@@ -149,8 +144,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
             var buffer = rb.buffer();
             int writeCursor = claimIndex;
             writeCursor += buffer.putStringUtf8(writeCursor, requestId);
-            buffer.putLong(writeCursor, cacheId);
-            writeCursor += 8;
+            writeCursor += buffer.putStringUtf8(writeCursor, cacheId);
             writeCursor += buffer.putStringUtf8(writeCursor, key);
             log.trace("TOTAL WRITTEN BYTES=" + (writeCursor - claimIndex));
             rb.commit(claimIndex);
@@ -161,8 +155,8 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
     }
 
     @Override
-    public void getCacheEntries(String requestId, long cacheId) {
-        var desiredLength = (requestId.length() + 4) + 8;
+    public void getCacheEntries(String requestId, String cacheId) {
+        var desiredLength = (requestId.length() + 4) + (cacheId.length() + 4);
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
@@ -173,8 +167,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
             var buffer = rb.buffer();
             int writeCursor = claimIndex;
             writeCursor += buffer.putStringUtf8(writeCursor, requestId);
-            buffer.putLong(writeCursor, cacheId);
-            writeCursor += 8;
+            writeCursor += buffer.putStringUtf8(writeCursor, cacheId);
             log.trace("TOTAL WRITTEN=" + (writeCursor - claimIndex));
             rb.commit(claimIndex);
         } catch (Exception e) {
@@ -205,8 +198,8 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, long cacheId) {
-        var desiredLength = (requestId.length() + 4) + 8;
+    public void sendCacheSubscribe(String requestId, String cacheId) {
+        var desiredLength = (requestId.length() + 4) + (cacheId.length() + 4);
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
@@ -217,8 +210,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
             var buffer = rb.buffer();
             int writeCursor = claimIndex;
             writeCursor += buffer.putStringUtf8(writeCursor, requestId);
-            buffer.putLong(writeCursor, cacheId);
-            writeCursor += 8;
+            writeCursor += buffer.putStringUtf8(writeCursor, cacheId);
             log.trace("TOTAL WRITTEN=" + (writeCursor - claimIndex));
             rb.commit(claimIndex);
         } catch (Exception e) {
@@ -228,8 +220,8 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
     }
 
     @Override
-    public void sendCacheUnsubscribe(String requestId, long cacheId) {
-        var desiredLength = (requestId.length() + 4) + 8;
+    public void sendCacheUnsubscribe(String requestId, String cacheId) {
+        var desiredLength = (requestId.length() + 4) + (cacheId.length() + 4);
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
@@ -240,8 +232,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
             var buffer = rb.buffer();
             int writeCursor = claimIndex;
             writeCursor += buffer.putStringUtf8(writeCursor, requestId);
-            buffer.putLong(writeCursor, cacheId);
-            writeCursor += 8;
+            writeCursor += buffer.putStringUtf8(writeCursor, cacheId);
             log.trace("TOTAL WRITTEN=" + (writeCursor - claimIndex));
             rb.commit(claimIndex);
         } catch (Exception e) {

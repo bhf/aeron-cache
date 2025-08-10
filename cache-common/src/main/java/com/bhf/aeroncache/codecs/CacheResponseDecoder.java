@@ -2,7 +2,6 @@ package com.bhf.aeroncache.codecs;
 
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import org.agrona.DirectBuffer;
 
@@ -11,11 +10,11 @@ import org.agrona.DirectBuffer;
  */
 public class CacheResponseDecoder {
 
-    public static void decodeCacheCreated(CreateCacheResult<ReusableLong> createCacheResult, CacheCreatedDecoder cacheCreatedDecoder, MessageHeaderDecoder headerDecoder, DirectBuffer buffer, int offset) {
+    public static void decodeCacheCreated(CreateCacheResult<ReusableString> createCacheResult, CacheCreatedDecoder cacheCreatedDecoder, MessageHeaderDecoder headerDecoder, DirectBuffer buffer, int offset) {
         cacheCreatedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var status = cacheCreatedDecoder.status();
         var cacheId = cacheCreatedDecoder.cacheId();
         var requestId = cacheCreatedDecoder.requestId();
-        var status = cacheCreatedDecoder.status();
 
         createCacheResult.clear();
         createCacheResult.getCacheId().copyFrom(cacheId);
@@ -23,14 +22,12 @@ public class CacheResponseDecoder {
         createCacheResult.setStatus(status);
     }
 
-    public static void decodeAllCacheEntriesResult(AllCacheEntriesResultDecoder decoder, MessageHeaderDecoder headerDecoder, GetAllCacheEntriesResult<ReusableLong, ReusableString, ReusableString> getCacheEntriesResult, DirectBuffer buffer, int offset) {
+    public static void decodeAllCacheEntriesResult(AllCacheEntriesResultDecoder decoder, MessageHeaderDecoder headerDecoder, GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> getCacheEntriesResult, DirectBuffer buffer, int offset) {
         decoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheID = decoder.cacheId();
         var status = decoder.status();
         var eob = decoder.endOfBatch();
 
         getCacheEntriesResult.clear();
-        getCacheEntriesResult.getCacheId().copyFrom(cacheID);
         getCacheEntriesResult.setStatus(status);
 
         // process group of key-value from the decoder directly into the flyweight
@@ -45,12 +42,15 @@ public class CacheResponseDecoder {
 
         var requestId = decoder.requestId();
         getCacheEntriesResult.setRequestId(requestId);
+
+        var cacheID = decoder.cacheId();
+        getCacheEntriesResult.getCacheId().copyFrom(cacheID);
     }
 
-    public static void decodeGetCacheEntryResult(CacheEntryResultDecoder getCacheEntryDecoder, MessageHeaderDecoder headerDecoder, GetCacheEntryResult<ReusableLong, ReusableString, ReusableString> getCacheEntryResult, DirectBuffer buffer, int offset) {
+    public static void decodeGetCacheEntryResult(CacheEntryResultDecoder getCacheEntryDecoder, MessageHeaderDecoder headerDecoder, GetCacheEntryResult<ReusableString, ReusableString, ReusableString> getCacheEntryResult, DirectBuffer buffer, int offset) {
         getCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheID = getCacheEntryDecoder.cacheId();
         var status = getCacheEntryDecoder.status();
+        var cacheID = getCacheEntryDecoder.cacheId();
         var key = getCacheEntryDecoder.key();
         var value = getCacheEntryDecoder.value();
         var requestId = getCacheEntryDecoder.requestId();
@@ -63,12 +63,13 @@ public class CacheResponseDecoder {
         getCacheEntryResult.setStatus(status);
     }
 
-    public static void decodeAddCacheEntryResult(CacheEntryCreatedDecoder addCacheEntryDecoder, MessageHeaderDecoder headerDecoder, AddCacheEntryResult<ReusableLong, ReusableString> addCacheEntryResult, DirectBuffer buffer, int offset) {
+    public static void decodeAddCacheEntryResult(CacheEntryCreatedDecoder addCacheEntryDecoder, MessageHeaderDecoder headerDecoder, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, DirectBuffer buffer, int offset) {
         addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+
+        var status = addCacheEntryDecoder.status();
         var cacheId = addCacheEntryDecoder.cacheId();
         var key = addCacheEntryDecoder.key();
         var requestId = addCacheEntryDecoder.requestId();
-        var status = addCacheEntryDecoder.status();
 
         addCacheEntryResult.clear();
         addCacheEntryResult.setEntryAdded(true);
@@ -78,12 +79,13 @@ public class CacheResponseDecoder {
         addCacheEntryResult.setStatus(status);
     }
 
-    public static void decodeCacheEntryRemoved(CacheEntryRemovedDecoder cacheEntryRemovedDecoder, MessageHeaderDecoder headerDecoder, RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult, DirectBuffer buffer, int offset) {
+    public static void decodeCacheEntryRemoved(CacheEntryRemovedDecoder cacheEntryRemovedDecoder, MessageHeaderDecoder headerDecoder, RemoveCacheEntryResult<ReusableString, ReusableString> removeCacheEntryResult, DirectBuffer buffer, int offset) {
         cacheEntryRemovedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+
+        var status = cacheEntryRemovedDecoder.status();
         var cacheId = cacheEntryRemovedDecoder.cacheId();
         var key = cacheEntryRemovedDecoder.key();
         var requestId = cacheEntryRemovedDecoder.requestId();
-        var status = cacheEntryRemovedDecoder.status();
 
         removeCacheEntryResult.clear();
         removeCacheEntryResult.getKey().copyFrom(key);
@@ -92,11 +94,12 @@ public class CacheResponseDecoder {
         removeCacheEntryResult.setStatus(status);
     }
 
-    public static void decodeCacheCleared(CacheClearedDecoder cacheClearedDecoder, MessageHeaderDecoder headerDecoder, ClearCacheResult<ReusableLong> clearCacheResult, DirectBuffer buffer, int offset) {
+    public static void decodeCacheCleared(CacheClearedDecoder cacheClearedDecoder, MessageHeaderDecoder headerDecoder, ClearCacheResult<ReusableString> clearCacheResult, DirectBuffer buffer, int offset) {
         cacheClearedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+
+        var status = cacheClearedDecoder.status();
         var cacheId = cacheClearedDecoder.cacheId();
         var requestId = cacheClearedDecoder.requestId();
-        var status = cacheClearedDecoder.status();
 
         clearCacheResult.clear();
         clearCacheResult.getCacheId().copyFrom(cacheId);
@@ -104,11 +107,12 @@ public class CacheResponseDecoder {
         clearCacheResult.setStatus(status);
     }
 
-    public static void decodeCacheDeleted(CacheDeletedDecoder cacheDeletedDecoder, MessageHeaderDecoder headerDecoder, DeleteCacheResult<ReusableLong> deleteCacheResult, DirectBuffer buffer, int offset) {
+    public static void decodeCacheDeleted(CacheDeletedDecoder cacheDeletedDecoder, MessageHeaderDecoder headerDecoder, DeleteCacheResult<ReusableString> deleteCacheResult, DirectBuffer buffer, int offset) {
         cacheDeletedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+
+        var status = cacheDeletedDecoder.status();
         var cacheId = cacheDeletedDecoder.cacheId();
         var requestId = cacheDeletedDecoder.requestId();
-        var status = cacheDeletedDecoder.status();
 
         deleteCacheResult.clear();
         deleteCacheResult.getCacheId().copyFrom(cacheId);
@@ -116,7 +120,7 @@ public class CacheResponseDecoder {
         deleteCacheResult.setStatus(status);
     }
 
-    public static void decodeAllCacheStatsResult(AllCacheStatsResultDecoder allCacheStatsResultDecoder, MessageHeaderDecoder headerDecoder, CacheStatsResult<ReusableLong> cacheStatsResult, DirectBuffer buffer, int offset) {
+    public static void decodeAllCacheStatsResult(AllCacheStatsResultDecoder allCacheStatsResultDecoder, MessageHeaderDecoder headerDecoder, CacheStatsResult<ReusableString> cacheStatsResult, DirectBuffer buffer, int offset) {
         allCacheStatsResultDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var status = allCacheStatsResultDecoder.status();
         cacheStatsResult.clear();
@@ -128,7 +132,7 @@ public class CacheResponseDecoder {
             var cleared = item.cleared();
             var size = item.size();
             var cacheId = item.cacheId();
-            var id = new ReusableLong();
+            var id = new ReusableString();
             id.copyFrom(cacheId);
             var stats = new CacheStats<>(id);
             stats.addedCount = added;
@@ -142,10 +146,11 @@ public class CacheResponseDecoder {
         cacheStatsResult.setRequestId(requestId);
     }
 
-    public static void decodeCacheSubscribeResult(CacheSubscriptionResponseDecoder cacheSubscriptionResponseDecoder, MessageHeaderDecoder headerDecoder, CacheSubscriptionResult<ReusableLong> cacheSubscriptionResult, DirectBuffer buffer, int offset) {
+    public static void decodeCacheSubscribeResult(CacheSubscriptionResponseDecoder cacheSubscriptionResponseDecoder, MessageHeaderDecoder headerDecoder, CacheSubscriptionResult<ReusableString> cacheSubscriptionResult, DirectBuffer buffer, int offset) {
         cacheSubscriptionResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = cacheSubscriptionResponseDecoder.cacheId();
+
         var status = cacheSubscriptionResponseDecoder.status();
+        var cacheId = cacheSubscriptionResponseDecoder.cacheId();
         var requestId = cacheSubscriptionResponseDecoder.requestId();
 
         cacheSubscriptionResult.clear();
@@ -154,11 +159,11 @@ public class CacheResponseDecoder {
         cacheSubscriptionResult.setRequestId(requestId);
     }
 
-    public static void decodeCacheUnsubscribeResult(CacheUnsubscribeResponseDecoder cacheUnsubscribeResponseDecoder, MessageHeaderDecoder headerDecoder, CacheUnsubscribeResult<ReusableLong> cacheUnsubscribeResult, DirectBuffer buffer, int offset) {
+    public static void decodeCacheUnsubscribeResult(CacheUnsubscribeResponseDecoder cacheUnsubscribeResponseDecoder, MessageHeaderDecoder headerDecoder, CacheUnsubscribeResult<ReusableString> cacheUnsubscribeResult, DirectBuffer buffer, int offset) {
         cacheUnsubscribeResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
-        var cacheId = cacheUnsubscribeResponseDecoder.cacheId();
         var status = cacheUnsubscribeResponseDecoder.status();
+        var cacheId = cacheUnsubscribeResponseDecoder.cacheId();
         var requestId = cacheUnsubscribeResponseDecoder.requestId();
 
         cacheUnsubscribeResult.clear();
@@ -167,7 +172,7 @@ public class CacheResponseDecoder {
         cacheUnsubscribeResult.setRequestId(requestId);
     }
 
-    public static void decodeCacheEntryUpdated(CacheEntryUpdateDecoder cacheEntryUpdateDecoder, MessageHeaderDecoder headerDecoder, CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult, DirectBuffer buffer, int offset) {
+    public static void decodeCacheEntryUpdated(CacheEntryUpdateDecoder cacheEntryUpdateDecoder, MessageHeaderDecoder headerDecoder, CacheEntryUpdateResult<ReusableString, ReusableString, ReusableString> cacheEntryUpdateResult, DirectBuffer buffer, int offset) {
         cacheEntryUpdateDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
         var cacheId = cacheEntryUpdateDecoder.cacheId();

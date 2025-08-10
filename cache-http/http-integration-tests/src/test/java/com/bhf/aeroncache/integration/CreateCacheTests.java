@@ -29,8 +29,7 @@ class CreateCacheTests {
 
     public static Stream<Arguments> provideBadParamsToCreateCache() {
         return Stream.of(
-                Arguments.of("wrongFieldName", 1),
-                Arguments.of("cacheId", "not a number"));
+                Arguments.of("wrongFieldName", 1));
     }
 
     @Test
@@ -38,7 +37,7 @@ class CreateCacheTests {
     @HappyPath
     void shouldCreateBasicCache() {
         // Arrange
-        var cacheId = 1;
+        var cacheId = "12";
         CacheTestUtils.deleteCache(cacheId);
 
         JSONObject requestBody = new JSONObject().put("cacheId", cacheId);

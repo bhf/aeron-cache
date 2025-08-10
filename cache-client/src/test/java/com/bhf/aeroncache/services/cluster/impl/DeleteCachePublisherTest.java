@@ -42,7 +42,7 @@ class DeleteCachePublisherTest {
     @DisplayName("Should correctly encode delete cache request and offer to cluster")
     void shouldEncodeDeleteCacheRequestAndOfferToCluster() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
 
         try (MockedStatic<CacheRequestEncoder> encoder = Mockito.mockStatic(CacheRequestEncoder.class)) {
@@ -71,7 +71,7 @@ class DeleteCachePublisherTest {
     @DisplayName("Should poll egress pending blocking delete cache request")
     void shouldPollEgressAndIdlePendingDeleteCacheRequest() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         when(cluster.pollEgress()).thenReturn(1);
 

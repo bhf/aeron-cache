@@ -42,7 +42,7 @@ class SubscribeCachePublisherTest {
     @DisplayName("Should correctly encode cache subscription request and offer to cluster")
     void shouldEncodeCacheSubscriptionRequestAndOfferToCluster() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
 
         try (MockedStatic<CacheRequestEncoder> encoder = Mockito.mockStatic(CacheRequestEncoder.class)) {
@@ -71,7 +71,7 @@ class SubscribeCachePublisherTest {
     @DisplayName("Should poll egress pending blocking cache subscription request")
     void shouldPollEgressAndIdlePendingCacheSubscriptionRequest() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         when(cluster.pollEgress()).thenReturn(1);
 

@@ -38,7 +38,7 @@ class AddCacheEntryRBPublisherTest {
     @DisplayName("Should throw NPE on null requestId without interacting with RingBuffer when adding cache entry")
     void shouldThrowExceptionOnNullRequestId(String requestId) {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var key = "someKey";
         var value = "someValue";
 
@@ -53,7 +53,7 @@ class AddCacheEntryRBPublisherTest {
     @DisplayName("Should abort claim on RingBuffer on RuntimeException when adding cache entry")
     void shouldAbortOnRingBufferOnException() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var key = "someKey";
         var value = "someValue";
         var requestId = UUID.randomUUID().toString();
@@ -71,7 +71,7 @@ class AddCacheEntryRBPublisherTest {
     @DisplayName("Should commit claim on RingBuffer when adding cache entry")
     void shouldCommitClaimOnRBWhenAddingCacheEntry() {
         // Arrange
-        var cacheId = 123L;
+        var cacheId = "123L";
         var key = "someKey";
         var value = "someValue";
         var requestId = UUID.randomUUID().toString();

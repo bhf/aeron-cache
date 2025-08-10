@@ -72,7 +72,7 @@ export async function createCacheRequest(currentState: { message: string, error:
  * Delete a cache.
  * @param cacheId
  */
-export async function deleteCacheRequest(cacheId: number) {
+export async function deleteCacheRequest(cacheId: string) {
     logger.info("Delete cache request with id", cacheId)
     try {
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + cacheId, {

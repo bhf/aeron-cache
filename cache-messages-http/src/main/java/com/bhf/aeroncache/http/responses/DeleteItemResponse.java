@@ -9,5 +9,5 @@ import com.bhf.aeroncache.messages.OperationStatus;
  * @param key             The key of the item removed.
  * @param operationStatus The status of the operation.
  */
-public record DeleteItemResponse(long cacheId, String key, OperationStatus operationStatus) {
+public record DeleteItemResponse(String cacheId, String key, OperationStatus operationStatus) {
 }

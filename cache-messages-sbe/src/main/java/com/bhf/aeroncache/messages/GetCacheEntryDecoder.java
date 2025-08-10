@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class GetCacheEntryDecoder
 {
-    public static final int BLOCK_LENGTH = 8;
+    public static final int BLOCK_LENGTH = 0;
     public static final int TEMPLATE_ID = 11;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -129,14 +129,9 @@ public final class GetCacheEntryDecoder
         return 0;
     }
 
-    public static int cacheIdEncodingOffset()
+    public static String cacheIdCharacterEncoding()
     {
-        return 0;
-    }
-
-    public static int cacheIdEncodingLength()
-    {
-        return 8;
+        return "UTF-8";
     }
 
     public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
@@ -149,26 +144,88 @@ public final class GetCacheEntryDecoder
         return "";
     }
 
-    public static long cacheIdNullValue()
+    public static int cacheIdHeaderLength()
     {
-        return -9223372036854775808L;
+        return 4;
     }
 
-    public static long cacheIdMinValue()
+    public int cacheIdLength()
     {
-        return -9223372036854775807L;
+        final int limit = parentMessage.limit();
+        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
     }
 
-    public static long cacheIdMaxValue()
+    public int skipCacheId()
     {
-        return 9223372036854775807L;
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataOffset = limit + headerLength;
+        parentMessage.limit(dataOffset + dataLength);
+
+        return dataLength;
     }
 
-    public long cacheId()
+    public int getCacheId(final MutableDirectBuffer dst, final int dstOffset, final int length)
     {
-        return buffer.getLong(offset + 0, java.nio.ByteOrder.LITTLE_ENDIAN);
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+        return bytesCopied;
     }
 
+    public int getCacheId(final byte[] dst, final int dstOffset, final int length)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+        return bytesCopied;
+    }
+
+    public void wrapCacheId(final DirectBuffer wrapBuffer)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+        wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
+    }
+
+    public String cacheId()
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+
+        if (0 == dataLength)
+        {
+            return "";
+        }
+
+        final byte[] tmp = new byte[dataLength];
+        buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
+
+        final String value;
+        try
+        {
+            value = new String(tmp, "UTF-8");
+        }
+        catch (final java.io.UnsupportedEncodingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+
+        return value;
+    }
 
     public static int keyId()
     {
@@ -428,7 +485,7 @@ public final class GetCacheEntryDecoder
         builder.append(BLOCK_LENGTH);
         builder.append("):");
         builder.append("cacheId=");
-        builder.append(cacheId());
+        builder.append('\'').append(cacheId()).append('\'');
         builder.append('|');
         builder.append("key=");
         builder.append('\'').append(key()).append('\'');

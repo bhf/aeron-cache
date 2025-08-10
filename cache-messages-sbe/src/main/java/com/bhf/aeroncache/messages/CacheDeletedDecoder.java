@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class CacheDeletedDecoder
 {
-    public static final int BLOCK_LENGTH = 9;
+    public static final int BLOCK_LENGTH = 1;
     public static final int TEMPLATE_ID = 10;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -119,60 +119,9 @@ public final class CacheDeletedDecoder
         this.limit = limit;
     }
 
-    public static int cacheIdId()
-    {
-        return 1;
-    }
-
-    public static int cacheIdSinceVersion()
-    {
-        return 0;
-    }
-
-    public static int cacheIdEncodingOffset()
-    {
-        return 0;
-    }
-
-    public static int cacheIdEncodingLength()
-    {
-        return 8;
-    }
-
-    public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
-    {
-        if (MetaAttribute.PRESENCE == metaAttribute)
-        {
-            return "required";
-        }
-
-        return "";
-    }
-
-    public static long cacheIdNullValue()
-    {
-        return -9223372036854775808L;
-    }
-
-    public static long cacheIdMinValue()
-    {
-        return -9223372036854775807L;
-    }
-
-    public static long cacheIdMaxValue()
-    {
-        return 9223372036854775807L;
-    }
-
-    public long cacheId()
-    {
-        return buffer.getLong(offset + 0, java.nio.ByteOrder.LITTLE_ENDIAN);
-    }
-
-
     public static int statusId()
     {
-        return 2;
+        return 1;
     }
 
     public static int statusSinceVersion()
@@ -182,7 +131,7 @@ public final class CacheDeletedDecoder
 
     public static int statusEncodingOffset()
     {
-        return 8;
+        return 0;
     }
 
     public static int statusEncodingLength()
@@ -202,14 +151,122 @@ public final class CacheDeletedDecoder
 
     public short statusRaw()
     {
-        return ((short)(buffer.getByte(offset + 8) & 0xFF));
+        return ((short)(buffer.getByte(offset + 0) & 0xFF));
     }
 
     public OperationStatus status()
     {
-        return OperationStatus.get(((short)(buffer.getByte(offset + 8) & 0xFF)));
+        return OperationStatus.get(((short)(buffer.getByte(offset + 0) & 0xFF)));
     }
 
+
+    public static int cacheIdId()
+    {
+        return 2;
+    }
+
+    public static int cacheIdSinceVersion()
+    {
+        return 0;
+    }
+
+    public static String cacheIdCharacterEncoding()
+    {
+        return "UTF-8";
+    }
+
+    public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public static int cacheIdHeaderLength()
+    {
+        return 4;
+    }
+
+    public int cacheIdLength()
+    {
+        final int limit = parentMessage.limit();
+        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+    }
+
+    public int skipCacheId()
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataOffset = limit + headerLength;
+        parentMessage.limit(dataOffset + dataLength);
+
+        return dataLength;
+    }
+
+    public int getCacheId(final MutableDirectBuffer dst, final int dstOffset, final int length)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+        return bytesCopied;
+    }
+
+    public int getCacheId(final byte[] dst, final int dstOffset, final int length)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int bytesCopied = Math.min(length, dataLength);
+        parentMessage.limit(limit + headerLength + dataLength);
+        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+        return bytesCopied;
+    }
+
+    public void wrapCacheId(final DirectBuffer wrapBuffer)
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+        wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
+    }
+
+    public String cacheId()
+    {
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        parentMessage.limit(limit + headerLength + dataLength);
+
+        if (0 == dataLength)
+        {
+            return "";
+        }
+
+        final byte[] tmp = new byte[dataLength];
+        buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
+
+        final String value;
+        try
+        {
+            value = new String(tmp, "UTF-8");
+        }
+        catch (final java.io.UnsupportedEncodingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+
+        return value;
+    }
 
     public static int requestIdId()
     {
@@ -360,11 +417,11 @@ public final class CacheDeletedDecoder
         }
         builder.append(BLOCK_LENGTH);
         builder.append("):");
-        builder.append("cacheId=");
-        builder.append(cacheId());
-        builder.append('|');
         builder.append("status=");
         builder.append(status());
+        builder.append('|');
+        builder.append("cacheId=");
+        builder.append('\'').append(cacheId()).append('\'');
         builder.append('|');
         builder.append("requestId=");
         builder.append('\'').append(requestId()).append('\'');

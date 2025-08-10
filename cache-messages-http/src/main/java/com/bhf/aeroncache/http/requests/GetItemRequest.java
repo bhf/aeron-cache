@@ -6,5 +6,5 @@ package com.bhf.aeroncache.http.requests;
  * @param cacheId The ID of the cache.
  * @param key The key of the item to get.
  */
-public record GetItemRequest(long cacheId, String key) {
+public record GetItemRequest(String cacheId, String key) {
 }

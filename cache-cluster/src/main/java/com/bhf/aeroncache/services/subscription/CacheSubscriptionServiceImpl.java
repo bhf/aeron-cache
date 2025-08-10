@@ -130,7 +130,7 @@ public class CacheSubscriptionServiceImpl<I extends Reusable> implements CacheSu
         for (var session : getSessionsForCache(addCacheEntryResult.getCacheId())) {
             log.info("Sending entry added update to session: {}", session.id());
             entryUpdateEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
-            entryUpdateEncoder.cacheId((Long) addCacheEntryResult.getCacheId().value())
+            entryUpdateEncoder.cacheId((String) addCacheEntryResult.getCacheId().value())
                     .key(key.value())
                     .value(value.value())
                     .requestId(addCacheEntryResult.getRequestId());

@@ -10,7 +10,6 @@ import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
-import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
@@ -97,16 +96,16 @@ public class AsyncConsumerPerfTest {
     }
 
     private static void runTest(ObservingCacheRequestPublisher observingPublisher) {
-        Consumer<CreateCacheResult<ReusableLong>> consumer = result -> System.out.println("Created cache " + result.getCacheId() + ", status=" + result.getStatus());
-        observingPublisher.sendCreateCache(UUID.randomUUID().toString(), 123L, consumer);
+        Consumer<CreateCacheResult<ReusableString>> consumer = result -> System.out.println("Created cache " + result.getCacheId() + ", status=" + result.getStatus());
+        observingPublisher.sendCreateCache(UUID.randomUUID().toString(), "123L", consumer);
 
         AtomicLong count = new AtomicLong();
         AtomicLong errorCount = new AtomicLong();
         AtomicLong start = new AtomicLong(System.currentTimeMillis());
 
         while (true) {
-            Consumer<AddCacheEntryResult<ReusableLong, ReusableString>> addEntryConsumer = reusableLongReusableStringAddCacheEntryResult -> {
-                if (reusableLongReusableStringAddCacheEntryResult.getStatus() != OperationStatus.SUCCESS) {
+            Consumer<AddCacheEntryResult<ReusableString, ReusableString>> addEntryConsumer = ReusableStringReusableStringAddCacheEntryResult -> {
+                if (ReusableStringReusableStringAddCacheEntryResult.getStatus() != OperationStatus.SUCCESS) {
                     var errors = errorCount.incrementAndGet();
                     System.out.println("TOTAL ERRORS: " + errors);
                 }
@@ -121,7 +120,7 @@ public class AsyncConsumerPerfTest {
                     System.out.println(v + "," + per);
                 }
             };
-            observingPublisher.addCacheEntry(UUID.randomUUID().toString(), 123L, UUID.randomUUID().toString(), UUID.randomUUID().toString(), addEntryConsumer);
+            observingPublisher.addCacheEntry(UUID.randomUUID().toString(), "123L", UUID.randomUUID().toString(), UUID.randomUUID().toString(), addEntryConsumer);
         }
     }
 }

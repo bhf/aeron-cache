@@ -10,7 +10,6 @@ import com.bhf.aeroncache.models.results.DeleteCacheResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
-import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import lombok.extern.log4j.Log4j2;
 
@@ -23,7 +22,7 @@ import java.util.function.Consumer;
 @Log4j2
 public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPublisher implements WebsocketStatusHandler, CacheSubscriptions  {
 
-    private final Map<Long, List<IdentifiableConsumer<String, CacheUpdateEvent>>> cacheSubscriptions = new ConcurrentHashMap<>();
+    private final Map<String, List<IdentifiableConsumer<String, CacheUpdateEvent>>> cacheSubscriptions = new ConcurrentHashMap<>();
 
     public CacheSubscriptionRequestPublisher(CacheRequestPublisher rbPublisher) {
         super(rbPublisher);
@@ -41,7 +40,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
      * @param consumer    The consumer of {@link CacheUpdateEvent}.
      */
     @Override
-    public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, long cacheId, String wsSessionId, String requestId, Consumer<CacheUpdateEvent> consumer) {
+    public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, String cacheId, String wsSessionId, String requestId, Consumer<CacheUpdateEvent> consumer) {
         List<IdentifiableConsumer<String, CacheUpdateEvent>> currentSubscribers;
         if (cacheSubscriptions.containsKey(cacheId)) {
             currentSubscribers = cacheSubscriptions.get(cacheId);
@@ -73,7 +72,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
      * @param requestId The request ID.
      * @param cacheId   The ID of the cache we want to subscribe too on the cluster side.
      */
-    private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, long cacheId, Consumer<Void> subscriptionFailureHandler) {
+    private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, String cacheId, Consumer<Void> subscriptionFailureHandler) {
         sendCacheSubscribe(requestId, cacheId, subscriptionResult -> {
             if (subscriptionResult.getStatus() != OperationStatus.SUCCESS) {
                 var errorMsg = STR."Couldn't subscribe to cache \{cacheId}, status=\{subscriptionResult.getStatus()}";
@@ -90,7 +89,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
      * @param requestId The request ID.
      * @param cacheId   The ID of the cache we want to unsubscribe too on the cluster side.
      */
-    private void sendCacheUnsubscribeRequest(AeronCache cluster, String requestId, long cacheId) {
+    private void sendCacheUnsubscribeRequest(AeronCache cluster, String requestId, String cacheId) {
         sendCacheUnsubscribe(requestId, cacheId, unsubscribeResult -> {
             if (unsubscribeResult.getStatus() != OperationStatus.SUCCESS) {
                 log.warn("Couldn't unsubscribe from cache {}, request ID {}", cacheId, requestId);
@@ -137,7 +136,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
     }
 
     @Override
-    public void handleCacheCleared(ClearCacheResult<ReusableLong> clearCacheResult) {
+    public void handleCacheCleared(ClearCacheResult<ReusableString> clearCacheResult) {
         log.info("Got cache cleared to send to ws");
         var subscribers = cacheSubscriptions.get(clearCacheResult.getCacheId().value());
 
@@ -149,7 +148,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
     }
 
     @Override
-    public void handleCacheDeleted(DeleteCacheResult<ReusableLong> deleteCacheResult) {
+    public void handleCacheDeleted(DeleteCacheResult<ReusableString> deleteCacheResult) {
         log.info("Got cache deleted to send to ws");
         var subscribers = cacheSubscriptions.get(deleteCacheResult.getCacheId().value());
 
@@ -161,7 +160,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
     }
 
     @Override
-    public void handleCacheEntryRemoved(RemoveCacheEntryResult<ReusableLong, ReusableString> removeCacheEntryResult) {
+    public void handleCacheEntryRemoved(RemoveCacheEntryResult<ReusableString, ReusableString> removeCacheEntryResult) {
         log.info("Got cache entry removed to send to ws");
         var subscribers = cacheSubscriptions.get(removeCacheEntryResult.getCacheId().value());
 
@@ -174,7 +173,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
     }
 
     @Override
-    public void handleCacheEntryUpdated(CacheEntryUpdateResult<ReusableLong, ReusableString, ReusableString> cacheEntryUpdateResult) {
+    public void handleCacheEntryUpdated(CacheEntryUpdateResult<ReusableString, ReusableString, ReusableString> cacheEntryUpdateResult) {
         log.info("Got cache entry updated to send to ws");
         var subscribers = cacheSubscriptions.get(cacheEntryUpdateResult.getCacheId().value());
 

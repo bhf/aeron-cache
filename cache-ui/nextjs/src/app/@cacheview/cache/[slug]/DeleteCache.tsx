@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 const logger = getLogger("DeleteCache");
 
 interface DeleteCacheProps {
-  cacheId: number;
+  cacheId: string;
 }
 
 /**

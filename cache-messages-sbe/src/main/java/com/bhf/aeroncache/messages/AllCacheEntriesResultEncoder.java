@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class AllCacheEntriesResultEncoder
 {
-    public static final int BLOCK_LENGTH = 10;
+    public static final int BLOCK_LENGTH = 2;
     public static final int TEMPLATE_ID = 13;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -104,61 +104,9 @@ public final class AllCacheEntriesResultEncoder
         this.limit = limit;
     }
 
-    public static int cacheIdId()
-    {
-        return 1;
-    }
-
-    public static int cacheIdSinceVersion()
-    {
-        return 0;
-    }
-
-    public static int cacheIdEncodingOffset()
-    {
-        return 0;
-    }
-
-    public static int cacheIdEncodingLength()
-    {
-        return 8;
-    }
-
-    public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
-    {
-        if (MetaAttribute.PRESENCE == metaAttribute)
-        {
-            return "required";
-        }
-
-        return "";
-    }
-
-    public static long cacheIdNullValue()
-    {
-        return -9223372036854775808L;
-    }
-
-    public static long cacheIdMinValue()
-    {
-        return -9223372036854775807L;
-    }
-
-    public static long cacheIdMaxValue()
-    {
-        return 9223372036854775807L;
-    }
-
-    public AllCacheEntriesResultEncoder cacheId(final long value)
-    {
-        buffer.putLong(offset + 0, value, java.nio.ByteOrder.LITTLE_ENDIAN);
-        return this;
-    }
-
-
     public static int statusId()
     {
-        return 2;
+        return 1;
     }
 
     public static int statusSinceVersion()
@@ -168,7 +116,7 @@ public final class AllCacheEntriesResultEncoder
 
     public static int statusEncodingOffset()
     {
-        return 8;
+        return 0;
     }
 
     public static int statusEncodingLength()
@@ -188,13 +136,13 @@ public final class AllCacheEntriesResultEncoder
 
     public AllCacheEntriesResultEncoder status(final OperationStatus value)
     {
-        buffer.putByte(offset + 8, (byte)value.value());
+        buffer.putByte(offset + 0, (byte)value.value());
         return this;
     }
 
     public static int endOfBatchId()
     {
-        return 3;
+        return 2;
     }
 
     public static int endOfBatchSinceVersion()
@@ -204,7 +152,7 @@ public final class AllCacheEntriesResultEncoder
 
     public static int endOfBatchEncodingOffset()
     {
-        return 9;
+        return 1;
     }
 
     public static int endOfBatchEncodingLength()
@@ -224,7 +172,7 @@ public final class AllCacheEntriesResultEncoder
 
     public AllCacheEntriesResultEncoder endOfBatch(final BooleanType value)
     {
-        buffer.putByte(offset + 9, (byte)value.value());
+        buffer.putByte(offset + 1, (byte)value.value());
         return this;
     }
 
@@ -232,7 +180,7 @@ public final class AllCacheEntriesResultEncoder
 
     public static long itemsId()
     {
-        return 40;
+        return 30;
     }
 
     public ItemsEncoder itemsCount(final int count)
@@ -321,7 +269,7 @@ public final class AllCacheEntriesResultEncoder
 
         public static int keyId()
         {
-            return 41;
+            return 31;
         }
 
         public static String keyCharacterEncoding()
@@ -405,7 +353,7 @@ public final class AllCacheEntriesResultEncoder
 
         public static int valueId()
         {
-            return 42;
+            return 32;
         }
 
         public static String valueCharacterEncoding()
@@ -546,6 +494,90 @@ public final class AllCacheEntriesResultEncoder
     }
 
     public AllCacheEntriesResultEncoder requestId(final String value)
+    {
+        final byte[] bytes;
+        try
+        {
+            bytes = null == value || value.isEmpty() ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes("UTF-8");
+        }
+        catch (final java.io.UnsupportedEncodingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+
+        final int length = bytes.length;
+        if (length > 1073741824)
+        {
+            throw new IllegalStateException("length > maxValue for type: " + length);
+        }
+
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        parentMessage.limit(limit + headerLength + length);
+        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putBytes(limit + headerLength, bytes, 0, length);
+
+        return this;
+    }
+
+    public static int cacheIdId()
+    {
+        return 5;
+    }
+
+    public static String cacheIdCharacterEncoding()
+    {
+        return "UTF-8";
+    }
+
+    public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public static int cacheIdHeaderLength()
+    {
+        return 4;
+    }
+
+    public AllCacheEntriesResultEncoder putCacheId(final DirectBuffer src, final int srcOffset, final int length)
+    {
+        if (length > 1073741824)
+        {
+            throw new IllegalStateException("length > maxValue for type: " + length);
+        }
+
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        parentMessage.limit(limit + headerLength + length);
+        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+        return this;
+    }
+
+    public AllCacheEntriesResultEncoder putCacheId(final byte[] src, final int srcOffset, final int length)
+    {
+        if (length > 1073741824)
+        {
+            throw new IllegalStateException("length > maxValue for type: " + length);
+        }
+
+        final int headerLength = 4;
+        final int limit = parentMessage.limit();
+        parentMessage.limit(limit + headerLength + length);
+        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+        return this;
+    }
+
+    public AllCacheEntriesResultEncoder cacheId(final String value)
     {
         final byte[] bytes;
         try

@@ -7,5 +7,5 @@ package com.bhf.aeroncache.http.requests;
  * @param key The key of the item.
  * @param value The value of the item.
  */
-public record PutItemRequest(long cacheId, String key, String value) {
+public record PutItemRequest(String cacheId, String key, String value) {
 }

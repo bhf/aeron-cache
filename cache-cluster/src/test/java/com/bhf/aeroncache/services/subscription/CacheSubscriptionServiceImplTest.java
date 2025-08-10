@@ -5,7 +5,6 @@ import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.requests.CacheSubscriptionRequestDetails;
 import com.bhf.aeroncache.models.requests.CacheUnsubscribeRequestDetails;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.ClientSession;
@@ -29,7 +28,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CacheSubscriptionServiceImplTest {
 
-    CacheSubscriptionService<ReusableLong> sut;
+    CacheSubscriptionService<ReusableString> sut;
 
     @Mock
     IdleStrategy idleStrategy;
@@ -37,15 +36,15 @@ class CacheSubscriptionServiceImplTest {
     @Mock
     ClientSession session;
 
-    private final long KNOWN_CACHE = 123L;
+    private final String KNOWN_CACHE = "123L";
 
 
     @BeforeEach
     void setup() {
-        CacheSubscriptionResult<ReusableLong> subscriptionResult = new CacheSubscriptionResult<>(new ReusableLong());
-        CacheUnsubscribeResult<ReusableLong> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableLong());
+        CacheSubscriptionResult<ReusableString> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
+        CacheUnsubscribeResult<ReusableString> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableString());
         sut = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult,
-                SupplierUtils.longSupplier);
+                SupplierUtils.stringSupplier);
     }
 
     @Test
@@ -67,7 +66,7 @@ class CacheSubscriptionServiceImplTest {
         // Arrange
         subscribeToCache();
 
-        var unsubscribeRequest = new CacheUnsubscribeRequestDetails<>(new ReusableLong());
+        var unsubscribeRequest = new CacheUnsubscribeRequestDetails<>(new ReusableString());
         unsubscribeRequest.setRequestId(UUID.randomUUID().toString());
         unsubscribeRequest.getCacheId().copyFrom(KNOWN_CACHE);
 
@@ -88,7 +87,7 @@ class CacheSubscriptionServiceImplTest {
         when(session.id()).thenReturn(321L);
 
         // Act
-        DeleteCacheResult<ReusableLong> requestDetails = new DeleteCacheResult<>(new ReusableLong());
+        DeleteCacheResult<ReusableString> requestDetails = new DeleteCacheResult<>(new ReusableString());
         requestDetails.getCacheId().copyFrom(KNOWN_CACHE);
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheDeletedEncoder deleteEncoder = Mockito.mock(CacheDeletedEncoder.class);
@@ -108,7 +107,7 @@ class CacheSubscriptionServiceImplTest {
         when(session.id()).thenReturn(321L);
 
         // Act
-        ClearCacheResult<ReusableLong> requestDetails = new ClearCacheResult<>(new ReusableLong());
+        ClearCacheResult<ReusableString> requestDetails = new ClearCacheResult<>(new ReusableString());
         requestDetails.getCacheId().copyFrom(KNOWN_CACHE);
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheClearedEncoder clearEncoder = Mockito.mock(CacheClearedEncoder.class);
@@ -128,8 +127,8 @@ class CacheSubscriptionServiceImplTest {
         when(session.id()).thenReturn(321L);
 
         // Act
-        RemoveCacheEntryResult<ReusableLong, ReusableString> requestDetails =
-                new RemoveCacheEntryResult<>(new ReusableLong(), new ReusableString());
+        RemoveCacheEntryResult<ReusableString, ReusableString> requestDetails =
+                new RemoveCacheEntryResult<>(new ReusableString(), new ReusableString());
         requestDetails.getCacheId().copyFrom(KNOWN_CACHE);
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheEntryRemovedEncoder entryRemovedEncoder = Mockito.mock(CacheEntryRemovedEncoder.class);
@@ -148,8 +147,8 @@ class CacheSubscriptionServiceImplTest {
         subscribeToCache();
 
         // Act
-        AddCacheEntryResult<ReusableLong, ReusableString> requestDetails =
-                new AddCacheEntryResult<>(new ReusableLong(), new ReusableString());
+        AddCacheEntryResult<ReusableString, ReusableString> requestDetails =
+                new AddCacheEntryResult<>(new ReusableString(), new ReusableString());
         requestDetails.getCacheId().copyFrom(KNOWN_CACHE);
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheEntryCreatedEncoder addEntryEncoder = Mockito.mock(CacheEntryCreatedEncoder.class);
@@ -164,8 +163,8 @@ class CacheSubscriptionServiceImplTest {
         verify(session).offer(any(MutableDirectBuffer.class), eq(0), anyInt());
     }
 
-    private CacheSubscriptionResult<ReusableLong> subscribeToCache() {
-        var subscribeRequest = new CacheSubscriptionRequestDetails<>(new ReusableLong());
+    private CacheSubscriptionResult<ReusableString> subscribeToCache() {
+        var subscribeRequest = new CacheSubscriptionRequestDetails<>(new ReusableString());
         subscribeRequest.setRequestId(UUID.randomUUID().toString());
         subscribeRequest.getCacheId().copyFrom(KNOWN_CACHE);
         return sut.subscribe(subscribeRequest, session);

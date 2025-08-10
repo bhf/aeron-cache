@@ -26,9 +26,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CacheClientAgentTest {
-    private static final long MAX_SBE_LONG = Long.MAX_VALUE;
-    private static final long MIN_SBE_LONG = -Long.MAX_VALUE;
-    
+
     CacheClientAgent sut;
 
     @Mock
@@ -74,7 +72,7 @@ class CacheClientAgentTest {
     @HappyPath
     @DisplayName("Should publish create cache request via Publisher only once")
     @MethodSource("provideCreateCacheParams")
-    void shouldPublishCreateCacheRequest(String requestId, long cacheId) {
+    void shouldPublishCreateCacheRequest(String requestId, String cacheId) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
         requestPublisher.sendCreateCache(requestId, cacheId);
@@ -88,18 +86,15 @@ class CacheClientAgentTest {
 
     public static Stream<Arguments> provideCreateCacheParams() {
         return Stream.of(
-                Arguments.of("", 1L),
-                Arguments.of("requestID", -1L),
-                Arguments.of("requestID", MAX_SBE_LONG),
-                Arguments.of("requestID", MIN_SBE_LONG),
-                Arguments.of(UUID.randomUUID().toString(), 123L));
+                Arguments.of("", "testCacheId"),
+                Arguments.of("requestID", "testCacheId"));
     }
 
     @ParameterizedTest
     @HappyPath
     @DisplayName("Should publish add cache entry request via Publisher only once")
     @MethodSource("provideAddCacheEntryParams")
-    void shouldPublishAddCacheEntryRequest(String requestId, long cacheId, String key, String value) {
+    void shouldPublishAddCacheEntryRequest(String requestId, String cacheId, String key, String value) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
         requestPublisher.addCacheEntry(requestId, cacheId, key, value);
@@ -113,18 +108,16 @@ class CacheClientAgentTest {
 
     public static Stream<Arguments> provideAddCacheEntryParams() {
         return Stream.of(
-                Arguments.of("", 1L, "key", "value"),
-                Arguments.of("requestID", -1L, "key", "value"),
-                Arguments.of("requestID", MAX_SBE_LONG, "key", "value"),
-                Arguments.of("requestID", MIN_SBE_LONG, "key", "value"),
-                Arguments.of(UUID.randomUUID().toString(), 123L, "key", "value"));
+                Arguments.of("", "testCacheId", "key", "value"),
+                Arguments.of("requestID", "testCacheId", "key", "value"),
+                Arguments.of(UUID.randomUUID().toString(), "123L", "key", "value"));
     }
 
     @ParameterizedTest
     @HappyPath
     @DisplayName("Should publish get cache entry request via Publisher only once")
     @MethodSource("provideGetCacheEntryParams")
-    void shouldPublishGetCacheEntryRequest(String requestId, long cacheId, String key) {
+    void shouldPublishGetCacheEntryRequest(String requestId, String cacheId, String key) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
         requestPublisher.getCacheEntry(requestId, cacheId, key);
@@ -138,18 +131,16 @@ class CacheClientAgentTest {
 
     public static Stream<Arguments> provideGetCacheEntryParams() {
         return Stream.of(
-                Arguments.of("", 1L, "key"),
-                Arguments.of("requestID", -1L, "key"),
-                Arguments.of("requestID", MAX_SBE_LONG, "key"),
-                Arguments.of("requestID", MIN_SBE_LONG, "key"),
-                Arguments.of(UUID.randomUUID().toString(), 123L, "key"));
+                Arguments.of("", "testCacheId", "key"),
+                Arguments.of("requestID", "testCacheId", "key"),
+                Arguments.of(UUID.randomUUID().toString(), "123L", "key"));
     }
 
     @ParameterizedTest
     @HappyPath
     @DisplayName("Should publish clear cache request via Publisher only once")
     @MethodSource("provideClearCacheParams")
-    void shouldPublishClearCacheRequest(String requestId, long cacheId) {
+    void shouldPublishClearCacheRequest(String requestId, String cacheId) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
         requestPublisher.clearCache(requestId, cacheId);
@@ -163,18 +154,16 @@ class CacheClientAgentTest {
 
     public static Stream<Arguments> provideClearCacheParams() {
         return Stream.of(
-                Arguments.of("", 1L),
-                Arguments.of("requestID", -1L),
-                Arguments.of("requestID", MAX_SBE_LONG),
-                Arguments.of("requestID", MIN_SBE_LONG),
-                Arguments.of(UUID.randomUUID().toString(), 123L));
+                Arguments.of("", "testCacheId"),
+                Arguments.of("requestID", "testCacheId"),
+                Arguments.of(UUID.randomUUID().toString(), "123L"));
     }
 
     @ParameterizedTest
     @HappyPath
     @DisplayName("Should publish delete cache request via Publisher only once")
     @MethodSource("provideDeleteCacheParams")
-    void shouldPublishDeleteCacheRequest(String requestId, long cacheId) {
+    void shouldPublishDeleteCacheRequest(String requestId, String cacheId) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
         requestPublisher.deleteCache(requestId, cacheId);
@@ -188,18 +177,16 @@ class CacheClientAgentTest {
 
     public static Stream<Arguments> provideDeleteCacheParams() {
         return Stream.of(
-                Arguments.of("", 1L),
-                Arguments.of("requestID", -1L),
-                Arguments.of("requestID", MAX_SBE_LONG),
-                Arguments.of("requestID", MIN_SBE_LONG),
-                Arguments.of(UUID.randomUUID().toString(), 123L));
+                Arguments.of("", "testCacheId"),
+                Arguments.of("requestID", "testCacheId"),
+                Arguments.of(UUID.randomUUID().toString(), "123L"));
     }
 
     @ParameterizedTest
     @HappyPath
     @DisplayName("Should publish get cache entries request via Publisher only once")
     @MethodSource("provideGetEntriesParams")
-    void shouldPublishGetCacheEntriesRequest(String requestId, long cacheId) {
+    void shouldPublishGetCacheEntriesRequest(String requestId, String cacheId) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
         requestPublisher.getCacheEntries(requestId, cacheId);
@@ -213,18 +200,16 @@ class CacheClientAgentTest {
 
     public static Stream<Arguments> provideGetEntriesParams() {
         return Stream.of(
-                Arguments.of("", 1L),
-                Arguments.of("requestID", -1L),
-                Arguments.of("requestID", MAX_SBE_LONG),
-                Arguments.of("requestID", MIN_SBE_LONG),
-                Arguments.of(UUID.randomUUID().toString(), 123L));
+                Arguments.of("", "testCacheId"),
+                Arguments.of("requestID", "testCacheId"),
+                Arguments.of(UUID.randomUUID().toString(), "123L"));
     }
 
     @ParameterizedTest
     @HappyPath
     @DisplayName("Should publish cache subscribe request via Publisher only once")
     @MethodSource("provideCacheSubscribeParams")
-    void shouldPublishCacheSubscribeRequest(String requestId, long cacheId) {
+    void shouldPublishCacheSubscribeRequest(String requestId, String cacheId) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
         requestPublisher.sendCacheSubscribe(requestId, cacheId);
@@ -238,18 +223,16 @@ class CacheClientAgentTest {
 
     public static Stream<Arguments> provideCacheSubscribeParams() {
         return Stream.of(
-                Arguments.of("", 1L),
-                Arguments.of("requestID", -1L),
-                Arguments.of("requestID", MAX_SBE_LONG),
-                Arguments.of("requestID", MIN_SBE_LONG),
-                Arguments.of(UUID.randomUUID().toString(), 123L));
+                Arguments.of("", "testCacheId"),
+                Arguments.of("requestID", "testCacheId"),
+                Arguments.of(UUID.randomUUID().toString(), "123L"));
     }
 
     @ParameterizedTest
     @HappyPath
     @DisplayName("Should publish cache unsubscribe request via Publisher only once")
     @MethodSource("provideCacheUnsubscribeParams")
-    void shouldPublishCacheUnsubscribeRequest(String requestId, long cacheId) {
+    void shouldPublishCacheUnsubscribeRequest(String requestId, String cacheId) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
         requestPublisher.sendCacheUnsubscribe(requestId, cacheId);
@@ -263,11 +246,9 @@ class CacheClientAgentTest {
 
     public static Stream<Arguments> provideCacheUnsubscribeParams() {
         return Stream.of(
-                Arguments.of("", 1L),
-                Arguments.of("requestID", -1L),
-                Arguments.of("requestID", MAX_SBE_LONG),
-                Arguments.of("requestID", MIN_SBE_LONG),
-                Arguments.of(UUID.randomUUID().toString(), 123L));
+                Arguments.of("", "testCacheId"),
+                Arguments.of("requestID", "testCacheId"),
+                Arguments.of(UUID.randomUUID().toString(), "123L"));
     }
 
     @ParameterizedTest
@@ -297,7 +278,7 @@ class CacheClientAgentTest {
     @HappyPath
     @DisplayName("Should publish remove cache entry request via Publisher only once")
     @MethodSource("provideRemoveCacheEntryParams")
-    void shouldPublishRemoveCacheEntryRequest(String requestId, long cacheId, String key) {
+    void shouldPublishRemoveCacheEntryRequest(String requestId, String cacheId, String key) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
         requestPublisher.removeCacheEntry(requestId, cacheId, key);
@@ -311,11 +292,9 @@ class CacheClientAgentTest {
 
     public static Stream<Arguments> provideRemoveCacheEntryParams() {
         return Stream.of(
-                Arguments.of("", 1L, "key"),
-                Arguments.of("requestID", -1L, "key"),
-                Arguments.of("requestID", MAX_SBE_LONG, "key"),
-                Arguments.of("requestID", MIN_SBE_LONG, "key"),
-                Arguments.of(UUID.randomUUID().toString(), 123L, "key"));
+                Arguments.of("", "testCacheId", "key"),
+                Arguments.of("requestID", "testCacheId", "key"),
+                Arguments.of(UUID.randomUUID().toString(), "123L", "key"));
     }
 
 }

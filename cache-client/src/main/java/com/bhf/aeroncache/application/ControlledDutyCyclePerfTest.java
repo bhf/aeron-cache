@@ -71,7 +71,7 @@ public class ControlledDutyCyclePerfTest {
      * @param cacheId      The ID of the cache we're testing against.
      * @param payloadValue
      */
-    private static void sendMessagesToCache(AeronCacheClusterListener client, AeronCache cluster, ObservingClusterRequestPublisher publisher, int cacheId, String payloadValue) {
+    private static void sendMessagesToCache(AeronCacheClusterListener client, AeronCache cluster, ObservingClusterRequestPublisher publisher, String cacheId, String payloadValue) {
         var ts = System.nanoTime();
         var requestId = String.valueOf(c++);
         lastSent = ts;
@@ -132,7 +132,7 @@ public class ControlledDutyCyclePerfTest {
             client.setCacheResultsCallbacks(observingPublisher);
             addConsumers(client, observingPublisher);
 
-            var cacheId = 808;
+            var cacheId = "808";
             System.out.println("Sending request to create cache " + cacheId);
             observingPublisher.sendCreateCacheBlocking(UUID.randomUUID().toString(), cacheId);
 

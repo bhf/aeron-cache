@@ -8,6 +8,6 @@ import com.bhf.aeroncache.messages.OperationStatus;
  * @param cacheId         The Cache ID.
  * @param operationStatus The status of the operation.
  */
-public record DeleteCacheResponse(long cacheId, OperationStatus operationStatus) {
+public record DeleteCacheResponse(String cacheId, OperationStatus operationStatus) {
 
 }

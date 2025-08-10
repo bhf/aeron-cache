@@ -13,8 +13,8 @@ import static io.restassured.RestAssured.given;
 class RemoveItemTests {
 
     private static final String REMOVE_ITEM_ENDPOINT = "/api/v1/cache/";
-    private static final int KNOWN_CACHE_ID = 1;
-    private static final int UNKNOWN_CACHE_ID = 123;
+    private static final String KNOWN_CACHE_ID = "1";
+    private static final String UNKNOWN_CACHE_ID = "123";
     private static final String KNOWN_KEY = "SomeKey";
     private static final String UNKNOWN_KEY = "UnknownKey";
     private static final String KNOWN_VALUE = "SomeValue";

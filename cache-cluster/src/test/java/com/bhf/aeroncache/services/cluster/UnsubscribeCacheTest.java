@@ -10,7 +10,7 @@ import com.bhf.aeroncache.models.results.CacheUnsubscribeResult;
 import com.bhf.aeroncache.services.TestUtils;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionServiceImpl;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
-import com.bhf.aeroncache.types.ReusableLong;
+import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.logbuffer.Header;
@@ -46,7 +46,7 @@ class UnsubscribeCacheTest {
     private final CacheUnsubscribeResponseDecoder cacheUnsubscribedDecoder = new CacheUnsubscribeResponseDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
-    private CacheUnsubscribeResult<ReusableLong> result;
+    private CacheUnsubscribeResult<ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
     private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
@@ -57,20 +57,20 @@ class UnsubscribeCacheTest {
         tracingService = Mockito.mock(CacheTracingService.class);
         sut = new SBEDecodingCacheClusterService("node0", tracingService);
         IdleStrategy idleStrategy = Mockito.mock(IdleStrategy.class);
-        CacheSubscriptionResult<ReusableLong> subscriptionResult = new CacheSubscriptionResult<>(new ReusableLong());
-        CacheUnsubscribeResult<ReusableLong> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableLong());
-        Supplier<ReusableLong> indexSupplier = ReusableLong::new;
+        CacheSubscriptionResult<ReusableString> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
+        CacheUnsubscribeResult<ReusableString> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableString());
+        Supplier<ReusableString> indexSupplier = ReusableString::new;
         sut.subscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult, indexSupplier);
         responseBuffer = new ExpandableArrayBuffer();
         requestBuffer = new ExpandableArrayBuffer();
-        result = new CacheUnsubscribeResult<>(SupplierUtils.longSupplier.get());
+        result = new CacheUnsubscribeResult<>(SupplierUtils.stringSupplier.get());
     }
 
     @ParameterizedTest
     @DisplayName("Should unsubscribe to a known cache")
-    @ValueSource(longs = {0, MAX_SBE_LONG, MIN_SBE_LONG})
+    @ValueSource(strings = {"0", "MAX_SBE_LONG", "MIN_SBE_LONG"})
     @HappyPath
-    void shouldUnsubscribeToKnownCache(long cacheId) {
+    void shouldUnsubscribeToKnownCache(String cacheId) {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);
@@ -102,7 +102,7 @@ class UnsubscribeCacheTest {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
-        var cacheId = 123L;
+        var cacheId = "123L";
         var length = CacheRequestEncoder.encodeCacheUnsubscribe(unsubscribeCacheEncoder, headerEncoder,
                 requestBuffer, requestId, cacheId);
 
