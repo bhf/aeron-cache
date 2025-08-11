@@ -11,12 +11,10 @@ Containerized and deployable with ```docker compose``` or on Kubernetes via ```h
 Includes an MCP server to power your Agentic AI and LLM workflows.
 
 
-
-https://github.com/user-attachments/assets/e888197f-f0b1-45b0-925c-115fa5cb0420
-
-https://github.com/user-attachments/assets/53205c80-4f65-4f5c-8eb7-78ea6f202115
+https://github.com/user-attachments/assets/c602f365-2b6a-497c-a671-29508cc04155
 
 
+https://github.com/user-attachments/assets/cdbf0e54-2ff8-47c4-8a98-50a8104de6fd
 
 
 * [How To Run - Docker](#docker)
