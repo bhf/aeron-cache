@@ -57,6 +57,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 @Log4j2
 public class HttpApplication {
@@ -78,6 +79,8 @@ public class HttpApplication {
     private static AgentRunner agentRunner;
     private static AeronCluster aeronCluster;
     private static MediaDriver mediaDriver;
+
+    private static final Pattern specialCharacters = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!-]");
 
     public static void main(String[] args) {
         System.out.println("Starting HTTP interface");
@@ -128,9 +131,9 @@ public class HttpApplication {
             mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
 
             var cacheMode = System.getenv("CACHE_MODE");
-            final boolean CLUSTERED_MODE = cacheMode==null || cacheMode.toUpperCase().equals("RAFT");
+            final boolean CLUSTERED_MODE = cacheMode == null || cacheMode.toUpperCase().equals("RAFT");
 
-            System.out.println("Cache mode: "+cacheMode+", using clustered mode: "+CLUSTERED_MODE);
+            System.out.println("Cache mode: " + cacheMode + ", using clustered mode: " + CLUSTERED_MODE);
 
             if (CLUSTERED_MODE) {
                 buildClusterConnection(egressIP, ingressEndpoints);
@@ -166,13 +169,13 @@ public class HttpApplication {
 
     private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {
 
-        var requestPublicationChannel = "aeron:udp?endpoint="+requestPubHost+":8008|alias=AC-unclustered-requests";
+        var requestPublicationChannel = "aeron:udp?endpoint=" + requestPubHost + ":8008|alias=AC-unclustered-requests";
         int requestPublicationStream = 1;
         var requestPublication = aeron.addPublication(requestPublicationChannel,
                 requestPublicationStream);
 
         var hostname = DNSUtils.getThisHostName();
-        var responseSubscriptionChannel = "aeron:udp?endpoint="+hostname+":8007|alias=AC-unclustered-responses";
+        var responseSubscriptionChannel = "aeron:udp?endpoint=" + hostname + ":8007|alias=AC-unclustered-responses";
         int responseSubscriptionStream = 2;
         var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
                 responseSubscriptionStream);
@@ -642,6 +645,16 @@ public class HttpApplication {
         try {
             var request = ctx.bodyAsClass(CreateCacheRequest.class);
             log.info("Got create cache request on cacheId {}", request.cacheId());
+
+            if (specialCharacters.matcher(request.cacheId()).find()) {
+                var errorMsg = "Cache ID shouldn't contain special characters";
+                var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_SPECIAL_CHARACTERS,
+                        OperationStatus.ERROR);
+                ctx.status(HTTPStatusUtils.BAD_REQUEST);
+                ctx.json(badRequest);
+                return;
+            }
+
             var requestId = getRequestId(ctx);
 
             CompletableFuture<CreateCacheResponse> future = new CompletableFuture<>();
