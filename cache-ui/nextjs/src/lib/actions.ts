@@ -44,7 +44,7 @@ export async function createCacheRequest(currentState: { message: string, error:
 
     var specialCharacterCheck = /[ `!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/
     if (specialCharacterCheck.test(cacheId as string)) {
-        return {message: "No special characters allows in cache ID", error: true}
+        return {message: "No special characters allowed in cache ID", error: true}
     }
 
     logger.info("Creating cache request with id", cacheId)
