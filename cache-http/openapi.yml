@@ -53,8 +53,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-          description: The numeric ID of the cache
+            type: string
+          description: The ID of the cache
       requestBody:
         content:
           application/json:
@@ -85,8 +85,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-          description: The numeric ID of the cache
+            type: string
+          description: The ID of the cache
       responses:
         '200':
           description: OK
@@ -112,8 +112,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-          description: The numeric ID of the cache
+            type: string
+          description: The ID of the cache
         - name: key
           in: path
           required: true
@@ -144,8 +144,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-          description: The numeric ID of the cache
+            type: string
+          description: The ID of the cache
         - name: key
           in: path
           required: true
@@ -180,9 +180,8 @@ components:
       type: object
       properties:
         cacheId:
-          type: integer
-          format: int64
-          example: 1
+          type: string
+          example: "SomeCacheID"
     CreateResponse:
       type: object
       properties:
@@ -194,9 +193,8 @@ components:
       type: object
       properties:
         cacheId:
-          type: integer
-          format: int64
-          example: 1
+          type: string
+          example: "SomeCacheID"
         key:
           type: string
           example: 'SomeRandomKey'
@@ -207,9 +205,8 @@ components:
       type: object
       properties:
         cacheId:
-          type: integer
-          format: int64
-          example: 1
+          type: string
+          example: "SomeCacheID"
         key:
           type: string
           example: 'SomeRandomKey'
@@ -217,16 +214,14 @@ components:
       type: object
       properties:
         cacheId:
-          type: integer
-          format: int64
-          example: 1
+          type: string
+          example: "SomeCacheID"
     GetItemResponse:
       type: object
       properties:
         cacheId:
-          type: integer
-          format: int64
-          example: 1
+          type: string
+          example: "SomeCacheID"
         key:
           type: string
           example: 'SomeRandomKey'
@@ -237,9 +232,8 @@ components:
       type: object
       properties:
         cacheId:
-          type: integer
-          format: int64
-          example: 1
+          type: string
+          example: "SomeCacheID"
         key:
           type: string
           example: 'SomeRandomKey'

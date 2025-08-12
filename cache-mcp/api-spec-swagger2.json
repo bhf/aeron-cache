@@ -88,8 +88,8 @@
             "name": "cacheId",
             "in": "path",
             "required": true,
-            "description": "The numeric ID of the cache",
-            "type": "integer"
+            "description": "The ID of the cache",
+            "type": "string"
           },
           {
             "name": "body",
@@ -127,8 +127,8 @@
             "name": "cacheId",
             "in": "path",
             "required": true,
-            "description": "The numeric ID of the cache",
-            "type": "integer"
+            "description": "The ID of the cache",
+            "type": "string"
           }
         ]
       }
@@ -160,8 +160,8 @@
             "name": "cacheId",
             "in": "path",
             "required": true,
-            "description": "The numeric ID of the cache",
-            "type": "integer"
+            "description": "The ID of the cache",
+            "type": "string"
           },
           {
             "name": "key",
@@ -198,8 +198,8 @@
             "name": "cacheId",
             "in": "path",
             "required": true,
-            "description": "The numeric ID of the cache",
-            "type": "integer"
+            "description": "The ID of the cache",
+            "type": "string"
           },
           {
             "name": "key",
@@ -230,9 +230,8 @@
       "type": "object",
       "properties": {
         "cacheId": {
-          "type": "integer",
-          "format": "int64",
-          "example": 1
+          "type": "string",
+          "example": "SomeCacheId"
         }
       }
     },
@@ -240,9 +239,8 @@
       "type": "object",
       "properties": {
         "cacheId": {
-          "type": "integer",
-          "format": "int64",
-          "example": 1
+          "type": "string",
+          "example": "SomeCacheId"
         }
       }
     },
@@ -250,9 +248,8 @@
       "type": "object",
       "properties": {
         "cacheId": {
-          "type": "integer",
-          "format": "int64",
-          "example": 1
+          "type": "string",
+          "example": "SomeCacheId"
         },
         "key": {
           "type": "string",
@@ -268,9 +265,8 @@
       "type": "object",
       "properties": {
         "cacheId": {
-          "type": "integer",
-          "format": "int64",
-          "example": 1
+          "type": "string",
+          "example": "SomeCacheId"
         },
         "key": {
           "type": "string",
@@ -282,9 +278,8 @@
       "type": "object",
       "properties": {
         "cacheId": {
-          "type": "integer",
-          "format": "int64",
-          "example": 1
+          "type": "string",
+          "example": "SomeCacheId"
         }
       }
     },
@@ -292,9 +287,8 @@
       "type": "object",
       "properties": {
         "cacheId": {
-          "type": "integer",
-          "format": "int64",
-          "example": 1
+          "type": "string",
+          "example": "SomeCacheId"
         },
         "key": {
           "type": "string",
@@ -310,9 +304,8 @@
       "type": "object",
       "properties": {
         "cacheId": {
-          "type": "integer",
-          "format": "int64",
-          "example": 1
+          "type": "string",
+          "example": "SomeCacheId"
         },
         "key": {
           "type": "string",
