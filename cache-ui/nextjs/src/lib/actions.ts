@@ -41,6 +41,12 @@ export async function getSSEURL(): Promise<string> {
  */
 export async function createCacheRequest(currentState: { message: string, error: boolean }, formData: FormData) {
     const cacheId = formData.get('cacheId')
+
+    var specialCharacterCheck = /[ `!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/
+    if (specialCharacterCheck.test(cacheId as string)) {
+        return {message: "No special characters allows in cache ID", error: true}
+    }
+
     logger.info("Creating cache request with id", cacheId)
     try {
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/', {
@@ -48,7 +54,7 @@ export async function createCacheRequest(currentState: { message: string, error:
             headers,
             body: JSON.stringify({cacheId}),
             cache: "no-cache"
-        });
+        })
         const content = await rawResponse.json();
         logger.info("Got response from sending request to create cache ", content)
 
