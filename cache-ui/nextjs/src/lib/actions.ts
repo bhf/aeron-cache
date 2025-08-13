@@ -42,7 +42,7 @@ export async function getSSEURL(): Promise<string> {
 export async function createCacheRequest(currentState: { message: string, error: boolean }, formData: FormData) {
     const cacheId = formData.get('cacheId')
 
-    var specialCharacterCheck = /[ `!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/
+    const specialCharacterCheck = /[ `!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?~]/
     if (specialCharacterCheck.test(cacheId as string)) {
         return {message: "No special characters allowed in cache ID", error: true}
     }

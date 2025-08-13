@@ -80,7 +80,7 @@ public class HttpApplication {
     private static AeronCluster aeronCluster;
     private static MediaDriver mediaDriver;
 
-    private static final Pattern specialCharacters = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!-]");
+    private static final Pattern specialCharacters = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!]");
 
     public static void main(String[] args) {
         System.out.println("Starting HTTP interface");
