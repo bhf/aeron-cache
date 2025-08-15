@@ -2,7 +2,7 @@
 
 import {useState} from "react";
 import {useParams} from "next/navigation";
-import Terminal from "@/components/cache-view/terminal";
+import Terminal from "@/components/cache-view/Terminal";
 import {getLogger} from "@/lib/loggingUtil";
 import {useWebSocket} from "@/app/@cacheview/wss/useWebsocket";
 

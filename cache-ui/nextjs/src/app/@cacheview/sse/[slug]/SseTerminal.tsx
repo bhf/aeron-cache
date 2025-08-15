@@ -1,7 +1,7 @@
 "use client"
 
 import {useParams} from "next/navigation";
-import Terminal from "@/components/cache-view/terminal";
+import Terminal from "@/components/cache-view/Terminal";
 import {getLogger} from "@/lib/loggingUtil";
 import useSSE from "@/app/@cacheview/sse/useSSE";
 

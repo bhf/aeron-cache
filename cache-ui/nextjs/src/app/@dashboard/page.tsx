@@ -1,4 +1,4 @@
-import {DashboardStats} from "@/app/@dashboard/dashboard/dashboard-stats";
+import {DashboardStats} from "@/app/@dashboard/dashboard/DashboardStats";
 import {getCacheAPIURI} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
 

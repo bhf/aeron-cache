@@ -1,4 +1,4 @@
-import SseTerminal from "@/app/@cacheview/sse/[slug]/sse-terminal";
+import SseTerminal from "@/app/@cacheview/sse/[slug]/SseTerminal";
 import {getSSEURL} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
 
