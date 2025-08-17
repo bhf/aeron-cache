@@ -5,48 +5,8 @@ import {CacheInfo} from "@/lib/types";
 import {RemoveCacheItem} from "@/app/@cacheview/cache/[slug]/RemoveCacheItem";
 import CopyToClipboard from "@/components/cache-view/CopyToClipboard";
 
-
-export function getCacheItemColumns(cacheId: number): ColumnDef<CacheInfo>[] {
-    return [
-        {
-            id: "remove",
-            header: "Remove",
-            cell: ({row}) => {
-                const itemKey = row.getValue("key")
-                const itemValue = row.getValue("value")
-
-                return (
-                    <div>
-                        <RemoveCacheItem cacheId={cacheId} itemKey={itemKey as string}></RemoveCacheItem>asd
-                    </div>
-                )
-            },
-        },
-        {
-            accessorKey: "key",
-            header: "Key",
-        },
-        {
-            accessorKey: "value",
-            header: "Value",
-        },
-        {
-            id: "actions",
-            header: "Actions",
-            cell: ({row}) => {
-                const itemKey = row.getValue("key")
-                const itemValue = row.getValue("value")
-
-                return (
-                    <div>
-                        <RemoveCacheItem cacheId={cacheId} itemKey={itemKey as string}></RemoveCacheItem>asd
-                        <CopyToClipboard value={itemValue as string} tooltip={"Copy Value"} element={"Value"}></CopyToClipboard>
-                        <CopyToClipboard value={itemKey as string} tooltip={"Copy Key"} element={"Value"}></CopyToClipboard>
-                    </div>
-                )
-            },
-        },
-    ]
+function maxCharacters() {
+    return 37;
 }
 
 export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
@@ -55,7 +15,6 @@ export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
         header: "Remove",
         cell: ({row}) => {
             const itemKey = row.getValue("key")
-            const itemValue = row.getValue("value")
             const cacheId = row.getValue("cacheId")
             return (
                 <div>
@@ -67,32 +26,38 @@ export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
     {
         accessorKey: "key",
         header: "Key",
+        cell: ({row}) => {
+            const itemKey = row.getValue("key") as string
+            const cleaned = itemKey.length > maxCharacters() ? itemKey.substring(0, maxCharacters()) + "....." : itemKey
+            return (
+                <div className={"flex flex-row space-x-2 mb-2"}>
+                    <div>{cleaned}</div>
+                    <CopyToClipboard value={itemKey as string} tooltip={"Copy Key"}
+                                     element={"Key"}></CopyToClipboard>
+
+                </div>
+            )
+        }
     },
     {
         accessorKey: "value",
         header: "Value",
-    },
-    {
-        accessorKey: "cacheId",
-        header: "CacheId",
-        enableHiding: true,
-
-    },
-    {
-        id: "copy",
-        header: "Copy",
         cell: ({row}) => {
-            const itemKey = row.getValue("key")
-            const itemValue = row.getValue("value")
-
+            const itemValue = row.getValue("value") as string
+            const cleaned = itemValue.length > maxCharacters() ? itemValue.substring(0, maxCharacters()) + "....." : itemValue
             return (
                 <div className={"flex flex-row space-x-2 mb-2"}>
-                    <CopyToClipboard value={itemKey as string} tooltip={"Copy Key"} element={"Key"}></CopyToClipboard>
+                    <div>{cleaned}</div>
                     <CopyToClipboard value={itemValue as string} tooltip={"Copy Value"}
                                      element={"Value"}></CopyToClipboard>
 
                 </div>
             )
         },
+    },
+    {
+        accessorKey: "cacheId",
+        header: "CacheId",
+        enableHiding: true,
     },
 ]

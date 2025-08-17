@@ -23,7 +23,7 @@ export default function AboutAeronCache() {
                         <DialogTitle>About Aeron Cache</DialogTitle>
                         <DialogDescription>
                             <Image className={"pt-5 pb-5"} src={"/zoom.gif"} width={500} height={296} alt={""}/>
-                            A distributed key value store using Aeron and SBE with a HTTP and WS interface.
+                            A key value store built using Aeron, Agrona and SBE with a HTTP, WS and SSE interface.
                         </DialogDescription>
                     </DialogHeader>
                     <div
