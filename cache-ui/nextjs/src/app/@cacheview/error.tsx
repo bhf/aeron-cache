@@ -16,7 +16,7 @@ export default function Error({
 
     return (
         <div>
-            <h2>Something went wrong trying to load the view of all caches!</h2>
+            <h2>Something went wrong loading the cache view!</h2>
             <button
                 onClick={
                     // Attempt to recover by trying to re-render the segment
