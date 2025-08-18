@@ -5,9 +5,8 @@ import {CacheInfo} from "@/lib/types";
 import {RemoveCacheItem} from "@/app/@cacheview/cache/[slug]/RemoveCacheItem";
 import CopyToClipboard from "@/components/cache-view/CopyToClipboard";
 
-function maxCharacters() {
-    return 37;
-}
+const MAX_CHARACTERS_MD_PLUS = 37
+const MAX_CHARACTERS_SM_PLUS = 20
 
 export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
     {
@@ -28,10 +27,15 @@ export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
         header: "Key",
         cell: ({row}) => {
             const itemKey = row.getValue("key") as string
-            const cleaned = itemKey.length > maxCharacters() ? itemKey.substring(0, maxCharacters()) + "....." : itemKey
+            const formattedKeyMD = itemKey.length > MAX_CHARACTERS_MD_PLUS ?
+                itemKey.substring(0, MAX_CHARACTERS_MD_PLUS) + "....." : itemKey
+            const formattedKeySM = itemKey.length > MAX_CHARACTERS_SM_PLUS ?
+                itemKey.substring(0, MAX_CHARACTERS_SM_PLUS) + "....." : itemKey
+
             return (
                 <div className={"flex flex-row space-x-2 mb-2"}>
-                    <div>{cleaned}</div>
+                    <div className={"max-md:hidden"}>{formattedKeyMD}</div>
+                    <div className={"min-md:hidden"}>{formattedKeySM}</div>
                     <CopyToClipboard value={itemKey as string} tooltip={"Copy Key"}
                                      element={"Key"}></CopyToClipboard>
 
@@ -44,10 +48,15 @@ export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
         header: "Value",
         cell: ({row}) => {
             const itemValue = row.getValue("value") as string
-            const cleaned = itemValue.length > maxCharacters() ? itemValue.substring(0, maxCharacters()) + "....." : itemValue
+            const formattedValueMD = itemValue.length > MAX_CHARACTERS_MD_PLUS ?
+                itemValue.substring(0, MAX_CHARACTERS_MD_PLUS) + "....." : itemValue
+            const formattedValueSM = itemValue.length > MAX_CHARACTERS_MD_PLUS ?
+                itemValue.substring(0, MAX_CHARACTERS_SM_PLUS) + "....." : itemValue
+
             return (
                 <div className={"flex flex-row space-x-2 mb-2"}>
-                    <div>{cleaned}</div>
+                    <div className={"max-md:hidden"}>{formattedValueMD}</div>
+                    <div className={"min-md:hidden"}>{formattedValueSM}</div>
                     <CopyToClipboard value={itemValue as string} tooltip={"Copy Value"}
                                      element={"Value"}></CopyToClipboard>
 
