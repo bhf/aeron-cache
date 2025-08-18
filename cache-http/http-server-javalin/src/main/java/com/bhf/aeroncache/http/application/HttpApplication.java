@@ -385,7 +385,9 @@ public class HttpApplication {
 
     /**
      * Handle getting details of available caches. Currently only
-     * implemented in memory on the HTTP side.
+     * implemented in memory on the HTTP side. Information returned is
+     * populated from any previous call to get the stats from the
+     * Aeron Cache instance.
      *
      * @param context The context.
      */
