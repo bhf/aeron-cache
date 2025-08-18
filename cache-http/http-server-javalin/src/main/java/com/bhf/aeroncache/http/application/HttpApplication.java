@@ -54,7 +54,6 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -74,6 +73,8 @@ public class HttpApplication {
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
+    private final static Set<String> allCaches = new HashSet<>();
+    private final static Map<String, Long> cacheToSize = new HashMap<>();
 
     private static String tracingServiceName;
     private static AgentRunner agentRunner;
@@ -380,8 +381,6 @@ public class HttpApplication {
         }
     }
 
-    final static HashSet<String> allCaches = new HashSet<>();
-    final static Map<String, Long> cacheToSize = new ConcurrentHashMap<>();
 
     /**
      * Handle getting details of available caches. Currently only
