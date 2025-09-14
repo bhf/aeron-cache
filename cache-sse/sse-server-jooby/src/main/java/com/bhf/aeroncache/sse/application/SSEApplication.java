@@ -27,6 +27,7 @@ import io.jooby.handler.Cors;
 import io.jooby.handler.CorsHandler;
 import io.jooby.jackson.JacksonModule;
 import io.jooby.netty.NettyServer;
+import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.CloseHelper;
 import org.agrona.MutableDirectBuffer;
@@ -96,7 +97,7 @@ public class SSEApplication extends Jooby {
     private static void handleSingleCacheSSE(ServerSentEmitter serverSentEmitter) {
         try {
             var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
-            var requestId = UUID.randomUUID().toString();
+            var requestId = getRequestId(serverSentEmitter.getContext());
             log.info("Subscription request for cacheId: {} on SSE sessionId: {}", cacheId, serverSentEmitter.getId());
 
             serverSentEmitter.onClose(() -> {
@@ -322,6 +323,24 @@ public class SSEApplication extends Jooby {
 
     private static void startHTTPServer(String[] args) {
         runApp(args, new NettyServer(new ServerOptions().setPort(7072)), SSEApplication::new);
+    }
+
+    private static String getRequestId(Context ctx) {
+        return tracingServiceName != null && ctx != null ? getTraceBasedRequestId(ctx) : UUID.randomUUID().toString();
+    }
+
+    /**
+     * Use the current span and trace Ids to build a requestId to
+     * be sent to the Aeron Cache cluster.
+     *
+     * @param ctx
+     * @return
+     */
+    private static String getTraceBasedRequestId(Context ctx) {
+        var currentSpanId = Span.current().getSpanContext().getSpanId();
+        var currentTraceId = Span.current().getSpanContext().getTraceId();
+        log.info("Creating requestId using traceID {} and spanID {}", currentTraceId, currentSpanId);
+        return STR."\{currentTraceId}@\{currentSpanId}";
     }
 
 }
