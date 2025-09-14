@@ -58,6 +58,7 @@ class CacheSubscriptionServiceImplTest {
 
         // Assert
         assertEquals(OperationStatus.DUPLICATE_SUBSCRIPTION, result.getStatus());
+        assertEquals(KNOWN_CACHE, result.getCacheId().value());
     }
 
     @Test
@@ -76,6 +77,7 @@ class CacheSubscriptionServiceImplTest {
 
         // Assert
         assertEquals(OperationStatus.UNKNOWN_SUBSCRIPTION, result.getStatus());
+        assertEquals(KNOWN_CACHE, result.getCacheId().value());
     }
 
     @Test
