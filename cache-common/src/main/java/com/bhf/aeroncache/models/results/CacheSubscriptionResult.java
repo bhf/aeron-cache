@@ -12,7 +12,7 @@ import lombok.Setter;
 @Setter
 @RequiredArgsConstructor
 @Flyweight
-public class CacheSubscriptionResult<I> implements Reusable<CacheSubscriptionResult<I>> {
+public class CacheSubscriptionResult<I extends Reusable> implements Reusable<CacheSubscriptionResult<I>> {
 
     final RequestId requestId = new RequestId();
     final I cacheId;
@@ -29,12 +29,14 @@ public class CacheSubscriptionResult<I> implements Reusable<CacheSubscriptionRes
     @Override
     public void clear() {
         requestId.clear();
+        cacheId.clear();
         status = OperationStatus.NONE;
     }
 
     @Override
     public void copyFrom(CacheSubscriptionResult<I> source) {
         this.requestId.copyFrom(source.requestId);
+        this.cacheId.copyFrom(source.cacheId);
         this.status = source.status;
     }
 
