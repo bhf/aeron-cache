@@ -40,6 +40,7 @@ public class CacheSubscriptionServiceImpl<I extends Reusable> implements CacheSu
             cacheIdToClientSessions.put(key, existingSubscribers);
         }
 
+        subscriptionResult.clear();
         subscriptionResult.setRequestId(requestDetails.getRequestId());
         subscriptionResult.getCacheId().copyFrom(requestDetails.getCacheId());
         if (!existingSubscribers.contains(session)) {
