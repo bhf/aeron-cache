@@ -1,4 +1,4 @@
-import {DashboardStats, DashboardStatsProps} from "@/app/@dashboard/dashboard/DashboardStats";
+import {DashboardStats} from "@/app/@dashboard/dashboard/DashboardStats";
 import {getCacheAPIURI} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
 import {JSX, Suspense} from "react";
