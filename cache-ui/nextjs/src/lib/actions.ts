@@ -27,7 +27,7 @@ export async function getPrometheusURL() {
 }
 
 export async function getWebsocketURL() {
-    return process.env.AERON_CACHE_WS_API ? process.env.AERON_CACHE_WS_API : "ws:localhost:5000";
+    return process.env.AERON_CACHE_WS_API ? process.env.AERON_CACHE_WS_API : "ws:localhost:7071";
 }
 
 export async function getSSEURL(): Promise<string> {
