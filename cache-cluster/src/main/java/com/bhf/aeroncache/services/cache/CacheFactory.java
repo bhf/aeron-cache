@@ -14,7 +14,10 @@ import java.util.function.Supplier;
  * @param <V> The type of the value for cache entries which this factory will create.
  */
 public class CacheFactory<I extends Reusable, K extends Reusable, V extends Reusable> {
-    public Cache<I, K, V> getNewCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, Supplier<Map<K, V>> mapSupplier) {
-        return new MapCache<I, K, V>(indexSupplier, keySupplier, valueSupplier, mapSupplier);
+    public Cache<I, K, V> getNewCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier,
+                                      Supplier<Map<K, V>> mapSupplier, CacheIdCodec<I> cacheIdSerializer,
+                                      CacheEntryCodec<K, V> cacheEntrySerializer) {
+        return new MapCache<I, K, V>(indexSupplier, keySupplier, valueSupplier, mapSupplier,
+                cacheIdSerializer, cacheEntrySerializer);
     }
 }

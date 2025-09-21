@@ -4,9 +4,17 @@ import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.Cache;
+import com.bhf.aeroncache.services.cache.CacheEntryCodec;
+import com.bhf.aeroncache.services.cache.CacheIdCodec;
+import io.aeron.ExclusivePublication;
+import io.aeron.Image;
+import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.Header;
 import lombok.extern.log4j.Log4j2;
+import org.agrona.DirectBuffer;
+import org.agrona.collections.MutableBoolean;
+import org.agrona.collections.Object2ObjectHashMap;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -19,14 +27,59 @@ import java.util.function.Supplier;
  * @param <V> The value type for the caches.
  */
 @Log4j2
-public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCacheManager<I, K, V> {
+public class MapCacheManager<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCacheManager<I, K, V> {
 
-    private final HashMap<I, Cache<I, K, V>> caches = new HashMap<>();
-    private final Supplier<Map<K,V>> mapSupplier;
+    private final Map<I, Cache<I, K, V>> caches = new Object2ObjectHashMap<>();
+    private final Supplier<Map<K, V>> mapSupplier;
+    private final CacheIdCodec<I> cacheIdSerializer;
+    private final CacheEntryCodec<K, V> cacheEntrySerializer;
 
-    public AbstractHashMapCacheManager(Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier, Supplier<V> cacheValueSupplier, Supplier<Map<K, V>> mapSupplier) {
+    public MapCacheManager(Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier,
+                           Supplier<V> cacheValueSupplier, Supplier<Map<K, V>> mapSupplier,
+                           CacheIdCodec<I> cacheIdSerializer,
+                           CacheEntryCodec<K, V> cacheEntrySerializer) {
         super(cacheIndexSupplier, cacheKeySupplier, cacheValueSupplier);
         this.mapSupplier = mapSupplier;
+        this.cacheIdSerializer = cacheIdSerializer;
+        this.cacheEntrySerializer = cacheEntrySerializer;
+    }
+
+    @Override
+    public void takeSnapshot(ExclusivePublication snapshotPublication) {
+        for (var cacheEntry : caches.entrySet()) {
+            var cacheId = cacheEntry.getKey();
+            var cache = cacheEntry.getValue();
+            cache.takeSnapshot(snapshotPublication, cacheId);
+        }
+    }
+
+    @Override
+    public void loadSnapshot(Image snapshotImage) {
+        MutableBoolean snapshotFinished = new MutableBoolean(false);
+
+        FragmentHandler handler = new FragmentHandler() {
+            @Override
+            public void onFragment(DirectBuffer buffer, int offset, int length, Header header) {
+                I cacheId = indexSupplier.get();
+                offset = cacheIdSerializer.getCacheId(buffer, offset, cacheId);
+                var cacheCreateResult = createCache(cacheId);
+
+                if (cacheCreateResult.getStatus() == OperationStatus.SUCCESS) {
+                    var cache = getCache(cacheId);
+                    cache.loadSnapshot(buffer, offset);
+                }
+                else{
+                    log.warn("Couldn't create cache on cache Id {}, status: {}", cacheId.value(),
+                            cacheCreateResult.getStatus());
+                }
+
+            }
+        };
+
+        while (!snapshotImage.isEndOfStream()) {
+            snapshotImage.poll(handler, 1);
+            if (snapshotFinished.value) break;
+        }
     }
 
     @Override
@@ -58,7 +111,7 @@ public abstract class AbstractHashMapCacheManager<I extends Reusable, K extends 
             return cacheCreationResult;
         }
 
-        var cache = cacheFactory.getNewCache(indexSupplier, keySupplier, valueSupplier, mapSupplier);
+        var cache = cacheFactory.getNewCache(indexSupplier, keySupplier, valueSupplier, mapSupplier, cacheIdSerializer, cacheEntrySerializer);
         I newKey = indexSupplier.get();
         newKey.copyFrom(cacheId);
         caches.put(newKey, cache);

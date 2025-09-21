@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache.impl;
 
 import com.bhf.aeroncache.messages.OperationStatus;
-import com.bhf.aeroncache.types.ReusableLong;
+import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,12 +19,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class MapCacheTest {
 
-    MapCache<ReusableLong, ReusableString, ReusableString> cache;
+    MapCache<ReusableString, ReusableString, ReusableString> cache;
 
     @BeforeEach
     void setup() {
-        cache = new MapCache<>(SupplierUtils.longSupplier, SupplierUtils.stringSupplier,
-                SupplierUtils.stringSupplier, SupplierUtils.hashmapSupplier);
+        cache = new MapCache<>(SupplierUtils.stringSupplier, SupplierUtils.stringSupplier,
+                SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
+                SBEDecodingCacheClusterService.getCacheIdSerializer(),
+                SBEDecodingCacheClusterService.getCacheEntrySerializer());
     }
 
     /**
@@ -48,7 +50,6 @@ class MapCacheTest {
     @MethodSource("provideTestAddParams")
     void testAdd(String key, String value) {
         // Arrange
-
         var reusableKey = new ReusableString();
         var reusableValue = new ReusableString();
         reusableKey.copyFrom(key);

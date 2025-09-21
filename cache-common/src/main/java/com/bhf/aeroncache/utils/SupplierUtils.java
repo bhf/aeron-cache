@@ -2,8 +2,8 @@ package com.bhf.aeroncache.utils;
 
 import com.bhf.aeroncache.types.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
+import org.agrona.collections.Object2ObjectHashMap;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -13,5 +13,5 @@ import java.util.function.Supplier;
 public class SupplierUtils {
     public static final Supplier<ReusableLong> longSupplier = ReusableLong::new;
     public static final Supplier<ReusableString> stringSupplier = ReusableString::new;
-    public static Supplier<Map<ReusableString, ReusableString>> hashmapSupplier = HashMap::new;
+    public static Supplier<Map<ReusableString, ReusableString>> mapSupplier = Object2ObjectHashMap::new;
 }
