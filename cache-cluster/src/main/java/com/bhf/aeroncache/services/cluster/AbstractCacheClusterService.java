@@ -6,6 +6,8 @@ import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.services.cache.CacheEntryCodec;
+import com.bhf.aeroncache.services.cache.CacheIdCodec;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
@@ -24,7 +26,6 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -46,8 +47,6 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private IdleStrategy idleStrategy;
     private final CacheManagerFactory<I, K, V> cacheManagerFactory = new CacheManagerFactory<>();
     private final CacheManager<I, K, V> cacheManager;
-    private Consumer<Image> imageConsumer;
-    private Consumer<ExclusivePublication> snapshotConsumer;
     final CreateCacheRequestDetails<I> createCacheRequestDetails;
     final ClearCacheRequestDetails<I> clearCacheRequestDetails;
     final RemoveCacheEntryRequestDetails<I, K> removeCacheEntryRequestDetails;
@@ -64,7 +63,10 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final CacheUnsubscribeResult<I> unsubscribeResult;
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
 
-    protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier, Supplier<Map<K, V>> mapSupplier, String nodeId, CacheTracingService tracingService) {
+    protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier,
+                                          Supplier<Map<K, V>> mapSupplier, CacheIdCodec<I> cacheIdSerializer,
+                                          CacheEntryCodec<K, V> cacheEntrySerializer,
+                                          String nodeId, CacheTracingService tracingService) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(indexSupplier.get());
         this.clearCacheRequestDetails = new ClearCacheRequestDetails<>(indexSupplier.get());
         this.removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get());
@@ -78,18 +80,11 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.cacheUnsubscribeRequestDetails = new CacheUnsubscribeRequestDetails<>(indexSupplier.get());
         this.subscribeResult = new CacheSubscriptionResult<>(indexSupplier.get());
         this.unsubscribeResult = new CacheUnsubscribeResult<>(indexSupplier.get());
-        this.cacheManager = cacheManagerFactory.getCacheManager(getSnapshotConsumer(), getImageConsumer(), indexSupplier, keySupplier, valueSupplier, mapSupplier);
+        this.cacheManager = cacheManagerFactory.getCacheManager(indexSupplier,
+                keySupplier, valueSupplier, mapSupplier, cacheIdSerializer, cacheEntrySerializer);
         this.nodeId = nodeId;
         this.tracingService = tracingService;
         this.indexSupplier = indexSupplier;
-    }
-
-    private Consumer<Image> getImageConsumer() {
-        return imageConsumer;
-    }
-
-    private Consumer<ExclusivePublication> getSnapshotConsumer() {
-        return snapshotConsumer;
     }
 
     private String nodeId;
