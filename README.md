@@ -23,7 +23,6 @@ https://github.com/user-attachments/assets/cdbf0e54-2ff8-47c4-8a98-50a8104de6fd
 * [Multi-cache Subscriptions](#subscribe-to-multiple-caches)
 * [Project Structure](#structure)
 * [Overview](#overview)
-* [Profiling](#profiling)
 * [Testing](#testing)
 * [Roadmap](#future-work)
 
@@ -212,15 +211,6 @@ __hyperfoil__ - Some basic hyperfoil tests
 
 [Top](#aeron-cache)
 
-## Profiling
-
-Adding entries in a tight loop:
-
-![img.png](docs/images/profilingTelemetry.png)
-
-![img_1.png](docs/images/allocationTree.png)
-
-[Top](#aeron-cache)
 
 ## Testing
 
