@@ -8,7 +8,7 @@ Includes HTTP, WS and SSE interfaces with support for multi-cache joins over WS 
 Prometheus+cAdvisor and tracing with Jaeger+OTEL. 
 Containerized and deployable with ```docker compose``` or on Kubernetes via ```helm``` or ```kubectl```.
 
-Includes an MCP server to power your Agentic AI and LLM workflows.
+Includes an MCP server to power your Agentic AI and LLM workflows. Rust based [CLI](https://github.com/bhf/aeron-cache-cli) also available.
 
 
 https://github.com/user-attachments/assets/c602f365-2b6a-497c-a671-29508cc04155
