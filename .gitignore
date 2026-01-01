@@ -171,3 +171,6 @@ cache-cluster/build/
 /.gradle/
 /cache-messages/build/
 *.log
+cache-ui/.idea
+.profileconfig.json
+*.jfr
