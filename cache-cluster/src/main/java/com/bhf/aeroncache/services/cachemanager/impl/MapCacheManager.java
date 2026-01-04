@@ -57,23 +57,20 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
     public void loadSnapshot(Image snapshotImage) {
         MutableBoolean snapshotFinished = new MutableBoolean(false);
 
-        FragmentHandler handler = new FragmentHandler() {
-            @Override
-            public void onFragment(DirectBuffer buffer, int offset, int length, Header header) {
-                I cacheId = indexSupplier.get();
-                offset = cacheIdSerializer.getCacheId(buffer, offset, cacheId);
-                var cacheCreateResult = createCache(cacheId);
+        FragmentHandler handler = (buffer, offset, length, header) -> {
+            I cacheId = indexSupplier.get();
+            offset = cacheIdSerializer.getCacheId(buffer, offset, cacheId);
+            var cacheCreateResult = createCache(cacheId);
 
-                if (cacheCreateResult.getStatus() == OperationStatus.SUCCESS) {
-                    var cache = getCache(cacheId);
-                    cache.loadSnapshot(buffer, offset);
-                }
-                else{
-                    log.warn("Couldn't create cache on cache Id {}, status: {}", cacheId.value(),
-                            cacheCreateResult.getStatus());
-                }
-
+            if (cacheCreateResult.getStatus() == OperationStatus.SUCCESS) {
+                var cache = getCache(cacheId);
+                cache.loadSnapshot(buffer, offset);
             }
+            else{
+                log.warn("Couldn't create cache on cache Id {}, status: {}", cacheId.value(),
+                        cacheCreateResult.getStatus());
+            }
+
         };
 
         while (!snapshotImage.isEndOfStream()) {
