@@ -150,7 +150,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         I cacheId = requestDetails.getCacheId();
         log.info("Got delete cache request for cache id {}", cacheId);
         var deleteCacheResult = cacheManager.deleteCache(cacheId);
-        handlePostDeleteCache(cacheId, deleteCacheResult, requestDetails, session, buffer, offset);
+        handlePostDeleteCache(cacheId, deleteCacheResult, requestDetails, session);
         tracingService.endHandleDeleteCache(requestDetails);
     }
 
@@ -169,7 +169,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var clearCacheResult = cacheManager.clearCache(cacheId);
         var requestId = requestDetails.getRequestId();
         clearCacheResult.setRequestId(requestId);
-        handlePostClearCache(cacheId, clearCacheResult, session, buffer, offset);
+        handlePostClearCache(cacheId, clearCacheResult, session);
         tracingService.endHandleClearCache(requestDetails);
     }
 
@@ -189,7 +189,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         log.info("Got remove cache entry request for cache id {}, key {}, request Id: {}", cacheId, key, requestId);
         var removeCacheEntryResult = cacheManager.removeCacheEntry(cacheId, key);
         removeCacheEntryResult.setRequestId(requestId);
-        handlePostRemoveCacheEntry(cacheId, key, removeCacheEntryResult, session, buffer, offset);
+        handlePostRemoveCacheEntry(cacheId, key, removeCacheEntryResult, session);
         tracingService.endRemoveCacheEntry(requestDetails);
     }
 
@@ -219,7 +219,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         addCacheEntryResult.setRequestId(requestId);
         addCacheEntryResult.getCacheId().copyFrom(cacheId);
         log.info("Result for add entry, key: {}, status: {}, ", addCacheEntryResult.getEntryKey(), addCacheEntryResult.getStatus());
-        handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, buffer, offset);
+        handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session);
         tracingService.endAddCacheEntry(requestDetails);
     }
 
@@ -237,7 +237,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         addEntryFailureResult.setRequestId(requestId);
         addEntryFailureResult.setCacheId(cacheId);
         log.info("Cache {} doesn't exist, tried to add on key key: {}", cacheId, addEntryFailureResult.getEntryKey());
-        handlePostAddCacheEntry(cacheId, key, value, addEntryFailureResult, session, buffer, offset);
+        handlePostAddCacheEntry(cacheId, key, value, addEntryFailureResult, session);
     }
 
     /**
@@ -258,7 +258,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         getCacheEntryResult.setRequestId(requestId);
         getCacheEntryResult.getCacheId().copyFrom(cacheId);
         log.info("Sending GET result: cacheId {}, key {}, value {}, reqId {}, status {}", getCacheEntryResult.getCacheId(), getCacheEntryResult.getEntryKey(), getCacheEntryResult.getEntryValue(), getCacheEntryResult.getRequestId(), getCacheEntryResult.getStatus());
-        handlePostGetCacheEntry(cacheId, key, getCacheEntryResult, session, buffer, offset);
+        handlePostGetCacheEntry(cacheId, key, getCacheEntryResult, session);
         tracingService.endGetCacheEntry(requestDetails);
     }
 
@@ -279,7 +279,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var getAllCacheEntriesResult = cacheManager.getAllCacheEntries(cacheId);
         getAllCacheEntriesResult.setRequestId(requestId);
         getAllCacheEntriesResult.getCacheId().copyFrom(cacheId);
-        handlePostGetAllCacheEntries(cacheId, getAllCacheEntriesResult, session, buffer, offset);
+        handlePostGetAllCacheEntries(cacheId, getAllCacheEntriesResult, session);
         tracingService.endGetAllCacheEntries(requestDetails);
     }
 
@@ -299,7 +299,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var cacheCreationResult = cacheManager.createCache(cacheId);
         cacheCreationResult.setRequestId(requestId);
         log.info("Will send result: " + cacheCreationResult.getStatus());
-        handlePostCreateCache(cacheId, cacheCreationResult, session, buffer, offset);
+        handlePostCreateCache(cacheId, cacheCreationResult, session);
         tracingService.endCreateCacheRequest(requestDetails);
     }
 
@@ -317,7 +317,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         log.info("Got request for all cache stats, request Id: {}", requestId);
         var cacheStatsResult = cacheManager.getCacheStatsResult();
         cacheStatsResult.setRequestId(requestId);
-        handlePostGetCacheStats(cacheStatsResult, session, buffer, offset);
+        handlePostGetCacheStats(cacheStatsResult, session);
         tracingService.endGetAllStatsRequest(requestDetails);
     }
 
@@ -328,7 +328,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var cacheId = requestDetails.getCacheId();
         log.info("Got request to subscribe for cache updates on cache: {}, request Id: {}", cacheId, requestId);
         var result = subscriptionService.subscribe(requestDetails, session);
-        handlePostCacheSubscriptionRequest(result, session, buffer, offset);
+        handlePostCacheSubscriptionRequest(result, session);
         tracingService.endCacheSubscriptionRequest(requestDetails);
     }
 
@@ -339,7 +339,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var cacheId = requestDetails.getCacheId();
         log.info("Got request to unsubscribe for cache updates on cache: {}, request Id: {}", cacheId, requestId);
         var result = subscriptionService.unsubscribe(requestDetails, session);
-        handlePostCacheUnsubscribeRequest(result, session, buffer, offset);
+        handlePostCacheUnsubscribeRequest(result, session);
         tracingService.endCacheUnsubscribeRequest(requestDetails);
     }
 
@@ -449,10 +449,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId             The ID of the cache created.
      * @param cacheCreationResult The result from the request to create the cache.
      * @param session             The client session.
-     * @param buffer              The buffer from which the creation request was decoded.
-     * @param offset              The offset from within the buffer to decode the original request from.
      */
-    protected abstract void handlePostCreateCache(I cacheId, CreateCacheResult<I> cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostCreateCache(I cacheId, CreateCacheResult<I> cacheCreationResult, ClientSession session);
 
     /**
      * After an entry is added to a cache, send out a EntryCreated message.
@@ -460,10 +458,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId             The ID of the cache in which the entry was created.
      * @param addCacheEntryResult The result from the request to add an entry.
      * @param session             The client session.
-     * @param buffer              The buffer from which the entry creation request was created.
-     * @param offset              The offset from within the buffer to decode the original request from.
      */
-    protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session);
 
     /**
      * Get an entry from the cache, send out a CacheEntry message.
@@ -471,10 +467,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId             The ID of the cache we need to get the entry from.
      * @param getCacheEntryResult The result from the request to add an entry.
      * @param session             The client session.
-     * @param buffer              The buffer from which the entry creation request was created.
-     * @param offset              The offset from within the buffer to decode the original request from.
      */
-    protected abstract void handlePostGetCacheEntry(I cacheId, K key, GetCacheEntryResult<I, K, V> getCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostGetCacheEntry(I cacheId, K key, GetCacheEntryResult<I, K, V> getCacheEntryResult, ClientSession session);
 
     /**
      * Get all entries from the cache.
@@ -482,10 +476,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId             The ID of the cache we need to get all entries from.
      * @param getCacheEntryResult The result from the request to get all entries.
      * @param session             The client session.
-     * @param buffer              The buffer from which the request was created.
-     * @param offset              The offset from within the buffer to decode the original request from.
      */
-    protected abstract void handlePostGetAllCacheEntries(I cacheId, GetAllCacheEntriesResult<I, K, V> getCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostGetAllCacheEntries(I cacheId, GetAllCacheEntriesResult<I, K, V> getCacheEntryResult, ClientSession session);
 
     /**
      * After an entry is removed from the cache, send out a EntryRemoved message.
@@ -493,10 +485,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId                The ID of the cache in which the entry was removed.
      * @param removeCacheEntryResult The result from the request to remove an entry.
      * @param session                The client session.
-     * @param buffer                 The buffer from which the entry removal request was created.
-     * @param offset                 The offset from within the buffer to decode the original request from.
      */
-    protected abstract void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, ClientSession session);
 
     /**
      * After a cache is cleared, send out a CacheCleared message.
@@ -504,10 +494,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId          The ID of the cache in which the entry was removed.
      * @param clearCacheResult The result from the request to clear a cache.
      * @param session          The client session.
-     * @param buffer           The buffer from which the clear request was created.
-     * @param offset           The offset from within the buffer to decode the original request from.
      */
-    protected abstract void handlePostClearCache(I cacheId, ClearCacheResult<I> clearCacheResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostClearCache(I cacheId, ClearCacheResult<I> clearCacheResult, ClientSession session);
 
     /**
      * After a cache is deleted, send out a CacheDeleted message.
@@ -516,40 +504,32 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param deleteCacheResult The result of deleting the cache.
      * @param requestDetails    The original request to delete the cache.
      * @param session           The client session.
-     * @param buffer            The buffer from which the delete request was created.
-     * @param offset            The offset from within the buffer to decode the original request from.
      */
-    protected abstract void handlePostDeleteCache(I cacheId, DeleteCacheResult<I> deleteCacheResult, DeleteCacheRequestDetails<I> requestDetails, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostDeleteCache(I cacheId, DeleteCacheResult<I> deleteCacheResult, DeleteCacheRequestDetails<I> requestDetails, ClientSession session);
 
     /**
      * Send out the cache stats.
      *
      * @param cacheStatsResult The stats across all caches.
      * @param session          The client session.
-     * @param buffer           The buffer from which the delete request was created.
-     * @param offset           The offset from within the buffer to decode the original request from.
      */
-    protected abstract void handlePostGetCacheStats(CacheStatsResult<I> cacheStatsResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostGetCacheStats(CacheStatsResult<I> cacheStatsResult, ClientSession session);
 
     /**
      * Send out the result of subscribing to a cache.
      *
      * @param subscriptionRequestResult The result of subscribing.
      * @param session                   The client session.
-     * @param buffer                    The buffer from which the delete request was created.
-     * @param offset                    The offset from within the buffer to decode the original request from.
      */
-    protected abstract void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I> subscriptionRequestResult, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I> subscriptionRequestResult, ClientSession session);
 
     /**
      * Send out the result of unsubscribing to a cache.
      *
      * @param unsubscribeResponse The result of unsubscribing.
      * @param session             The client session.
-     * @param buffer              The buffer from which the delete request was created.
-     * @param offset              The offset from within the buffer to decode the original request from.
      */
-    protected abstract void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<I> unsubscribeResponse, ClientSession session, DirectBuffer buffer, int offset);
+    protected abstract void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<I> unsubscribeResponse, ClientSession session);
 
     /**
      * @param session   Session to send the message too.
