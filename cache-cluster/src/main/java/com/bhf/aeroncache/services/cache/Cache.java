@@ -50,7 +50,7 @@ public interface Cache<I extends Reusable, K extends Reusable, V extends Reusabl
      * Get stats about this cache.
      * @return A {@link CacheStats} reusable.
      */
-    CacheStats getCacheStats();
+    CacheStats<I> getCacheStats();
 
     /**
      * Take a snapshot of this cache.
