@@ -35,7 +35,8 @@ public class CreateCacheEncoderBenchmark {
     @Benchmark
     public void encodeBHEncoder(Blackhole bh) {
         enc.wrapAndApplyHeader(buffer, 0, headerEncoder);
-        enc.cacheId(++cacheId);
+        ++cacheId;
+        enc.cacheId(""+cacheId);
         bh.consume(enc);
     }
 
@@ -47,7 +48,8 @@ public class CreateCacheEncoderBenchmark {
     @Benchmark
     public void encodeBHCacheId(Blackhole bh) {
         enc.wrapAndApplyHeader(buffer, 0, headerEncoder);
-        enc.cacheId(++cacheId);
+        ++cacheId;
+        enc.cacheId(""+cacheId);
         bh.consume(cacheId);
     }
 
@@ -59,7 +61,8 @@ public class CreateCacheEncoderBenchmark {
     @Benchmark
     public void encodeNoBH(Blackhole bh) {
         enc.wrapAndApplyHeader(buffer, 0, headerEncoder);
-        enc.cacheId(++cacheId);
+        ++cacheId;
+        enc.cacheId(""+cacheId);
     }
 
     /**
