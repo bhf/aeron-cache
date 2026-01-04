@@ -1,0 +1,112 @@
+openapi: 3.0.1
+info:
+  title: Aeron Near Cache HTTP API
+  description: This API exposes endpoints to interact with Aeron Cache in near cache mode.
+  termsOfService: https://www.github.com/bhf
+  contact:
+    name: Sanjeev
+    url: https://www.sanjeev.pages.dev
+    email: na@na.com
+  license:
+    name: MIT License
+    url: https://choosealicense.com/licenses/mit/
+  version: '1.0'
+servers:
+  - url: http://localhost:7070
+    description: Dev server
+paths:
+  /api/v1/near/cache:
+    post:
+      tags:
+        - CreateCache
+      summary: Create a new cache
+      description: Create a cache by specifying the cache Id in the request body
+      operationId: createCache
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CreateResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/near/cache/{cacheId}/{key}:
+    get:
+      tags:
+        - GetItem
+      summary: Get an item from the near cache
+      description: Get an item by it's key from the specified cache
+      operationId: getItem
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the cache
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The key of the item
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/GetItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        errorMsg:
+          type: string
+          example: 'Details about the error that occurred'
+        helpMsg:
+          type: string
+          example: 'A user friendly help message'
+    CreateRequest:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCacheID"
+    CreateResponse:
+      type: object
+      properties:
+        cacheId:
+          type: integer
+          format: int64
+          example: 1
+    GetItemResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCacheID"
+        key:
+          type: string
+          example: 'SomeRandomKey'
+        value:
+          type: string
+          example: 'SomeRandomValue'

@@ -8,7 +8,12 @@ Includes HTTP, WS and SSE interfaces with support for multi-cache joins over WS 
 Prometheus+cAdvisor and tracing with Jaeger+OTEL. 
 Containerized and deployable with ```docker compose``` or on Kubernetes via ```helm``` or ```kubectl```.
 
-Includes an MCP server to power your Agentic AI and LLM workflows. Rust based [CLI](https://github.com/bhf/aeron-cache-cli) also available.
+Features:
+
+* An MCP server to power your Agentic AI and LLM workflows. 
+* Rust based [CLI](https://github.com/bhf/aeron-cache-cli).
+* Clustered and single node modes
+* Near cache implementation
 
 
 https://github.com/user-attachments/assets/c602f365-2b6a-497c-a671-29508cc04155
@@ -186,6 +191,8 @@ __cache-sse__ - SSE interfaces around the cache-client.
 __cache-messages-sbe__ - Core SBE messages used by the cache.
 
 __cache-messages-http__ - Messages used by HTTP interfaces to the cache.
+
+__cache-near__ - Near cache implementation with a HTTP interface.
 
 __cache-ui__ - A UI that uses the REST API provided by cache-http-server
 
