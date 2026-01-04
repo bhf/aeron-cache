@@ -1,0 +1,22 @@
+package com.bhf.aeroncache.http.config;
+
+import org.agrona.concurrent.BackoffIdleStrategy;
+import org.agrona.concurrent.BusySpinIdleStrategy;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.YieldingIdleStrategy;
+
+import java.util.function.Supplier;
+
+/**
+ * All {@link org.agrona.concurrent.IdleStrategy} implementations used for the {@link com.bhf.aeroncache.http.application.NearCacheApplication}.
+ */
+public class HttpNearCacheIdleStrategies {
+
+    public static final Supplier<IdleStrategy>blockingPublisherIdleStrategy = BusySpinIdleStrategy::new;
+    public static final Supplier<IdleStrategy> clusterClientAgentIdleStrategy = BackoffIdleStrategy::new;
+    public static final Supplier<IdleStrategy>clusterMessagePublisherIdleStrategy = BusySpinIdleStrategy::new;
+    public static final Supplier<IdleStrategy>agentRunnerIdleStrategy = YieldingIdleStrategy::new;
+    public static final Supplier<IdleStrategy>unclusteredAgentIdleStrategy = BusySpinIdleStrategy::new;
+
+}
+
