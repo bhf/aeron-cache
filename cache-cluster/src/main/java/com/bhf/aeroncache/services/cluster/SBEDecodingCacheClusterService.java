@@ -213,7 +213,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostCreateCache(ReusableString cacheId, CreateCacheResult<ReusableString> cacheCreationResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostCreateCache(ReusableString cacheId, CreateCacheResult<ReusableString> cacheCreationResult, ClientSession session) {
         cacheCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheCreatedEncoder
                 .status(cacheCreationResult.getStatus())
@@ -223,7 +223,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostAddCacheEntry(ReusableString cacheId, ReusableString key, ReusableString value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostAddCacheEntry(ReusableString cacheId, ReusableString key, ReusableString value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, ClientSession session) {
         entryCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         entryCreatedEncoder
                 .status(addCacheEntryResult.getStatus())
@@ -235,7 +235,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostGetCacheEntry(ReusableString cacheId, ReusableString key, GetCacheEntryResult<ReusableString, ReusableString, ReusableString> getCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostGetCacheEntry(ReusableString cacheId, ReusableString key, GetCacheEntryResult<ReusableString, ReusableString, ReusableString> getCacheEntryResult, ClientSession session) {
         cacheEntryResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheEntryResultEncoder
                 .status(getCacheEntryResult.getStatus())
@@ -253,7 +253,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostGetAllCacheEntries(ReusableString cacheId, GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> getAllCacheEntriesResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostGetAllCacheEntries(ReusableString cacheId, GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> getAllCacheEntriesResult, ClientSession session) {
         allCacheEntriesResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         allCacheEntriesResultEncoder
                 .status(getAllCacheEntriesResult.getStatus())
@@ -275,7 +275,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostRemoveCacheEntry(ReusableString cacheId, ReusableString key, RemoveCacheEntryResult<ReusableString, ReusableString> removeCacheEntryResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostRemoveCacheEntry(ReusableString cacheId, ReusableString key, RemoveCacheEntryResult<ReusableString, ReusableString> removeCacheEntryResult, ClientSession session) {
         entryRemovedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         entryRemovedEncoder
                 .status(removeCacheEntryResult.getStatus())
@@ -287,7 +287,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostClearCache(ReusableString cacheId, ClearCacheResult<ReusableString> clearCacheResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostClearCache(ReusableString cacheId, ClearCacheResult<ReusableString> clearCacheResult, ClientSession session) {
         cacheClearedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheClearedEncoder
                 .status(clearCacheResult.getStatus())
@@ -298,7 +298,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostDeleteCache(ReusableString cacheId, DeleteCacheResult<ReusableString> deleteCacheResult, DeleteCacheRequestDetails<ReusableString> requestDetails, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostDeleteCache(ReusableString cacheId, DeleteCacheResult<ReusableString> deleteCacheResult, DeleteCacheRequestDetails<ReusableString> requestDetails, ClientSession session) {
         cacheDeletedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheDeletedEncoder
                 .status(deleteCacheResult.getStatus())
@@ -309,7 +309,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostGetCacheStats(CacheStatsResult<ReusableString> cacheStatsResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostGetCacheStats(CacheStatsResult<ReusableString> cacheStatsResult, ClientSession session) {
         cacheStatsResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheStatsResultEncoder.status(OperationStatus.SUCCESS);
 
@@ -330,7 +330,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<ReusableString> subscriptionRequestResult, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<ReusableString> subscriptionRequestResult, ClientSession session) {
         cacheSubscriptionResponseEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheSubscriptionResponseEncoder
                 .status(subscriptionRequestResult.getStatus())
@@ -340,7 +340,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<ReusableString> unsubscribeResponse, ClientSession session, DirectBuffer buffer, int offset) {
+    protected void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<ReusableString> unsubscribeResponse, ClientSession session) {
         cacheUnsubscribeResponseEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheUnsubscribeResponseEncoder
                 .status(unsubscribeResponse.getStatus())
