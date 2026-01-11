@@ -13,7 +13,7 @@ Features:
 * An MCP server to power your Agentic AI and LLM workflows. 
 * Rust based [CLI](https://github.com/bhf/aeron-cache-cli).
 * Clustered and single node modes
-* Near cache implementation
+* Near cache implementation (read ahead)
 
 
 https://github.com/user-attachments/assets/c602f365-2b6a-497c-a671-29508cc04155
