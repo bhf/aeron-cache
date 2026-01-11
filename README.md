@@ -14,6 +14,7 @@ Features:
 * Rust based [CLI](https://github.com/bhf/aeron-cache-cli).
 * Clustered and single node modes
 * Near cache implementation (read ahead)
+* Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded) in Java, Rust, Typescript and Python (wip)
 
 
 https://github.com/user-attachments/assets/c602f365-2b6a-497c-a671-29508cc04155
