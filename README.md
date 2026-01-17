@@ -10,11 +10,11 @@ Containerized and deployable with ```docker compose``` or on Kubernetes via ```h
 
 Features:
 
-* An MCP server to power your Agentic AI and LLM workflows. 
-* Rust based [CLI](https://github.com/bhf/aeron-cache-cli).
 * Clustered and single node modes
 * Near cache implementation (read ahead)
-* Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded) in Java, Rust, Typescript and Python (wip)
+* Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded) in Java, Rust, Typescript and Python
+* Rust based [CLI](https://github.com/bhf/aeron-cache-cli)
+* An MCP server to power your Agentic AI and LLM workflows
 
 
 https://github.com/user-attachments/assets/c602f365-2b6a-497c-a671-29508cc04155
