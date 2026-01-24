@@ -2,8 +2,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: aeroncache-http-javalin-config
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Release.namespace }}
 data:
   DNS_DELAY: "true"
-  CLUSTER_ADDRESSES: "aeroncache-cluster-0.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.default.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.default.svc.cluster.local"
+  CLUSTER_ADDRESSES: "aeroncache-cluster-0.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local"
   {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | indent 2 }}
