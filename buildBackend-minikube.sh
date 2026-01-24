@@ -1,4 +1,4 @@
-./gradlew build
+./gradlew clean build
 cd cache-cluster
 docker build . -t aeroncache-cluster
 minikube image load aeroncache-cluster:latest --profile aeroncache
@@ -8,4 +8,7 @@ minikube image load aeroncache-http-javalin:latest --profile aeroncache
 cd ../cache-ws/ws-server-javalin/
 docker build . -t aeroncache-ws-javalin
 minikube image load aeroncache-ws-javalin:latest --profile aeroncache
+cd ../cache-sse/sse-server-jooby/
+docker build . -t aeroncache-sse-jooby
+minikube image load aeroncache-sse-jooby:latest --profile aeroncache
 minikube image ls --profile aeroncache
