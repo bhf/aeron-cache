@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: ReplicaSet
+kind: Deployment
 metadata:
   name: {{ include "aeroncache-ui-nextjs.fullname" . }}
   labels:
@@ -8,8 +8,6 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
-  podManagementPolicy: Parallel
-  serviceName: {{ include "aeroncache-ui-nextjs.fullname" . }}
   selector:
     matchLabels:
       {{- include "aeroncache-ui-nextjs.selectorLabels" . | nindent 6 }}
