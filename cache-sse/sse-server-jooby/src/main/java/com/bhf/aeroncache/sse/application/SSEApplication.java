@@ -214,7 +214,7 @@ public class SSEApplication extends Jooby {
     private static void buildClusterConnection(String egressIP, String ingressEndpoints) {
         aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient",
                 mediaDriver);
-        //addClusterErrorHandler(aeronCluster);
+        addClusterErrorHandler(aeronCluster);
 
         cache = new AeronCache() {
             @Override

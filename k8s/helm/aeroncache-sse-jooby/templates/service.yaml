@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aeroncache-sse-jooby.fullname" . }}
+  labels:
+    {{- include "aeroncache-sse-jooby.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 7072
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "aeroncache-sse-jooby.selectorLabels" . | nindent 4 }}
