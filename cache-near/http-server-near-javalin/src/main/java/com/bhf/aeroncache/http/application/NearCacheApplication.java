@@ -62,7 +62,7 @@ import java.util.regex.Pattern;
 public class NearCacheApplication {
 
     public static final String PROMO_MICROMETER_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
-    private static final int PORT = 7070;
+    private static final int PORT = 7073;
     private static final String API_PREFIX = "/api/v1/near/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
@@ -136,7 +136,7 @@ public class NearCacheApplication {
             mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
 
             var cacheMode = System.getenv("CACHE_MODE");
-            final boolean CLUSTERED_MODE = cacheMode == null || cacheMode.toUpperCase().equals("RAFT");
+            final boolean CLUSTERED_MODE = cacheMode == null || cacheMode.equalsIgnoreCase("RAFT");
 
             System.out.println("Cache mode: " + cacheMode + ", using clustered mode: " + CLUSTERED_MODE);
 
