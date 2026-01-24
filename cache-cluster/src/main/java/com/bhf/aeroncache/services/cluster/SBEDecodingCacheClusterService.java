@@ -196,6 +196,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         cacheSubscriptionRequestDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheSubscriptionRequestDecoder.cacheId();
         var requestId = cacheSubscriptionRequestDecoder.requestId();
+        cacheSubscribeRequestDetails.getCacheId().clear();
         cacheSubscribeRequestDetails.getCacheId().copyFrom(cacheId);
         cacheSubscribeRequestDetails.setRequestId(requestId);
         return cacheSubscribeRequestDetails;
@@ -207,6 +208,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
         cacheUnsubscribeRequestDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var cacheId = cacheUnsubscribeRequestDecoder.cacheId();
         var requestId = cacheUnsubscribeRequestDecoder.requestId();
+        cacheUnsubscribeRequestDetails.getCacheId().clear();
         cacheUnsubscribeRequestDetails.getCacheId().copyFrom(cacheId);
         cacheUnsubscribeRequestDetails.setRequestId(requestId);
         return cacheUnsubscribeRequestDetails;
