@@ -1,4 +1,4 @@
-FROM openjdk:21
+FROM eclipse-temurin:21
 COPY build/libs /tmp
 COPY build/agent/opentelemetry-javaagent.jar /tmp/opentelemetry-javaagent.jar
 COPY build/agent/opentelemetry-javaagent-extension.jar /tmp/opentelemetry-javaagent-extension.jar

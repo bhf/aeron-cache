@@ -1,4 +1,4 @@
-FROM openjdk:21
+FROM eclipse-temurin:21
 COPY build/libs /tmp
 WORKDIR /tmp
 ENTRYPOINT ["java","-jar","cache-client-all.jar"]
