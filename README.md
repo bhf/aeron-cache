@@ -24,8 +24,7 @@ https://github.com/user-attachments/assets/cdbf0e54-2ff8-47c4-8a98-50a8104de6fd
 
 
 * [How To Run - Docker](#docker)
-* [How To Run - Minikube](#minikube)
-* [How To Run - K8s/Helm](#helm-charts)
+* [How To Run - K8s/Helm](#k8s-and-helm)
 * [Multi-cache Subscriptions](#subscribe-to-multiple-caches)
 * [Project Structure](#structure)
 * [Overview](#overview)
@@ -56,103 +55,21 @@ cache-ui-1              |  ✓ Starting...
 
 ```
 
-* Frontend on localhost:3000
-* HTTP API on localhost:7070
-* Websocket on localhost:7071
-* Jaeger tracing on localhost:16686
-* Prometheus on localhost:9090
-* cAdvisor on localhost:8080
-
 You can also spin up a single node cache by using ```docker-compose-nonclustered.yaml```
 
 [Top](#aeron-cache)
 
-### Minikube
-
-The scripts assume you've got a minikube profile setup called "aeroncache".
-
-You can build and push images too your cluster using buildImages-minikube.sh
-
-You can see example k8s config in folders called "k8s" in application modules.
-Look for scripts called apply-k8s.sh which are used to apply the config to your minikube cluster.
-
-You also need to open up the services, see openservices-minikube.sh
-
-A correctly running backend setup should look something like this:
-
-```bash 
-optimus@optimus-lab:~/Workspaces/aeron-cache$ kubectl get pods
-NAME                   READY   STATUS    RESTARTS      AGE
-aeroncache-cluster-0   1/1     Running   1 (17m ago)   58m
-aeroncache-cluster-1   1/1     Running   1 (17m ago)   58m
-aeroncache-cluster-2   1/1     Running   1 (17m ago)   58m
-aeroncache-http-0      1/1     Running   1 (17m ago)   45m
-aeroncache-ws-0        1/1     Running   1 (17m ago)   28m
-optimus@optimus-lab:~/Workspaces/aeron-cache$ kubectl get services
-NAME                 TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
-aeroncache-cluster   ClusterIP      None            <none>        <none>           58m
-aeroncache-http      LoadBalancer   10.106.42.94    <pending>     7070:32531/TCP   55m
-aeroncache-ws        LoadBalancer   10.109.54.228   <pending>     7070:31182/TCP   31m
-kubernetes           ClusterIP      10.96.0.1       <none>        443/TCP          150m
-optimus@optimus-lab:~/Workspaces/aeron-cache$ kubectl get statefulsets
-NAME                 READY   AGE
-aeroncache-cluster   3/3     61m
-aeroncache-http      1/1     48m
-aeroncache-ws        1/1     33m
-optimus@optimus-lab:~/Workspaces/aeron-cache$ kubectl get configmaps
-NAME                        DATA   AGE
-aeroncache-cluster-config   2      59m
-aeroncache-http-config      2      57m
-aeroncache-ws-config        2      33m
-kube-root-ca.crt            1      152m
-optimus@optimus-lab:~/Workspaces/aeron-cache$ kubectl get serviceaccounts
-NAME                 SECRETS   AGE
-aeroncache-cluster   0         123m
-aeroncache-http      0         57m
-aeroncache-ws        0         33m
-default              0         152m
-
-```
-
-If you apply the k8s config for cache-ui you'll see the UI components in addition to the backend:
+### K8s and Helm
 
 ```bash
-optimus@optimus-lab:~/Workspaces/aeron-cache/cache-ui$ kubectl get services
-NAME                      TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
-aeroncache-ui-nextjs      LoadBalancer   10.106.163.22   <pending>     3000:32345/TCP   33m
-
-optimus@optimus-lab:~/Workspaces/aeron-cache/cache-ui$ kubectl get pods -l "tier=frontend"
-NAME                         READY   STATUS    RESTARTS   AGE
-aeroncache-ui-nextjs-g76pw   1/1     Running   0          10m
-
-optimus@optimus-lab:~/Workspaces/aeron-cache/cache-ui$ kubectl logs aeroncache-ui-nextjs-g76pw
-   ▲ Next.js 15.2.3
-   - Local:        http://localhost:3000
-   - Network:      http://0.0.0.0:3000
-
- ✓ Starting...
- ✓ Ready in 120ms
-
-```
-
-[Top](#aeron-cache)
-
-### Helm Charts
-
-In ```/k8s/helm/``` there are some Helm charts which are a work in progress (missing ancillary telemetry services and awaiting DNS resolution for UI readiness probe).
-
-To install from Helm charts:
-
-```bash
+git clone https://github.com/bhf/aeron-cache
+cd aeron-cache/
+make all
 cd k8s/helm/
-helm --namespace default upgrade -i aeroncache-cluster aeroncache-cluster/
-helm --namespace default upgrade -i aeroncache-http-javalin aeroncache-http-javalin/
-helm --namespace default upgrade -i aeroncache-ws-javalin aeroncache-ws-javalin/
-helm --namespace default upgrade -i aeroncache-ui-nextjs aeroncache-ui-nextjs/
+make install-all
 ```
 
-This will result in a cache-cluster with 3 pods, an instance of the HTTP interface running in a single pod as a statefulset and an
-instance of the websocket interface also running in a single pod as a statefulset. The UI should also be running as a replicaset with an LB.
+![img.png](img.png)
 
 [Top](#aeron-cache)
 
