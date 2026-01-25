@@ -61,6 +61,8 @@ You can also spin up a single node cache by using ```docker-compose-nonclustered
 
 ### K8s and Helm
 
+The ```Makefile``` is setup to push images to Minikube.
+
 ```bash
 git clone https://github.com/bhf/aeron-cache
 cd aeron-cache/
