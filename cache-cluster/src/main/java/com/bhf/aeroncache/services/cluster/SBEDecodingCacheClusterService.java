@@ -197,7 +197,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .value(value.value())
                 .requestId(addCacheEntryResult.getRequestId());
 
-        subscriptionService.handleEntryAdded(addCacheEntryResult, egressBuffer, key, value, entryUpdateEncoder, headerEncoder);
+        subscriptionService.handleEntryAdded(addCacheEntryResult, egressBuffer, key, value, entryUpdateEncoder.encodedLength()+headerEncoder.encodedLength());
     }
 
     @Override
@@ -249,7 +249,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .key(key.value())
                 .requestId(removeCacheEntryResult.getRequestId());
         sendMessage(session, egressBuffer, entryRemovedEncoder.encodedLength() + headerEncoder.encodedLength());
-        subscriptionService.handleEntryRemoved(removeCacheEntryResult, egressBuffer, entryRemovedEncoder, headerEncoder, session.id());
+        subscriptionService.handleEntryRemoved(removeCacheEntryResult, egressBuffer, entryRemovedEncoder.encodedLength()+headerEncoder.encodedLength(), session.id());
     }
 
     @Override
@@ -260,7 +260,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .cacheId(cacheId.value())
                 .requestId(clearCacheResult.getRequestId());
         sendMessage(session, egressBuffer, cacheClearedEncoder.encodedLength() + headerEncoder.encodedLength());
-        subscriptionService.handleClearCache(clearCacheResult, egressBuffer, cacheClearedEncoder, headerEncoder, session.id());
+        subscriptionService.handleClearCache(clearCacheResult, egressBuffer, cacheClearedEncoder.encodedLength()+headerEncoder.encodedLength(), session.id());
     }
 
     @Override
@@ -271,7 +271,7 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .cacheId(cacheId.value())
                 .requestId(requestDetails.getRequestId());
         sendMessage(session, egressBuffer, cacheDeletedEncoder.encodedLength() + headerEncoder.encodedLength());
-        subscriptionService.handleDeleteCache(deleteCacheResult, egressBuffer, cacheDeletedEncoder, headerEncoder, session.id());
+        subscriptionService.handleDeleteCache(deleteCacheResult, egressBuffer, cacheDeletedEncoder.encodedLength()+headerEncoder.encodedLength(), session.id());
     }
 
     @Override

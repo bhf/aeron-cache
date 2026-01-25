@@ -23,7 +23,6 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
     private final CacheUnsubscribeResult<I> unsubscribeResult;
     private final Supplier<I> indexSupplier;
 
-
     private final Map<I, Set<ClientSession>> cacheIdToClientSessions = new HashMap<>();
 
     @Override
@@ -86,37 +85,36 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
 
     @Override
     public void handleDeleteCache(DeleteCacheResult<I> requestDetails, MutableDirectBuffer egressBuffer,
-                                  CacheDeletedEncoder cacheDeletedEncoder, MessageHeaderEncoder headerEncoder,
+                                  int length,
                                   long excludeSessionId) {
         for (var session : getSessionsForCache(requestDetails.getCacheId())) {
             if (session.id() != excludeSessionId) {
                 log.debug("Sending delete cache update to session: {}", session.id());
-                sendMessage(session, egressBuffer, cacheDeletedEncoder.encodedLength() + headerEncoder.encodedLength());
+                sendMessage(session, egressBuffer, length);
             }
         }
     }
 
     @Override
     public void handleClearCache(ClearCacheResult<I> clearCacheResult, MutableDirectBuffer egressBuffer,
-                                 CacheClearedEncoder cacheClearedEncoder, MessageHeaderEncoder headerEncoder,
+                                 int length,
                                  long excludeSessionId) {
         for (var session : getSessionsForCache(clearCacheResult.getCacheId())) {
             if (session.id() != excludeSessionId) {
                 log.debug("Sending clear cache update to session: {}", session.id());
-                sendMessage(session, egressBuffer, cacheClearedEncoder.encodedLength() + headerEncoder.encodedLength());
+                sendMessage(session, egressBuffer, length);
             }
         }
     }
 
     @Override
     public void handleEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult,
-                                   MutableDirectBuffer egressBuffer, CacheEntryRemovedEncoder entryRemovedEncoder,
-                                   MessageHeaderEncoder headerEncoder, long excludeSessionId) {
+                                   MutableDirectBuffer egressBuffer, int length, long excludeSessionId) {
         log.info("Sending entry removed to subscribers on cacheId {}", removeCacheEntryResult.getCacheId());
         for (var session : getSessionsForCache(removeCacheEntryResult.getCacheId())) {
             if (session.id() != excludeSessionId) {
                 log.debug("Sending entry removed update to session: {}", session.id());
-                sendMessage(session, egressBuffer, entryRemovedEncoder.encodedLength() + headerEncoder.encodedLength());
+                sendMessage(session, egressBuffer, length);
             }
         }
     }
@@ -124,12 +122,11 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
     @Override
     public void handleEntryAdded(AddCacheEntryResult<I, K> addCacheEntryResult,
                                  MutableDirectBuffer egressBuffer, K key,
-                                 V value, CacheEntryUpdateEncoder entryUpdateEncoder,
-                                 MessageHeaderEncoder headerEncoder) {
+                                 V value, int length) {
         log.info("Sending entry added to subscribers on cacheId {}", addCacheEntryResult.getCacheId());
         for (var session : getSessionsForCache(addCacheEntryResult.getCacheId())) {
             log.debug("Sending entry added update to session: {}", session.id());
-            sendMessage(session, egressBuffer, entryUpdateEncoder.encodedLength() + headerEncoder.encodedLength());
+            sendMessage(session, egressBuffer, length);
         }
     }
 

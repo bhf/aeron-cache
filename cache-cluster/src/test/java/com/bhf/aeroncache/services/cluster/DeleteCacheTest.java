@@ -25,8 +25,7 @@ import org.mockito.Mockito;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -87,8 +86,7 @@ class DeleteCacheTest {
         verify(sut.subscriptionService, times(1)).handleDeleteCache(
                 any(DeleteCacheResult.class),
                 any(MutableDirectBuffer.class),
-                any(CacheDeletedEncoder.class),
-                any(MessageHeaderEncoder.class),
+                anyInt(),
                 eq(session.id()));
     }
 

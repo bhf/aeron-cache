@@ -31,13 +31,13 @@ public interface CacheSubscriptionService<I extends Reusable, K extends Reusable
      */
     CacheUnsubscribeResult<I> unsubscribe(CacheUnsubscribeRequestDetails<I> requestDetails, ClientSession session);
 
-    void handleDeleteCache(DeleteCacheResult<I> requestDetails, MutableDirectBuffer egressBuffer, CacheDeletedEncoder cacheDeletedEncoder, MessageHeaderEncoder headerEncoder, long excludeSessionId);
+    void handleDeleteCache(DeleteCacheResult<I> requestDetails, MutableDirectBuffer egressBuffer, int length, long excludeSessionId);
 
-    void handleClearCache(ClearCacheResult<I> clearCacheResult, MutableDirectBuffer egressBuffer, CacheClearedEncoder cacheClearedEncoder, MessageHeaderEncoder headerEncoder, long excludeSessionId);
+    void handleClearCache(ClearCacheResult<I> clearCacheResult, MutableDirectBuffer egressBuffer, int length, long excludeSessionId);
 
-    void handleEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult, MutableDirectBuffer egressBuffer, CacheEntryRemovedEncoder entryRemovedEncoder, MessageHeaderEncoder headerEncoder, long excludeSessionId);
+    void handleEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult, MutableDirectBuffer egressBuffer, int length, long excludeSessionId);
 
-    void handleEntryAdded(AddCacheEntryResult<I, K> addCacheEntryResult, MutableDirectBuffer egressBuffer, K key, V value, CacheEntryUpdateEncoder entryCreatedEncoder, MessageHeaderEncoder headerEncoder);
+    void handleEntryAdded(AddCacheEntryResult<I, K> addCacheEntryResult, MutableDirectBuffer egressBuffer, K key, V value, int length);
 
     void onSessionClose(ClientSession session);
 }

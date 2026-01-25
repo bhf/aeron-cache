@@ -94,7 +94,7 @@ class CacheSubscriptionServiceImplTest {
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheDeletedEncoder deleteEncoder = Mockito.mock(CacheDeletedEncoder.class);
         MessageHeaderEncoder headerEncoder = Mockito.mock(MessageHeaderEncoder.class);
-        sut.handleDeleteCache(requestDetails, egressBuffer, deleteEncoder, headerEncoder, 0);
+        sut.handleDeleteCache(requestDetails, egressBuffer, deleteEncoder.encodedLength()+headerEncoder.encodedLength(), 0);
 
         // Assert
         verify(session).offer(any(MutableDirectBuffer.class), eq(0), anyInt());
@@ -114,7 +114,7 @@ class CacheSubscriptionServiceImplTest {
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheClearedEncoder clearEncoder = Mockito.mock(CacheClearedEncoder.class);
         MessageHeaderEncoder headerEncoder = Mockito.mock(MessageHeaderEncoder.class);
-        sut.handleClearCache(requestDetails, egressBuffer, clearEncoder, headerEncoder, 0);
+        sut.handleClearCache(requestDetails, egressBuffer, clearEncoder.encodedLength()+headerEncoder.encodedLength(), 0);
 
         // Assert
         verify(session).offer(any(MutableDirectBuffer.class), eq(0), anyInt());
@@ -135,7 +135,7 @@ class CacheSubscriptionServiceImplTest {
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
         CacheEntryRemovedEncoder entryRemovedEncoder = Mockito.mock(CacheEntryRemovedEncoder.class);
         MessageHeaderEncoder headerEncoder = Mockito.mock(MessageHeaderEncoder.class);
-        sut.handleEntryRemoved(requestDetails, egressBuffer, entryRemovedEncoder, headerEncoder, 0);
+        sut.handleEntryRemoved(requestDetails, egressBuffer, entryRemovedEncoder.encodedLength()+headerEncoder.encodedLength(), 0);
 
         // Assert
         verify(session).offer(any(MutableDirectBuffer.class), eq(0), anyInt());
@@ -159,7 +159,7 @@ class CacheSubscriptionServiceImplTest {
         key.copyFrom("key");
         var value = new ReusableString();
         value.copyFrom("value");
-        sut.handleEntryAdded(requestDetails, egressBuffer, key, value, addEntryEncoder, headerEncoder);
+        sut.handleEntryAdded(requestDetails, egressBuffer, key, value, addEntryEncoder.encodedLength()+headerEncoder.encodedLength());
 
         // Assert
         verify(session).offer(any(MutableDirectBuffer.class), eq(0), anyInt());

@@ -25,8 +25,7 @@ import org.mockito.Mockito;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -101,8 +100,7 @@ class AddCacheEntryTest {
                 any(MutableDirectBuffer.class),
                 eq(reusableKey),
                 eq(reusableValue),
-                any(CacheEntryUpdateEncoder.class),
-                any(MessageHeaderEncoder.class));
+                anyInt());
     }
 
     @Test
