@@ -7,11 +7,23 @@ uninstall-frontend: uninstall-ui
 install-all: install-cluster install-http install-ws install-sse install-http-near install-ui
 uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near uninstall-ui
 
+install-all-singlenode: install-singlenode install-http install-ws install-sse install-http-near install-ui
+uninstall-all-singlenode: uninstall-singlenode uninstall-http uninstall-ws uninstall-sse uninstall-http-near uninstall-ui
+
+install-backend-singlenode: install-singlenode install-http install-ws install-sse install-http-near
+uninstall-backend-singlenode: uninstall-singlenode uninstall-http uninstall-ws uninstall-sse uninstall-http-near
+
 install-cluster:
 	$(MAKE) -C aeroncache-cluster install
 
 uninstall-cluster:
 	$(MAKE) -C aeroncache-cluster uninstall
+
+install-singlenode:
+	$(MAKE) -C aeroncache-singlenode install
+
+uninstall-singlenode:
+	$(MAKE) -C aeroncache-singlenode uninstall
 
 install-http:
 	$(MAKE) -C aeroncache-http-javalin install

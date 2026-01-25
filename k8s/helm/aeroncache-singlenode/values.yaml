@@ -1,11 +1,11 @@
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
-replicaCount: 3
+replicaCount: 1
 
 # Set the configmap to use for the cluster config
-aeroncacheClusterConfigmap: aeroncache-cluster-config
+aeroncacheClusterConfigmap: aeroncache-singlenode-config
 
 # This sets the cache mode for the cluster
-cacheMode: "RAFT"
+cacheMode: "SINGLE"
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
@@ -15,13 +15,13 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
-release-name: "aeroncache-cluster"
+release-name: "aeroncache-singlenode"
 
 # This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
 # This is to override the chart name.
 nameOverride: ""
-fullnameOverride: "aeroncache-cluster"
+fullnameOverride: "aeroncache-singlenode"
 
 # This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
 serviceAccount:
@@ -33,7 +33,7 @@ serviceAccount:
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: "aeroncache-cluster"
+  name: "aeroncache-singlenode"
 
 # This is for setting Kubernetes Annotations to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/

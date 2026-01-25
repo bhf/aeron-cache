@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aeroncache-singlenode.fullname" . }}
+  labels:
+    {{- include "aeroncache-singlenode.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  clusterIP: {{ .Values.service.clusterIP }}
+  selector:
+    {{- include "aeroncache-singlenode.selectorLabels" . | nindent 4 }}

@@ -5,5 +5,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   DNS_DELAY: "true"
+  CACHE_MODE: {{ .Values.cacheMode | quote }}
   CLUSTER_ADDRESSES: "aeroncache-cluster-0.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local"
   {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | indent 2 }}
