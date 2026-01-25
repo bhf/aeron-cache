@@ -44,6 +44,8 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     private final CacheUnsubscribeRequestDecoder cacheUnsubscribeRequestDecoder = new CacheUnsubscribeRequestDecoder();
     private final CacheSubscriptionResponseEncoder cacheSubscriptionResponseEncoder = new CacheSubscriptionResponseEncoder();
     private final CacheUnsubscribeResponseEncoder cacheUnsubscribeResponseEncoder = new CacheUnsubscribeResponseEncoder();
+    private final CacheEntryUpdateEncoder entryUpdateEncoder = new CacheEntryUpdateEncoder();
+
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
 
     public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<ReusableString, ReusableString, ReusableString> cacheManagerFactory) {
@@ -188,7 +190,14 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
                 .key(key.value())
                 .requestId(addCacheEntryResult.getRequestId());
         sendMessage(session, egressBuffer, entryCreatedEncoder.encodedLength() + headerEncoder.encodedLength());
-        subscriptionService.handleEntryAdded(addCacheEntryResult, egressBuffer, key, value, entryCreatedEncoder, headerEncoder);
+
+        entryUpdateEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        entryUpdateEncoder.cacheId((String) addCacheEntryResult.getCacheId().value())
+                .key(key.value())
+                .value(value.value())
+                .requestId(addCacheEntryResult.getRequestId());
+
+        subscriptionService.handleEntryAdded(addCacheEntryResult, egressBuffer, key, value, entryUpdateEncoder, headerEncoder);
     }
 
     @Override

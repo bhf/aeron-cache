@@ -5,7 +5,6 @@ import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.CacheSubscriptionRequestDetails;
 import com.bhf.aeroncache.models.requests.CacheUnsubscribeRequestDetails;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.types.ReusableString;
 import io.aeron.cluster.service.ClientSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -17,13 +16,13 @@ import java.util.function.Supplier;
 
 @RequiredArgsConstructor
 @Log4j2
-public class CacheSubscriptionServiceImpl<I extends Reusable> implements CacheSubscriptionService<I> {
+public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable, V extends Reusable> implements CacheSubscriptionService<I,K,V> {
 
     private final IdleStrategy idleStrategy;
     private final CacheSubscriptionResult<I> subscriptionResult;
     private final CacheUnsubscribeResult<I> unsubscribeResult;
     private final Supplier<I> indexSupplier;
-    private final CacheEntryUpdateEncoder entryUpdateEncoder = new CacheEntryUpdateEncoder();
+
 
     private final Map<I, Set<ClientSession>> cacheIdToClientSessions = new HashMap<>();
 
@@ -110,7 +109,7 @@ public class CacheSubscriptionServiceImpl<I extends Reusable> implements CacheSu
     }
 
     @Override
-    public void handleEntryRemoved(RemoveCacheEntryResult<I, ReusableString> removeCacheEntryResult,
+    public void handleEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult,
                                    MutableDirectBuffer egressBuffer, CacheEntryRemovedEncoder entryRemovedEncoder,
                                    MessageHeaderEncoder headerEncoder, long excludeSessionId) {
         log.info("Sending entry removed to subscribers on cacheId {}", removeCacheEntryResult.getCacheId());
@@ -123,18 +122,13 @@ public class CacheSubscriptionServiceImpl<I extends Reusable> implements CacheSu
     }
 
     @Override
-    public void handleEntryAdded(AddCacheEntryResult<I, ReusableString> addCacheEntryResult,
-                                 MutableDirectBuffer egressBuffer, ReusableString key,
-                                 ReusableString value, CacheEntryCreatedEncoder entryCreatedEncoder,
+    public void handleEntryAdded(AddCacheEntryResult<I, K> addCacheEntryResult,
+                                 MutableDirectBuffer egressBuffer, K key,
+                                 V value, CacheEntryUpdateEncoder entryUpdateEncoder,
                                  MessageHeaderEncoder headerEncoder) {
         log.info("Sending entry added to subscribers on cacheId {}", addCacheEntryResult.getCacheId());
         for (var session : getSessionsForCache(addCacheEntryResult.getCacheId())) {
-            log.info("Sending entry added update to session: {}", session.id());
-            entryUpdateEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
-            entryUpdateEncoder.cacheId((String) addCacheEntryResult.getCacheId().value())
-                    .key(key.value())
-                    .value(value.value())
-                    .requestId(addCacheEntryResult.getRequestId());
+            log.debug("Sending entry added update to session: {}", session.id());
             sendMessage(session, egressBuffer, entryUpdateEncoder.encodedLength() + headerEncoder.encodedLength());
         }
     }

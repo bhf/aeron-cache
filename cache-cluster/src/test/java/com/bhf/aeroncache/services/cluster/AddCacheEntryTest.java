@@ -101,7 +101,7 @@ class AddCacheEntryTest {
                 any(MutableDirectBuffer.class),
                 eq(reusableKey),
                 eq(reusableValue),
-                any(CacheEntryCreatedEncoder.class),
+                any(CacheEntryUpdateEncoder.class),
                 any(MessageHeaderEncoder.class));
     }
 

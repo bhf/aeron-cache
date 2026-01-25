@@ -5,14 +5,13 @@ import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.CacheSubscriptionRequestDetails;
 import com.bhf.aeroncache.models.requests.CacheUnsubscribeRequestDetails;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.types.ReusableString;
 import io.aeron.cluster.service.ClientSession;
 import org.agrona.MutableDirectBuffer;
 
 /**
  * Service for subscribing to caches.
  */
-public interface CacheSubscriptionService<I extends Reusable> {
+public interface CacheSubscriptionService<I extends Reusable, K extends Reusable, V extends Reusable> {
 
     /**
      * Subscribe to a cache.
@@ -36,9 +35,9 @@ public interface CacheSubscriptionService<I extends Reusable> {
 
     void handleClearCache(ClearCacheResult<I> clearCacheResult, MutableDirectBuffer egressBuffer, CacheClearedEncoder cacheClearedEncoder, MessageHeaderEncoder headerEncoder, long excludeSessionId);
 
-    void handleEntryRemoved(RemoveCacheEntryResult<I, ReusableString> removeCacheEntryResult, MutableDirectBuffer egressBuffer, CacheEntryRemovedEncoder entryRemovedEncoder, MessageHeaderEncoder headerEncoder, long excludeSessionId);
+    void handleEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult, MutableDirectBuffer egressBuffer, CacheEntryRemovedEncoder entryRemovedEncoder, MessageHeaderEncoder headerEncoder, long excludeSessionId);
 
-    void handleEntryAdded(AddCacheEntryResult<I, ReusableString> addCacheEntryResult, MutableDirectBuffer egressBuffer, ReusableString key, ReusableString value, CacheEntryCreatedEncoder entryCreatedEncoder, MessageHeaderEncoder headerEncoder);
+    void handleEntryAdded(AddCacheEntryResult<I, K> addCacheEntryResult, MutableDirectBuffer egressBuffer, K key, V value, CacheEntryUpdateEncoder entryCreatedEncoder, MessageHeaderEncoder headerEncoder);
 
     void onSessionClose(ClientSession session);
 }

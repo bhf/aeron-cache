@@ -40,7 +40,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private final Supplier<I> indexSupplier;
     private Cluster cluster;
     private final CacheTracingService tracingService;
-    CacheSubscriptionService<I> subscriptionService;
+    CacheSubscriptionService<I, K, V> subscriptionService;
     private IdleStrategy idleStrategy;
     private final CacheManagerFactory<I, K, V> cacheManagerFactory;
     private final CacheManager<I, K, V> cacheManager;

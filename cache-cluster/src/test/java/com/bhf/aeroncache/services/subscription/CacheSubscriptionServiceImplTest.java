@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CacheSubscriptionServiceImplTest {
 
-    CacheSubscriptionService<ReusableString> sut;
+    CacheSubscriptionService<ReusableString, ReusableString, ReusableString> sut;
 
     @Mock
     IdleStrategy idleStrategy;
@@ -153,7 +153,7 @@ class CacheSubscriptionServiceImplTest {
                 new AddCacheEntryResult<>(new ReusableString(), new ReusableString());
         requestDetails.getCacheId().copyFrom(KNOWN_CACHE);
         MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
-        CacheEntryCreatedEncoder addEntryEncoder = Mockito.mock(CacheEntryCreatedEncoder.class);
+        CacheEntryUpdateEncoder addEntryEncoder = Mockito.mock(CacheEntryUpdateEncoder.class);
         MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
         var key = new ReusableString();
         key.copyFrom("key");
