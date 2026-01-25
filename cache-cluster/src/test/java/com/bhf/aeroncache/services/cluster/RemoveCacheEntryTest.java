@@ -52,7 +52,7 @@ class RemoveCacheEntryTest {
     @BeforeEach
     void setup() {
         tracingService = Mockito.mock(CacheTracingService.class);
-        sut = new SBEDecodingCacheClusterService("node0", tracingService);
+        sut = new SBEDecodingCacheClusterService("node0", tracingService, TestUtils.getCacheManagerFactory());
         sut.subscriptionService = Mockito.mock(CacheSubscriptionService.class);
         responseBuffer = new ExpandableArrayBuffer();
         requestBuffer = new ExpandableArrayBuffer();

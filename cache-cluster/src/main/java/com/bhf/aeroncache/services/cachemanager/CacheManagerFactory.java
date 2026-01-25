@@ -1,28 +1,8 @@
 package com.bhf.aeroncache.services.cachemanager;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.services.cache.CacheEntryCodec;
-import com.bhf.aeroncache.services.cache.CacheIdCodec;
-import com.bhf.aeroncache.services.cachemanager.impl.MapCacheManager;
 
-import java.util.Map;
-import java.util.function.Supplier;
+public interface CacheManagerFactory<I extends Reusable, K extends Reusable, V extends Reusable> {
 
-/**
- * A factory to create cache manager instances.
- *
- * @param <I> The type on which caches are indexed.
- * @param <K> The type of the key for cache entries which this factory will create.
- * @param <V> The type of the value for cache entries which this factory will create.
- */
-public class CacheManagerFactory<I extends Reusable, K extends Reusable, V extends Reusable> {
-    public CacheManager<I, K, V> getCacheManager(Supplier<I> cacheIndexSupplier,
-                                                 Supplier<K> cacheKeySupplier,
-                                                 Supplier<V> cacheValueSupplier,
-                                                 Supplier<Map<K, V>> mapSupplier,
-                                                 CacheIdCodec<I> cacheIdSerializer,
-                                                 CacheEntryCodec<K, V> cacheEntrySerializer) {
-        return new MapCacheManager<I, K, V>(cacheIndexSupplier, cacheKeySupplier,
-                cacheValueSupplier, mapSupplier, cacheIdSerializer, cacheEntrySerializer);
-    }
+    CacheManager<I, K, V> getCacheManager();
 }

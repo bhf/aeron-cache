@@ -6,8 +6,6 @@ import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.services.cache.CacheEntryCodec;
-import com.bhf.aeroncache.services.cache.CacheIdCodec;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
@@ -25,7 +23,6 @@ import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 
-import java.util.Map;
 import java.util.function.Supplier;
 
 /**
@@ -45,7 +42,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private final CacheTracingService tracingService;
     CacheSubscriptionService<I> subscriptionService;
     private IdleStrategy idleStrategy;
-    private final CacheManagerFactory<I, K, V> cacheManagerFactory = new CacheManagerFactory<>();
+    private final CacheManagerFactory<I, K, V> cacheManagerFactory;
     private final CacheManager<I, K, V> cacheManager;
     final CreateCacheRequestDetails<I> createCacheRequestDetails;
     final ClearCacheRequestDetails<I> clearCacheRequestDetails;
@@ -64,9 +61,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
 
     protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier,
-                                          Supplier<Map<K, V>> mapSupplier, CacheIdCodec<I> cacheIdSerializer,
-                                          CacheEntryCodec<K, V> cacheEntrySerializer,
-                                          String nodeId, CacheTracingService tracingService) {
+                                          String nodeId, CacheTracingService tracingService, CacheManagerFactory<I,K,V> cacheManagerFactory) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(indexSupplier.get());
         this.clearCacheRequestDetails = new ClearCacheRequestDetails<>(indexSupplier.get());
         this.removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get());
@@ -80,8 +75,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.cacheUnsubscribeRequestDetails = new CacheUnsubscribeRequestDetails<>(indexSupplier.get());
         this.subscribeResult = new CacheSubscriptionResult<>(indexSupplier.get());
         this.unsubscribeResult = new CacheUnsubscribeResult<>(indexSupplier.get());
-        this.cacheManager = cacheManagerFactory.getCacheManager(indexSupplier,
-                keySupplier, valueSupplier, mapSupplier, cacheIdSerializer, cacheEntrySerializer);
+        this.cacheManagerFactory = cacheManagerFactory;
+        this.cacheManager = cacheManagerFactory.getCacheManager();
         this.nodeId = nodeId;
         this.tracingService = tracingService;
         this.indexSupplier = indexSupplier;

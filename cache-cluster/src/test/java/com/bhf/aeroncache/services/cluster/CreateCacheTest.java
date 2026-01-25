@@ -47,7 +47,7 @@ class CreateCacheTest {
     @BeforeEach
     void setup() {
         tracingService = Mockito.mock(CacheTracingService.class);
-        sut = new SBEDecodingCacheClusterService("node0", tracingService);
+        sut = new SBEDecodingCacheClusterService("node0", tracingService, TestUtils.getCacheManagerFactory());
         responseBuffer = new ExpandableArrayBuffer();
         requestBuffer = new ExpandableArrayBuffer();
         result = new CreateCacheResult<>(SupplierUtils.stringSupplier.get());

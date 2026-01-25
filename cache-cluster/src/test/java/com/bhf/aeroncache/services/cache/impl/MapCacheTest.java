@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache.impl;
 
+import com.bhf.aeroncache.application.CacheSerializerUtils;
 import com.bhf.aeroncache.messages.OperationStatus;
-import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,8 +25,8 @@ class MapCacheTest {
     void setup() {
         cache = new MapCache<>(SupplierUtils.stringSupplier, SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
-                SBEDecodingCacheClusterService.getCacheIdSerializer(),
-                SBEDecodingCacheClusterService.getCacheEntrySerializer());
+                CacheSerializerUtils.getCacheIdSerializer(),
+                CacheSerializerUtils.getCacheEntrySerializer());
     }
 
     /**

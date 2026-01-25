@@ -1,11 +1,15 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.application.unclustered.SingleNodeApplication;
+import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
+import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
 import com.bhf.aeroncache.services.tracing.impl.OtelTracingService;
+import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.DNSUtils;
+import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.CommonContext;
 import io.aeron.archive.Archive;
@@ -200,13 +204,15 @@ public class CacheNodeApplication {
                 .replicationChannel(logReplicationChannel(hostname))
                 .archiveContext(aeronArchiveContext.clone());
 
+        final var cacheManagerFactory = getCacheManagerFactory();
+
         final ClusteredServiceContainer.Context clusteredServiceContext =
                 new ClusteredServiceContainer.Context()
                         .aeronDirectoryName(aeronDirName)
                         .archiveContext(aeronArchiveContext.clone())
                         .clusterDir(new File(baseDir, "cluster"))
                         .clusteredService(new SBEDecodingCacheClusterService(String.valueOf(nodeId),
-                                getTracingService(nodeId)))
+                                getTracingService(nodeId), cacheManagerFactory))
                         .errorHandler(errorHandler("Clustered Service"));
 
         if (USE_BUSY_SPIN_IDLE_FOR_CLUSTER_SERVICE) {
@@ -231,6 +237,12 @@ public class CacheNodeApplication {
             barrier.await();
             System.out.println("[" + nodeId + "] Exiting");
         }
+    }
+
+    private static CacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManagerFactory() {
+        return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
+                SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
+                CacheSerializerUtils.getCacheIdSerializer(), CacheSerializerUtils.getCacheEntrySerializer());
     }
 
     private static CacheTracingService getTracingService(int nodeId) {

@@ -1,9 +1,13 @@
 package com.bhf.aeroncache.services;
 
+import com.bhf.aeroncache.application.CacheSerializerUtils;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.messages.CreateCacheEncoder;
 import com.bhf.aeroncache.messages.MessageHeaderEncoder;
+import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
+import com.bhf.aeroncache.types.ReusableString;
+import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.DirectBufferVector;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.logbuffer.BufferClaim;
@@ -89,5 +93,11 @@ public class TestUtils {
                 requestBuffer, requestId, cacheId);
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
+    }
+
+    public static BasicCacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManagerFactory(){
+        return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
+                SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
+                CacheSerializerUtils.getCacheIdSerializer(), CacheSerializerUtils.getCacheEntrySerializer());
     }
 }

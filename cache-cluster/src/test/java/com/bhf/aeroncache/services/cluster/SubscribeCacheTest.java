@@ -54,7 +54,7 @@ class SubscribeCacheTest {
     @BeforeEach
     void setup() {
         tracingService = Mockito.mock(CacheTracingService.class);
-        sut = new SBEDecodingCacheClusterService("node0", tracingService);
+        sut = new SBEDecodingCacheClusterService("node0", tracingService, TestUtils.getCacheManagerFactory());
         IdleStrategy idleStrategy = Mockito.mock(IdleStrategy.class);
         CacheSubscriptionResult<ReusableString> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
         CacheUnsubscribeResult<ReusableString> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableString());

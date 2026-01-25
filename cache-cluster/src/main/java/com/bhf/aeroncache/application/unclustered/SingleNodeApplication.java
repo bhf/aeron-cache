@@ -1,8 +1,13 @@
 package com.bhf.aeroncache.application.unclustered;
 
+import com.bhf.aeroncache.application.CacheSerializerUtils;
+import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
+import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
+import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.DNSUtils;
+import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.Aeron;
 import io.aeron.DirectBufferVector;
 import io.aeron.cluster.service.ClientSession;
@@ -14,7 +19,6 @@ import io.aeron.logbuffer.BufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.SleepingIdleStrategy;
 
 import java.util.Collection;
 import java.util.List;
@@ -38,7 +42,9 @@ public class SingleNodeApplication {
                 .aeronDirectoryName(mediaDriver.aeronDirectoryName());
         final Aeron aeron = Aeron.connect(aeronCtx);
 
-        final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0", new NoOpTracingService());
+        final var cacheManagerFactory = getCacheManager();
+
+        final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0", new NoOpTracingService(), cacheManagerFactory);
         Cluster cluster = getCluster(aeron);
         service.onStart(cluster, null);
 
@@ -78,6 +84,12 @@ public class SingleNodeApplication {
         final AgentRunner serverAgentRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace,
                 null, serverAgent);
         AgentRunner.startOnThread(serverAgentRunner);
+    }
+
+    private static CacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManager() {
+        return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
+                SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
+                CacheSerializerUtils.getCacheIdSerializer(), CacheSerializerUtils.getCacheEntrySerializer());
     }
 
     private static Cluster getCluster(Aeron aeron) {
