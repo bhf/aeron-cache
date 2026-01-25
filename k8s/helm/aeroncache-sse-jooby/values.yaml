@@ -1,8 +1,13 @@
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
 
+# This sets the cluster addresses.
+clusterAddresses: "aeroncache-cluster-0.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local"
+cacheMode: "RAFT"
+
 # Set the configmap to use for the cluster config
 aeroncacheWSConfigmap: aeroncache-sse-jooby-config
+requestPubHost: "aeroncache-sse-jooby"
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
