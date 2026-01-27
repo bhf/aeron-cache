@@ -165,16 +165,6 @@ public class CacheNodeApplication {
         System.out.println("user.dir=" + baseDir.getAbsolutePath());
         System.out.println("AeronDirName=" + aeronDirName);
 
-        final ShutdownSignalBarrier barrier = new ShutdownSignalBarrier();
-
-        final MediaDriver.Context mediaDriverContext = new MediaDriver.Context()
-                .aeronDirectoryName(aeronDirName)
-                .threadingMode(ThreadingMode.SHARED)
-                .termBufferSparseFile(true)
-                .multicastFlowControlSupplier(new MinMulticastFlowControlSupplier())
-                .terminationHook(barrier::signal)
-                .errorHandler(CacheNodeApplication.errorHandler("Media Driver"));
-
         final AeronArchive.Context replicationArchiveContext = new AeronArchive.Context()
                 .controlResponseChannel("aeron:udp?endpoint=" + hostname + ":0|alias=AeronCache-Archive" +
                         "-ControlResponse-" + nodeId);
@@ -228,11 +218,20 @@ public class CacheNodeApplication {
 
         System.out.println("Launching cluster node now...");
 
-        try (
-                ClusteredMediaDriver clusteredMediaDriver = ClusteredMediaDriver.launch(
-                        mediaDriverContext, archiveContext, consensusModuleContext);
-                ClusteredServiceContainer container = ClusteredServiceContainer.launch(
-                        clusteredServiceContext)) {
+        try (final ShutdownSignalBarrier barrier = new ShutdownSignalBarrier()) {
+            final MediaDriver.Context mediaDriverContext = new MediaDriver.Context()
+                    .aeronDirectoryName(aeronDirName)
+                    .threadingMode(ThreadingMode.SHARED)
+                    .termBufferSparseFile(true)
+                    .multicastFlowControlSupplier(new MinMulticastFlowControlSupplier())
+                    .terminationHook(barrier::signal)
+                    .errorHandler(CacheNodeApplication.errorHandler("Media Driver"));
+
+            ClusteredMediaDriver clusteredMediaDriver = ClusteredMediaDriver.launch(
+                    mediaDriverContext, archiveContext, consensusModuleContext);
+            ClusteredServiceContainer container = ClusteredServiceContainer.launch(
+                    clusteredServiceContext);
+
             System.out.println("[" + nodeId + "] Started Cluster Node on " + hostname + "...");
             barrier.await();
             System.out.println("[" + nodeId + "] Exiting");

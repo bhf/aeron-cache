@@ -1,13 +1,14 @@
 [versions]
-aeron = "1.46.2"
+aeron = "1.50.0"
 sbetool = "1.33.0"
 lombok = "1.18.34"
 log4j = "2.24.0"
-junit = "5.9.1"
+junit = "5.10.2"
+junit-platform = "1.10.2"
 sbegenerator = "0.0.9"
 lombokplugin = "8.10"
 jmhplugin = "0.7.2"
-mockito = "5.16.1"
+mockito = "5.21.0"
 shadow = "7.1.2"
 javalin = "6.4.0"
 restassured = "5.5.1"
@@ -28,6 +29,7 @@ sbetool = { module = "uk.co.real-logic:sbe-tool", version.ref = "sbetool" }
 junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 mockito-junit = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 javalin = { module = "io.javalin:javalin", version.ref = "javalin" }
