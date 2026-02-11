@@ -22,31 +22,23 @@ import org.apache.logging.log4j.util.Strings;
  * message decoding.
  */
 @Log4j2
-public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<ReusableString, ReusableString, ReusableString> {
+public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<ReusableString, ReusableString, ReusableString>{
 
     private final CacheCreatedEncoder cacheCreatedEncoder = new CacheCreatedEncoder();
-    private final CreateCacheDecoder createCacheDecoder = new CreateCacheDecoder();
-    private final ClearCacheDecoder clearCacheDecoder = new ClearCacheDecoder();
-    private final RemoveCacheEntryDecoder removeCacheEntryDecoder = new RemoveCacheEntryDecoder();
-    private final AddCacheEntryDecoder addCacheEntryDecoder = new AddCacheEntryDecoder();
-    private final GetCacheEntryDecoder getCacheEntryDecoder = new GetCacheEntryDecoder();
-    private final GetAllCacheEntriesDecoder getAllCacheEntriesDecoder = new GetAllCacheEntriesDecoder();
     private final CacheEntryCreatedEncoder entryCreatedEncoder = new CacheEntryCreatedEncoder();
     private final CacheEntryResultEncoder cacheEntryResultEncoder = new CacheEntryResultEncoder();
     private final AllCacheEntriesResultEncoder allCacheEntriesResultEncoder = new AllCacheEntriesResultEncoder();
     private final CacheEntryRemovedEncoder entryRemovedEncoder = new CacheEntryRemovedEncoder();
     private final CacheClearedEncoder cacheClearedEncoder = new CacheClearedEncoder();
-    private final DeleteCacheDecoder deleteCacheDecoder = new DeleteCacheDecoder();
     private final CacheDeletedEncoder cacheDeletedEncoder = new CacheDeletedEncoder();
-    private final GetCacheStatsDecoder getCacheStatsDecoder = new GetCacheStatsDecoder();
     private final AllCacheStatsResultEncoder cacheStatsResultEncoder = new AllCacheStatsResultEncoder();
-    private final CacheSubscriptionRequestDecoder cacheSubscriptionRequestDecoder = new CacheSubscriptionRequestDecoder();
-    private final CacheUnsubscribeRequestDecoder cacheUnsubscribeRequestDecoder = new CacheUnsubscribeRequestDecoder();
     private final CacheSubscriptionResponseEncoder cacheSubscriptionResponseEncoder = new CacheSubscriptionResponseEncoder();
     private final CacheUnsubscribeResponseEncoder cacheUnsubscribeResponseEncoder = new CacheUnsubscribeResponseEncoder();
     private final CacheEntryUpdateEncoder entryUpdateEncoder = new CacheEntryUpdateEncoder();
 
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
+
+    private CacheRequestDecoder<ReusableString,ReusableString,ReusableString> decoder;
 
     public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<ReusableString, ReusableString, ReusableString> cacheManagerFactory) {
         super(SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier,
@@ -55,130 +47,77 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
 
     @Override
     protected CreateCacheRequestDetails<ReusableString> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
-        createCacheRequestDetails.clear();
-        createCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = createCacheDecoder.cacheId();
-        var requestId = createCacheDecoder.requestId();
-        createCacheRequestDetails.getCacheId().copyFrom(cacheId);
-        createCacheRequestDetails.setRequestId(requestId);
+        decoder.decodeGetCreateCacheRequestDetails(buffer, offset, createCacheRequestDetails);
         return createCacheRequestDetails;
     }
 
     @Override
     protected ClearCacheRequestDetails<ReusableString> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
-        clearCacheRequestDetails.clear();
-        clearCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = clearCacheDecoder.cacheId();
-        var requestId = clearCacheDecoder.requestId();
-        clearCacheRequestDetails.getCacheId().copyFrom(cacheId);
-        clearCacheRequestDetails.setRequestId(requestId);
+        decoder.decodeClearCacheRequest(buffer, offset, clearCacheRequestDetails);
         return clearCacheRequestDetails;
     }
 
     @Override
     protected RemoveCacheEntryRequestDetails<ReusableString, ReusableString> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
-        removeCacheEntryRequestDetails.clear();
-        removeCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = removeCacheEntryDecoder.cacheId();
-        var key = removeCacheEntryDecoder.key();
-        var requestId = removeCacheEntryDecoder.requestId();
-        removeCacheEntryRequestDetails.getCacheId().copyFrom(cacheId);
-        removeCacheEntryRequestDetails.getKey().copyFrom(key);
-        removeCacheEntryRequestDetails.setRequestId(requestId);
+        decoder.decodeRemoveCacheEntryRequest(buffer, offset, removeCacheEntryRequestDetails);
         return removeCacheEntryRequestDetails;
     }
 
     @Override
     protected AddCacheEntryRequestDetails<ReusableString, ReusableString, ReusableString> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
-        addCacheEntryRequestDetails.clear();
-        addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = addCacheEntryDecoder.cacheId();
-        var requestID = addCacheEntryDecoder.requestId();
-        var key = addCacheEntryDecoder.key();
-        var value = addCacheEntryDecoder.entryValue();
-        addCacheEntryRequestDetails.getCacheId().copyFrom(cacheId);
-        addCacheEntryRequestDetails.getKey().copyFrom(key);
-        addCacheEntryRequestDetails.getValue().copyFrom(value);
-        addCacheEntryRequestDetails.setRequestId(requestID);
+        decoder.decodeAddCacheEntryRequest(buffer, offset, addCacheEntryRequestDetails);
         return addCacheEntryRequestDetails;
     }
 
     @Override
     protected GetCacheEntryRequestDetails<ReusableString, ReusableString> getCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
-        getCacheEntryRequestDetails.clear();
-        getCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = getCacheEntryDecoder.cacheId();
-        var key = getCacheEntryDecoder.key();
-        var requestId = getCacheEntryDecoder.requestId();
-        getCacheEntryRequestDetails.getKey().copyFrom(key);
-        getCacheEntryRequestDetails.getCacheId().copyFrom(cacheId);
-        getCacheEntryRequestDetails.setRequestId(requestId);
+        decoder.decodeGetCacheEntryRequest(buffer, offset, getCacheEntryRequestDetails);
         return getCacheEntryRequestDetails;
     }
 
     @Override
     protected GetAllCacheEntriesRequestDetails<ReusableString> getAllCacheEntriesRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
-        getAllCacheEntriesRequestDetails.clear();
-        getAllCacheEntriesDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = getAllCacheEntriesDecoder.cacheId();
-        var requestId = getAllCacheEntriesDecoder.requestId();
-        getAllCacheEntriesRequestDetails.getCacheId().copyFrom(cacheId);
-        getAllCacheEntriesRequestDetails.setRequestId(requestId);
+        decoder.decodeGetAllCacheEntriesRequest(buffer, offset, getAllCacheEntriesRequestDetails);
         return getAllCacheEntriesRequestDetails;
     }
 
     @Override
     protected DeleteCacheRequestDetails<ReusableString> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
-        deleteCacheRequestDetails.clear();
-        deleteCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = deleteCacheDecoder.cacheId();
-        var requestId = deleteCacheDecoder.requestId();
-        deleteCacheRequestDetails.getCacheId().copyFrom(cacheId);
-        deleteCacheRequestDetails.setRequestId(requestId);
+        decoder.decodeGetDeleteCacheRequest(buffer, offset, deleteCacheRequestDetails);
         return deleteCacheRequestDetails;
     }
 
     @Override
     protected GetCacheStatsRequestDetails getCacheStatsRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
-        getCacheStatsRequestDetails.clear();
-        getCacheStatsDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var requestId = getCacheStatsDecoder.requestId();
-        getCacheStatsRequestDetails.setRequestId(requestId);
+        decoder.decodeGetCacheStatsRequest(buffer, offset, getCacheStatsRequestDetails);
         return getCacheStatsRequestDetails;
     }
 
     @Override
     protected CacheSubscriptionRequestDetails<ReusableString> getCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset) {
-        cacheSubscribeRequestDetails.clear();
-        cacheSubscriptionRequestDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = cacheSubscriptionRequestDecoder.cacheId();
-        var requestId = cacheSubscriptionRequestDecoder.requestId();
-        cacheSubscribeRequestDetails.getCacheId().clear();
-        cacheSubscribeRequestDetails.getCacheId().copyFrom(cacheId);
-        cacheSubscribeRequestDetails.setRequestId(requestId);
+        decoder.decodeCacheSubscriptionRequest(buffer, offset, cacheSubscribeRequestDetails);
         return cacheSubscribeRequestDetails;
     }
 
     @Override
     protected CacheUnsubscribeRequestDetails<ReusableString> getCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset) {
-        cacheUnsubscribeRequestDetails.clear();
-        cacheUnsubscribeRequestDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = cacheUnsubscribeRequestDecoder.cacheId();
-        var requestId = cacheUnsubscribeRequestDecoder.requestId();
-        cacheUnsubscribeRequestDetails.getCacheId().clear();
-        cacheUnsubscribeRequestDetails.getCacheId().copyFrom(cacheId);
-        cacheUnsubscribeRequestDetails.setRequestId(requestId);
+        decoder.decodeGetCacheUnsubscribeRequest(buffer, offset, cacheUnsubscribeRequestDetails);
         return cacheUnsubscribeRequestDetails;
     }
 
     @Override
     protected void handlePostCreateCache(ReusableString cacheId, CreateCacheResult<ReusableString> cacheCreationResult, ClientSession session) {
+        var length = encodeCacheCreationResult(cacheId, cacheCreationResult);
+        sendMessage(session, egressBuffer, length);
+    }
+
+    private int encodeCacheCreationResult(ReusableString cacheId, CreateCacheResult<ReusableString> cacheCreationResult) {
         cacheCreatedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheCreatedEncoder
                 .status(cacheCreationResult.getStatus())
                 .cacheId(cacheId.value())
                 .requestId(cacheCreationResult.getRequestId());
-        sendMessage(session, egressBuffer, cacheCreatedEncoder.encodedLength() + headerEncoder.encodedLength());
+        return cacheCreatedEncoder.encodedLength() + headerEncoder.encodedLength();
     }
 
     @Override
