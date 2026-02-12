@@ -3,6 +3,8 @@ package com.bhf.aeroncache.application;
 import com.bhf.aeroncache.application.unclustered.SingleNodeApplication;
 import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
+import com.bhf.aeroncache.services.cluster.ReusableStringCacheRequestDecoder;
+import com.bhf.aeroncache.services.cluster.ReusableStringCacheResponseEncoder;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
@@ -195,14 +197,14 @@ public class CacheNodeApplication {
                 .archiveContext(aeronArchiveContext.clone());
 
         final var cacheManagerFactory = getCacheManagerFactory();
+        final var cacheService = getSbeDecodingCacheClusterService(nodeId, cacheManagerFactory);
 
         final ClusteredServiceContainer.Context clusteredServiceContext =
                 new ClusteredServiceContainer.Context()
                         .aeronDirectoryName(aeronDirName)
                         .archiveContext(aeronArchiveContext.clone())
                         .clusterDir(new File(baseDir, "cluster"))
-                        .clusteredService(new SBEDecodingCacheClusterService(String.valueOf(nodeId),
-                                getTracingService(nodeId), cacheManagerFactory))
+                        .clusteredService(cacheService)
                         .errorHandler(errorHandler("Clustered Service"));
 
         if (USE_BUSY_SPIN_IDLE_FOR_CLUSTER_SERVICE) {
@@ -236,6 +238,13 @@ public class CacheNodeApplication {
             barrier.await();
             System.out.println("[" + nodeId + "] Exiting");
         }
+    }
+
+    private static SBEDecodingCacheClusterService<ReusableString, ReusableString, ReusableString> getSbeDecodingCacheClusterService(int nodeId, CacheManagerFactory<ReusableString, ReusableString, ReusableString> cacheManagerFactory) {
+        var encoder = new ReusableStringCacheResponseEncoder();
+        var decoder = new ReusableStringCacheRequestDecoder();
+        return new SBEDecodingCacheClusterService<>(String.valueOf(nodeId), getTracingService(nodeId), cacheManagerFactory,
+                SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, encoder, decoder);
     }
 
     private static CacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManagerFactory() {

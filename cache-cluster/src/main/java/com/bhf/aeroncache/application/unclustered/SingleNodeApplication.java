@@ -3,6 +3,8 @@ package com.bhf.aeroncache.application.unclustered;
 import com.bhf.aeroncache.application.CacheSerializerUtils;
 import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
+import com.bhf.aeroncache.services.cluster.ReusableStringCacheRequestDecoder;
+import com.bhf.aeroncache.services.cluster.ReusableStringCacheResponseEncoder;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
 import com.bhf.aeroncache.types.ReusableString;
@@ -44,7 +46,11 @@ public class SingleNodeApplication {
 
         final var cacheManagerFactory = getCacheManager();
 
-        final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0", new NoOpTracingService(), cacheManagerFactory);
+        var encoder = new ReusableStringCacheResponseEncoder();
+        var decoder = new ReusableStringCacheRequestDecoder();
+
+        final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0", new NoOpTracingService(),
+                cacheManagerFactory, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, encoder, decoder);
         Cluster cluster = getCluster(aeron);
         service.onStart(cluster, null);
 
