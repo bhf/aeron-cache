@@ -1,75 +1,77 @@
 package com.bhf.aeroncache.services.cluster;
 
-import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
-import com.bhf.aeroncache.types.ReusableString;
-import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.ClientSession;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 
+import java.util.function.Supplier;
+
 /**
- * Decode SBE messages representing cache actions. This implementation
- * indexes the cache via it's {@link java.lang.Long} identity, with
- * keys and values being represented by String objects. This level of
+ * Decode SBE messages representing cache actions. This level of
  * abstraction is an implementation which does have responsibility for
- * message decoding.
+ * message decoding and encoding.
  */
 @Log4j2
-public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<ReusableString, ReusableString, ReusableString>{
+public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCacheClusterService<I, K, V>{
 
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
-    private final CacheRequestDecoder<ReusableString,ReusableString,ReusableString> decoder = new ReusableStringCacheRequestDecoder();
-    private final CacheResponseEncoder<ReusableString, ReusableString, ReusableString> encoder = new ReusableStringCacheResponseEncoder();
+    private final CacheRequestDecoder<I, K, V> decoder;
+    private final CacheResponseEncoder<I, K, V> encoder;
 
-    public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<ReusableString, ReusableString, ReusableString> cacheManagerFactory) {
-        super(SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier,
+    public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory,
+                                          Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier, Supplier<V> cacheValueSupplier,
+                                          CacheResponseEncoder<I, K, V> encoder, CacheRequestDecoder<I, K, V> decoder) {
+        super(cacheIndexSupplier, cacheKeySupplier, cacheValueSupplier,
                 nodeId, tracingService, cacheManagerFactory);
+        this.decoder = decoder;
+        this.encoder = encoder;
     }
 
     @Override
-    protected CreateCacheRequestDetails<ReusableString> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+    protected CreateCacheRequestDetails<I> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         decoder.decodeGetCreateCacheRequestDetails(buffer, offset, createCacheRequestDetails);
         return createCacheRequestDetails;
     }
 
     @Override
-    protected ClearCacheRequestDetails<ReusableString> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+    protected ClearCacheRequestDetails<I> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         decoder.decodeClearCacheRequest(buffer, offset, clearCacheRequestDetails);
         return clearCacheRequestDetails;
     }
 
     @Override
-    protected RemoveCacheEntryRequestDetails<ReusableString, ReusableString> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+    protected RemoveCacheEntryRequestDetails<I, K> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         decoder.decodeRemoveCacheEntryRequest(buffer, offset, removeCacheEntryRequestDetails);
         return removeCacheEntryRequestDetails;
     }
 
     @Override
-    protected AddCacheEntryRequestDetails<ReusableString, ReusableString, ReusableString> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+    protected AddCacheEntryRequestDetails<I, K, V> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         decoder.decodeAddCacheEntryRequest(buffer, offset, addCacheEntryRequestDetails);
         return addCacheEntryRequestDetails;
     }
 
     @Override
-    protected GetCacheEntryRequestDetails<ReusableString, ReusableString> getCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+    protected GetCacheEntryRequestDetails<I, K> getCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         decoder.decodeGetCacheEntryRequest(buffer, offset, getCacheEntryRequestDetails);
         return getCacheEntryRequestDetails;
     }
 
     @Override
-    protected GetAllCacheEntriesRequestDetails<ReusableString> getAllCacheEntriesRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+    protected GetAllCacheEntriesRequestDetails<I> getAllCacheEntriesRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         decoder.decodeGetAllCacheEntriesRequest(buffer, offset, getAllCacheEntriesRequestDetails);
         return getAllCacheEntriesRequestDetails;
     }
 
     @Override
-    protected DeleteCacheRequestDetails<ReusableString> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
+    protected DeleteCacheRequestDetails<I> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         decoder.decodeGetDeleteCacheRequest(buffer, offset, deleteCacheRequestDetails);
         return deleteCacheRequestDetails;
     }
@@ -81,25 +83,25 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected CacheSubscriptionRequestDetails<ReusableString> getCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset) {
+    protected CacheSubscriptionRequestDetails<I> getCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset) {
         decoder.decodeCacheSubscriptionRequest(buffer, offset, cacheSubscribeRequestDetails);
         return cacheSubscribeRequestDetails;
     }
 
     @Override
-    protected CacheUnsubscribeRequestDetails<ReusableString> getCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset) {
+    protected CacheUnsubscribeRequestDetails<I> getCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset) {
         decoder.decodeGetCacheUnsubscribeRequest(buffer, offset, cacheUnsubscribeRequestDetails);
         return cacheUnsubscribeRequestDetails;
     }
 
     @Override
-    protected void handlePostCreateCache(ReusableString cacheId, CreateCacheResult<ReusableString> cacheCreationResult, ClientSession session) {
+    protected void handlePostCreateCache(I cacheId, CreateCacheResult<I> cacheCreationResult, ClientSession session) {
         var length = encoder.encodeCacheCreationResult(cacheId, cacheCreationResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
     }
 
     @Override
-    protected void handlePostAddCacheEntry(ReusableString cacheId, ReusableString key, ReusableString value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, ClientSession session) {
+    protected void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session) {
         var addCacheEntryResultLength = encoder.encodeAddCacheEntryResult(cacheId, key, addCacheEntryResult, egressBuffer);
         sendMessage(session, egressBuffer, addCacheEntryResultLength);
 
@@ -108,52 +110,52 @@ public class SBEDecodingCacheClusterService extends AbstractCacheClusterService<
     }
 
     @Override
-    protected void handlePostGetCacheEntry(ReusableString cacheId, ReusableString key, GetCacheEntryResult<ReusableString, ReusableString, ReusableString> getCacheEntryResult, ClientSession session) {
+    protected void handlePostGetCacheEntry(I cacheId, K key, GetCacheEntryResult<I, K, V> getCacheEntryResult, ClientSession session) {
         var length = encoder.encodeCacheEntryResult(cacheId, getCacheEntryResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
     }
 
     @Override
-    protected void handlePostGetAllCacheEntries(ReusableString cacheId, GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> getAllCacheEntriesResult, ClientSession session) {
+    protected void handlePostGetAllCacheEntries(I cacheId, GetAllCacheEntriesResult<I, K, V> getAllCacheEntriesResult, ClientSession session) {
         var length = encoder.encodeAllCacheEntriesResult(cacheId, getAllCacheEntriesResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
     }
 
     @Override
-    protected void handlePostRemoveCacheEntry(ReusableString cacheId, ReusableString key, RemoveCacheEntryResult<ReusableString, ReusableString> removeCacheEntryResult, ClientSession session) {
+    protected void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, ClientSession session) {
         var length = encoder.encodeRemoveCacheEntryResult(cacheId, key, removeCacheEntryResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
         subscriptionService.handleEntryRemoved(removeCacheEntryResult, egressBuffer, length, session.id());
     }
 
     @Override
-    protected void handlePostClearCache(ReusableString cacheId, ClearCacheResult<ReusableString> clearCacheResult, ClientSession session) {
+    protected void handlePostClearCache(I cacheId, ClearCacheResult<I> clearCacheResult, ClientSession session) {
         var length = encoder.encodeCacheCleared(cacheId, clearCacheResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
         subscriptionService.handleClearCache(clearCacheResult, egressBuffer, length, session.id());
     }
 
     @Override
-    protected void handlePostDeleteCache(ReusableString cacheId, DeleteCacheResult<ReusableString> deleteCacheResult, DeleteCacheRequestDetails<ReusableString> requestDetails, ClientSession session) {
+    protected void handlePostDeleteCache(I cacheId, DeleteCacheResult<I> deleteCacheResult, DeleteCacheRequestDetails<I> requestDetails, ClientSession session) {
         var length = encoder.encodeDeleteCache(cacheId, deleteCacheResult, requestDetails, egressBuffer);
         sendMessage(session, egressBuffer, length);
         subscriptionService.handleDeleteCache(deleteCacheResult, egressBuffer, length, session.id());
     }
 
     @Override
-    protected void handlePostGetCacheStats(CacheStatsResult<ReusableString> cacheStatsResult, ClientSession session) {
+    protected void handlePostGetCacheStats(CacheStatsResult<I> cacheStatsResult, ClientSession session) {
         var length = encoder.encodeCacheStatsResult(cacheStatsResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
     }
 
     @Override
-    protected void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<ReusableString> subscriptionRequestResult, ClientSession session) {
+    protected void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I> subscriptionRequestResult, ClientSession session) {
         var length = encoder.encodeCacheSubscriptionResult(subscriptionRequestResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
     }
 
     @Override
-    protected void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<ReusableString> unsubscribeResponse, ClientSession session) {
+    protected void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<I> unsubscribeResponse, ClientSession session) {
         var length = encoder.encodeCacheUnsubscribeRequest(unsubscribeResponse, egressBuffer);
         sendMessage(session, egressBuffer, length);
     }
