@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="SSEApplication" type="Application" factoryName="Application" nameIsGenerated="true">
+  <configuration default="false" name="SSEApplication" type="Application" factoryName="Application" folderName="Clustered" nameIsGenerated="true">
     <option name="envFilePaths">
       <option value="$PROJECT_DIR$/config/dev.env" />
     </option>

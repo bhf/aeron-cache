@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="HttpApplication" type="Application" factoryName="Application" folderName="Clustered" nameIsGenerated="true">
+  <configuration default="false" name="HttpApplication-Singlenode" type="Application" factoryName="Application" folderName="SingleNode">
     <option name="envFilePaths">
-      <option value="$PROJECT_DIR$/config/dev.env" />
+      <option value="$PROJECT_DIR$/config/singlenode-dev.env" />
     </option>
     <option name="MAIN_CLASS_NAME" value="com.bhf.aeroncache.http.application.HttpApplication" />
     <module name="aeron-cache.cache-http.http-server-javalin.main" />

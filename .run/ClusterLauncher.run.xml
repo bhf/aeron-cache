@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="ClusterLauncher" type="Application" factoryName="Application" nameIsGenerated="true">
+  <configuration default="false" name="ClusterLauncher" type="Application" factoryName="Application" folderName="Clustered" nameIsGenerated="true">
     <option name="MAIN_CLASS_NAME" value="com.bhf.aeroncache.application.ClusterLauncher" />
     <module name="aeron-cache.cache-cluster.main" />
     <option name="VM_PARAMETERS" value="--add-opens java.base/jdk.internal.misc=ALL-UNNAMED" />
