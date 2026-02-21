@@ -72,6 +72,7 @@ public class WebsocketApplication {
     private static AgentRunner agentRunner;
     private static AeronCluster aeronCluster;
     private static MediaDriver mediaDriver;
+    private static boolean CLUSTERED_MODE;
 
     public static void main(String[] args) {
         System.out.println("Starting Websocket interface");
@@ -114,7 +115,7 @@ public class WebsocketApplication {
             mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
 
             var cacheMode = System.getenv("CACHE_MODE");
-            final boolean CLUSTERED_MODE = cacheMode==null || cacheMode.toUpperCase().equals("RAFT");
+            CLUSTERED_MODE = cacheMode==null || cacheMode.toUpperCase().equals("RAFT");
 
             System.out.println("Cache mode: "+cacheMode+", using clustered mode: "+CLUSTERED_MODE);
 
@@ -334,8 +335,11 @@ public class WebsocketApplication {
 
     private static void onWsClose(WsCloseContext wsCloseContext) {
         log.info("Websocket closed for sessionId: {}", wsCloseContext.sessionId());
-        subscriptionService.handleWsClosed(cache, getRequestId(wsCloseContext.getUpgradeCtx$javalin()),
-                wsCloseContext.sessionId());
+
+        if(CLUSTERED_MODE) {
+            subscriptionService.handleWsClosed(cache, getRequestId(wsCloseContext.getUpgradeCtx$javalin()),
+                    wsCloseContext.sessionId());
+        }
     }
 
     /**

@@ -48,6 +48,8 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
             subscriptionResult.setStatus(OperationStatus.DUPLICATE_SUBSCRIPTION);
         }
 
+        log.debug("Total subscriptions: {}", existingSubscribers.size());
+
         return subscriptionResult;
     }
 

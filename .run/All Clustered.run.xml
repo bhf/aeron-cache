@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="All Clustered" type="CompoundRunConfigurationType">
+    <toRun name="ClusterLauncher" type="Application" />
+    <toRun name="HttpApplication" type="Application" />
+    <toRun name="SSEApplication" type="Application" />
+    <toRun name="WebsocketApplication" type="Application" />
+    <method v="2" />
+  </configuration>
+</component>

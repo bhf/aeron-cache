@@ -149,7 +149,7 @@ public class UnclusteredServiceAgent implements Agent {
                     }
                 }
 
-                return responseCodeWs;
+                return responseCodeHttp+responseCodeWs+responseCodeSse;
             }
 
             @Override
