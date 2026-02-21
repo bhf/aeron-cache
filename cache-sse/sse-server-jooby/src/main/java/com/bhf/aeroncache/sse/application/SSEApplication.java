@@ -203,7 +203,7 @@ public class SSEApplication extends Jooby {
             }
         };
 
-        IdleStrategy unclusteredAgentIdleStrategy = SSEIdleStrategies.unclusteredAgentIdleStrategy.get();
+        IdleStrategy unclusteredAgentIdleStrategy = SSEIdleStrategies.unclusteredIdleStrategy.get();
         final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy,
                 Throwable::printStackTrace,
                 null, serverAgent);

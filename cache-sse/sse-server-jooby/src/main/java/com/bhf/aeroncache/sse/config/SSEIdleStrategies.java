@@ -12,6 +12,6 @@ public class SSEIdleStrategies {
     public static final Supplier<IdleStrategy> clusterClientAgentIdleStrategy = BackoffIdleStrategy::new;
     public static final Supplier<IdleStrategy> clusterMessagePublisherIdleStrategy = BusySpinIdleStrategy::new;
     public static final Supplier<IdleStrategy> agentRunnerIdleStrategy = YieldingIdleStrategy::new;
-    public static final Supplier<IdleStrategy> unclusteredAgentIdleStrategy = BusySpinIdleStrategy::new;
+    public static final Supplier<IdleStrategy> unclusteredIdleStrategy = BackoffIdleStrategy::new;
 
 }

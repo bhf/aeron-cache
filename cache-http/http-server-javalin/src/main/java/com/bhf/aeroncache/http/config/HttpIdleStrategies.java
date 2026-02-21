@@ -4,7 +4,6 @@ import com.bhf.aeroncache.http.application.HttpApplication;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.YieldingIdleStrategy;
 
 import java.util.function.Supplier;
 
@@ -16,8 +15,8 @@ public class HttpIdleStrategies {
     public static final Supplier<IdleStrategy> blockingPublisherIdleStrategy = BusySpinIdleStrategy::new;
     public static final Supplier<IdleStrategy> clusterClientAgentIdleStrategy = BackoffIdleStrategy::new;
     public static final Supplier<IdleStrategy> clusterMessagePublisherIdleStrategy = BusySpinIdleStrategy::new;
-    public static final Supplier<IdleStrategy> agentRunnerIdleStrategy = YieldingIdleStrategy::new;
-    public static final Supplier<IdleStrategy> unclusteredAgentIdleStrategy = BusySpinIdleStrategy::new;
+    public static final Supplier<IdleStrategy> agentRunnerIdleStrategy = BackoffIdleStrategy::new;
+    public static final Supplier<IdleStrategy> unclusteredIdleStrategy = BackoffIdleStrategy::new;
 
 }
 

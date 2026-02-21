@@ -226,7 +226,7 @@ public class HttpApplication {
             }
         };
 
-        IdleStrategy unclusteredAgentIdleStrategy = HttpIdleStrategies.unclusteredAgentIdleStrategy.get();
+        IdleStrategy unclusteredAgentIdleStrategy = HttpIdleStrategies.unclusteredIdleStrategy.get();
         final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy,
                 Throwable::printStackTrace,
                 null, serverAgent);

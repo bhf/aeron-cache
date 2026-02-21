@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="All Single Node" type="CompoundRunConfigurationType">
+    <toRun name="HttpApplication-Singlenode" type="Application" />
+    <toRun name="SSEApplication-Singlenode" type="Application" />
+    <toRun name="SingleNodeCacheLauncher" type="Application" />
+    <toRun name="WebsocketApplication-Singlenode" type="Application" />
+    <method v="2" />
+  </configuration>
+</component>
