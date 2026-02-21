@@ -1,5 +1,7 @@
 package com.bhf.aeroncache.application;
 
+import io.aeron.cluster.ClusterTool;
+
 import java.util.concurrent.Executors;
 
 /**
@@ -17,6 +19,12 @@ public class ClusterLauncher {
                 CacheNodeApplication.main(new String[]{String.valueOf(finalI)});
             });
         }
+    }
+
+    public static void shutdownCluster() {
+        System.out.println("Shutting down now");
+        ClusterTool.main(new String[]{".", "shutdown"});
+        System.out.println("Should now be shutdown");
     }
 
 }

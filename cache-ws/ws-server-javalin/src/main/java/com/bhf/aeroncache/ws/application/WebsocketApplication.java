@@ -244,10 +244,10 @@ public class WebsocketApplication {
         };
     }
 
-    private static void shutdown() {
-        CloseHelper.close(agentRunner);
-        CloseHelper.close(mediaDriver);
+    public static void shutdown() {
         CloseHelper.close(aeronCluster);
+        CloseHelper.close(mediaDriver);
+        CloseHelper.close(agentRunner);
     }
 
     private static void addClusterErrorHandler(AeronCluster aeronCluster) {
