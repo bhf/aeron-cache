@@ -70,7 +70,7 @@ public class AeronCacheClusterListener implements EgressListener {
         headerDecoder.wrap(buffer, offset);
         final int templateId = headerDecoder.templateId();
 
-        log.info("Got client side message with TID {}", templateId);
+        log.debug("Got client side message with TID {}", templateId);
 
         switch (templateId) {
             case CacheCreatedDecoder.TEMPLATE_ID -> handleCacheCreated(buffer, offset);
@@ -212,7 +212,7 @@ public class AeronCacheClusterListener implements EgressListener {
      */
     private void handleAllCacheStatsResult(DirectBuffer buffer, int offset) {
         CacheResponseDecoder.decodeAllCacheStatsResult(allCacheStatsResultDecoder, headerDecoder, cacheStatsResult, buffer, offset);
-        log.info("Got cache stats result, requestId: {}", cacheStatsResult.getRequestId());
+        log.debug("Got cache stats result, requestId: {}", cacheStatsResult.getRequestId());
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleAllCacheStats(cacheStatsResult);

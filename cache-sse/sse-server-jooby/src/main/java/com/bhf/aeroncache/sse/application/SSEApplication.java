@@ -60,6 +60,7 @@ public class SSEApplication extends Jooby {
     private static AeronCluster aeronCluster;
     private static MediaDriver mediaDriver;
     private static final ObjectWriter writer = new ObjectMapper().writer();
+    private static boolean CLUSTERED_MODE;
 
     public static void main(final String[] args) {
         System.out.println("Starting SSE interface");
@@ -102,7 +103,9 @@ public class SSEApplication extends Jooby {
 
             serverSentEmitter.onClose(() -> {
                 log.warn("Closed on " + serverSentEmitter.getId());
-                subscriptionService.handleSSEClosed(cache, requestId, serverSentEmitter.getId());
+                if (CLUSTERED_MODE) {
+                    subscriptionService.handleSSEClosed(cache, requestId, serverSentEmitter.getId());
+                }
             });
 
             serverSentEmitter.keepAlive(60, TimeUnit.DAYS);
@@ -285,7 +288,7 @@ public class SSEApplication extends Jooby {
             mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
 
             var cacheMode = System.getenv("CACHE_MODE");
-            final boolean CLUSTERED_MODE = cacheMode == null || cacheMode.toUpperCase().equals("RAFT");
+            CLUSTERED_MODE = cacheMode == null || cacheMode.toUpperCase().equals("RAFT");
 
             System.out.println("Cache mode: " + cacheMode + ", using clustered mode: " + CLUSTERED_MODE);
 
