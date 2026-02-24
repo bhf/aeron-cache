@@ -14,6 +14,8 @@ javalin = "6.4.0"
 restassured = "5.5.1"
 slf4j = "2.0.16"
 jackson = "2.17.2"
+json = "20240303"
+hamcrest = "2.1"
 opentelemetry = "1.49.0"
 micrometer = "1.14.6"
 micrometer-javalin = "6.6.0"
@@ -34,6 +36,8 @@ mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 mockito-junit = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 javalin = { module = "io.javalin:javalin", version.ref = "javalin" }
 restassured = { module = "io.rest-assured:rest-assured", version.ref = "restassured"}
+json = { module = "org.json:json", version.ref = "json" }
+hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
 jackson-core = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson"}
 opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry"}
 opentelemetry-sdk = { module = "io.opentelemetry:opentelemetry-sdk", version.ref = "opentelemetry"}
