@@ -10,6 +10,10 @@ import java.util.concurrent.Executors;
 public class ClusterLauncher {
     public static void main(String[] args) {
         int clusterNodes = 3;
+        launchCluster(clusterNodes);
+    }
+
+    public static void launchCluster(int clusterNodes) {
         var pool = Executors.newFixedThreadPool(clusterNodes);
 
         for (var i = 0; i < clusterNodes; i++) {
@@ -22,9 +26,23 @@ public class ClusterLauncher {
     }
 
     public static void shutdownCluster() {
-        System.out.println("Shutting down now");
-        ClusterTool.main(new String[]{".", "shutdown"});
-        System.out.println("Should now be shutdown");
+        System.out.println("Shutting down now...");
+        try {
+            var javaHome = System.getProperty("java.home");
+            var javaBin = javaHome + java.io.File.separator + "bin" + java.io.File.separator + "java";
+            var classpath = System.getProperty("java.class.path");
+
+            ProcessBuilder pb = new ProcessBuilder(
+                    javaBin, "-cp", classpath, "io.aeron.cluster.ClusterTool", ".", "shutdown"
+            );
+            pb.inheritIO();
+            var process = pb.start();
+            int exitCode = process.waitFor();
+            System.out.println("Aeron Cache cluster shutdown process exited with code: " + exitCode);
+        } catch (Exception e) {
+            System.err.println("Failed to shutdown Aeron Cache cluster");
+            e.printStackTrace();
+        }
     }
 
 }
