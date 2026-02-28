@@ -21,21 +21,21 @@ public class BasicCacheManagerFactory<I extends Reusable, K extends Reusable, V 
     private final Supplier<K> cacheKeySupplier;
     private final Supplier<V> cacheValueSupplier;
     private final Supplier<Map<K, V>> mapSupplier;
-    private final CacheIdCodec<I> cacheIdSerializer;
-    private final CacheEntryCodec<K, V> cacheEntrySerializer;
+    private final CacheIdCodec<I> cacheIdSnapshotCodec;
+    private final CacheEntryCodec<K, V> cacheEntrySnapshotCodec;
 
-    public BasicCacheManagerFactory(Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier, Supplier<V> cacheValueSupplier, Supplier<Map<K, V>> mapSupplier, CacheIdCodec<I> cacheIdSerializer, CacheEntryCodec<K, V> cacheEntrySerializer) {
+    public BasicCacheManagerFactory(Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier, Supplier<V> cacheValueSupplier, Supplier<Map<K, V>> mapSupplier, CacheIdCodec<I> cacheIdCodec, CacheEntryCodec<K, V> cacheEntryCodec) {
         this.cacheIndexSupplier = cacheIndexSupplier;
         this.cacheKeySupplier = cacheKeySupplier;
         this.cacheValueSupplier = cacheValueSupplier;
         this.mapSupplier = mapSupplier;
-        this.cacheIdSerializer = cacheIdSerializer;
-        this.cacheEntrySerializer = cacheEntrySerializer;
+        this.cacheIdSnapshotCodec = cacheIdCodec;
+        this.cacheEntrySnapshotCodec = cacheEntryCodec;
     }
 
     @Override
     public CacheManager<I, K, V> getCacheManager() {
         return new MapCacheManager<I, K, V>(cacheIndexSupplier, cacheKeySupplier,
-                cacheValueSupplier, mapSupplier, cacheIdSerializer, cacheEntrySerializer);
+                cacheValueSupplier, mapSupplier, cacheIdSnapshotCodec, cacheEntrySnapshotCodec);
     }
 }
