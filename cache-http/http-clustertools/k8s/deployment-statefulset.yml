@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: aeroncache-http-clustertools
+  namespace: default
+  labels:
+    app.kubernetes.io/name: aeroncache-http-clustertools
+    app.kubernetes.io/instance: aeroncache-http-clustertools
+spec:
+  replicas: 1
+  podManagementPolicy: Parallel
+  serviceName: aeroncache-http-clustertools
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: aeroncache-http-clustertools
+      app.kubernetes.io/instance: aeroncache-http-clustertools
+  template:
+    metadata:
+      annotations:
+        {}
+      labels:
+        app.kubernetes.io/name: aeroncache-http-clustertools
+        app.kubernetes.io/instance: aeroncache-http-clustertools
+    spec:
+      serviceAccountName: aeroncache-http-clustertools
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+          name: shm
+      containers:
+        - name: aeroncache-http-clustertools
+          image: docker.io/library/aeroncache-http-clustertools
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 7070
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: shm
+          env:
+            - name: POD_ADDRESS
+              value: 127.0.0.1
+          envFrom:
+            - configMapRef:
+                name: aeroncache-http-clustertools-config

@@ -1,11 +1,11 @@
-install-backend: install-cluster install-http install-ws install-sse install-http-near
-uninstall-backend: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near
+install-backend: install-cluster install-http install-ws install-sse install-http-near install-http-clustertools
+uninstall-backend: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near uninstall-http-clustertools
 
 install-frontend: install-ui
 uninstall-frontend: uninstall-ui
 
-install-all: install-cluster install-http install-ws install-sse install-http-near install-ui
-uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near uninstall-ui
+install-all: install-cluster install-http install-ws install-sse install-http-near install-ui install-http-clustertools
+uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near uninstall-ui uninstall-http-clustertools
 
 install-all-singlenode: install-singlenode install-http-singlenode install-ws-singlenode install-sse-singlenode install-ui
 uninstall-all-singlenode: uninstall-singlenode uninstall-http uninstall-ws uninstall-sse uninstall-ui
@@ -63,3 +63,9 @@ install-ui:
 
 uninstall-ui:
 	$(MAKE) -C aeroncache-ui-nextjs uninstall
+
+install-http-clustertools:
+	$(MAKE) -C aeroncache-http-clustertools install
+
+uninstall-http-clustertools:
+	$(MAKE) -C aeroncache-http-clustertools uninstall
