@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.services;
 
-import com.bhf.aeroncache.application.CacheSerializerUtils;
+import com.bhf.aeroncache.application.CacheSnapshotCodecUtils;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.messages.CreateCacheEncoder;
 import com.bhf.aeroncache.messages.MessageHeaderEncoder;
@@ -98,6 +98,6 @@ public class TestUtils {
     public static BasicCacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManagerFactory(){
         return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
-                CacheSerializerUtils.getCacheIdSerializer(), CacheSerializerUtils.getCacheEntrySerializer());
+                CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(), CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec());
     }
 }

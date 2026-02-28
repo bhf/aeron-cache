@@ -250,7 +250,7 @@ public class CacheNodeApplication {
     private static CacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManagerFactory() {
         return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
-                CacheSerializerUtils.getCacheIdSerializer(), CacheSerializerUtils.getCacheEntrySerializer());
+                CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(), CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec());
     }
 
     private static CacheTracingService getTracingService(int nodeId) {

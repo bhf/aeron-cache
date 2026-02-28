@@ -30,18 +30,18 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
 
     final Map<K, V> cache;
     private final V emptyValue;
-    private final CacheIdCodec<I> cacheIdSerializer;
+    private final CacheIdCodec<I> cacheIdSnapshotCodec;
     private final MutableDirectBuffer buffer = new ExpandableArrayBuffer();
-    private final CacheEntryCodec<K, V> cacheEntryCodec;
+    private final CacheEntryCodec<K, V> cacheEntrySnapshotCodec;
 
     public MapCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier,
-                    Supplier<Map<K, V>> mapSupplier, CacheIdCodec<I> cacheIdSerializer,
-                    CacheEntryCodec<K, V> cacheEntrySerializer) {
+                    Supplier<Map<K, V>> mapSupplier, CacheIdCodec<I> cacheIdSnapshotCodec,
+                    CacheEntryCodec<K, V> cacheEntrySnapshotCodec) {
         super(indexSupplier, keySupplier, valueSupplier);
         this.cache = mapSupplier.get();
         this.emptyValue = valueSupplier.get();
-        this.cacheIdSerializer = cacheIdSerializer;
-        this.cacheEntryCodec = cacheEntrySerializer;
+        this.cacheIdSnapshotCodec = cacheIdSnapshotCodec;
+        this.cacheEntrySnapshotCodec = cacheEntrySnapshotCodec;
     }
 
     @Override
@@ -106,7 +106,7 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
 
     @Override
     public void takeSnapshot(ExclusivePublication snapshotPublication, I cacheId) {
-        int offset = cacheIdSerializer.serializeCacheId(cacheId, buffer, 0);
+        int offset = cacheIdSnapshotCodec.serializeCacheId(cacheId, buffer, 0);
         offset = stats.encode(buffer, offset);
         int length = offset;
 
@@ -116,7 +116,7 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
             ++entriesSnapshotted;
             var key = entry.getKey();
             var value = entry.getValue();
-            length = cacheEntryCodec.serialize(key, value, buffer, length);
+            length = cacheEntrySnapshotCodec.serialize(key, value, buffer, length);
         }
 
         log.info("Total entries snapshotted in cache {} is {}", cacheId, entriesSnapshotted);
@@ -137,7 +137,7 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
         log.info("Total entries to load: {} for cache Id: {}, added: {}", stats.size, stats.getCacheId(), stats.addedCount);
         int added = 0;
         while (added < stats.size) {
-            offset = cacheEntryCodec.deserialize(buffer, offset, cache);
+            offset = cacheEntrySnapshotCodec.deserialize(buffer, offset, cache);
             added++;
         }
 

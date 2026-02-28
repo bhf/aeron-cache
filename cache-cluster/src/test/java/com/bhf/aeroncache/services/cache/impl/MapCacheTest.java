@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.services.cache.impl;
 
-import com.bhf.aeroncache.application.CacheSerializerUtils;
+import com.bhf.aeroncache.application.CacheSnapshotCodecUtils;
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
@@ -25,8 +25,8 @@ class MapCacheTest {
     void setup() {
         cache = new MapCache<>(SupplierUtils.stringSupplier, SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
-                CacheSerializerUtils.getCacheIdSerializer(),
-                CacheSerializerUtils.getCacheEntrySerializer());
+                CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(),
+                CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec());
     }
 
     /**

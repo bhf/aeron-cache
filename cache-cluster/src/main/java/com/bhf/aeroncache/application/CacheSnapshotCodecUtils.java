@@ -10,9 +10,9 @@ import org.agrona.MutableDirectBuffer;
 import java.util.Map;
 
 @Log4j2
-public class CacheSerializerUtils {
+public class CacheSnapshotCodecUtils {
 
-    public static CacheEntryCodec<ReusableString, ReusableString> getCacheEntrySerializer() {
+    public static CacheEntryCodec<ReusableString, ReusableString> getCacheEntrySnapshotCodec() {
         return new CacheEntryCodec<>() {
             @Override
             public int serialize(ReusableString key, ReusableString value, MutableDirectBuffer buffer, int offset) {
@@ -60,7 +60,7 @@ public class CacheSerializerUtils {
         };
     }
 
-    public static CacheIdCodec<ReusableString> getCacheIdSerializer() {
+    public static CacheIdCodec<ReusableString> getCacheIdSnapshotCodec() {
         return new CacheIdCodec<>() {
             @Override
             public int serializeCacheId(ReusableString cacheId, MutableDirectBuffer buffer, int offset) {

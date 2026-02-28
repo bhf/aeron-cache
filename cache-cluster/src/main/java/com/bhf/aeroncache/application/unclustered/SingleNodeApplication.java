@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.application.unclustered;
 
-import com.bhf.aeroncache.application.CacheSerializerUtils;
+import com.bhf.aeroncache.application.CacheSnapshotCodecUtils;
 import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.ReusableStringCacheRequestDecoder;
@@ -95,7 +95,7 @@ public class SingleNodeApplication {
     private static CacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManager() {
         return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
-                CacheSerializerUtils.getCacheIdSerializer(), CacheSerializerUtils.getCacheEntrySerializer());
+                CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(), CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec());
     }
 
     private static Cluster getCluster(Aeron aeron) {

@@ -15,9 +15,9 @@ import java.util.function.Supplier;
  */
 public class CacheFactory<I extends Reusable, K extends Reusable, V extends Reusable> {
     public Cache<I, K, V> getNewCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier,
-                                      Supplier<Map<K, V>> mapSupplier, CacheIdCodec<I> cacheIdSerializer,
-                                      CacheEntryCodec<K, V> cacheEntrySerializer) {
+                                      Supplier<Map<K, V>> mapSupplier, CacheIdCodec<I> cacheIdSnapshotCodec,
+                                      CacheEntryCodec<K, V> cacheEntrySnapshotCodec) {
         return new MapCache<I, K, V>(indexSupplier, keySupplier, valueSupplier, mapSupplier,
-                cacheIdSerializer, cacheEntrySerializer);
+                cacheIdSnapshotCodec, cacheEntrySnapshotCodec);
     }
 }
