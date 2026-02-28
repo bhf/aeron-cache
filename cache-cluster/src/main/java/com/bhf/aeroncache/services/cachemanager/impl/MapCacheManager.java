@@ -46,11 +46,15 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
 
     @Override
     public void takeSnapshot(ExclusivePublication snapshotPublication) {
+        int totalCachesSnapshotted = 0;
         for (var cacheEntry : caches.entrySet()) {
+            ++totalCachesSnapshotted;
             var cacheId = cacheEntry.getKey();
             var cache = cacheEntry.getValue();
             cache.takeSnapshot(snapshotPublication, cacheId);
         }
+
+        log.info("Total caches snapshotted: {}", totalCachesSnapshotted);
     }
 
     @Override
@@ -62,9 +66,12 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
             offset = cacheIdSerializer.getCacheId(buffer, offset, cacheId);
             var cacheCreateResult = createCache(cacheId);
 
+            log.info("Loading snapshot on cache Id: "+cacheId);
+
             if (cacheCreateResult.getStatus() == OperationStatus.SUCCESS) {
                 var cache = getCache(cacheId);
                 cache.loadSnapshot(buffer, offset);
+                cache.getCacheStats().getCacheId().copyFrom(cacheId);
             }
             else{
                 log.warn("Couldn't create cache on cache Id {}, status: {}", cacheId.value(),

@@ -111,11 +111,15 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
         int length = offset;
 
         var allEntries = getAllEntries();
+        int entriesSnapshotted = 0;
         for (var entry : allEntries.entrySet()) {
+            ++entriesSnapshotted;
             var key = entry.getKey();
             var value = entry.getValue();
-            length = cacheEntryCodec.serialize(key, value, buffer, offset);
+            length = cacheEntryCodec.serialize(key, value, buffer, length);
         }
+
+        log.info("Total entries snapshotted in cache {} is {}", cacheId, entriesSnapshotted);
 
         var result = snapshotPublication.offer(buffer, 0, length);
 
@@ -127,12 +131,17 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
 
     @Override
     public void loadSnapshot(DirectBuffer buffer, int offset) {
+
         offset = stats.decode(buffer, offset);
 
+        log.info("Total entries to load: {} for cache Id: {}, added: {}", stats.size, stats.getCacheId(), stats.addedCount);
         int added = 0;
         while (added < stats.size) {
             offset = cacheEntryCodec.deserialize(buffer, offset, cache);
+            added++;
         }
+
+        log.info("Total loaded from snapshot: {}", added);
     }
 
 }
