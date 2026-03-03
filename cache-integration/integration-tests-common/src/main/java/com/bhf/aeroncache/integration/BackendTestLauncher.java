@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.integration.launcher;
+package com.bhf.aeroncache.integration;
 
 import com.bhf.aeroncache.application.ClusterLauncher;
 import com.bhf.aeroncache.http.application.HttpApplication;
