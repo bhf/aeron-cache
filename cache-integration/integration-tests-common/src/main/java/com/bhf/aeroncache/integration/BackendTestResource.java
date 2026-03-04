@@ -6,14 +6,17 @@ import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 @RequiredArgsConstructor
+@Getter
 public class BackendTestResource implements ExtensionContext.Store.CloseableResource {
 
-    @Getter
+    private final String baseHttpUri;
     private final int httpPort;
 
-    @Getter
-    private final String baseHttpUri;
+    private final String baseWsUri;
+    private final int wsPort;
 
+    private final String baseSSEUri;
+    private final int ssePort;
 
     @Override
     public void close() {

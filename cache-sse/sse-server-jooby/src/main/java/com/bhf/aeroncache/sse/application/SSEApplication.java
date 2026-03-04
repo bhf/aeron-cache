@@ -45,7 +45,7 @@ import java.util.function.Consumer;
 @Log4j2
 public class SSEApplication extends Jooby {
 
-    private static final int PORT = 7071;
+    private static final int DEFAULT_SSE_PORT = 0;
     private static final String API_PREFIX = "/api/sse/v1/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
@@ -63,11 +63,16 @@ public class SSEApplication extends Jooby {
     private static boolean CLUSTERED_MODE;
 
     public static void main(final String[] args) {
+        startSSEInterface(args, DEFAULT_SSE_PORT);
+    }
+
+    public static int startSSEInterface(String[] args, int port) {
         System.out.println("Starting SSE interface");
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
 
-        startHTTPServer(args);
+        var boundPort = startHTTPServer(args, port);
         setupCacheConnection();
+        return boundPort;
     }
 
     {
@@ -324,8 +329,12 @@ public class SSEApplication extends Jooby {
         }
     }
 
-    private static void startHTTPServer(String[] args) {
-        runApp(args, new NettyServer(new ServerOptions().setPort(7072)), SSEApplication::new);
+    private static int startHTTPServer(String[] args, int port) {
+        var serverOptions = new ServerOptions().setPort(port);
+        var nettyServer = new NettyServer(serverOptions);
+        runApp(args, nettyServer, SSEApplication::new);
+        log.info("Launched SSE interface on port {}",serverOptions.getPort());
+        return serverOptions.getPort();
     }
 
     private static String getRequestId(Context ctx) {

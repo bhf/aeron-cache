@@ -64,7 +64,7 @@ import java.util.regex.Pattern;
 public class HttpApplication {
 
     public static final String PROMO_MICROMETER_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
-    private static final int PORT = 7070;
+    private static final int DEFAULT_HTTP_PORT = 7070;
     private static final String API_PREFIX = "/api/v1/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
@@ -86,10 +86,15 @@ public class HttpApplication {
     private static final Pattern specialCharacters = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!]");
 
     public static void main(String[] args) {
+        startHTTPInterface(DEFAULT_HTTP_PORT);
+    }
+
+    public static int startHTTPInterface(int port) {
+
         System.out.println("Starting HTTP interface");
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
 
-        var app = startHTTPServer();
+        var app = startHTTPServer(port);
 
         try {
             final ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
@@ -168,6 +173,10 @@ public class HttpApplication {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
+        var httpPort = app.port();
+        log.info("Started HTTP interface on port "+httpPort);
+        return httpPort;
     }
 
     private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {
@@ -277,7 +286,7 @@ public class HttpApplication {
      *
      * @return The wired up Javalin instance.
      */
-    private static Javalin startHTTPServer() {
+    private static Javalin startHTTPServer(int port) {
 
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         registry.config().commonTags("application", "aeron-cache-http");
@@ -311,7 +320,7 @@ public class HttpApplication {
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
                 .post("baselinePost", HttpApplication::postActionBaseline)
                 .get("baselineGet", HttpApplication::getActionBaseline)
-                .start(PORT);
+                .start(port);
     }
 
     private static void checkClusterConnectivity(Context ctx) {

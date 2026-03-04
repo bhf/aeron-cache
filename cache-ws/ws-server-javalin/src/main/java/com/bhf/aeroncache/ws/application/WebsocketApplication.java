@@ -55,7 +55,7 @@ import java.util.function.Consumer;
 public class WebsocketApplication {
 
     public static final String PROMO_MICROMETER_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
-    private static final int PORT = 7071;
+    private static final int DEFAULT_WS_PORT = 7071;
     private static final String API_PREFIX = "/api/ws/v1/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
@@ -75,10 +75,14 @@ public class WebsocketApplication {
     private static boolean CLUSTERED_MODE;
 
     public static void main(String[] args) {
+        startWebsocketInterface(DEFAULT_WS_PORT);
+    }
+
+    public static int startWebsocketInterface(int port) {
         System.out.println("Starting Websocket interface");
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
 
-        var app = startHTTPServer();
+        var app = startHTTPServer(port);
 
         try {
             ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
@@ -150,6 +154,9 @@ public class WebsocketApplication {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
+        log.info("Started websocket on port {}", app.port());
+        return app.port();
     }
 
     private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {
@@ -259,7 +266,7 @@ public class WebsocketApplication {
      *
      * @return The wired up Javalin instance.
      */
-    private static Javalin startHTTPServer() {
+    private static Javalin startHTTPServer(int port) {
 
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         registry.config().commonTags("application", "aeron-cache-ws");
@@ -284,7 +291,7 @@ public class WebsocketApplication {
                 .get(LIVENESS, WebsocketApplication::handleGetLiveness)
                 .get(READINESS, WebsocketApplication::handleGetReadiness)
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
-                .start(PORT);
+                .start(port);
     }
 
     private static void checkClusterConnectivity(Context ctx) {

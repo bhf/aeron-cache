@@ -3,6 +3,8 @@ package com.bhf.aeroncache.integration;
 import com.bhf.aeroncache.application.ClusterLauncher;
 import com.bhf.aeroncache.http.application.HttpApplication;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.sse.application.SSEApplication;
+import com.bhf.aeroncache.ws.application.WebsocketApplication;
 import org.junit.jupiter.api.extension.*;
 
 public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver {
@@ -24,12 +26,25 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
 
         store.getOrComputeIfAbsent(BACKEND_KEY, key -> {
             try {
-                System.out.println("Starting backend once...");
+                System.out.println("Starting AeronCache Cluster...");
                 ClusterLauncher.launchCluster(3);
 
-                HttpApplication.main(null);
+                var baseUri = "http://localhost";
+                int httpPort = 0;
+                int wsPort = 0;
+                int ssePort = 0;
 
-                return new BackendTestResource(7070, "http://localhost");
+                if (config.httpEnabled()) {
+                    httpPort = HttpApplication.startHTTPInterface(0);
+                }
+                if (config.wsEnabled()) {
+                    wsPort = WebsocketApplication.startWebsocketInterface(0);
+                }
+                if (config.sseEnabled()) {
+                    ssePort = SSEApplication.startSSEInterface(null, 0);
+                }
+
+                return new BackendTestResource(baseUri, httpPort, baseUri, wsPort, baseUri, ssePort);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

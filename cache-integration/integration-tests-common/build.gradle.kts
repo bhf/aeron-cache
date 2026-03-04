@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(libs.restassured)
+    implementation(libs.jooby.netty)
     implementation(libs.json)
     implementation(libs.junit)
     implementation(libs.junit.params)
@@ -12,6 +13,8 @@ dependencies {
 
     implementation(project(":cache-cluster"))
     implementation(project(":cache-http:http-server-javalin"))
+    implementation(project(":cache-ws:ws-server-javalin"))
+    implementation(project(":cache-sse:sse-server-jooby"))
     implementation(project(":cache-common"))
 
     testImplementation(platform(libs.junit.bom))
@@ -19,7 +22,6 @@ dependencies {
     testImplementation(libs.jackson.core)
 
     testRuntimeOnly(libs.junit.platform.launcher)
-
 
 }
 
