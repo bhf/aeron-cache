@@ -1,13 +1,16 @@
-package com.bhf.aeroncache.integration;
+package com.bhf.aeroncache.integration.http;
 
 import com.bhf.aeroncache.annotations.HappyPath;
-import io.restassured.RestAssured;
+import com.bhf.aeroncache.integration.BackendTestLauncher;
+import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import io.restassured.http.ContentType;
 import org.hamcrest.Matchers;
 import org.json.JSONObject;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -16,26 +19,22 @@ import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
 
+@ExtendWith(BackendTestLauncher.class)
+@BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = false)
 class DeleteCacheTests {
 
     private static final String DELETE_CACHE_ENDPOINT = "/api/v1/cache/";
     private static final String KNOWN_CACHE_ID = "1";
     private static final String UNKNOWN_CACHE_ID = "123";
 
-    @BeforeAll
-    static void setup() {
-        RestAssured.baseURI = "http://localhost";
-        RestAssured.port = 7070;
-    }
-
     @Test
     @DisplayName("Should delete an existing cache")
     @HappyPath
-    void shouldDeleteExistingCache() {
+    void shouldDeleteExistingCache(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.createCache(KNOWN_CACHE_ID);
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
 
-        given()
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -50,11 +49,11 @@ class DeleteCacheTests {
     @Test
     @DisplayName("Should return 404 on unknown cache")
     @HappyPath
-    void shouldHandleUnknownCache() {
+    void shouldHandleUnknownCache(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.deleteCache(UNKNOWN_CACHE_ID);
+        CacheTestUtils.deleteCache(UNKNOWN_CACHE_ID, backend);
 
-        given()
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -69,10 +68,10 @@ class DeleteCacheTests {
     @ParameterizedTest
     @DisplayName("Should return status 400 for badly formed requests to delete a cache")
     @MethodSource("provideBadParamsToDeleteCache")
-    void shouldReturn400ForBadlyFormedRequest(String field, Object value) {
+    void shouldReturn400ForBadlyFormedRequest(String field, Object value, BackendTestResource backend) {
         var requestBody = new JSONObject().put(field, value);
 
-        given()
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .body(requestBody.toString())

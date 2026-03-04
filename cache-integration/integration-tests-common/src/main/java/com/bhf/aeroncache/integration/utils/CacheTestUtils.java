@@ -1,5 +1,6 @@
-package com.bhf.aeroncache.integration;
+package com.bhf.aeroncache.integration.utils;
 
+import com.bhf.aeroncache.integration.BackendTestResource;
 import io.restassured.http.ContentType;
 import io.restassured.http.Method;
 import org.json.JSONObject;
@@ -20,9 +21,9 @@ public class CacheTestUtils {
      *
      * @param cacheId The ID of the cache to create.
      */
-    public static void createCache(String cacheId) {
+    public static void createCache(String cacheId, BackendTestResource backend) {
         JSONObject jsonObj = new JSONObject().put("cacheId", cacheId);
-        given()
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .body(jsonObj.toString())
@@ -36,14 +37,14 @@ public class CacheTestUtils {
      * @param key     The key to add the item against.
      * @param value   The value to add.
      */
-    public static void addItem(String cacheId, String key, String value) {
+    public static void addItem(String cacheId, String key, String value, BackendTestResource backend) {
         JSONObject jsonObj = new JSONObject()
                 .put("cacheId", cacheId)
                 .put("key", key)
                 .put("value", value);
 
         var endpoint = PUT_ITEM_ENDPOINT + cacheId;
-        given()
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .body(jsonObj.toString())
@@ -56,8 +57,8 @@ public class CacheTestUtils {
      * @param cacheId The cache from which to remove the item.
      * @param key     The key of the item to be removed.
      */
-    public static void removeItem(String cacheId, String key) {
-        given()
+    public static void removeItem(String cacheId, String key, BackendTestResource backend) {
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .request(Method.DELETE, DELETE_ENDPOINT + cacheId + "/" + key);
@@ -68,9 +69,9 @@ public class CacheTestUtils {
      *
      * @param cacheId THe cache to be deleted.
      */
-    public static void deleteCache(String cacheId) {
+    public static void deleteCache(String cacheId, BackendTestResource backend) {
         JSONObject jsonObj = new JSONObject().put("cacheId", cacheId);
-        given()
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .body(jsonObj.toString())
