@@ -45,7 +45,7 @@ import java.util.function.Consumer;
 @Log4j2
 public class SSEApplication extends Jooby {
 
-    private static final int DEFAULT_SSE_PORT = 0;
+    private static final int DEFAULT_SSE_PORT = 7072;
     private static final String API_PREFIX = "/api/sse/v1/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";

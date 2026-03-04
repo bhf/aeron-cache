@@ -13,21 +13,33 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
             ExtensionContext.Namespace.create(BackendTestLauncher.class);
 
     private static final String BACKEND_KEY = "backend";
+    private static String functionalityKey;
 
     @Override
     public void beforeAll(ExtensionContext context) {
 
-        ExtensionContext root = context.getRoot();
-        ExtensionContext.Store store = root.getStore(NAMESPACE);
+        var extensionContextRoot = context.getRoot();
+        var extensionContextStore = extensionContextRoot.getStore(NAMESPACE);
 
         BackendTestConfig config =
                 context.getRequiredTestClass()
                         .getAnnotation(BackendTestConfig.class);
 
-        store.getOrComputeIfAbsent(BACKEND_KEY, key -> {
+        var functionalityKeyBuilder = new StringBuilder(BACKEND_KEY + "_http");
+
+        if (config.wsEnabled()) {
+            functionalityKeyBuilder.append("_ws");
+        }
+        if (config.sseEnabled()) {
+            functionalityKeyBuilder.append("_sse");
+        }
+
+        functionalityKey = functionalityKeyBuilder.toString();
+
+        extensionContextStore.getOrComputeIfAbsent(functionalityKey, key -> {
             try {
                 System.out.println("Starting AeronCache Cluster...");
-                ClusterLauncher.launchCluster(3);
+                ClusterLauncher.launchTestCluster(3, functionalityKey);
 
                 var baseUri = "http://localhost";
                 int httpPort = 0;
@@ -61,7 +73,7 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
         return extensionContext.getStore(NAMESPACE)
-                .get(BACKEND_KEY, BackendTestResource.class);
+                .get(functionalityKey, BackendTestResource.class);
     }
 
 }

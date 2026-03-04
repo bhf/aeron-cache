@@ -114,7 +114,11 @@ public class CacheNodeApplication {
      * @param args passed to the process.
      */
     public static void main(final String[] args) {
+        var baseDirectory = System.getProperty("user.dir");
+        startAeronCacheApplication(args, baseDirectory);
+    }
 
+    public static void startAeronCacheApplication(String[] args, String baseDirectory) {
         var cacheMode = System.getenv("CACHE_MODE");
         final boolean CLUSTERED_MODE = cacheMode == null || cacheMode.toUpperCase().equals("RAFT");
 
@@ -123,11 +127,12 @@ public class CacheNodeApplication {
             SingleNodeApplication.main(new String[]{});
         } else {
             System.out.println("Starting Aeron Cache server node in clustered mode");
-            startClusteredMode(args);
+            int nodeId = Integer.parseInt(args[0]);
+            startClusteredMode(nodeId, baseDirectory);
         }
     }
 
-    private static void startClusteredMode(String[] args) {
+    private static void startClusteredMode(int nodeId_, String baseDirectory) {
         int nodeId = -1;
         String[] hostnames = null;
 
@@ -156,13 +161,13 @@ public class CacheNodeApplication {
         }
 
         if (hostnames == null) {
-            nodeId = Integer.parseInt(args[0]);
+            nodeId = nodeId_;
             hostnames = new String[]{"localhost", "localhost", "localhost"};
         }
 
         final String hostname = hostnames[nodeId];
         System.out.println("This node's hostname:" + hostname);
-        final File baseDir = new File(System.getProperty("user.dir"), "node" + nodeId);
+        final File baseDir = new File(baseDirectory, "node" + nodeId);
         final String aeronDirName = CommonContext.getAeronDirectoryName() + "-" + nodeId + "-driver";
         System.out.println("user.dir=" + baseDir.getAbsolutePath());
         System.out.println("AeronDirName=" + aeronDirName);

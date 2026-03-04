@@ -1,7 +1,5 @@
 package com.bhf.aeroncache.application;
 
-import io.aeron.cluster.ClusterTool;
-
 import java.util.concurrent.Executors;
 
 /**
@@ -10,10 +8,10 @@ import java.util.concurrent.Executors;
 public class ClusterLauncher {
     public static void main(String[] args) {
         int clusterNodes = 3;
-        launchCluster(clusterNodes);
+        launchTestCluster(clusterNodes);
     }
 
-    public static void launchCluster(int clusterNodes) {
+    public static void launchTestCluster(int clusterNodes) {
         var pool = Executors.newFixedThreadPool(clusterNodes);
 
         for (var i = 0; i < clusterNodes; i++) {
@@ -21,6 +19,19 @@ public class ClusterLauncher {
             pool.execute(() -> {
                 System.out.println("Launching cluster with node Id: " + finalI);
                 CacheNodeApplication.main(new String[]{String.valueOf(finalI)});
+            });
+        }
+    }
+
+    public static void launchTestCluster(int clusterNodes, String functionalityKey) {
+        var pool = Executors.newFixedThreadPool(clusterNodes);
+
+        for (var i = 0; i < clusterNodes; i++) {
+            int finalI = i;
+            pool.execute(() -> {
+                System.out.println("Launching cluster with node Id: " + finalI);
+                var baseDir = functionalityKey+"_"+finalI;
+                CacheNodeApplication.startAeronCacheApplication(new String[]{String.valueOf(finalI)}, baseDir);
             });
         }
     }
