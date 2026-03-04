@@ -2,13 +2,15 @@ package com.bhf.aeroncache.integration;
 
 import com.bhf.aeroncache.application.ClusterLauncher;
 import com.bhf.aeroncache.http.application.HttpApplication;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
+import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import org.junit.jupiter.api.extension.*;
 
-public class BackendTestLauncher implements BeforeAllCallback {
+public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver {
 
     private static final ExtensionContext.Namespace NAMESPACE =
-            ExtensionContext.Namespace.create("backend");
+            ExtensionContext.Namespace.create(BackendTestLauncher.class);
+
+    private static final String BACKEND_KEY = "backend";
 
     @Override
     public void beforeAll(ExtensionContext context) {
@@ -16,31 +18,35 @@ public class BackendTestLauncher implements BeforeAllCallback {
         ExtensionContext root = context.getRoot();
         ExtensionContext.Store store = root.getStore(NAMESPACE);
 
-        store.getOrComputeIfAbsent("backend", key -> {
+        BackendTestConfig config =
+                context.getRequiredTestClass()
+                        .getAnnotation(BackendTestConfig.class);
+
+        store.getOrComputeIfAbsent(BACKEND_KEY, key -> {
             try {
                 System.out.println("Starting backend once...");
                 ClusterLauncher.launchCluster(3);
 
                 HttpApplication.main(null);
 
-                return new BackendResource();
+                return new BackendTestResource(7070, "http://localhost");
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
     }
 
-    static class BackendResource implements ExtensionContext.Store.CloseableResource {
-        @Override
-        public void close() {
-            System.out.println("Shutting down backend...");
-            try {
-                System.out.println("Shutting down Aeron Cache Cluster");
-                ClusterLauncher.shutdownCluster();
-            } catch (Throwable e) {
-                System.err.println("Error during cluster shutdown: " + e.getMessage());
-                e.printStackTrace();
-            }
-        }
+    @Override
+    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return parameterContext.getParameter()
+                .getType()
+                .equals(BackendTestResource.class);
     }
+
+    @Override
+    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return extensionContext.getStore(NAMESPACE)
+                .get(BACKEND_KEY, BackendTestResource.class);
+    }
+
 }

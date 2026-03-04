@@ -13,3 +13,4 @@ include("cache-http:http-clustertools")
 
 include("cache-integration:integration-tests-common")
 include("cache-integration:http-integration-tests")
+include("cache-integration:ws-integration-tests")

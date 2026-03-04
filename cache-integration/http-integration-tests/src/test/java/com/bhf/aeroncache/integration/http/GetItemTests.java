@@ -1,15 +1,21 @@
-package com.bhf.aeroncache.integration;
+package com.bhf.aeroncache.integration.http;
 
 import com.bhf.aeroncache.annotations.HappyPath;
-import io.restassured.RestAssured;
+import com.bhf.aeroncache.integration.BackendTestLauncher;
+import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.comparesEqualTo;
 
+@ExtendWith(BackendTestLauncher.class)
+@BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = false)
 class GetItemTests {
 
     private static final String GET_ENDPOINT = "/api/v1/cache/";
@@ -20,21 +26,19 @@ class GetItemTests {
     private static final String UNKNOWN_KEY = "UNKNOWN_KEY";
 
     @BeforeAll
-    static void setup() {
-        RestAssured.baseURI = "http://localhost";
-        RestAssured.port = 7070;
+    static void setup(BackendTestResource backend) {
 
         // seed the cache with a single cache and a known key-value pair
-        CacheTestUtils.createCache(KNOWN_CACHE_ID);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE);
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
     }
 
     @Test
     @DisplayName("Should get an existing value back")
     @HappyPath
-    void shouldGetExistingCacheValue() {
+    void shouldGetExistingCacheValue(BackendTestResource backend) {
         // Arrange
-        given()
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -49,11 +53,11 @@ class GetItemTests {
 
     @Test
     @DisplayName("Should get a blank value back on an unknown key")
-    void shouldGetBlankValueOnUnknownKey() {
+    void shouldGetBlankValueOnUnknownKey(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.removeItem(KNOWN_CACHE_ID, UNKNOWN_KEY);
+        CacheTestUtils.removeItem(KNOWN_CACHE_ID, UNKNOWN_KEY, backend);
 
-        given()
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -68,9 +72,9 @@ class GetItemTests {
 
     @Test
     @DisplayName("Should get 404 on unknown cache")
-    void shouldGet404OnUnknownCache() {
+    void shouldGet404OnUnknownCache(BackendTestResource backend) {
         // Arrange
-        given()
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
