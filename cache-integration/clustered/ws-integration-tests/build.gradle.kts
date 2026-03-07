@@ -11,11 +11,13 @@ dependencies {
     testImplementation(libs.json)
     testImplementation(libs.hamcrest)
     testImplementation(libs.jackson.core)
+    testImplementation(libs.awaitility)
 
     testImplementation(project(":cache-cluster"))
     testImplementation(project(":cache-http:http-server-javalin"))
     testImplementation(project(":cache-common"))
     testImplementation(project(":cache-integration:integration-common"))
+    testImplementation(project(":cache-integration:streaming-integration-common"))
 
     testRuntimeOnly(libs.junit.platform.launcher)
 }
@@ -44,7 +46,7 @@ tasks.test {
 }
 
 tasks.register<Delete>("cleanTestNodes") {
-    delete("backend_http_0", "backend_http_1", "backend_http_2")
+    delete("backend_http_ws_0", "backend_http_ws_1", "backend_http_ws_2")
 }
 
 fun loadTestEnv(): Map<String, String> {

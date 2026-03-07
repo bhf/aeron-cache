@@ -4,18 +4,21 @@ plugins {
 
 
 dependencies {
-    testImplementation(libs.restassured)
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit)
-    testImplementation(libs.junit.params)
-    testImplementation(libs.json)
-    testImplementation(libs.hamcrest)
-    testImplementation(libs.jackson.core)
+    implementation(libs.restassured)
+    implementation(platform(libs.junit.bom))
+    implementation(libs.junit)
+    implementation(libs.junit.params)
+    implementation(libs.json)
+    implementation(libs.hamcrest)
+    implementation(libs.jackson.core)
+    implementation(libs.awaitility)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.sse)
 
-    testImplementation(project(":cache-cluster"))
-    testImplementation(project(":cache-http:http-server-javalin"))
-    testImplementation(project(":cache-common"))
-    testImplementation(project(":cache-integration:integration-common"))
+    implementation(project(":cache-cluster"))
+    implementation(project(":cache-http:http-server-javalin"))
+    implementation(project(":cache-common"))
+    implementation(project(":cache-integration:integration-common"))
 
     testRuntimeOnly(libs.junit.platform.launcher)
 }
@@ -44,7 +47,7 @@ tasks.test {
 }
 
 tasks.register<Delete>("cleanTestNodes") {
-    delete("backend_http_0", "backend_http_1", "backend_http_2")
+    delete("backend_http_sse_0", "backend_http_sse_1", "backend_http_sse_2")
 }
 
 fun loadTestEnv(): Map<String, String> {
