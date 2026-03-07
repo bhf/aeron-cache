@@ -3,20 +3,17 @@ package com.bhf.aeroncache.integration.http;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
-import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
+import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.comparesEqualTo;
-
 @ExtendWith(BackendTestLauncher.class)
-@BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = false)
-class GetItemTests {
+abstract class GetItemTests {
 
     private static final String GET_ENDPOINT = "/api/v1/cache/";
     private static final String KNOWN_CACHE_ID = "1";
@@ -38,7 +35,7 @@ class GetItemTests {
     @HappyPath
     void shouldGetExistingCacheValue(BackendTestResource backend) {
         // Arrange
-        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+        RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -48,7 +45,7 @@ class GetItemTests {
                 // Assert
                 .then().assertThat()
                 .statusCode(200)
-                .body("value", comparesEqualTo(KNOWN_VALUE));
+                .body("value", Matchers.comparesEqualTo(KNOWN_VALUE));
     }
 
     @Test
@@ -57,7 +54,7 @@ class GetItemTests {
         // Arrange
         CacheTestUtils.removeItem(KNOWN_CACHE_ID, UNKNOWN_KEY, backend);
 
-        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+        RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -67,14 +64,14 @@ class GetItemTests {
                 // Assert
                 .then().assertThat()
                 .statusCode(404)
-                .body("value", comparesEqualTo(""));
+                .body("value", Matchers.comparesEqualTo(""));
     }
 
     @Test
     @DisplayName("Should get 404 on unknown cache")
     void shouldGet404OnUnknownCache(BackendTestResource backend) {
         // Arrange
-        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+        RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -84,9 +81,9 @@ class GetItemTests {
                 // Assert
                 .then().assertThat()
                 .statusCode(404)
-                .body("cacheId", comparesEqualTo("0"))
-                .body("key", comparesEqualTo("NA"))
-                .body("value", comparesEqualTo("NA"));
+                .body("cacheId", Matchers.comparesEqualTo("0"))
+                .body("key", Matchers.comparesEqualTo("NA"))
+                .body("value", Matchers.comparesEqualTo("NA"));
     }
 
 }

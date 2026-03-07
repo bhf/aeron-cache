@@ -3,8 +3,8 @@ package com.bhf.aeroncache.integration.http;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
-import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
+import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.hamcrest.Matchers;
 import org.json.JSONObject;
@@ -17,11 +17,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.stream.Stream;
 
-import static io.restassured.RestAssured.given;
-
 @ExtendWith(BackendTestLauncher.class)
-@BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = false)
-class DeleteCacheTests {
+abstract class DeleteCacheTests {
 
     private static final String DELETE_CACHE_ENDPOINT = "/api/v1/cache/";
     private static final String KNOWN_CACHE_ID = "1";
@@ -34,7 +31,7 @@ class DeleteCacheTests {
         // Arrange
         CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
 
-        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+        RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -53,7 +50,7 @@ class DeleteCacheTests {
         // Arrange
         CacheTestUtils.deleteCache(UNKNOWN_CACHE_ID, backend);
 
-        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+        RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -71,7 +68,7 @@ class DeleteCacheTests {
     void shouldReturn400ForBadlyFormedRequest(String field, Object value, BackendTestResource backend) {
         var requestBody = new JSONObject().put(field, value);
 
-        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+        RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .body(requestBody.toString())

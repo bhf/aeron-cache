@@ -17,7 +17,7 @@ dependencies {
     testImplementation(project(":cache-http:http-server-javalin"))
     testImplementation(project(":cache-common"))
     testImplementation(project(":cache-integration:integration-common"))
-    testImplementation(project(":cache-integration:streaming-integration-common"))
+    testImplementation(project(":cache-integration:integration-common-streaming"))
 
     testRuntimeOnly(libs.junit.platform.launcher)
 }
