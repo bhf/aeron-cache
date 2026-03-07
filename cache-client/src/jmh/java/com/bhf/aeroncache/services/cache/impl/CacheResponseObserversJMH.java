@@ -22,13 +22,13 @@ public class CacheResponseObserversJMH {
     @Benchmark
     public void addObservers(Blackhole bh) {
 
-        long cacheId = 1L;
+        String cacheId = "1L";
         String key = "someKey";
         String value = "someValue";
         String requestId = UUID.randomUUID().toString();
-        var consumer = new Consumer<AddCacheEntryResult<ReusableLong, ReusableString>>() {
+        var consumer = new Consumer<AddCacheEntryResult<ReusableString, ReusableString>>() {
             @Override
-            public void accept(AddCacheEntryResult<ReusableLong, ReusableString> reusableLongReusableStringAddCacheEntryResult) {
+            public void accept(AddCacheEntryResult<ReusableString, ReusableString> reusableStringReusableStringAddCacheEntryResult) {
 
             }
         };
