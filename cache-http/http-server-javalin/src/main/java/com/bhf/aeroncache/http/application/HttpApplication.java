@@ -86,10 +86,15 @@ public class HttpApplication {
     private static final Pattern specialCharacters = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!]");
 
     public static void main(String[] args) {
-        startHTTPInterface(DEFAULT_HTTP_PORT);
+
+        var cacheMode = System.getenv("CACHE_MODE");
+        final boolean CLUSTERED_MODE = cacheMode == null || cacheMode.toUpperCase().equals("RAFT");
+
+        System.out.println("Cache mode: " + cacheMode + ", using clustered mode: " + CLUSTERED_MODE);
+        startHTTPInterface(DEFAULT_HTTP_PORT, CLUSTERED_MODE);
     }
 
-    public static int startHTTPInterface(int port) {
+    public static int startHTTPInterface(int port, boolean useClusteredMode) {
 
         System.out.println("Starting HTTP interface");
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
@@ -138,12 +143,7 @@ public class HttpApplication {
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
             mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
 
-            var cacheMode = System.getenv("CACHE_MODE");
-            final boolean CLUSTERED_MODE = cacheMode == null || cacheMode.toUpperCase().equals("RAFT");
-
-            System.out.println("Cache mode: " + cacheMode + ", using clustered mode: " + CLUSTERED_MODE);
-
-            if (CLUSTERED_MODE) {
+            if (useClusteredMode) {
                 buildClusterConnection(egressIP, ingressEndpoints);
             } else {
                 final Aeron.Context aeronCtx = new Aeron.Context()
