@@ -10,6 +10,11 @@ dependencies {
     implementation(libs.junit)
     implementation(libs.junit.params)
     implementation(libs.junit.api)
+    implementation(libs.hamcrest)
+    implementation(libs.jackson.core)
+    implementation(libs.awaitility)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.sse)
 
     implementation(project(":cache-cluster"))
     implementation(project(":cache-http:http-server-javalin"))
@@ -17,12 +22,7 @@ dependencies {
     implementation(project(":cache-sse:sse-server-jooby"))
     implementation(project(":cache-common"))
 
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.hamcrest)
-    testImplementation(libs.jackson.core)
-
     testRuntimeOnly(libs.junit.platform.launcher)
-
 }
 
 tasks.withType<JavaCompile>().configureEach {
