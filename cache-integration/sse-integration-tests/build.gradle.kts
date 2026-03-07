@@ -11,6 +11,9 @@ dependencies {
     testImplementation(libs.json)
     testImplementation(libs.hamcrest)
     testImplementation(libs.jackson.core)
+    testImplementation(libs.awaitility)
+    testImplementation(libs.okhttp)
+    testImplementation(libs.okhttp.sse)
 
     testImplementation(project(":cache-cluster"))
     testImplementation(project(":cache-http:http-server-javalin"))
@@ -44,7 +47,7 @@ tasks.test {
 }
 
 tasks.register<Delete>("cleanTestNodes") {
-    delete("backend_http_0", "backend_http_1", "backend_http_2")
+    delete("backend_http_sse_0", "backend_http_sse_1", "backend_http_sse_2")
 }
 
 fun loadTestEnv(): Map<String, String> {

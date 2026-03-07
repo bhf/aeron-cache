@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.integration;
 
 import com.bhf.aeroncache.application.ClusterLauncher;
+import com.bhf.aeroncache.application.unclustered.SingleNodeApplication;
 import com.bhf.aeroncache.http.application.HttpApplication;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.sse.application.SSEApplication;
@@ -38,16 +39,25 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
 
         extensionContextStore.getOrComputeIfAbsent(functionalityKey, key -> {
             try {
-                System.out.println("Starting AeronCache Cluster...");
-                ClusterLauncher.launchTestCluster(3, functionalityKey);
 
-                var baseUri = "http://localhost";
+                if(config.useClusteredMode()){
+                    System.out.println("Starting AeronCache Cluster...");
+                    ClusterLauncher.launchTestCluster(3, functionalityKey);
+                }
+                else{
+                    System.out.println("Starting AeronCache Singlenode...");
+
+                }
+
+
+                var baseHttpUri = "http://localhost";
+                var baseWsUri = "ws://localhost";
                 int httpPort = 0;
                 int wsPort = 0;
                 int ssePort = 0;
 
                 if (config.httpEnabled()) {
-                    httpPort = HttpApplication.startHTTPInterface(0);
+                    httpPort = HttpApplication.startHTTPInterface(0, config.useClusteredMode());
                 }
                 if (config.wsEnabled()) {
                     wsPort = WebsocketApplication.startWebsocketInterface(0);
@@ -56,8 +66,9 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
                     ssePort = SSEApplication.startSSEInterface(null, 0);
                 }
 
-                return new BackendTestResource(baseUri, httpPort, baseUri, wsPort, baseUri, ssePort);
+                return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseHttpUri, ssePort);
             } catch (Exception e) {
+                e.printStackTrace();
                 throw new RuntimeException(e);
             }
         });

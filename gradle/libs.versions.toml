@@ -21,6 +21,9 @@ micrometer = "1.14.6"
 micrometer-javalin = "6.6.0"
 lmax-disruptor = "3.4.2"
 jooby = "4.0.4"
+awaitility = "4.3.0"
+okhttp = "5.3.2"
+okhttp-sse = "5.3.2"
 
 [libraries]
 log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
@@ -49,6 +52,9 @@ lmax-disruptor = { module = "com.lmax:disruptor", version.ref = "lmax-disruptor"
 jooby-kotlin = { module = "io.jooby:jooby-kotlin", version.ref = "jooby"}
 jooby-netty = { module = "io.jooby:jooby-netty", version.ref = "jooby"}
 jooby-jackson = { module = "io.jooby:jooby-jackson", version.ref = "jooby"}
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility"}
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp"}
+okhttp-sse = { module = "com.squareup.okhttp3:okhttp-sse", version.ref = "okhttp-sse"}
 
 [plugins]
 sbegenerator = { id = "com.github.vontikov.sbe-generator-plugin", version.ref = "sbegenerator" }

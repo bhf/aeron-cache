@@ -28,8 +28,8 @@ public @interface BackendTestConfig {
     boolean sseEnabled() default false;
 
     /**
-     * Whether a random port should be used.
+     * Whether we should use clustered mode.
      * @return
      */
-    boolean useRandomPort() default true;
+    boolean useClusteredMode() default true;
 }
