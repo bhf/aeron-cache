@@ -4,10 +4,10 @@ import com.bhf.aeroncache.integration.clients.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.streaming.AbstractPutItemTests;
 
-@BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = true)
-class PutItemTests extends AbstractPutItemTests {
+@BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = true, useClusteredMode = true)
+class ClusteredPutItemTests extends AbstractPutItemTests {
 
-    public PutItemTests() {
+    public ClusteredPutItemTests() {
         super(new SSEStreamingHelper());
     }
 }
