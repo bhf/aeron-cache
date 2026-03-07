@@ -4,22 +4,21 @@ plugins {
 
 
 dependencies {
-    testImplementation(libs.restassured)
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit)
-    testImplementation(libs.junit.params)
-    testImplementation(libs.json)
-    testImplementation(libs.hamcrest)
-    testImplementation(libs.jackson.core)
-    testImplementation(libs.awaitility)
-    testImplementation(libs.okhttp)
-    testImplementation(libs.okhttp.sse)
+    implementation(libs.restassured)
+    implementation(platform(libs.junit.bom))
+    implementation(libs.junit)
+    implementation(libs.junit.params)
+    implementation(libs.json)
+    implementation(libs.hamcrest)
+    implementation(libs.jackson.core)
+    implementation(libs.awaitility)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.sse)
 
-    testImplementation(project(":cache-cluster"))
-    testImplementation(project(":cache-http:http-server-javalin"))
-    testImplementation(project(":cache-common"))
-    testImplementation(project(":cache-integration:integration-tests-common"))
-    testImplementation(project(":cache-integration:streaming-integration-tests"))
+    implementation(project(":cache-cluster"))
+    implementation(project(":cache-http:http-server-javalin"))
+    implementation(project(":cache-common"))
+    implementation(project(":cache-integration:integration-tests-common"))
 
     testRuntimeOnly(libs.junit.platform.launcher)
 }
