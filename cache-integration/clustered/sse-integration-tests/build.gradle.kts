@@ -30,6 +30,8 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.withType<Test>().configureEach {
     jvmArgs("--enable-preview")
+    jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED")
+    jvmArgs("--add-opens", "java.base/java.util.zip=ALL-UNNAMED")
 }
 
 tasks.withType<JavaExec>().configureEach {
@@ -41,6 +43,7 @@ tasks.test {
     jvmArgs("--add-opens", "java.base/java.util.zip=ALL-UNNAMED")
     jvmArgs("--enable-preview")
     systemProperty("aeron.dir.delete.on.shutdown", "true")
+    systemProperty("aeron.cluster.message.timeout", "30000000000")
 
     environment(loadTestEnv())
     useJUnitPlatform()

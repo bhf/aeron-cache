@@ -65,7 +65,7 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
                     ssePort = SSEApplication.startSSEInterface(null, 0);
                 }
 
-                return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseHttpUri, ssePort);
+                return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseHttpUri, ssePort, functionalityKey);
             } catch (Exception e) {
                 e.printStackTrace();
                 throw new RuntimeException(e);

@@ -51,7 +51,7 @@ public class CacheNodeApplication {
     }
 
     private static final int PORT_BASE = 9000;
-    private static final int PORTS_PER_NODE = 100;
+    private static final int PORTS_PER_NODE = 20;
     private static final int ARCHIVE_CONTROL_PORT_OFFSET = 1;
     static final int CLIENT_FACING_PORT_OFFSET = 2;
     private static final int MEMBER_FACING_PORT_OFFSET = 3;

@@ -1,5 +1,8 @@
 package com.bhf.aeroncache.application;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 
 /**
@@ -36,24 +39,38 @@ public class ClusterLauncher {
         }
     }
 
-    public static void shutdownCluster() {
+    public static int shutdownCluster(String folder) {
         System.out.println("Shutting down now...");
+        return runClusterTool("abort", folder);
+    }
+
+    private static int runClusterTool(String command, String folder) {
         try {
             var javaHome = System.getProperty("java.home");
-            var javaBin = javaHome + java.io.File.separator + "bin" + java.io.File.separator + "java";
+            var javaBin = javaHome + File.separator + "bin" + File.separator + "java";
             var classpath = System.getProperty("java.class.path");
 
-            ProcessBuilder pb = new ProcessBuilder(
-                    javaBin, "-cp", classpath, "io.aeron.cluster.ClusterTool", ".", "shutdown"
-            );
+            List<String> args = new ArrayList<>();
+            args.add(javaBin);
+            args.add("--add-opens");
+            args.add("java.base/jdk.internal.misc=ALL-UNNAMED");
+            System.getProperties().forEach((key, value) -> args.add("-D" + key + "=" + value));
+
+            args.add("-cp");
+            args.add(classpath);
+            args.add("io.aeron.cluster.ClusterTool");
+            args.add(folder);
+            args.add(command);
+
+            ProcessBuilder pb = new ProcessBuilder(args);
             pb.inheritIO();
             var process = pb.start();
-            int exitCode = process.waitFor();
-            System.out.println("Aeron Cache cluster shutdown process exited with code: " + exitCode);
+            return process.waitFor();
         } catch (Exception e) {
-            System.err.println("Failed to shutdown Aeron Cache cluster");
+            System.out.println("Error trying to use ClusterTool");
             e.printStackTrace();
         }
+        return 0;
     }
 
 }
