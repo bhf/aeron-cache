@@ -25,6 +25,10 @@ public class ReusableString implements Reusable<String> {
         sb.append(source.sb);
     }
 
+    public void copyFrom(CharSequence source) {
+        sb.append(source);
+    }
+
     public void copyFrom(StringBuilder source) {
         sb.append(source);
     }
@@ -49,5 +53,9 @@ public class ReusableString implements Reusable<String> {
     @Override
     public int hashCode() {
         return sb.toString().hashCode();
+    }
+
+    public void append(char c) {
+        sb.append(c);
     }
 }

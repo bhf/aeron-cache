@@ -18,15 +18,17 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
     private final DeleteCacheDecoder deleteCacheDecoder = new DeleteCacheDecoder();
     private final GetCacheStatsDecoder getCacheStatsDecoder = new GetCacheStatsDecoder();
     private final CacheUnsubscribeRequestDecoder cacheUnsubscribeRequestDecoder = new CacheUnsubscribeRequestDecoder();
-
+    private final AppendableFlyweight appendable = new AppendableFlyweight();
+    private boolean useAppendable = false;
 
     @Override
     public void decodeGetCreateCacheRequestDetails(DirectBuffer buffer, int offset, CreateCacheRequestDetails<ReusableString> createCacheRequestDetails) {
         createCacheRequestDetails.clear();
         createCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = createCacheDecoder.cacheId();
+        appendable.setReusable(createCacheRequestDetails.getCacheId());
+        createCacheDecoder.cacheId(appendable);
+        //var cacheId = createCacheDecoder.cacheId();
         var requestId = createCacheDecoder.requestId();
-        createCacheRequestDetails.getCacheId().copyFrom(cacheId);
         createCacheRequestDetails.setRequestId(requestId);
     }
 
@@ -65,16 +67,31 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
 
     @Override
     public void decodeAddCacheEntryRequest(DirectBuffer buffer, int offset, AddCacheEntryRequestDetails<ReusableString, ReusableString, ReusableString> addCacheEntryRequestDetails) {
-        addCacheEntryRequestDetails.clear();
-        addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var cacheId = addCacheEntryDecoder.cacheId();
-        var requestID = addCacheEntryDecoder.requestId();
-        var key = addCacheEntryDecoder.key();
-        var value = addCacheEntryDecoder.entryValue();
-        addCacheEntryRequestDetails.getCacheId().copyFrom(cacheId);
-        addCacheEntryRequestDetails.getKey().copyFrom(key);
-        addCacheEntryRequestDetails.getValue().copyFrom(value);
-        addCacheEntryRequestDetails.setRequestId(requestID);
+
+        if(useAppendable) {
+            addCacheEntryRequestDetails.clear();
+            addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+            appendable.setReusable(addCacheEntryRequestDetails.getCacheId());
+            addCacheEntryDecoder.cacheId(appendable);
+            var requestID = addCacheEntryDecoder.requestId();
+            addCacheEntryRequestDetails.setRequestId(requestID);
+            appendable.setReusable(addCacheEntryRequestDetails.getKey());
+            addCacheEntryDecoder.key(appendable);
+            appendable.setReusable(addCacheEntryRequestDetails.getValue());
+            addCacheEntryDecoder.entryValue(appendable);
+        }
+        else{
+            addCacheEntryRequestDetails.clear();
+            addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+            var cacheId = addCacheEntryDecoder.cacheId();
+            var requestID = addCacheEntryDecoder.requestId();
+            var key = addCacheEntryDecoder.key();
+            var value = addCacheEntryDecoder.entryValue();
+            addCacheEntryRequestDetails.getCacheId().copyFrom(cacheId);
+            addCacheEntryRequestDetails.getKey().copyFrom(key);
+            addCacheEntryRequestDetails.getValue().copyFrom(value);
+            addCacheEntryRequestDetails.setRequestId(requestID);
+        }
     }
 
     @Override
