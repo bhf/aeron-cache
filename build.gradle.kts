@@ -13,3 +13,13 @@ allprojects {
         mavenCentral()
     }
 }
+
+/*val skipIntegrationTests = project.hasProperty("skipIntegrationTests")
+
+subprojects {
+    if (path.startsWith(":cache-integration:")) {
+        tasks.withType<Test>().configureEach {
+            enabled = !skipIntegrationTests
+        }
+    }
+}*/
