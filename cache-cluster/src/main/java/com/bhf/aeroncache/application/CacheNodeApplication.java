@@ -1,15 +1,13 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.application.unclustered.SingleNodeApplication;
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
-import com.bhf.aeroncache.services.cluster.ReusableStringCacheRequestDecoder;
-import com.bhf.aeroncache.services.cluster.ReusableStringCacheResponseEncoder;
-import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
+import com.bhf.aeroncache.services.cluster.*;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
 import com.bhf.aeroncache.services.tracing.impl.OtelTracingService;
-import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.ChannelUriStringBuilder;
@@ -32,6 +30,7 @@ import org.agrona.concurrent.ShutdownSignalBarrier;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static java.lang.Integer.parseInt;
 
@@ -202,7 +201,9 @@ public class CacheNodeApplication {
                 .archiveContext(aeronArchiveContext.clone());
 
         final var cacheManagerFactory = getCacheManagerFactory();
-        final var cacheService = getSbeDecodingCacheClusterService(nodeId, cacheManagerFactory);
+        final CacheResponseEncoder encoder = getCacheResponseEncoder();
+        final CacheRequestDecoder decoder = getCacheRequestDecoder();
+        final var cacheService = getSbeDecodingCacheClusterService(nodeId, cacheManagerFactory, encoder, decoder);
 
         final ClusteredServiceContainer.Context clusteredServiceContext =
                 new ClusteredServiceContainer.Context()
@@ -245,16 +246,26 @@ public class CacheNodeApplication {
         }
     }
 
-    private static SBEDecodingCacheClusterService<ReusableString, ReusableString, ReusableString> getSbeDecodingCacheClusterService(int nodeId, CacheManagerFactory<ReusableString, ReusableString, ReusableString> cacheManagerFactory) {
-        var encoder = new ReusableStringCacheResponseEncoder();
-        var decoder = new ReusableStringCacheRequestDecoder();
-        return new SBEDecodingCacheClusterService<>(String.valueOf(nodeId), getTracingService(nodeId), cacheManagerFactory,
-                SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, encoder, decoder);
+    private static CacheRequestDecoder getCacheRequestDecoder() {
+        return new ReusableStringCacheRequestDecoder();
     }
 
-    private static CacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManagerFactory() {
+    private static CacheResponseEncoder getCacheResponseEncoder() {
+        return new ReusableStringCacheResponseEncoder();
+    }
+
+    private static SBEDecodingCacheClusterService<Reusable<?>, Reusable<?>, Reusable<?>> getSbeDecodingCacheClusterService(
+            int nodeId,
+            CacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> cacheManagerFactory,
+            CacheResponseEncoder<Reusable<?>, Reusable<?>, Reusable<?>> encoder,
+            CacheRequestDecoder<Reusable<?>, Reusable<?>, Reusable<?>> decoder) {
+        return new SBEDecodingCacheClusterService<Reusable<?>, Reusable<?>, Reusable<?>>(String.valueOf(nodeId), getTracingService(nodeId), cacheManagerFactory,
+                (Supplier) SupplierUtils.stringSupplier, (Supplier) SupplierUtils.stringSupplier, (Supplier) SupplierUtils.stringSupplier, encoder, decoder);
+    }
+
+    private static CacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> getCacheManagerFactory() {
         return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
-                SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
+                SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, (Supplier)SupplierUtils.mapSupplier,
                 CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(), CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec());
     }
 

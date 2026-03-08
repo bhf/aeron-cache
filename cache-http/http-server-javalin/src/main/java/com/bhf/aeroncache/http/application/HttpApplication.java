@@ -171,6 +171,7 @@ public class HttpApplication {
             clusterConnected.set(true);
             AgentRunner.startOnThread(agentRunner);
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
 
