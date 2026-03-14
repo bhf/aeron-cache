@@ -1,6 +1,7 @@
 plugins {
     application
     alias(libs.plugins.shadow)
+    alias(libs.plugins.jib)
 }
 
 project.setProperty("mainClassName", "com.bhf.aeroncache.ws.application.WebsocketApplication")
@@ -41,6 +42,44 @@ val copyExtension = tasks.register<Copy>("copyExtension") {
     from(extension.singleFile)
     into(layout.buildDirectory.dir("agent"))
     rename(".*\\.jar", "opentelemetry-javaagent-extension.jar")
+}
+
+apply(plugin = "com.google.cloud.tools.jib")
+
+configure<com.google.cloud.tools.jib.gradle.JibExtension> {
+    from {
+        image = "eclipse-temurin:21"
+    }
+    to {
+        image = "aeron-cache-ws-server-javalin"
+        tags = setOf("latest", project.version.toString())
+    }
+    container {
+        mainClass = "com.bhf.aeroncache.ws.application.WebsocketApplication"
+        jvmFlags = listOf(
+            "--enable-preview",
+            "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
+            "-javaagent:/app/agent/opentelemetry-javaagent.jar",
+            "-Dotel.javaagent.extensions=/app/agent/opentelemetry-javaagent-extension.jar"
+        )
+        ports = listOf("8080")
+    }
+    extraDirectories {
+        paths {
+            path {
+                setFrom(layout.buildDirectory.dir("agent"))
+                into = "/app/agent"
+            }
+        }
+    }
+}
+
+tasks.named("jib") {
+    dependsOn(copyAgent, copyExtension)
+}
+
+tasks.named("jibDockerBuild") {
+    dependsOn(copyAgent, copyExtension)
 }
 
 tasks.test {

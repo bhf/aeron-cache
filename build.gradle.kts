@@ -20,6 +20,12 @@ subprojects {
     tasks.withType<Test>().configureEach {
         if (project.path.startsWith(":cache-integration:")) {
             enabled = !skipIntegrationTests
+            if (enabled) {
+                dependsOn(":cache-http:http-server-javalin:jibDockerBuild")
+                dependsOn(":cache-sse:sse-server-jooby:jibDockerBuild")
+                dependsOn(":cache-ws:ws-server-javalin:jibDockerBuild")
+                dependsOn(":cache-cluster:jibDockerBuild")
+            }
         }
     }
 }
