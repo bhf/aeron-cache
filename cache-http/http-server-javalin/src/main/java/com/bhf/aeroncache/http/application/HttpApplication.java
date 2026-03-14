@@ -245,31 +245,37 @@ public class HttpApplication {
     }
 
     private static void buildClusterConnection(String egressIP, String ingressEndpoints) {
-        aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient",
-                mediaDriver);
-        //addClusterErrorHandler(aeronCluster);
+        try {
+            aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient",
+                    mediaDriver);
+            addClusterErrorHandler(aeronCluster);
 
-        cache = new AeronCache() {
-            @Override
-            public void sendKeepAlive() {
-                aeronCluster.sendKeepAlive();
-            }
+            cache = new AeronCache() {
+                @Override
+                public void sendKeepAlive() {
+                    aeronCluster.sendKeepAlive();
+                }
 
-            @Override
-            public int pollEgress() {
-                return aeronCluster.pollEgress();
-            }
+                @Override
+                public int pollEgress() {
+                    return aeronCluster.pollEgress();
+                }
 
-            @Override
-            public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
-                return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
-            }
+                @Override
+                public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
+                    return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
+                }
 
-            @Override
-            public boolean isConnected() {
-                return !aeronCluster.isClosed();
-            }
-        };
+                @Override
+                public boolean isConnected() {
+                    return !aeronCluster.isClosed();
+                }
+            };
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Will try to reconnect");
+            buildClusterConnection(egressIP, ingressEndpoints);
+        }
     }
 
     public static void shutdown() {

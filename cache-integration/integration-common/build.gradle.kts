@@ -15,6 +15,7 @@ dependencies {
     implementation(libs.awaitility)
     implementation(libs.okhttp)
     implementation(libs.okhttp.sse)
+    implementation(libs.testcontainers)
 
     implementation(project(":cache-cluster"))
     implementation(project(":cache-http:http-server-javalin"))

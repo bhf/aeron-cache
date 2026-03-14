@@ -1,12 +1,18 @@
 package com.bhf.aeroncache.integration;
 
 import com.bhf.aeroncache.application.ClusterLauncher;
-import com.bhf.aeroncache.application.unclustered.SingleNodeApplication;
 import com.bhf.aeroncache.http.application.HttpApplication;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.utils.TestContainersEnvironmentFactory;
 import com.bhf.aeroncache.sse.application.SSEApplication;
 import com.bhf.aeroncache.ws.application.WebsocketApplication;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.extension.*;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver {
 
@@ -26,51 +32,106 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
                 context.getRequiredTestClass()
                         .getAnnotation(BackendTestConfig.class);
 
-        var functionalityKeyBuilder = new StringBuilder(BACKEND_KEY + "_http");
-
-        if (config.wsEnabled()) {
-            functionalityKeyBuilder.append("_ws");
-        }
-        if (config.sseEnabled()) {
-            functionalityKeyBuilder.append("_sse");
-        }
-
-        functionalityKey = functionalityKeyBuilder.toString();
+        functionalityKey = getFunctionalityKey(config);
 
         extensionContextStore.getOrComputeIfAbsent(functionalityKey, key -> {
             try {
-
-                if(config.useClusteredMode()){
-                    System.out.println("Starting AeronCache Cluster...");
-                    ClusterLauncher.launchTestCluster(3, functionalityKey);
-                }
-                else{
-                    System.out.println("Starting AeronCache Singlenode...");
-
-                }
-
-                var baseHttpUri = "http://localhost";
-                var baseWsUri = "ws://localhost";
-                int httpPort = 0;
-                int wsPort = 0;
-                int ssePort = 0;
-
-                if (config.httpEnabled()) {
-                    httpPort = HttpApplication.startHTTPInterface(0, config.useClusteredMode());
-                }
-                if (config.wsEnabled()) {
-                    wsPort = WebsocketApplication.startWebsocketInterface(0);
-                }
-                if (config.sseEnabled()) {
-                    ssePort = SSEApplication.startSSEInterface(null, 0);
-                }
-
-                return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseHttpUri, ssePort, functionalityKey);
+                return config.useTestContainersEnvironment() ? getTestContainersTestResource(config) 
+                        : getEmbeddedBackendTestResource(config);
             } catch (Exception e) {
                 e.printStackTrace();
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    /**
+     * Create the backend environment using TestContainers.
+     *
+     * @param config
+     * @return
+     */
+    private BackendTestResource getTestContainersTestResource(BackendTestConfig config) {
+        System.out.println("Using TestContainers Environment for "+config);
+        Network network = Network.newNetwork();
+        List<GenericContainer<?>> allContainers = new ArrayList<>();
+
+        if (config.useClusteredMode()) {
+            System.out.println("Starting AeronCache Cluster...");
+            List<GenericContainer<?>> cacheNodes = TestContainersEnvironmentFactory.getClusteredCacheContainers(3, network);
+            allContainers.addAll(cacheNodes);
+            cacheNodes.forEach(GenericContainer::start);
+
+            var baseHttpUri = "http://localhost";
+            var baseWsUri = "ws://localhost";
+            var baseSseUri = "http://localhost";
+            int httpPort = 0;
+            int wsPort = 0;
+            int ssePort = 0;
+
+            if (config.httpEnabled()) {
+                var httpClient = TestContainersEnvironmentFactory.getClusteredHTTPContainer(3, network);
+                httpClient.start();
+                baseHttpUri = "http://"+httpClient.getHost();
+                httpPort = httpClient.getMappedPort(7070);
+                allContainers.add(httpClient);
+            }
+            if (config.wsEnabled()) {
+                var wsClient = TestContainersEnvironmentFactory.getClusteredWSContainer(3, network);
+                wsClient.start();
+                baseWsUri = "ws://"+wsClient.getHost();
+                wsPort = wsClient.getMappedPort(7071);
+                allContainers.add(wsClient);
+            }
+            if (config.sseEnabled()) {
+                var sseClient = TestContainersEnvironmentFactory.getClusteredSSEContainer(3, network);
+                sseClient.start();
+                baseSseUri = "http://"+sseClient.getHost();
+                ssePort = sseClient.getMappedPort(7072);
+                allContainers.add(sseClient);
+            }
+
+            return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSseUri, ssePort, functionalityKey, true, allContainers);
+        } else {
+            System.out.println("Starting AeronCache Singlenode...");
+            return null;
+        }
+    }
+
+    /**
+     * Create an embedded backend environment.
+     *
+     * @param config
+     * @return
+     */
+    @NotNull
+    private static BackendTestResource getEmbeddedBackendTestResource(BackendTestConfig config) {
+        if(config.useClusteredMode()){
+            System.out.println("Starting AeronCache Cluster...");
+            ClusterLauncher.launchTestCluster(3, functionalityKey);
+        }
+        else{
+            System.out.println("Starting AeronCache Singlenode...");
+
+        }
+
+        var baseHttpUri = "http://localhost";
+        var baseWsUri = "ws://localhost";
+        int httpPort = 0;
+        int wsPort = 0;
+        int ssePort = 0;
+
+        if (config.httpEnabled()) {
+            httpPort = HttpApplication.startHTTPInterface(0, config.useClusteredMode());
+        }
+        if (config.wsEnabled()) {
+            wsPort = WebsocketApplication.startWebsocketInterface(0);
+        }
+        if (config.sseEnabled()) {
+            ssePort = SSEApplication.startSSEInterface(null, 0);
+        }
+
+        return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseHttpUri, ssePort, functionalityKey, false, List.of());
     }
 
     @Override
@@ -84,6 +145,25 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
         return extensionContext.getStore(NAMESPACE)
                 .get(functionalityKey, BackendTestResource.class);
+    }
+
+    /**
+     * Build a functionality key indicating the combination of backend functionality this environment is initialized for.
+     *
+     * @param config
+     * @return
+     */
+    private static String getFunctionalityKey(BackendTestConfig config) {
+        var functionalityKeyBuilder = new StringBuilder(BACKEND_KEY + "_http");
+
+        if (config.wsEnabled()) {
+            functionalityKeyBuilder.append("_ws");
+        }
+        if (config.sseEnabled()) {
+            functionalityKeyBuilder.append("_sse");
+        }
+
+        return functionalityKeyBuilder.toString();
     }
 
 }

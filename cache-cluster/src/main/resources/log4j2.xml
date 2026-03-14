@@ -16,7 +16,7 @@
     </Appenders>
 
     <Loggers>
-        <AsyncRoot level="info">
+        <AsyncRoot level="warn">
             <AppenderRef ref="AsyncConsole"/>
             <!--<AppenderRef ref="RandomAccessFile"/>-->
         </AsyncRoot>

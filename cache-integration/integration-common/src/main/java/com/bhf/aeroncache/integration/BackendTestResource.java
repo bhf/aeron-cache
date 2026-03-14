@@ -4,6 +4,9 @@ import com.bhf.aeroncache.application.ClusterLauncher;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.testcontainers.containers.GenericContainer;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @Getter
@@ -11,18 +14,33 @@ public class BackendTestResource implements ExtensionContext.Store.CloseableReso
 
     private final String baseHttpUri;
     private final int httpPort;
-
     private final String baseWsUri;
     private final int wsPort;
-
     private final String baseSSEUri;
     private final int ssePort;
-
     private final String functionalityKey;
+    private final boolean useTestContainers;
+    private final List<GenericContainer<?>> allContainers;
 
     @Override
     public void close() {
         System.out.println("Shutting down backend...");
+
+        if(!useTestContainers){
+            System.out.println("Shutting down embedded environment");
+            shutdownEmbeddedBackend();
+        }
+        else{
+            System.out.println("Shutting down TestContainers environment");
+            allContainers.forEach(genericContainer -> {
+                var aliases = genericContainer.getDockerImageName();
+                System.out.println("Shutting down container running image: "+aliases);
+                genericContainer.stop();
+            });
+        }
+    }
+
+    private void shutdownEmbeddedBackend() {
         try {
             System.out.println("Shutting down Aeron Cache Cluster");
 

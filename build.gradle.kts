@@ -14,12 +14,12 @@ allprojects {
     }
 }
 
-/*val skipIntegrationTests = project.hasProperty("skipIntegrationTests")
+val skipIntegrationTests = project.hasProperty("skipIntegrationTests")
 
 subprojects {
-    if (path.startsWith(":cache-integration:")) {
-        tasks.withType<Test>().configureEach {
+    tasks.withType<Test>().configureEach {
+        if (project.path.startsWith(":cache-integration:")) {
             enabled = !skipIntegrationTests
         }
     }
-}*/
+}

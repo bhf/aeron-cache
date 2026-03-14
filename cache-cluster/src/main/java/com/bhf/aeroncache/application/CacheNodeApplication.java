@@ -126,7 +126,8 @@ public class CacheNodeApplication {
             SingleNodeApplication.main(new String[]{});
         } else {
             System.out.println("Starting Aeron Cache server node in clustered mode");
-            int nodeId = Integer.parseInt(args[0]);
+            var clusterNode = System.getenv("CLUSTER_NODE");
+            int nodeId = Integer.parseInt(clusterNode);
             startClusteredMode(nodeId, baseDirectory);
         }
     }

@@ -32,4 +32,10 @@ public @interface BackendTestConfig {
      * @return
      */
     boolean useClusteredMode() default true;
+
+    /**
+     * Whether integration tests should be run using TestContainers.
+     * @return
+     */
+    boolean useTestContainersEnvironment() default false;
 }

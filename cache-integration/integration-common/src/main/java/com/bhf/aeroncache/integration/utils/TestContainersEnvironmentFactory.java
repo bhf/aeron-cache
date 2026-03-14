@@ -1,0 +1,108 @@
+package com.bhf.aeroncache.integration.utils;
+
+import org.jetbrains.annotations.NotNull;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.wait.strategy.Wait;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+/**
+ * A factory for creating different combinations of Aeron Cache environments.
+ */
+public class TestContainersEnvironmentFactory {
+
+    public static List<GenericContainer<?>> getClusteredCacheContainers(int nodes, Network network ) {
+
+        List<GenericContainer<?>> containers = new ArrayList<>();
+
+        String clusterAddresses = getClusterAddresses(nodes);
+
+        for (int i = 0; i < nodes; i++) {
+
+            String name = "node" + i;
+
+            GenericContainer<?> container =
+                    new GenericContainer<>("aeroncache-cluster:latest")
+                            .withNetwork(network)
+                            .withNetworkAliases(name)
+                            .withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
+                            .withSharedMemorySize(512L * 1024L * 1024L) // 512MB
+                            .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                            .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
+                            .withEnv("CLUSTER_NODE", String.valueOf(i))
+                            .withEnv("CLUSTER_PORT_BASE", "9000")
+                            .withEnv("OTEL_SERVICE_NAME", "aeron-cache-cluster-node")
+                            .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")
+                            .withEnv("CACHE_MODE", "RAFT");
+
+            containers.add(container);
+        }
+
+        return containers;
+    }
+
+    public static GenericContainer<?> getClusteredHTTPContainer(int nodes, Network network) {
+        String clusterAddresses = getClusterAddresses(nodes);
+
+        return new GenericContainer<>("aeroncache-http-javalin:latest")
+                .withNetwork(network)
+                .withNetworkAliases("cache-http-client")
+                .withSharedMemorySize(512L * 1024L * 1024L) // 512MB as requested previously
+                .withExposedPorts(7070)
+                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
+                .withEnv("EGRESS_IP", "172.16.202.5")
+                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-http")
+                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("CACHE_MODE", "RAFT")
+                .waitingFor(Wait.forHttp("/readiness"));
+    }
+
+    public static GenericContainer<?> getClusteredWSContainer(int nodes, Network network) {
+        String clusterAddresses = getClusterAddresses(nodes);
+
+        return new GenericContainer<>("aeroncache-ws-javalin:latest")
+                .withNetwork(network)
+                .withNetworkAliases("cache-ws-client")
+                .withSharedMemorySize(512L * 1024L * 1024L) // 512MB
+                .withExposedPorts(7071)
+                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
+                .withEnv("EGRESS_IP", "172.16.202.5")
+                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws")
+                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("CACHE_MODE", "RAFT")
+                .waitingFor(Wait.forHttp("/readiness"));
+    }
+
+    public static GenericContainer<?> getClusteredSSEContainer(int nodes, Network network) {
+        String clusterAddresses = getClusterAddresses(nodes);
+
+        return new GenericContainer<>("aeroncache-sse-jooby:latest")
+                .withNetwork(network)
+                .withNetworkAliases("cache-sse-client")
+                .withSharedMemorySize(512L * 1024L * 1024L) // 512MB
+                .withExposedPorts(7072)
+                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
+                .withEnv("EGRESS_IP", "172.16.202.5")
+                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws") // Matches docker-compose
+                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("CACHE_MODE", "RAFT")
+                .withEnv("REQUEST_PUB_HOST", "node0");
+    }
+
+    private static @NotNull String getClusterAddresses(int nodes) {
+        return IntStream.range(0, nodes)
+                .mapToObj(i -> "node" + i)
+                .collect(Collectors.joining(","));
+    }
+
+}
