@@ -153,9 +153,10 @@ Core coverage > 70% (as of 4th July 2025)
 ### JMH
 There are a handful of JMH tests in ```cache-cluster``` and in ```cache-client```.
 
-### HTTP API 
-There are approx 20 HTTP based integration tests (including param variation) using JUnit and 
-RestAssured in ```:cache-http:http-integration-tests``` which cover the main functionality offered by the HTTP API. 
+### Integration Tests
+
+There are various integration test suites in ```:cache-integration``` which use TestContainers. These are generally broken 
+down by environment/backend configuration combinations. 
 
 [Top](#aeron-cache)
 
