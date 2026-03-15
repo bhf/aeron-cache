@@ -11,6 +11,8 @@ import org.hamcrest.Matchers;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
@@ -18,6 +20,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 @BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
 class ClusterRestartTests {
 
+    private static final Logger log = LoggerFactory.getLogger(ClusterRestartTests.class);
     private static final String GET_ENDPOINT = "/api/v1/cache/";
     static final String PUT_ITEM_ENDPOINT = "/api/v1/cache/";
     static final String KNOWN_CACHE_ID = "1";
@@ -48,12 +51,42 @@ class ClusterRestartTests {
         backend.getContainers().httpContainer().stop();
         backend.getContainers().clusterContainers().forEach(GenericContainer::stop);
 
-        backend.getContainers().clusterContainers().forEach(GenericContainer::start);
+        backend.getContainers().clusterContainers().forEach(this::startWithRetry);
+
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        int clusterNodesLaunched = 0;
+
+        while (clusterNodesLaunched != 3) {
+            int nodesUp = 0;
+
+            for (var container : backend.getContainers().clusterContainers()) {
+                if (container.isRunning()) {
+                    nodesUp++;
+                }
+            }
+            if (nodesUp < 3) {
+                log.info("Only {} cache nodes up", nodesUp);
+                backend.getContainers().clusterContainers().forEach(this::startWithRetry);
+            } else {
+                log.info("All cache nodes started and running");
+                clusterNodesLaunched = nodesUp;
+            }
+        }
+
         backend.getContainers().httpContainer().start();
+        startWithRetry(backend.getContainers().httpContainer());
         backend.getContainers().httpContainer().waitingFor(Wait.forHttp("/readiness"));
 
-        RestAssured.given().port(backend.getContainers().httpContainer().getMappedPort(7070))
-                .baseUri("http://"+backend.getContainers().httpContainer().getHost())
+        var mappedPort = backend.getContainers().httpContainer().getMappedPort(7070);
+        var mappedHost = "http://"+backend.getContainers().httpContainer().getHost();
+
+        RestAssured.given().port(mappedPort)
+                .baseUri(mappedHost)
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -66,5 +99,29 @@ class ClusterRestartTests {
                 .body("value", Matchers.comparesEqualTo(KNOWN_VALUE));
 
 
+    }
+
+    private void startWithRetry(GenericContainer<?> container) {
+        int maxRetries = 3;
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                if (!container.isRunning()) {
+                    log.info("Starting container {}, attempt {}", container.getDockerImageName(), i);
+                    container.stop();
+                    container.start();
+                }
+                if (container.isRunning()) {
+                    return;
+                }
+            } catch (Exception e) {
+                log.error("Couldn't start container {} on attempt {}", container.getDockerImageName(), i, e);
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            }
+        }
     }
 }

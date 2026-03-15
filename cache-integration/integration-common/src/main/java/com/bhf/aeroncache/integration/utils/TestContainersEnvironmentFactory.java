@@ -1,12 +1,15 @@
 package com.bhf.aeroncache.integration.utils;
 
 import org.jetbrains.annotations.NotNull;
+import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -24,12 +27,15 @@ public class TestContainersEnvironmentFactory {
         for (int i = 0; i < nodes; i++) {
 
             String name = "node" + i;
+            String hostPath = "/tmp/aeron-cache/" + name+"-"+ UUID.randomUUID();
+            new File(hostPath).mkdirs();
 
             GenericContainer<?> container =
                     new GenericContainer<>("aeroncache-cluster:latest")
                             .withNetwork(network)
                             .withNetworkAliases(name)
                             .withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
+                            .withFileSystemBind(hostPath, "/tmp/data", BindMode.READ_WRITE)
                             .withSharedMemorySize(512L * 1024L * 1024L) // 512MB
                             .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                             .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
@@ -37,7 +43,8 @@ public class TestContainersEnvironmentFactory {
                             .withEnv("CLUSTER_PORT_BASE", "9000")
                             .withEnv("OTEL_SERVICE_NAME", "aeron-cache-cluster-node")
                             .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")
-                            .withEnv("CACHE_MODE", "RAFT");
+                            .withEnv("CACHE_MODE", "RAFT")
+                            .withEnv("CACHE_DATA_DIR", "/tmp/data");
 
             containers.add(container);
         }

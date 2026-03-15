@@ -63,7 +63,7 @@ apply(plugin = "com.google.cloud.tools.jib")
 
 configure<com.google.cloud.tools.jib.gradle.JibExtension> {
     from {
-        image = "eclipse-temurin:21"
+        image = "docker://eclipse-temurin:21"
     }
     to {
         image = "aeron-cache-http-server-javalin"

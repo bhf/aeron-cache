@@ -72,6 +72,9 @@ services:
       - OTEL_SERVICE_NAME=aeron-cache-cluster-node
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
       - CACHE_MODE=RAFT
+      - CACHE_DATA_DIR=/tmp/data
+    volumes:
+      - ./data/node0:/tmp/data
   node1:
     build:
       context: cache-cluster
@@ -87,6 +90,9 @@ services:
       - OTEL_SERVICE_NAME=aeron-cache-cluster-node
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
       - CACHE_MODE=RAFT
+      - CACHE_DATA_DIR=/tmp/data
+    volumes:
+      - ./data/node1:/tmp/data
   node2:
     build:
       context: cache-cluster
@@ -102,6 +108,9 @@ services:
       - OTEL_SERVICE_NAME=aeron-cache-cluster-node
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
       - CACHE_MODE=RAFT
+      - CACHE_DATA_DIR=/tmp/data
+    volumes:
+      - ./data/node2:/tmp/data
   cache-http-client:
     shm_size: '1gb'
     build:

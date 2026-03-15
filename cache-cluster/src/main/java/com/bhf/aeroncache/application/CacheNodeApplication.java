@@ -113,7 +113,11 @@ public class CacheNodeApplication {
      * @param args passed to the process.
      */
     public static void main(final String[] args) {
-        var baseDirectory = System.getProperty("user.dir");
+        var baseDirectory = System.getenv("CACHE_DATA_DIR");
+        if (baseDirectory == null || baseDirectory.isEmpty()) {
+            baseDirectory = System.getProperty("user.dir");
+        }
+        System.out.println("Base directory for data: " + baseDirectory);
         startAeronCacheApplication(args, baseDirectory);
     }
 
@@ -128,7 +132,13 @@ public class CacheNodeApplication {
             System.out.println("Starting Aeron Cache server node in clustered mode");
             var clusterNode = System.getenv("CLUSTER_NODE");
             int nodeId = Integer.parseInt(clusterNode);
-            startClusteredMode(nodeId, baseDirectory);
+            try {
+                startClusteredMode(nodeId, baseDirectory);
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println("Will try to restart clustered cache");
+                startAeronCacheApplication(args, baseDirectory);
+            }
         }
     }
 
@@ -244,6 +254,9 @@ public class CacheNodeApplication {
             System.out.println("[" + nodeId + "] Started Cluster Node on " + hostname + "...");
             barrier.await();
             System.out.println("[" + nodeId + "] Exiting");
+        }
+        catch (Exception e){
+            throw e;
         }
     }
 
