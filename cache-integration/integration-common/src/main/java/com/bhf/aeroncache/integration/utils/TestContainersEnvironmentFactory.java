@@ -18,7 +18,16 @@ import java.util.stream.IntStream;
  */
 public class TestContainersEnvironmentFactory {
 
-    public static List<GenericContainer<?>> getClusteredCacheContainers(int nodes, Network network ) {
+    public static final long SHM_SIZE_MBS = 512L;
+
+    /**
+     * Get containers for an AeronCache Cluster.
+     *
+     * @param nodes
+     * @param network
+     * @return
+     */
+    public static List<GenericContainer<?>> getClusteredCacheContainers(int nodes, Network network) {
 
         List<GenericContainer<?>> containers = new ArrayList<>();
 
@@ -27,7 +36,7 @@ public class TestContainersEnvironmentFactory {
         for (int i = 0; i < nodes; i++) {
 
             String name = "node" + i;
-            String hostPath = "/tmp/aeron-cache/" + name+"-"+ UUID.randomUUID();
+            String hostPath = "/tmp/aeron-cache/" + name + "-" + UUID.randomUUID();
             new File(hostPath).mkdirs();
 
             GenericContainer<?> container =
@@ -36,7 +45,7 @@ public class TestContainersEnvironmentFactory {
                             .withNetworkAliases(name)
                             .withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
                             .withFileSystemBind(hostPath, "/tmp/data", BindMode.READ_WRITE)
-                            .withSharedMemorySize(512L * 1024L * 1024L) // 512MB
+                            .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                             .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                             .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                             .withEnv("CLUSTER_NODE", String.valueOf(i))
@@ -52,13 +61,20 @@ public class TestContainersEnvironmentFactory {
         return containers;
     }
 
+    /**
+     * Get a container for a single HTTP interface configured for using cluster mode.
+     *
+     * @param nodes
+     * @param network
+     * @return
+     */
     public static GenericContainer<?> getClusteredHTTPContainer(int nodes, Network network) {
         String clusterAddresses = getClusterAddresses(nodes);
 
         return new GenericContainer<>("aeroncache-http-javalin:latest")
                 .withNetwork(network)
                 .withNetworkAliases("cache-http-client")
-                .withSharedMemorySize(512L * 1024L * 1024L) // 512MB as requested previously
+                .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7070)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
@@ -70,13 +86,20 @@ public class TestContainersEnvironmentFactory {
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
+    /**
+     * Get a container for a single WS interface configured for using cluster mode.
+     *
+     * @param nodes
+     * @param network
+     * @return
+     */
     public static GenericContainer<?> getClusteredWSContainer(int nodes, Network network) {
         String clusterAddresses = getClusterAddresses(nodes);
 
         return new GenericContainer<>("aeroncache-ws-javalin:latest")
                 .withNetwork(network)
                 .withNetworkAliases("cache-ws-client")
-                .withSharedMemorySize(512L * 1024L * 1024L) // 512MB
+                .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7071)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
@@ -88,24 +111,38 @@ public class TestContainersEnvironmentFactory {
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
+    /**
+     * Get a container for a single SSE interface configured for using cluster mode.
+     *
+     * @param nodes
+     * @param network
+     * @return
+     */
     public static GenericContainer<?> getClusteredSSEContainer(int nodes, Network network) {
         String clusterAddresses = getClusterAddresses(nodes);
 
         return new GenericContainer<>("aeroncache-sse-jooby:latest")
                 .withNetwork(network)
                 .withNetworkAliases("cache-sse-client")
-                .withSharedMemorySize(512L * 1024L * 1024L) // 512MB
+                .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7072)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
-                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws") // Matches docker-compose
+                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws")
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
                 .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
                 .withEnv("CACHE_MODE", "RAFT")
-                .withEnv("REQUEST_PUB_HOST", "node0");
+                .withEnv("REQUEST_PUB_HOST", "node0")
+                .waitingFor(Wait.forHttp("/readiness"));
     }
 
+    /**
+     * Build the AeronCache cluster addresses based on the number of nodes.
+     *
+     * @param nodes
+     * @return
+     */
     private static @NotNull String getClusterAddresses(int nodes) {
         return IntStream.range(0, nodes)
                 .mapToObj(i -> "node" + i)
