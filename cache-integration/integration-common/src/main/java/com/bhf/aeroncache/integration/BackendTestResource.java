@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.integration;
 
 import com.bhf.aeroncache.application.ClusterLauncher;
+import com.bhf.aeroncache.integration.config.BackendTestContainers;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -20,7 +21,7 @@ public class BackendTestResource implements ExtensionContext.Store.CloseableReso
     private final int ssePort;
     private final String functionalityKey;
     private final boolean useTestContainers;
-    private final List<GenericContainer<?>> allContainers;
+    private final BackendTestContainers containers;
 
     @Override
     public void close() {
@@ -32,12 +33,26 @@ public class BackendTestResource implements ExtensionContext.Store.CloseableReso
         }
         else{
             System.out.println("Shutting down TestContainers environment");
-            allContainers.forEach(genericContainer -> {
-                var aliases = genericContainer.getDockerImageName();
-                System.out.println("Shutting down container running image: "+aliases);
-                genericContainer.stop();
+            containers.clusterContainers().forEach(genericContainer -> {
+                shutdownContainer(genericContainer);
             });
+
+            if (containers.httpContainer() != null) {
+                shutdownContainer(containers.httpContainer());
+            }
+            if (containers.wsContainer() != null) {
+                shutdownContainer(containers.wsContainer());
+            }
+            if (containers.sseContainer() != null) {
+                shutdownContainer(containers.sseContainer());
+            }
         }
+    }
+
+    private static void shutdownContainer(GenericContainer<?> genericContainer) {
+        var aliases = genericContainer.getDockerImageName();
+        System.out.println("Shutting down container running image: "+aliases);
+        genericContainer.stop();
     }
 
     private void shutdownEmbeddedBackend() {

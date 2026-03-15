@@ -3,6 +3,7 @@ package com.bhf.aeroncache.integration;
 import com.bhf.aeroncache.application.ClusterLauncher;
 import com.bhf.aeroncache.http.application.HttpApplication;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.BackendTestContainers;
 import com.bhf.aeroncache.integration.utils.TestContainersEnvironmentFactory;
 import com.bhf.aeroncache.sse.application.SSEApplication;
 import com.bhf.aeroncache.ws.application.WebsocketApplication;
@@ -11,7 +12,6 @@ import org.junit.jupiter.api.extension.*;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver {
@@ -54,12 +54,10 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
     private BackendTestResource getTestContainersTestResource(BackendTestConfig config) {
         System.out.println("Using TestContainers Environment for "+config);
         Network network = Network.newNetwork();
-        List<GenericContainer<?>> allContainers = new ArrayList<>();
 
         if (config.useClusteredMode()) {
             System.out.println("Starting AeronCache Cluster...");
             List<GenericContainer<?>> cacheNodes = TestContainersEnvironmentFactory.getClusteredCacheContainers(3, network);
-            allContainers.addAll(cacheNodes);
             cacheNodes.forEach(GenericContainer::start);
 
             var baseHttpUri = "http://localhost";
@@ -69,29 +67,31 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
             int wsPort = 0;
             int ssePort = 0;
 
+            GenericContainer<?> httpContainer = null;
+            GenericContainer<?> wsContainer = null;
+            GenericContainer<?> sseContainer = null;
+
             if (config.httpEnabled()) {
-                var httpClient = TestContainersEnvironmentFactory.getClusteredHTTPContainer(3, network);
-                httpClient.start();
-                baseHttpUri = "http://"+httpClient.getHost();
-                httpPort = httpClient.getMappedPort(7070);
-                allContainers.add(httpClient);
+                httpContainer = TestContainersEnvironmentFactory.getClusteredHTTPContainer(3, network);
+                httpContainer.start();
+                baseHttpUri = "http://"+httpContainer.getHost();
+                httpPort = httpContainer.getMappedPort(7070);
             }
             if (config.wsEnabled()) {
-                var wsClient = TestContainersEnvironmentFactory.getClusteredWSContainer(3, network);
-                wsClient.start();
-                baseWsUri = "ws://"+wsClient.getHost();
-                wsPort = wsClient.getMappedPort(7071);
-                allContainers.add(wsClient);
+                wsContainer = TestContainersEnvironmentFactory.getClusteredWSContainer(3, network);
+                wsContainer.start();
+                baseWsUri = "ws://"+wsContainer.getHost();
+                wsPort = wsContainer.getMappedPort(7071);
             }
             if (config.sseEnabled()) {
-                var sseClient = TestContainersEnvironmentFactory.getClusteredSSEContainer(3, network);
-                sseClient.start();
-                baseSseUri = "http://"+sseClient.getHost();
-                ssePort = sseClient.getMappedPort(7072);
-                allContainers.add(sseClient);
+                sseContainer = TestContainersEnvironmentFactory.getClusteredSSEContainer(3, network);
+                sseContainer.start();
+                baseSseUri = "http://"+sseContainer.getHost();
+                ssePort = sseContainer.getMappedPort(7072);
             }
 
-            return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSseUri, ssePort, functionalityKey, true, allContainers);
+            var backendTestContainers = new BackendTestContainers(cacheNodes, httpContainer, wsContainer, sseContainer);
+            return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSseUri, ssePort, functionalityKey, true, backendTestContainers);
         } else {
             System.out.println("Starting AeronCache Singlenode...");
             return null;
@@ -131,7 +131,7 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
             ssePort = SSEApplication.startSSEInterface(null, 0);
         }
 
-        return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseHttpUri, ssePort, functionalityKey, false, List.of());
+        return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseHttpUri, ssePort, functionalityKey, false, null);
     }
 
     @Override
