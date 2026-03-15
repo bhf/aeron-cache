@@ -134,7 +134,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
                 .withEnv("CACHE_MODE", "RAFT")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                .waitingFor(Wait.forHttp("/readiness"));
+                .waitingFor(Wait.forHttp("/readiness/"));
     }
 
     /**
