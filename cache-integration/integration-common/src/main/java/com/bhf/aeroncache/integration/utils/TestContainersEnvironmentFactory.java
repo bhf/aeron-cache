@@ -228,7 +228,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                .waitingFor(Wait.forHttp("/readiness"));
+                .waitingFor(Wait.forHttp("/readiness/"));
     }
 
     /**

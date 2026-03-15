@@ -217,6 +217,7 @@ public class SSEApplication extends Jooby {
                 null, serverAgent);
 
         AgentRunner.startOnThread(serverAgentRunner);
+        clusterConnected.set(true);
     }
 
     private static void buildClusterConnection(String egressIP, String ingressEndpoints) {
