@@ -62,7 +62,7 @@ class ClusterRestartTests {
 
                 // Assert
                 .then().assertThat()
-                .statusCode(201)
+                .statusCode(200)
                 .body("value", Matchers.comparesEqualTo(KNOWN_VALUE));
 
 
