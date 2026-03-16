@@ -17,6 +17,12 @@ allprojects {
 val skipIntegrationTests = project.hasProperty("skipIntegrationTests")
 val jibOnBuild = project.hasProperty("jibDockerOnBuild")
 
+abstract class TestLock : BuildService<BuildServiceParameters.None>
+
+val testLock = gradle.sharedServices.registerIfAbsent("testLock", TestLock::class.java) {
+    maxParallelUsages.set(1)
+}
+
 subprojects {
     tasks.withType<Test>().configureEach {
         if (project.path.startsWith(":cache-integration:")) {
@@ -27,6 +33,12 @@ subprojects {
                 dependsOn(":cache-ws:ws-server-javalin:jibDockerBuild")
                 dependsOn(":cache-cluster:jibDockerBuild")
             }
+        }
+
+        if (project.path.startsWith(":cache-integration:clustered:") ||
+            project.path.startsWith(":cache-integration:singlenode:")) {
+            maxParallelForks = 1
+            usesService(testLock)
         }
     }
 }
