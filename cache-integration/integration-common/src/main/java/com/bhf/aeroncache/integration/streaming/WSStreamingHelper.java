@@ -1,12 +1,16 @@
 package com.bhf.aeroncache.integration.streaming;
 
 import com.bhf.aeroncache.integration.BackendTestResource;
+import org.awaitility.Awaitility;
+import org.hamcrest.Matchers;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WSStreamingHelper implements StreamingHelper{
 
@@ -16,21 +20,41 @@ public class WSStreamingHelper implements StreamingHelper{
     @Override
     public CompletableFuture<String> getSingleValue(BackendTestResource backend) {
         CompletableFuture<String> messageFuture = new CompletableFuture<>();
-        var httpClient = HttpClient.newHttpClient();
+
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
                 + backend.getWsPort() + STREAMING_API_PREFIX + KNOWN_CACHE_ID;
 
-        httpClient.newWebSocketBuilder()
+        var httpClient = HttpClient.newHttpClient();
+        AtomicBoolean isOpen = new AtomicBoolean();
+
+        var socketFuture = httpClient.newWebSocketBuilder()
                 .buildAsync(URI.create(cacheSubscriptionURI), new WebSocket.Listener() {
+                    @Override
+                    public void onOpen(WebSocket webSocket) {
+                        isOpen.set(true);
+                        WebSocket.Listener.super.onOpen(webSocket);
+                    }
 
                     @Override
-                    public CompletionStage<?> onText(WebSocket webSocket,
-                                                     CharSequence data,
-                                                     boolean last) {
-                        messageFuture.complete(data.toString());
-                        return WebSocket.Listener.super.onText(webSocket, data, last);
+                    public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+                        isOpen.set(false);
+                        return WebSocket.Listener.super.onClose(webSocket, statusCode, reason);
                     }
-                }).join();
+
+                    @Override
+                    public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
+                        messageFuture.complete(data.toString());
+                        return messageFuture;
+                    }
+
+                    @Override
+                    public void onError(WebSocket webSocket, Throwable error) {
+                        WebSocket.Listener.super.onError(webSocket, error);
+                    }
+                });
+
+        socketFuture.join();
+        Awaitility.await().atMost(60, TimeUnit.SECONDS).untilAtomic(isOpen, Matchers.equalTo(true));
 
         return messageFuture;
     }

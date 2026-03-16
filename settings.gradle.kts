@@ -22,4 +22,4 @@ include("cache-integration:clustered:ws-integration-tests")
 include("cache-integration:clustered:sse-integration-tests")
 include("cache-integration:clustered:shutdown-integration-tests")
 
-include("cache-integration:singlenode:http-integration-tests")
+include("cache-integration:singlenode:core-integration-tests")

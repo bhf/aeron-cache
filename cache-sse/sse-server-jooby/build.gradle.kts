@@ -66,7 +66,7 @@ configure<com.google.cloud.tools.jib.gradle.JibExtension> {
         image = "docker://eclipse-temurin:21"
     }
     to {
-        image = "aeron-cache-sse-server-jooby"
+        image = "aeroncache-sse-jooby"
         tags = setOf("latest", project.version.toString())
     }
     container {

@@ -15,12 +15,13 @@ allprojects {
 }
 
 val skipIntegrationTests = project.hasProperty("skipIntegrationTests")
+val jibOnBuild = project.hasProperty("jibDockerOnBuild")
 
 subprojects {
     tasks.withType<Test>().configureEach {
         if (project.path.startsWith(":cache-integration:")) {
             enabled = !skipIntegrationTests
-            if (enabled) {
+            if (enabled || jibOnBuild) {
                 dependsOn(":cache-http:http-server-javalin:jibDockerBuild")
                 dependsOn(":cache-sse:sse-server-jooby:jibDockerBuild")
                 dependsOn(":cache-ws:ws-server-javalin:jibDockerBuild")

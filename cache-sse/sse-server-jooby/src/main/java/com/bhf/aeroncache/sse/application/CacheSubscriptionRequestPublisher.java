@@ -77,7 +77,13 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
             if (subscriptionResult.getStatus() != OperationStatus.SUCCESS) {
                 var errorMsg = STR."Couldn't subscribe to cache \{cacheId}, status=\{subscriptionResult.getStatus()}";
                 log.warn(errorMsg);
-                subscriptionFailureHandler.accept(null);
+                if (subscriptionResult.getStatus() != OperationStatus.DUPLICATE_SUBSCRIPTION) {
+                    log.warn("Calling subscription failure handler to close SSE session");
+                    subscriptionFailureHandler.accept(null);
+                }
+                else{
+                    log.warn("Not calling subscription failure handler");
+                }
             }
         });
     }

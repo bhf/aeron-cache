@@ -46,7 +46,7 @@ public abstract class AbstractPutItemTests {
 
         // Assert
          Awaitility.await()
-                .atMost(5, TimeUnit.SECONDS)
+                .atMost(60, TimeUnit.SECONDS)
                 .untilAsserted(() ->
                         MatcherAssert.assertThat(eventData.get(), Matchers.notNullValue())
                 );

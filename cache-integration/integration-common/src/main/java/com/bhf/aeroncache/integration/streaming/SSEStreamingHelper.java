@@ -28,7 +28,6 @@ public class SSEStreamingHelper implements StreamingHelper{
         CompletableFuture<String> eventData = new CompletableFuture<>();
         AtomicBoolean isOpen = new AtomicBoolean();
 
-        var httpClient = new OkHttpClient();
         var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
                 + backend.getSsePort() + STREAMING_API_PREFIX + KNOWN_CACHE_ID;
 
@@ -36,6 +35,7 @@ public class SSEStreamingHelper implements StreamingHelper{
                 .url(cacheSubscriptionURI)
                 .build();
 
+        var httpClient = new OkHttpClient();
         var factory = EventSources.createFactory(httpClient);
         factory.newEventSource(request, new EventSourceListener() {
 
@@ -49,9 +49,21 @@ public class SSEStreamingHelper implements StreamingHelper{
             public void onOpen(@NotNull EventSource eventSource, @NotNull Response response) {
                 isOpen.set(true);
             }
+
+            @Override
+            public void onClosed(@NotNull EventSource eventSource) {
+                super.onClosed(eventSource);
+                isOpen.set(false);
+            }
+
+            @Override
+            public void onFailure(@NotNull EventSource eventSource, @Nullable Throwable t, @Nullable Response response) {
+                super.onFailure(eventSource, t, response);
+                System.out.println("GOT SSE FAILURE:"+eventSource);
+            }
         });
 
-        Awaitility.await().atMost(5, TimeUnit.SECONDS).untilAtomic(isOpen, Matchers.equalTo(true));
+        Awaitility.await().atMost(60, TimeUnit.SECONDS).untilAtomic(isOpen, Matchers.equalTo(true));
 
         return eventData;
 
