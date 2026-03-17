@@ -1,14 +1,12 @@
 package com.bhf.aeroncache.integration.shutdown;
 
 import com.bhf.aeroncache.integration.BackendTestResource;
-import lombok.extern.log4j.Log4j2;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 /**
  * Basic utility functions for helping in the restarting of containers.
  */
-@Log4j2
 public class ContainerRestartUtils {
 
     /**
