@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.integration.http;
+package com.bhf.aeroncache.integration.shutdown;
 
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
@@ -15,7 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
 
 @ExtendWith(BackendTestLauncher.class)
 @BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
@@ -51,8 +50,8 @@ class ClusterRestartTests {
         backend.getContainers().clusterContainers().forEach(GenericContainer::stop);
 
         // Re-Arrange
-        awaitAeronCacheClusterRestart(backend);
-        awaitHTTPInterfaceRestart(backend);
+        ContainerRestartUtils.awaitAeronCacheClusterRestart(backend);
+        ContainerRestartUtils.awaitHTTPInterfaceRestart(backend);
 
         var mappedPort = backend.getContainers().httpContainer().getMappedPort(7070);
         var mappedHost = "http://"+backend.getContainers().httpContainer().getHost();
@@ -67,66 +66,5 @@ class ClusterRestartTests {
                 .statusCode(200)
                 .body("value", Matchers.comparesEqualTo(KNOWN_VALUE));
 
-    }
-
-    private void awaitHTTPInterfaceRestart(BackendTestResource backend) {
-        backend.getContainers().httpContainer().start();
-        startWithRetry(backend.getContainers().httpContainer());
-        backend.getContainers().httpContainer().waitingFor(Wait.forHttp("/readiness"));
-    }
-
-    private void awaitAeronCacheClusterRestart(BackendTestResource backend) {
-        backend.getContainers().clusterContainers().forEach(this::startWithRetry);
-        awaitOnFirstRestartAttempt();
-
-        int clusterNodesLaunched = 0;
-        while (clusterNodesLaunched != 3) {
-            int nodesUp = 0;
-
-            for (var container : backend.getContainers().clusterContainers()) {
-                if (container.isRunning()) {
-                    nodesUp++;
-                }
-            }
-            if (nodesUp < 3) {
-                log.info("Only {} cache nodes up", nodesUp);
-                backend.getContainers().clusterContainers().forEach(this::startWithRetry);
-            } else {
-                log.info("All cache nodes started and running");
-                clusterNodesLaunched = nodesUp;
-            }
-        }
-    }
-
-    private static void awaitOnFirstRestartAttempt() {
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void startWithRetry(GenericContainer<?> container) {
-        int maxRetries = 3;
-        for (int i = 0; i < maxRetries; i++) {
-            try {
-                if (!container.isRunning()) {
-                    log.info("Starting container {}, attempt {}", container.getDockerImageName(), i);
-                    container.stop();
-                    container.start();
-                }
-                if (container.isRunning()) {
-                    return;
-                }
-            } catch (Exception e) {
-                log.error("Couldn't start container {} on attempt {}", container.getDockerImageName(), i, e);
-            }
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-            }
-        }
     }
 }

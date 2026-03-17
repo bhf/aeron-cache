@@ -1,0 +1,85 @@
+package com.bhf.aeroncache.integration.shutdown;
+
+import com.bhf.aeroncache.integration.BackendTestResource;
+import lombok.extern.log4j.Log4j2;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
+
+/**
+ * Basic utility functions for helping in the restarting of containers.
+ */
+@Log4j2
+public class ContainerRestartUtils {
+
+    /**
+     * Wait for the HTTP interface to be restarted.
+     *
+     * @param backend
+     */
+    public static void awaitHTTPInterfaceRestart(BackendTestResource backend) {
+        backend.getContainers().httpContainer().start();
+        startWithRetry(backend.getContainers().httpContainer());
+        backend.getContainers().httpContainer().waitingFor(Wait.forHttp("/readiness"));
+    }
+
+    /**
+     * Wait for the AeronCache Cluster to be restarted.
+     *
+     * @param backend
+     */
+    public static void awaitAeronCacheClusterRestart(BackendTestResource backend) {
+        backend.getContainers().clusterContainers().forEach(ContainerRestartUtils::startWithRetry);
+        awaitOnFirstRestartAttempt();
+
+        int clusterNodesLaunched = 0;
+        while (clusterNodesLaunched != 3) {
+            int nodesUp = 0;
+
+            for (var container : backend.getContainers().clusterContainers()) {
+                if (container.isRunning()) {
+                    nodesUp++;
+                }
+            }
+            if (nodesUp < 3) {
+                System.out.println("Only "+nodesUp+" cache nodes up");
+                backend.getContainers().clusterContainers().forEach(ContainerRestartUtils::startWithRetry);
+            } else {
+                System.out.println("All cache nodes started and running");
+                clusterNodesLaunched = nodesUp;
+            }
+        }
+    }
+
+    private static void awaitOnFirstRestartAttempt() {
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void startWithRetry(GenericContainer<?> container) {
+        int maxRetries = 3;
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                if (!container.isRunning()) {
+                    System.out.println("Starting container "+container.getDockerImageName()+", attempt "+i);
+                    container.stop();
+                    container.start();
+                }
+                if (container.isRunning()) {
+                    return;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println("Couldn't start container "+container.getDockerImageName()+", attempt "+i);
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            }
+        }
+    }
+}
