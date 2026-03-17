@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.integration.streaming;
 
 import com.bhf.aeroncache.annotations.HappyPath;
+import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
@@ -45,10 +46,15 @@ public abstract class AbstractPutItemTests {
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
 
         // Assert
-         Awaitility.await()
+        Awaitility.await()
                 .atMost(60, TimeUnit.SECONDS)
-                .untilAsserted(() ->
-                        MatcherAssert.assertThat(eventData.get(), Matchers.notNullValue())
+                .untilAsserted(() -> {
+                            var updateEvent = eventData.get();
+                            MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+                            MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+                            MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
+                            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+                        }
                 );
     }
 

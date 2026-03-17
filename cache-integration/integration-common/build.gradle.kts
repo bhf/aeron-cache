@@ -18,6 +18,7 @@ dependencies {
     implementation(libs.testcontainers)
 
     implementation(project(":cache-cluster"))
+    implementation(project(":cache-messages-http"))
     implementation(project(":cache-http:http-server-javalin"))
     implementation(project(":cache-ws:ws-server-javalin"))
     implementation(project(":cache-sse:sse-server-jooby"))

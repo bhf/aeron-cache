@@ -1,6 +1,9 @@
 package com.bhf.aeroncache.integration.streaming;
 
+import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -21,11 +24,12 @@ public class SSEStreamingHelper implements StreamingHelper{
 
     private static final String STREAMING_API_PREFIX = "/api/sse/v1/cache/";
     private static final String KNOWN_CACHE_ID = "1";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
-    public CompletableFuture<String> getSingleValue(BackendTestResource backend) {
+    public CompletableFuture<CacheUpdateEvent> getSingleValue(BackendTestResource backend) {
         CountDownLatch latch = new CountDownLatch(1);
-        CompletableFuture<String> eventData = new CompletableFuture<>();
+        CompletableFuture<CacheUpdateEvent> eventData = new CompletableFuture<>();
         AtomicBoolean isOpen = new AtomicBoolean();
 
         var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
@@ -41,7 +45,12 @@ public class SSEStreamingHelper implements StreamingHelper{
 
             @Override
             public void onEvent(@NotNull okhttp3.sse.EventSource eventSource, @Nullable String id, @Nullable String type, @NotNull String data) {
-                eventData.complete(data);
+                try {
+                    CacheUpdateEvent event = OBJECT_MAPPER.readValue(data.toString(), CacheUpdateEvent.class);
+                    eventData.complete(event);
+                } catch (JsonProcessingException e) {
+                    eventData.completeExceptionally(e);
+                }
                 latch.countDown();
             }
 

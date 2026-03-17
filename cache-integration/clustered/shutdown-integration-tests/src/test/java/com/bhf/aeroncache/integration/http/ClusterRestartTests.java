@@ -9,6 +9,7 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.hamcrest.Matchers;
 import org.json.JSONObject;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -28,8 +29,9 @@ class ClusterRestartTests {
     static final String KNOWN_VALUE = "SomeValue";
 
     @Test
+    @DisplayName("Should get a known value we added post restart")
     @HappyPath
-    void shouldAddAnItemToCache(BackendTestResource backend) {
+    void shouldGetKnownItemPostRestart(BackendTestResource backend) {
         // Arrange
         CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
         JSONObject requestBody = new JSONObject().put("cacheId", KNOWN_CACHE_ID)
@@ -40,27 +42,44 @@ class ClusterRestartTests {
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .body(requestBody.toString())
-
-                // Act
                 .when().post(PUT_ITEM_ENDPOINT + KNOWN_CACHE_ID)
-
-                // Assert
                 .then().assertThat()
                 .statusCode(200);
 
+        // Act
         backend.getContainers().httpContainer().stop();
         backend.getContainers().clusterContainers().forEach(GenericContainer::stop);
 
-        backend.getContainers().clusterContainers().forEach(this::startWithRetry);
+        // Re-Arrange
+        awaitAeronCacheClusterRestart(backend);
+        awaitHTTPInterfaceRestart(backend);
 
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        var mappedPort = backend.getContainers().httpContainer().getMappedPort(7070);
+        var mappedHost = "http://"+backend.getContainers().httpContainer().getHost();
+
+        // Assert
+        RestAssured.given().port(mappedPort)
+                .baseUri(mappedHost)
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .when().get(GET_ENDPOINT + KNOWN_CACHE_ID + "/" + KNOWN_KEY)
+                .then().assertThat()
+                .statusCode(200)
+                .body("value", Matchers.comparesEqualTo(KNOWN_VALUE));
+
+    }
+
+    private void awaitHTTPInterfaceRestart(BackendTestResource backend) {
+        backend.getContainers().httpContainer().start();
+        startWithRetry(backend.getContainers().httpContainer());
+        backend.getContainers().httpContainer().waitingFor(Wait.forHttp("/readiness"));
+    }
+
+    private void awaitAeronCacheClusterRestart(BackendTestResource backend) {
+        backend.getContainers().clusterContainers().forEach(this::startWithRetry);
+        awaitOnFirstRestartAttempt();
 
         int clusterNodesLaunched = 0;
-
         while (clusterNodesLaunched != 3) {
             int nodesUp = 0;
 
@@ -77,28 +96,14 @@ class ClusterRestartTests {
                 clusterNodesLaunched = nodesUp;
             }
         }
+    }
 
-        backend.getContainers().httpContainer().start();
-        startWithRetry(backend.getContainers().httpContainer());
-        backend.getContainers().httpContainer().waitingFor(Wait.forHttp("/readiness"));
-
-        var mappedPort = backend.getContainers().httpContainer().getMappedPort(7070);
-        var mappedHost = "http://"+backend.getContainers().httpContainer().getHost();
-
-        RestAssured.given().port(mappedPort)
-                .baseUri(mappedHost)
-                .contentType(ContentType.JSON)
-                .accept(ContentType.JSON)
-
-                // Act
-                .when().get(GET_ENDPOINT + KNOWN_CACHE_ID + "/" + KNOWN_KEY)
-
-                // Assert
-                .then().assertThat()
-                .statusCode(200)
-                .body("value", Matchers.comparesEqualTo(KNOWN_VALUE));
-
-
+    private static void awaitOnFirstRestartAttempt() {
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void startWithRetry(GenericContainer<?> container) {

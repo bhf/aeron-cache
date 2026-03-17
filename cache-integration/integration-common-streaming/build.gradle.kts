@@ -16,6 +16,7 @@ dependencies {
     implementation(libs.okhttp.sse)
 
     implementation(project(":cache-cluster"))
+    implementation(project(":cache-messages-http"))
     implementation(project(":cache-http:http-server-javalin"))
     implementation(project(":cache-common"))
     implementation(project(":cache-integration:integration-common"))
