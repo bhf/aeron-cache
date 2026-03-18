@@ -5,7 +5,6 @@ import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
-import lombok.Getter;
 import org.awaitility.Awaitility;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -14,19 +13,21 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @ExtendWith(BackendTestLauncher.class)
-public abstract class AbstractPutItemTests {
+public abstract class AbstractMultiStreamPutItemTests {
 
     private static final String KNOWN_CACHE_ID = "1";
     private static final String KNOWN_KEY = "SomeKey";
     private static final String KNOWN_VALUE = "SomeValue";
 
-    private final StreamingHelper streamingHelper;
+    private final StreamingHelper[] streamingHelpers;
 
-    protected AbstractPutItemTests(StreamingHelper streamingHelper) {
-        this.streamingHelper = streamingHelper;
+    protected AbstractMultiStreamPutItemTests(StreamingHelper... streamingHelpers) {
+        this.streamingHelpers = streamingHelpers;
     }
 
     @BeforeAll
@@ -39,7 +40,9 @@ public abstract class AbstractPutItemTests {
     @HappyPath
     void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
         // Arrange
-        var eventData = streamingHelper.getSingleValue(backend);
+        var futures = Arrays.stream(streamingHelpers)
+                .map(helper -> helper.getSingleValue(backend))
+                .collect(Collectors.toList());
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
@@ -48,13 +51,15 @@ public abstract class AbstractPutItemTests {
         Awaitility.await()
                 .atMost(60, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
-                            var updateEvent = eventData.get();
-                            MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
-                            MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
-                            MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
-                            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
-                        }
-                );
+                    for (var future : futures) {
+                        var updateEvent = future.get(60, TimeUnit.SECONDS);
+                        MatcherAssert.assertThat("Expected event data to be available", updateEvent, Matchers.notNullValue());
+                        MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+                        MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+                        MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
+                        MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+                    }
+                });
     }
 
 }

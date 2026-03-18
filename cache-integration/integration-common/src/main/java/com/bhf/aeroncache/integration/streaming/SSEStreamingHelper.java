@@ -68,7 +68,7 @@ public class SSEStreamingHelper implements StreamingHelper{
             @Override
             public void onFailure(@NotNull EventSource eventSource, @Nullable Throwable t, @Nullable Response response) {
                 super.onFailure(eventSource, t, response);
-                System.out.println("GOT SSE FAILURE:"+eventSource);
+                System.out.println("GOT SSE FAILURE:"+eventSource.request());
             }
         });
 
