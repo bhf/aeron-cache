@@ -46,11 +46,8 @@ public class SingleNodeApplication {
 
         final var cacheManagerFactory = getCacheManager();
 
-        var encoder = new ReusableStringCacheResponseEncoder();
-        var decoder = new ReusableStringCacheRequestDecoder();
-
-        final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0", new NoOpTracingService(),
-                cacheManagerFactory, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, encoder, decoder);
+        final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0",
+                new NoOpTracingService(), cacheManagerFactory);
         Cluster cluster = getCluster(aeron);
         service.onStart(cluster, null);
 
@@ -93,9 +90,11 @@ public class SingleNodeApplication {
     }
 
     private static CacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManager() {
+        var encoder = new ReusableStringCacheResponseEncoder();
+        var decoder = new ReusableStringCacheRequestDecoder();
         return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
-                CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(), CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec());
+                CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(), CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec(), encoder, decoder);
     }
 
     private static Cluster getCluster(Aeron aeron) {

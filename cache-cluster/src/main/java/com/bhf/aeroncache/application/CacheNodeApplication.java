@@ -212,9 +212,7 @@ public class CacheNodeApplication {
                 .archiveContext(aeronArchiveContext.clone());
 
         final var cacheManagerFactory = getCacheManagerFactory();
-        final CacheResponseEncoder encoder = getCacheResponseEncoder();
-        final CacheRequestDecoder decoder = getCacheRequestDecoder();
-        final var cacheService = getSbeDecodingCacheClusterService(nodeId, cacheManagerFactory, encoder, decoder);
+        final var cacheService = getSbeDecodingCacheClusterService(nodeId, cacheManagerFactory);
 
         final ClusteredServiceContainer.Context clusteredServiceContext =
                 new ClusteredServiceContainer.Context()
@@ -260,27 +258,18 @@ public class CacheNodeApplication {
         }
     }
 
-    private static CacheRequestDecoder getCacheRequestDecoder() {
-        return new ReusableStringCacheRequestDecoder();
-    }
-
-    private static CacheResponseEncoder getCacheResponseEncoder() {
-        return new ReusableStringCacheResponseEncoder();
-    }
-
     private static SBEDecodingCacheClusterService<Reusable<?>, Reusable<?>, Reusable<?>> getSbeDecodingCacheClusterService(
-            int nodeId,
-            CacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> cacheManagerFactory,
-            CacheResponseEncoder<Reusable<?>, Reusable<?>, Reusable<?>> encoder,
-            CacheRequestDecoder<Reusable<?>, Reusable<?>, Reusable<?>> decoder) {
-        return new SBEDecodingCacheClusterService<Reusable<?>, Reusable<?>, Reusable<?>>(String.valueOf(nodeId), getTracingService(nodeId), cacheManagerFactory,
-                (Supplier) SupplierUtils.stringSupplier, (Supplier) SupplierUtils.stringSupplier, (Supplier) SupplierUtils.stringSupplier, encoder, decoder);
+            int nodeId, CacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> cacheManagerFactory) {
+        return new SBEDecodingCacheClusterService<>(String.valueOf(nodeId), getTracingService(nodeId), cacheManagerFactory);
     }
 
     private static CacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> getCacheManagerFactory() {
+        var encoder = new ReusableStringCacheResponseEncoder();
+        var decoder = new ReusableStringCacheRequestDecoder();
         return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, (Supplier)SupplierUtils.mapSupplier,
-                CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(), CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec());
+                CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(), CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec(),
+                encoder, decoder);
     }
 
     private static CacheTracingService getTracingService(int nodeId) {

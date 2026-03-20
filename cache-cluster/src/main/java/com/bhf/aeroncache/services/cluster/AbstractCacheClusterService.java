@@ -60,26 +60,25 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final CacheUnsubscribeResult<I> unsubscribeResult;
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
 
-    protected AbstractCacheClusterService(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier,
-                                          String nodeId, CacheTracingService tracingService, CacheManagerFactory<I,K,V> cacheManagerFactory) {
-        this.createCacheRequestDetails = new CreateCacheRequestDetails<>(indexSupplier.get());
-        this.clearCacheRequestDetails = new ClearCacheRequestDetails<>(indexSupplier.get());
-        this.removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get());
-        this.addCacheEntryRequestDetails = new AddCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
-        this.deleteCacheRequestDetails = new DeleteCacheRequestDetails<>(indexSupplier.get());
-        this.getCacheEntryRequestDetails = new GetCacheEntryRequestDetails<>(indexSupplier.get(), keySupplier.get());
-        this.getAllCacheEntriesRequestDetails = new GetAllCacheEntriesRequestDetails<>(indexSupplier.get());
+    protected AbstractCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I,K,V> cacheManagerFactory) {
+        this.createCacheRequestDetails = new CreateCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
+        this.clearCacheRequestDetails = new ClearCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
+        this.removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        this.addCacheEntryRequestDetails = new AddCacheEntryRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get(), cacheManagerFactory.getValueSupplier().get());
+        this.deleteCacheRequestDetails = new DeleteCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
+        this.getCacheEntryRequestDetails = new GetCacheEntryRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        this.getAllCacheEntriesRequestDetails = new GetAllCacheEntriesRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.addEntryFailureResult = new AddCacheEntryResult<>();
         this.getCacheStatsRequestDetails = new GetCacheStatsRequestDetails();
-        this.cacheSubscribeRequestDetails = new CacheSubscriptionRequestDetails<>(indexSupplier.get());
-        this.cacheUnsubscribeRequestDetails = new CacheUnsubscribeRequestDetails<>(indexSupplier.get());
-        this.subscribeResult = new CacheSubscriptionResult<>(indexSupplier.get());
-        this.unsubscribeResult = new CacheUnsubscribeResult<>(indexSupplier.get());
+        this.cacheSubscribeRequestDetails = new CacheSubscriptionRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
+        this.cacheUnsubscribeRequestDetails = new CacheUnsubscribeRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
+        this.subscribeResult = new CacheSubscriptionResult<>(cacheManagerFactory.getIndexSupplier().get());
+        this.unsubscribeResult = new CacheUnsubscribeResult<>(cacheManagerFactory.getIndexSupplier().get());
         this.cacheManagerFactory = cacheManagerFactory;
         this.cacheManager = cacheManagerFactory.getCacheManager();
         this.nodeId = nodeId;
         this.tracingService = tracingService;
-        this.indexSupplier = indexSupplier;
+        this.indexSupplier = cacheManagerFactory.getIndexSupplier();
     }
 
     private String nodeId;

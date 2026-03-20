@@ -25,13 +25,10 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
     private final CacheRequestDecoder<I, K, V> decoder;
     private final CacheResponseEncoder<I, K, V> encoder;
 
-    public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory,
-                                          Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier, Supplier<V> cacheValueSupplier,
-                                          CacheResponseEncoder<I, K, V> encoder, CacheRequestDecoder<I, K, V> decoder) {
-        super(cacheIndexSupplier, cacheKeySupplier, cacheValueSupplier,
-                nodeId, tracingService, cacheManagerFactory);
-        this.decoder = decoder;
-        this.encoder = encoder;
+    public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory) {
+        super(nodeId, tracingService, cacheManagerFactory);
+        this.decoder = cacheManagerFactory.getDecoder();
+        this.encoder = cacheManagerFactory.getEncoder();
     }
 
     @Override
