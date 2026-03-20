@@ -3,7 +3,9 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
-import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.messages.AllCacheEntriesResultDecoder;
+import com.bhf.aeroncache.messages.MessageHeaderDecoder;
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.GetAllCacheEntriesRequestDetails;
 import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
 import com.bhf.aeroncache.services.TestUtils;
@@ -36,17 +38,14 @@ import static org.mockito.Mockito.verify;
 class GetCacheEntriesTest {
 
     private final Header header = new Header(0, 0);
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    private final GetAllCacheEntriesEncoder getAllCacheEntriesEncoder = new GetAllCacheEntriesEncoder();
     private final AllCacheEntriesResultDecoder allCacheEntriesResultDecoder = new AllCacheEntriesResultDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
-    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
-    private final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
+    private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
 
     @BeforeEach
     void setup() {
@@ -65,7 +64,7 @@ class GetCacheEntriesTest {
     void shouldGetEntriesFromKnownCache(String cacheId) {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
-        TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);
+        TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
 
@@ -74,13 +73,12 @@ class GetCacheEntriesTest {
         for (int i = 0; i < itemsToAdd; i++) {
             var key = "key-"+i;
             var value = "value-"+i;
-            var length = CacheRequestEncoder.encodeAddCacheEntry(addCacheEntryEncoder, headerEncoder,
-                    requestBuffer, requestId, cacheId, key, value);
+
+            var length = cacheRequestEncoder.encodeAddCacheEntry(requestBuffer, requestId, cacheId, key, value);
             sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         }
 
-        int length = CacheRequestEncoder.encodeGetCacheEntries(getAllCacheEntriesEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        int length = cacheRequestEncoder.encodeGetCacheEntries(requestBuffer, requestId, cacheId);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
@@ -114,8 +112,7 @@ class GetCacheEntriesTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
-        var length = CacheRequestEncoder.encodeGetCacheEntries(getAllCacheEntriesEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeGetCacheEntries(requestBuffer, requestId, cacheId);
 
         // Act
         long ts = System.currentTimeMillis();

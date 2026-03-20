@@ -38,12 +38,13 @@ class GetCacheStatsTest {
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final GetCacheStatsEncoder getCacheStatsEncoder = new GetCacheStatsEncoder();
     private final AllCacheStatsResultDecoder allCacheStatsResultDecoder = new AllCacheStatsResultDecoder();
+    private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private CacheStatsResult<ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
-    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
+
 
     @BeforeEach
     void setup() {
@@ -62,11 +63,10 @@ class GetCacheStatsTest {
     void shouldGetEntriesFromKnownCache(String cacheId) {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
-        TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);
+        TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        int length = CacheRequestEncoder.encodeGetAllCacheStats(getCacheStatsEncoder, headerEncoder,
-                requestBuffer, requestId);
+        int length = cacheRequestEncoder.encodeGetAllCacheStats(requestBuffer, requestId);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);

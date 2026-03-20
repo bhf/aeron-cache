@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
@@ -91,7 +92,7 @@ public class AsyncConsumerPerfTest {
             }
         };
 
-        var agent = new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy()), "AeronCache-CacheClient-Agent");
+        var agent = new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy(), new CacheRequestEncoder()), "AeronCache-CacheClient-Agent");
         return agent;
     }
 

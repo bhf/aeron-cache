@@ -44,6 +44,7 @@ class UnsubscribeCacheTest {
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final CacheUnsubscribeRequestEncoder unsubscribeCacheEncoder = new CacheUnsubscribeRequestEncoder();
     private final CacheUnsubscribeResponseDecoder cacheUnsubscribedDecoder = new CacheUnsubscribeResponseDecoder();
+    private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private CacheUnsubscribeResult<ReusableString> result;
@@ -73,16 +74,14 @@ class UnsubscribeCacheTest {
     void shouldUnsubscribeToKnownCache(String cacheId) {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
-        TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);
+        TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        int length = CacheRequestEncoder.encodeCacheSubscribe(subscribeCacheEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        int length = cacheRequestEncoder.encodeCacheSubscribe(requestBuffer, requestId, cacheId);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
         // Act
-        CacheRequestEncoder.encodeCacheUnsubscribe(unsubscribeCacheEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        cacheRequestEncoder.encodeCacheUnsubscribe(requestBuffer, requestId, cacheId);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeCacheUnsubscribeResult(cacheUnsubscribedDecoder, headerDecoder, result, responseBuffer, 0);
 
@@ -103,8 +102,7 @@ class UnsubscribeCacheTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
-        var length = CacheRequestEncoder.encodeCacheUnsubscribe(unsubscribeCacheEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeCacheUnsubscribe(requestBuffer, requestId, cacheId);
 
         // Act
         long ts = System.currentTimeMillis();

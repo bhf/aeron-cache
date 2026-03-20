@@ -42,7 +42,7 @@ class AddCacheEntryTest {
     private AddCacheEntryResult<ReusableString, ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
-    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
+    private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
     private final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
     private final CacheEntryCreatedDecoder cacheEntryCreatedDecoder = new CacheEntryCreatedDecoder();
 
@@ -68,12 +68,11 @@ class AddCacheEntryTest {
         var value = "someValue";
 
         // create the cache
-        TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);
+        TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         // add an entry to the cache
         var requestId = UUID.randomUUID().toString();
-        var length = CacheRequestEncoder.encodeAddCacheEntry(addCacheEntryEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId, key, value);
+        var length = cacheRequestEncoder.encodeAddCacheEntry(requestBuffer, requestId, cacheId, key, value);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
@@ -115,8 +114,7 @@ class AddCacheEntryTest {
 
         // Act
         requestId = UUID.randomUUID().toString();
-        var length = CacheRequestEncoder.encodeAddCacheEntry(addCacheEntryEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId, key, value);
+        var length = cacheRequestEncoder.encodeAddCacheEntry(requestBuffer, requestId, cacheId, key, value);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeAddCacheEntryResult(cacheEntryCreatedDecoder, headerDecoder, result, responseBuffer, 0);
 

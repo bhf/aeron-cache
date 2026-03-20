@@ -26,18 +26,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
     private final AeronCache cluster;
     private final IdleStrategy idleStrategy;
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
-
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
-    private final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
-    private final GetCacheEntryEncoder getCacheEntryEncoder = new GetCacheEntryEncoder();
-    private final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
-    private final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
-    private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
-    private final GetAllCacheEntriesEncoder getAllCacheEntriesEncoder = new GetAllCacheEntriesEncoder();
-    private final GetCacheStatsEncoder getCacheStatsEncoder = new GetCacheStatsEncoder();
-    private final CacheSubscriptionRequestEncoder cacheSubscriptionRequestEncoder = new CacheSubscriptionRequestEncoder();
-    private final CacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder = new CacheUnsubscribeRequestEncoder();
+    private final CacheRequestEncoder cacheRequestEncoder;
 
     @Override
     public void sendCreateCacheBlocking(String requestId, String cacheId) {
@@ -47,22 +36,9 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void sendCreateCache(String requestId, String cacheId) {
-        CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder, msgBuffer, requestId, cacheId);
-        publishCreateCache(createCacheEncoder, headerEncoder, msgBuffer, 0);
+        var length = cacheRequestEncoder.encodeCreateCacheRequest(msgBuffer, requestId, cacheId);
+        publishToCache(msgBuffer, 0, length);
         log.info("Sent create cache request on cache {} with request Id {}", cacheId, requestId);
-    }
-
-    /**
-     * Publish the request to create a new cache on the cluster.
-     *
-     * @param createCacheEncoder The encoded create cache message.
-     * @param headerEncoder      The header encoder.
-     * @param msgBuffer          The buffer to use.
-     * @param msgBufferOffset    The offset from which to publish.
-     */
-    void publishCreateCache(CreateCacheEncoder createCacheEncoder, MessageHeaderEncoder headerEncoder, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
-        var length = createCacheEncoder.encodedLength() + headerEncoder.encodedLength();
-        publishToCache(msgBuffer, msgBufferOffset, length);
     }
 
     @Override
@@ -73,22 +49,9 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void addCacheEntry(String requestId, String cacheId, String key, String value) {
-        CacheRequestEncoder.encodeAddCacheEntry(addCacheEntryEncoder, headerEncoder, msgBuffer, requestId, cacheId, key, value);
-        publishAddCachEntry(addCacheEntryEncoder, headerEncoder, msgBuffer, 0);
+        var length = cacheRequestEncoder.encodeAddCacheEntry(msgBuffer, requestId, cacheId, key, value);
+        publishToCache(msgBuffer, 0, length);
         log.info("Sent add cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
-    }
-
-    /**
-     * Publish the request to add a cache entry to the cluster.
-     *
-     * @param addCacheEntry   The add cache entry message encoded.
-     * @param header          The message header.
-     * @param msgBuffer       The buffer to use.
-     * @param msgBufferOffset The offset within the buffer to start.
-     */
-    void publishAddCachEntry(AddCacheEntryEncoder addCacheEntry, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
-        var length = addCacheEntry.encodedLength() + header.encodedLength();
-        publishToCache(msgBuffer, msgBufferOffset, length);
     }
 
     @Override
@@ -99,22 +62,9 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void getCacheEntry(String requestId, String cacheId, String key) {
-        CacheRequestEncoder.encodeGetCacheEntry(getCacheEntryEncoder, headerEncoder, msgBuffer, requestId, cacheId, key);
-        publishGetCacheEntry(getCacheEntryEncoder, headerEncoder, msgBuffer, 0);
+        var length = cacheRequestEncoder.encodeGetCacheEntry(msgBuffer, requestId, cacheId, key);
+        publishToCache(msgBuffer, 0, length);
         log.info("Sent get cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
-    }
-
-    /**
-     * Publish a request to get an entry from the cluster.
-     *
-     * @param getCacheEntry   The encoded get entry request.
-     * @param header          The message header.
-     * @param msgBuffer       The buffer to use.
-     * @param msgBufferOffset The offset within the buffer to start.
-     */
-    void publishGetCacheEntry(GetCacheEntryEncoder getCacheEntry, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
-        var length = getCacheEntry.encodedLength() + header.encodedLength();
-        publishToCache(msgBuffer, msgBufferOffset, length);
     }
 
     @Override
@@ -125,22 +75,9 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void clearCache(String requestId, String cacheId) {
-        CacheRequestEncoder.encodeClearCache(clearCacheEncoder, headerEncoder, msgBuffer, requestId, cacheId);
-        publishClearCache(clearCacheEncoder, headerEncoder, msgBuffer, 0);
+        var length = cacheRequestEncoder.encodeClearCache(msgBuffer, requestId, cacheId);
+        publishToCache(msgBuffer, 0, length);
         log.info("Sent clear cache request on cache {} with request Id {}", cacheId, requestId);
-    }
-
-    /**
-     * Publish a request to clear a cache.
-     *
-     * @param clearCache      The encoded request to clear a cache.
-     * @param header          The message header.
-     * @param msgBuffer       The buffer to use.
-     * @param msgBufferOffset The offset within the buffer to start.
-     */
-    void publishClearCache(ClearCacheEncoder clearCache, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
-        var length = clearCache.encodedLength() + header.encodedLength();
-        publishToCache(msgBuffer, msgBufferOffset, length);
     }
 
     @Override
@@ -151,22 +88,9 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void deleteCache(String requestId, String cacheId) {
-        CacheRequestEncoder.encodeDeleteCache(deleteCacheEncoder, headerEncoder, msgBuffer, requestId, cacheId);
-        publishDeleteCache(deleteCacheEncoder, headerEncoder, msgBuffer, 0);
+        var length = cacheRequestEncoder.encodeDeleteCache(msgBuffer, requestId, cacheId);
+        publishToCache(msgBuffer, 0, length);
         log.info("Sent delete cache request on cache {} with request Id {}", cacheId, requestId);
-    }
-
-    /**
-     * Publish a request to delete an entire cache.
-     *
-     * @param deleteCache     The encoded request to delete a cache.
-     * @param header          The message header.
-     * @param msgBuffer       The buffer to use.
-     * @param msgBufferOffset The offset within the buffer to start.
-     */
-    void publishDeleteCache(DeleteCacheEncoder deleteCache, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
-        var length = deleteCache.encodedLength() + header.encodedLength();
-        publishToCache(msgBuffer, msgBufferOffset, length);
     }
 
     @Override
@@ -177,22 +101,9 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void removeCacheEntry(String requestId, String cacheId, String key) {
-        CacheRequestEncoder.encodeRemoveCacheEntry(removeCacheEntryEncoder, headerEncoder, msgBuffer, requestId, cacheId, key);
-        publishRemoveCacheEntry(removeCacheEntryEncoder, headerEncoder, msgBuffer, 0);
+        var length = cacheRequestEncoder.encodeRemoveCacheEntry(msgBuffer, requestId, cacheId, key);
+        publishToCache(msgBuffer, 0, length);
         log.info("Sent remove cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
-    }
-
-    /**
-     * Publish a request to remove a cache entry.
-     *
-     * @param removeCacheEntry The encoded request to remove a cache entry.
-     * @param header           The message header.
-     * @param msgBuffer        The buffer to use.
-     * @param msgBufferOffset  The offset within the buffer to start.
-     */
-    void publishRemoveCacheEntry(RemoveCacheEntryEncoder removeCacheEntry, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
-        var length = removeCacheEntry.encodedLength() + header.encodedLength();
-        publishToCache(msgBuffer, msgBufferOffset, length);
     }
 
     @Override
@@ -203,22 +114,9 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void getCacheEntries(String requestId, String cacheId) {
-        CacheRequestEncoder.encodeGetCacheEntries(getAllCacheEntriesEncoder, headerEncoder, msgBuffer, requestId, cacheId);
-        publishGetAllCacheEntries(getAllCacheEntriesEncoder, headerEncoder, msgBuffer, 0);
+        var length = cacheRequestEncoder.encodeGetCacheEntries(msgBuffer, requestId, cacheId);
+        publishToCache(msgBuffer, 0, length);
         log.info("Sent get cache content request on cache {} with request Id {}", cacheId, requestId);
-    }
-
-    /**
-     * Publish a request to get all cache entries.
-     *
-     * @param getAllCacheEntriesEncoder The encoded request.
-     * @param header                    The message header.
-     * @param msgBuffer                 The buffer to use.
-     * @param msgBufferOffset           The offset within the buffer to start.
-     */
-    void publishGetAllCacheEntries(GetAllCacheEntriesEncoder getAllCacheEntriesEncoder, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
-        var length = getAllCacheEntriesEncoder.encodedLength() + header.encodedLength();
-        publishToCache(msgBuffer, msgBufferOffset, length);
     }
 
     @Override
@@ -229,22 +127,9 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void sendCacheSubscribe(String requestId, String cacheId) {
-        CacheRequestEncoder.encodeCacheSubscribe(cacheSubscriptionRequestEncoder, headerEncoder, msgBuffer, requestId, cacheId);
-        publishCacheSubscribe(cacheSubscriptionRequestEncoder, headerEncoder, msgBuffer, 0);
+        var length = cacheRequestEncoder.encodeCacheSubscribe(msgBuffer, requestId, cacheId);
+        publishToCache(msgBuffer, 0, length);
         log.info("Sent cache subscription request on cache {} with request Id {}", cacheId, requestId);
-    }
-
-    /**
-     * Publish the request to subscribe to a cache on the cluster.
-     *
-     * @param cacheSubscriptionRequest The encoded cache subscription request.
-     * @param header                   The header encoder.
-     * @param msgBuffer                The buffer to use.
-     * @param msgBufferOffset          The offset from which to publish.
-     */
-    void publishCacheSubscribe(CacheSubscriptionRequestEncoder cacheSubscriptionRequest, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
-        var length = cacheSubscriptionRequest.encodedLength() + header.encodedLength();
-        publishToCache(msgBuffer, msgBufferOffset, length);
     }
 
     @Override
@@ -255,14 +140,9 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void sendCacheUnsubscribe(String requestId, String cacheId) {
-        CacheRequestEncoder.encodeCacheUnsubscribe(cacheUnsubscribeRequestEncoder, headerEncoder, msgBuffer, requestId, cacheId);
-        publishCacheUnsubscribe(cacheUnsubscribeRequestEncoder, headerEncoder, msgBuffer, 0);
+        var length = cacheRequestEncoder.encodeCacheUnsubscribe(msgBuffer, requestId, cacheId);
+        publishToCache(msgBuffer, 0, length);
         log.info("Sent cache unsubscribe request on cache {} with request Id {}", cacheId, requestId);
-    }
-
-    void publishCacheUnsubscribe(CacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
-        var length = cacheUnsubscribeRequestEncoder.encodedLength() + header.encodedLength();
-        publishToCache(msgBuffer, msgBufferOffset, length);
     }
 
     @Override
@@ -273,25 +153,12 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void getAllCacheStats(String requestId) {
-        CacheRequestEncoder.encodeGetAllCacheStats(getCacheStatsEncoder, headerEncoder, msgBuffer, requestId);
-        publishGetAllCacheStats(getCacheStatsEncoder, headerEncoder, msgBuffer, 0);
+        var length = cacheRequestEncoder.encodeGetAllCacheStats(msgBuffer, requestId);
+        publishToCache(msgBuffer, 0, length);
         log.info("Sent request to get all cache with request Id {}", requestId);
     }
 
-    /**
-     * Publish a request to get all cache stats.
-     *
-     * @param getCacheStats   The encoded request to get cache stats.
-     * @param header          The message header.
-     * @param msgBuffer       The buffer to use.
-     * @param msgBufferOffset The offset within the buffer to start.
-     */
-    void publishGetAllCacheStats(GetCacheStatsEncoder getCacheStats, MessageHeaderEncoder header, MutableDirectBuffer msgBuffer, int msgBufferOffset) {
-        var length = getCacheStats.encodedLength() + header.encodedLength();
-        publishToCache(msgBuffer, msgBufferOffset, length);
-    }
-
-    void publishToCache(MutableDirectBuffer msgBuffer, int offset, int length) {
+    public void publishToCache(MutableDirectBuffer msgBuffer, int offset, int length) {
         idleStrategy.reset();
         long offered = 0;
         while ((offered = cluster.offer(msgBuffer, offset, length)) < 0) {

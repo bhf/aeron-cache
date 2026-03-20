@@ -45,7 +45,7 @@ class RemoveCacheEntryTest {
     private CacheTracingService tracingService;
     private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
     private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
-    private final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
+    private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
     private final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
 
     @BeforeEach
@@ -69,17 +69,16 @@ class RemoveCacheEntryTest {
         var value = "someValue";
 
         // create the cache
-        TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);
+        TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         // add an entry to the cache
         var requestId = UUID.randomUUID().toString();
-        var length = CacheRequestEncoder.encodeAddCacheEntry(addCacheEntryEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId, key, value);
+
+        var length = cacheRequestEncoder.encodeAddCacheEntry(requestBuffer, requestId, cacheId, key, value);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
         // Act
-        length = CacheRequestEncoder.encodeRemoveCacheEntry(removeCacheEntryEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId, key);
+        length = cacheRequestEncoder.encodeRemoveCacheEntry(requestBuffer, requestId, cacheId, key);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeCacheEntryRemoved(cacheEntryRemovedDecoder, headerDecoder, result, responseBuffer, 0);
 
@@ -107,12 +106,11 @@ class RemoveCacheEntryTest {
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
         var key = "someKey";
-        TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);
+        TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         // Act
         requestId = UUID.randomUUID().toString();
-        var length = CacheRequestEncoder.encodeRemoveCacheEntry(removeCacheEntryEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId, key);
+        var length = cacheRequestEncoder.encodeRemoveCacheEntry(requestBuffer, requestId, cacheId, key);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeCacheEntryRemoved(cacheEntryRemovedDecoder, headerDecoder, result, responseBuffer, 0);
 

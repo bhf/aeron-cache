@@ -36,7 +36,7 @@ class CreateCacheTest {
     private final Header header = new Header(0, 0);
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
+    private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
     private final CacheCreatedDecoder cacheCreatedDecoder = new CacheCreatedDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
@@ -63,8 +63,7 @@ class CreateCacheTest {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
-        var length = CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeCreateCacheRequest(requestBuffer, requestId, cacheId);
 
         // Act
         long ts = System.currentTimeMillis();
@@ -88,14 +87,12 @@ class CreateCacheTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
-        var length = CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeCreateCacheRequest(requestBuffer, requestId, cacheId);
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
 
         // Act
-        length = CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        length = cacheRequestEncoder.encodeCreateCacheRequest(requestBuffer, requestId, cacheId);
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeCacheCreated(result, cacheCreatedDecoder, headerDecoder, responseBuffer, 0);
 

@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
@@ -126,7 +127,7 @@ public class ControlledDutyCyclePerfTest {
 
             ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(aeronCache, rb);
-            BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(aeronCache, new BusySpinIdleStrategy());
+            BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(aeronCache, new BusySpinIdleStrategy(), new CacheRequestEncoder());
             var observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher, blockingRequestPublisher);
 
             client.setCacheResultsCallbacks(observingPublisher);

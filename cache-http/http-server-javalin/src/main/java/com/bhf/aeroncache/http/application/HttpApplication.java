@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.http.application;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
@@ -111,7 +112,7 @@ public class HttpApplication {
                 CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cache, rb);
 
                 BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cache,
-                        HttpIdleStrategies.blockingPublisherIdleStrategy.get());
+                        HttpIdleStrategies.blockingPublisherIdleStrategy.get(), new CacheRequestEncoder());
                 observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher,
                         blockingRequestPublisher);
             } else {
@@ -158,9 +159,9 @@ public class HttpApplication {
             var clusterMessagePublisherIdleStrategy = HttpIdleStrategies.clusterMessagePublisherIdleStrategy.get();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
                     new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy), "AeronCache-ClusterClient-Agent") :
+                            clusterMessagePublisherIdleStrategy, new CacheRequestEncoder()), "AeronCache-ClusterClient-Agent") :
                     new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy), "AeronCache-CacheClient-Agent");
+                            clusterMessagePublisherIdleStrategy, new CacheRequestEncoder()), "AeronCache-CacheClient-Agent");
 
             var errorHandler = aeronCluster != null ? ClusterUtils.getAgentRunnerErrorHandler(aeronCluster) :
                     new RethrowingErrorHandler();

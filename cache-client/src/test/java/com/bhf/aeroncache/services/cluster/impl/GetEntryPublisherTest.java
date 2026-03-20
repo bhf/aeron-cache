@@ -27,6 +27,9 @@ class GetEntryPublisherTest {
     ClusterMessagePublisher sut;
 
     @Mock
+    CacheRequestEncoder cacheRequestEncoder;
+
+    @Mock
     private AeronCache cluster;
 
     @Mock
@@ -34,7 +37,7 @@ class GetEntryPublisherTest {
 
     @BeforeEach
     void setup() {
-        sut = new ClusterMessagePublisher(cluster, idleStrategy);
+        sut = new ClusterMessagePublisher(cluster, idleStrategy, cacheRequestEncoder);
     }
 
     @Test
@@ -46,26 +49,20 @@ class GetEntryPublisherTest {
         var requestId = UUID.randomUUID().toString();
         var key = "someKey";
 
-        try (MockedStatic<CacheRequestEncoder> encoder = Mockito.mockStatic(CacheRequestEncoder.class)) {
-            // Act
-            sut.getCacheEntry(requestId, cacheId, key);
+        // Act
+        sut.getCacheEntry(requestId, cacheId, key);
 
-            // Assert
-            encoder.verify(() ->
-                            CacheRequestEncoder.encodeGetCacheEntry(
-                                    any(GetCacheEntryEncoder.class),
-                                    any(MessageHeaderEncoder.class),
-                                    any(MutableDirectBuffer.class),
-                                    eq(requestId),
-                                    eq(cacheId),
-                                    eq(key)),
-                    times(1));
+        // Assert
+        verify(cacheRequestEncoder, times(1)).encodeGetCacheEntry(
+                any(MutableDirectBuffer.class),
+                eq(requestId),
+                eq(cacheId),
+                eq(key));
 
-            verify(cluster, atMostOnce()).offer(
-                    any(MutableDirectBuffer.class),
-                    eq(0),
-                    intThat(isGreaterThanZero()));
-        }
+        verify(cluster, atMostOnce()).offer(
+                any(MutableDirectBuffer.class),
+                eq(0),
+                intThat(isGreaterThanZero()));
     }
 
     @Test

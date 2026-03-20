@@ -44,7 +44,7 @@ class DeleteCacheTest {
     private DeleteCacheResult<ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
-    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
+    private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
 
     @BeforeEach
     void setup() {
@@ -63,11 +63,10 @@ class DeleteCacheTest {
     void shouldDeleteKnownCache(String cacheId) {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
-        TestUtils.createCache(cacheId, session, createCacheEncoder, headerEncoder, requestBuffer, sut, header);
+        TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        int length = CacheRequestEncoder.encodeDeleteCache(deleteCacheEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        int length = cacheRequestEncoder.encodeDeleteCache(requestBuffer, requestId, cacheId);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
@@ -97,8 +96,7 @@ class DeleteCacheTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
-        var length = CacheRequestEncoder.encodeDeleteCache(deleteCacheEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeDeleteCache(requestBuffer, requestId, cacheId);
 
         // Act
         long ts = System.currentTimeMillis();

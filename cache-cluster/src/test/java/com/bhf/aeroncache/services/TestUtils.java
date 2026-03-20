@@ -2,8 +2,6 @@ package com.bhf.aeroncache.services;
 
 import com.bhf.aeroncache.application.CacheSnapshotCodecUtils;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
-import com.bhf.aeroncache.messages.CreateCacheEncoder;
-import com.bhf.aeroncache.messages.MessageHeaderEncoder;
 import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.ReusableStringCacheRequestDecoder;
 import com.bhf.aeroncache.services.cluster.ReusableStringCacheResponseEncoder;
@@ -21,6 +19,8 @@ import java.util.UUID;
 
 public class TestUtils {
 
+    private static final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
+    private static final Header header = new Header(0, 0);
     /**
      * The mocked session copies response data over to the
      * response buffer.
@@ -81,18 +81,13 @@ public class TestUtils {
      * Create a cache.
      * @param cacheId
      * @param session
-     * @param createCacheEncoder
-     * @param headerEncoder
      * @param requestBuffer
      * @param sut
-     * @param header
      */
-    public static void createCache(String cacheId, ClientSession session, CreateCacheEncoder createCacheEncoder,
-                                   MessageHeaderEncoder headerEncoder, MutableDirectBuffer requestBuffer,
-                                   SBEDecodingCacheClusterService sut, Header header) {
+    public static void createCache(String cacheId, ClientSession session, MutableDirectBuffer requestBuffer,
+                                   SBEDecodingCacheClusterService sut) {
         var requestId = UUID.randomUUID().toString();
-        var length = CacheRequestEncoder.encodeCreateCacheRequest(createCacheEncoder, headerEncoder,
-                requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeCreateCacheRequest(requestBuffer, requestId, cacheId);
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
     }
