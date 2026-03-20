@@ -75,7 +75,7 @@ class GetCacheEntryTest {
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
         // Act
-        length = cacheRequestEncoder.encodeGetCacheEntry(requestBuffer, requestId, cacheId, key);
+        length = cacheRequestEncoder.encodeGetCacheEntry(requestId, cacheId, key, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeGetCacheEntryResult(cacheEntryResultDecoder, headerDecoder, result, responseBuffer, 0);
 
@@ -103,7 +103,7 @@ class GetCacheEntryTest {
 
         // Act
         requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeGetCacheEntry(requestBuffer, requestId, cacheId, key);
+        var length = cacheRequestEncoder.encodeGetCacheEntry(requestId, cacheId, key, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeGetCacheEntryResult(cacheEntryResultDecoder, headerDecoder, result, responseBuffer, 0);
 
