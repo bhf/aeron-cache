@@ -68,7 +68,7 @@ class ClearCacheTest {
         TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        int length = cacheRequestEncoder.encodeClearCache(requestBuffer, requestId, cacheId);
+        int length = cacheRequestEncoder.encodeClearCache(requestId, cacheId, requestBuffer);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
@@ -97,7 +97,7 @@ class ClearCacheTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
-        var length = cacheRequestEncoder.encodeClearCache(requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeClearCache(requestId, cacheId, requestBuffer);
 
         // Act
         long ts = System.currentTimeMillis();
