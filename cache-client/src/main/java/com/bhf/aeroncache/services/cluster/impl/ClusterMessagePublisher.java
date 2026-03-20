@@ -152,7 +152,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void getAllCacheStats(String requestId) {
-        var length = cacheRequestEncoder.encodeGetAllCacheStats(msgBuffer, requestId);
+        var length = cacheRequestEncoder.encodeGetAllCacheStats(requestId, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent request to get all cache with request Id {}", requestId);
     }

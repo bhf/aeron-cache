@@ -10,7 +10,6 @@ import com.bhf.aeroncache.services.TestUtils;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.types.ReusableString;
-import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.logbuffer.Header;
 import org.agrona.ExpandableArrayBuffer;
@@ -66,7 +65,7 @@ class GetCacheStatsTest {
         TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        int length = cacheRequestEncoder.encodeGetAllCacheStats(requestBuffer, requestId);
+        int length = cacheRequestEncoder.encodeGetAllCacheStats(requestId, requestBuffer);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
