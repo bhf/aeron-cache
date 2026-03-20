@@ -66,7 +66,7 @@ class DeleteCacheTest {
         TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        int length = cacheRequestEncoder.encodeDeleteCache(requestBuffer, requestId, cacheId);
+        int length = cacheRequestEncoder.encodeDeleteCache(requestId, cacheId, requestBuffer);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
@@ -96,7 +96,7 @@ class DeleteCacheTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
-        var length = cacheRequestEncoder.encodeDeleteCache(requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeDeleteCache(requestId, cacheId, requestBuffer);
 
         // Act
         long ts = System.currentTimeMillis();
