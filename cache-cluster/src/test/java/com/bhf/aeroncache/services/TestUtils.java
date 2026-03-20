@@ -87,7 +87,7 @@ public class TestUtils {
     public static void createCache(String cacheId, ClientSession session, MutableDirectBuffer requestBuffer,
                                    SBEDecodingCacheClusterService sut) {
         var requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeCreateCacheRequest(requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeCreateCacheRequest(requestId, cacheId, requestBuffer);
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
     }

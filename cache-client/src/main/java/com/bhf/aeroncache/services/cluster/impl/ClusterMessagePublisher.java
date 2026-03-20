@@ -4,7 +4,6 @@ import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
 import com.bhf.aeroncache.handlers.PublicationFailureHandler;
-import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +35,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void sendCreateCache(String requestId, String cacheId) {
-        var length = cacheRequestEncoder.encodeCreateCacheRequest(msgBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeCreateCacheRequest(requestId, cacheId, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent create cache request on cache {} with request Id {}", cacheId, requestId);
     }

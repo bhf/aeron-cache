@@ -63,7 +63,7 @@ class CreateCacheTest {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeCreateCacheRequest(requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeCreateCacheRequest(requestId, cacheId, requestBuffer);
 
         // Act
         long ts = System.currentTimeMillis();
@@ -87,12 +87,12 @@ class CreateCacheTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
-        var length = cacheRequestEncoder.encodeCreateCacheRequest(requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeCreateCacheRequest(requestId, cacheId, requestBuffer);
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
 
         // Act
-        length = cacheRequestEncoder.encodeCreateCacheRequest(requestBuffer, requestId, cacheId);
+        length = cacheRequestEncoder.encodeCreateCacheRequest(requestId, cacheId, requestBuffer);
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeCacheCreated(result, cacheCreatedDecoder, headerDecoder, responseBuffer, 0);
 

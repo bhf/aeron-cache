@@ -8,19 +8,19 @@ import org.agrona.MutableDirectBuffer;
  */
 public class CacheRequestEncoder {
 
-    MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
-    AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
-    GetCacheEntryEncoder getCacheEntryEncoder = new GetCacheEntryEncoder();
-    ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
-    DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
-    RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
-    GetAllCacheEntriesEncoder getAllCacheEntriesEncoder = new GetAllCacheEntriesEncoder();
-    CacheSubscriptionRequestEncoder cacheSubscriptionRequestEncoder = new CacheSubscriptionRequestEncoder();
-    CacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder = new CacheUnsubscribeRequestEncoder();
-    GetCacheStatsEncoder getCacheStatsEncoder = new GetCacheStatsEncoder();
+    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
+    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
+    private final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
+    private final GetCacheEntryEncoder getCacheEntryEncoder = new GetCacheEntryEncoder();
+    private final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
+    private final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
+    private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
+    private final GetAllCacheEntriesEncoder getAllCacheEntriesEncoder = new GetAllCacheEntriesEncoder();
+    private final CacheSubscriptionRequestEncoder cacheSubscriptionRequestEncoder = new CacheSubscriptionRequestEncoder();
+    private final CacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder = new CacheUnsubscribeRequestEncoder();
+    private final GetCacheStatsEncoder getCacheStatsEncoder = new GetCacheStatsEncoder();
 
-    public int encodeCreateCacheRequest(MutableDirectBuffer msgBuffer, String requestId, String cacheId) {
+    public int encodeCreateCacheRequest(String requestId, String cacheId, MutableDirectBuffer msgBuffer) {
         createCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId)
                 .requestId(requestId);
