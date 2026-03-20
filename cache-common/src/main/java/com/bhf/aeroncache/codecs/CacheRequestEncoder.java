@@ -66,7 +66,7 @@ public class CacheRequestEncoder {
         return getAllCacheEntriesEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
-    public int encodeCacheSubscribe(MutableDirectBuffer msgBuffer, String requestId, String cacheId) {
+    public int encodeCacheSubscribe(String requestId, String cacheId, MutableDirectBuffer msgBuffer) {
         cacheSubscriptionRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         return cacheSubscriptionRequestEncoder.encodedLength()+ headerEncoder.encodedLength();

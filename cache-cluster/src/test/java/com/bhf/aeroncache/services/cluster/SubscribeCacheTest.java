@@ -73,7 +73,7 @@ class SubscribeCacheTest {
         TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        int length = cacheRequestEncoder.encodeCacheSubscribe(requestBuffer, requestId, cacheId);
+        int length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, requestBuffer);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
@@ -96,7 +96,7 @@ class SubscribeCacheTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
-        var length = cacheRequestEncoder.encodeCacheSubscribe(requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, requestBuffer);
 
         // Act
         long ts = System.currentTimeMillis();

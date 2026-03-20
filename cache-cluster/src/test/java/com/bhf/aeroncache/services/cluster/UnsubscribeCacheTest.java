@@ -77,7 +77,7 @@ class UnsubscribeCacheTest {
         TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        int length = cacheRequestEncoder.encodeCacheSubscribe(requestBuffer, requestId, cacheId);
+        int length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
         // Act

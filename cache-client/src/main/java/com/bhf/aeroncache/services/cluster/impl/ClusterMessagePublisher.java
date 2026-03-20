@@ -126,7 +126,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void sendCacheSubscribe(String requestId, String cacheId) {
-        var length = cacheRequestEncoder.encodeCacheSubscribe(msgBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent cache subscription request on cache {} with request Id {}", cacheId, requestId);
     }
