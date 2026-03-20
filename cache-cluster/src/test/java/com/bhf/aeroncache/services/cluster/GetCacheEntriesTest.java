@@ -78,7 +78,7 @@ class GetCacheEntriesTest {
             sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         }
 
-        int length = cacheRequestEncoder.encodeGetCacheEntries(requestBuffer, requestId, cacheId);
+        int length = cacheRequestEncoder.encodeGetCacheEntries(requestId, cacheId, requestBuffer);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
@@ -112,7 +112,7 @@ class GetCacheEntriesTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
-        var length = cacheRequestEncoder.encodeGetCacheEntries(requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeGetCacheEntries(requestId, cacheId, requestBuffer);
 
         // Act
         long ts = System.currentTimeMillis();

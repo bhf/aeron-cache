@@ -60,7 +60,7 @@ public class CacheRequestEncoder {
         return removeCacheEntryEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
-    public int encodeGetCacheEntries(MutableDirectBuffer msgBuffer, String requestId, String cacheId) {
+    public int encodeGetCacheEntries(String requestId, String cacheId, MutableDirectBuffer msgBuffer) {
         getAllCacheEntriesEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId).requestId(requestId);
         return getAllCacheEntriesEncoder.encodedLength()+ headerEncoder.encodedLength();
