@@ -74,7 +74,7 @@ class RemoveCacheEntryTest {
         // add an entry to the cache
         var requestId = UUID.randomUUID().toString();
 
-        var length = cacheRequestEncoder.encodeAddCacheEntry(requestBuffer, requestId, cacheId, key, value);
+        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
         // Act

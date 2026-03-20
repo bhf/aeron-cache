@@ -72,7 +72,7 @@ class AddCacheEntryTest {
 
         // add an entry to the cache
         var requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeAddCacheEntry(requestBuffer, requestId, cacheId, key, value);
+        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, requestBuffer);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
@@ -114,7 +114,7 @@ class AddCacheEntryTest {
 
         // Act
         requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeAddCacheEntry(requestBuffer, requestId, cacheId, key, value);
+        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeAddCacheEntryResult(cacheEntryCreatedDecoder, headerDecoder, result, responseBuffer, 0);
 

@@ -27,7 +27,7 @@ public class CacheRequestEncoder {
         return createCacheEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
-    public int encodeAddCacheEntry(MutableDirectBuffer msgBuffer, String requestId, String cacheId, String key, String value) {
+    public int encodeAddCacheEntry(String requestId, String cacheId, String key, String value, MutableDirectBuffer msgBuffer) {
         addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId)
                 .requestId(requestId)

@@ -3,8 +3,6 @@ package com.bhf.aeroncache.services.cluster.impl;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
-import com.bhf.aeroncache.messages.AddCacheEntryEncoder;
-import com.bhf.aeroncache.messages.MessageHeaderEncoder;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,8 +10,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.internal.matchers.GreaterThan;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -55,11 +51,8 @@ class AddEntryPublisherTest {
 
             // Assert
             verify(cacheRequestEncoder, times(1)).encodeAddCacheEntry(
-                                    any(MutableDirectBuffer.class),
-                                    eq(requestId),
-                                    eq(cacheId),
-                                    eq(key),
-                                    eq(value));
+                    eq(requestId), eq(cacheId), eq(key), eq(value), any(MutableDirectBuffer.class)
+            );
 
             verify(cluster, atMostOnce()).offer(
                     any(MutableDirectBuffer.class),

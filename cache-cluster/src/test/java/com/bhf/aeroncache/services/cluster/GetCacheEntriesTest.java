@@ -74,7 +74,7 @@ class GetCacheEntriesTest {
             var key = "key-"+i;
             var value = "value-"+i;
 
-            var length = cacheRequestEncoder.encodeAddCacheEntry(requestBuffer, requestId, cacheId, key, value);
+            var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, requestBuffer);
             sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         }
 
