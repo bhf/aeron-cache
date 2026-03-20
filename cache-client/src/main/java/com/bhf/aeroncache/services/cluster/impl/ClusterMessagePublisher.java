@@ -100,7 +100,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
 
     @Override
     public void removeCacheEntry(String requestId, String cacheId, String key) {
-        var length = cacheRequestEncoder.encodeRemoveCacheEntry(msgBuffer, requestId, cacheId, key);
+        var length = cacheRequestEncoder.encodeRemoveCacheEntry(requestId, cacheId, key, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent remove cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }

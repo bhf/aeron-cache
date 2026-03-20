@@ -78,7 +78,7 @@ class RemoveCacheEntryTest {
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
         // Act
-        length = cacheRequestEncoder.encodeRemoveCacheEntry(requestBuffer, requestId, cacheId, key);
+        length = cacheRequestEncoder.encodeRemoveCacheEntry(requestId, cacheId, key, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeCacheEntryRemoved(cacheEntryRemovedDecoder, headerDecoder, result, responseBuffer, 0);
 
@@ -110,7 +110,7 @@ class RemoveCacheEntryTest {
 
         // Act
         requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeRemoveCacheEntry(requestBuffer, requestId, cacheId, key);
+        var length = cacheRequestEncoder.encodeRemoveCacheEntry(requestId, cacheId, key, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeCacheEntryRemoved(cacheEntryRemovedDecoder, headerDecoder, result, responseBuffer, 0);
 
