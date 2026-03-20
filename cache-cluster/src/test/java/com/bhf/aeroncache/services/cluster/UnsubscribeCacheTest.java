@@ -81,7 +81,7 @@ class UnsubscribeCacheTest {
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
         // Act
-        cacheRequestEncoder.encodeCacheUnsubscribe(requestBuffer, requestId, cacheId);
+        cacheRequestEncoder.encodeCacheUnsubscribe(requestId, cacheId, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         CacheResponseDecoder.decodeCacheUnsubscribeResult(cacheUnsubscribedDecoder, headerDecoder, result, responseBuffer, 0);
 
@@ -102,7 +102,7 @@ class UnsubscribeCacheTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
-        var length = cacheRequestEncoder.encodeCacheUnsubscribe(requestBuffer, requestId, cacheId);
+        var length = cacheRequestEncoder.encodeCacheUnsubscribe(requestId, cacheId, requestBuffer);
 
         // Act
         long ts = System.currentTimeMillis();
