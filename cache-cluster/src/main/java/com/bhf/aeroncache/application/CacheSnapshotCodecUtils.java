@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.application;
 
-import com.bhf.aeroncache.services.cache.CacheEntryCodec;
-import com.bhf.aeroncache.services.cache.CacheIdCodec;
+import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
+import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
 import com.bhf.aeroncache.types.ReusableString;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
@@ -12,10 +12,10 @@ import java.util.Map;
 @Log4j2
 public class CacheSnapshotCodecUtils {
 
-    public static CacheEntryCodec<ReusableString, ReusableString> getCacheEntrySnapshotCodec() {
-        return new CacheEntryCodec<>() {
+    public static CacheEntrySnapshotCodec<ReusableString, ReusableString> getCacheEntrySnapshotCodec() {
+        return new CacheEntrySnapshotCodec<>() {
             @Override
-            public int serialize(ReusableString key, ReusableString value, MutableDirectBuffer buffer, int offset) {
+            public int serializeCacheEntry(ReusableString key, ReusableString value, MutableDirectBuffer buffer, int offset) {
                 int written = 0;
                 var keyLength = key.value().length();
                 buffer.putInt(offset+written, keyLength);
@@ -36,7 +36,7 @@ public class CacheSnapshotCodecUtils {
             }
 
             @Override
-            public int deserialize(DirectBuffer buffer, int offset, Map<ReusableString, ReusableString> cache) {
+            public int deserializeCacheEntry(DirectBuffer buffer, int offset, Map<ReusableString, ReusableString> cache) {
                 int read = 0;
                 var keyLength = buffer.getInt(offset + read);
                 read += 4;
@@ -60,8 +60,8 @@ public class CacheSnapshotCodecUtils {
         };
     }
 
-    public static CacheIdCodec<ReusableString> getCacheIdSnapshotCodec() {
-        return new CacheIdCodec<>() {
+    public static CacheIdSnapshotCodec<ReusableString> getCacheIdSnapshotCodec() {
+        return new CacheIdSnapshotCodec<>() {
             @Override
             public int serializeCacheId(ReusableString cacheId, MutableDirectBuffer buffer, int offset) {
                 var value = cacheId.value();
@@ -72,7 +72,7 @@ public class CacheSnapshotCodecUtils {
             }
 
             @Override
-            public int getCacheId(DirectBuffer buffer, int offset, ReusableString cacheId) {
+            public int deserializeCacheId(DirectBuffer buffer, int offset, ReusableString cacheId) {
                 var length = buffer.getInt(offset);
                 var value = buffer.getStringWithoutLengthAscii(offset+4, length);
                 log.trace("Cache ID legnth="+length+", value="+value);

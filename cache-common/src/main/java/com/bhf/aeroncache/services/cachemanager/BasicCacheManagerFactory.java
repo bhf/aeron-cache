@@ -1,8 +1,8 @@
 package com.bhf.aeroncache.services.cachemanager;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.services.cache.CacheEntryCodec;
-import com.bhf.aeroncache.services.cache.CacheIdCodec;
+import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
+import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
 import com.bhf.aeroncache.services.cachemanager.impl.MapCacheManager;
 import com.bhf.aeroncache.codecs.CacheRequestDecoder;
 import com.bhf.aeroncache.codecs.CacheResponseEncoder;
@@ -25,8 +25,8 @@ public class BasicCacheManagerFactory<I extends Reusable, K extends Reusable, V 
     private final Supplier<K> cacheKeySupplier;
     private final Supplier<V> cacheValueSupplier;
     private final Supplier<Map<K, V>> mapSupplier;
-    private final CacheIdCodec<I> cacheIdSnapshotCodec;
-    private final CacheEntryCodec<K, V> cacheEntrySnapshotCodec;
+    private final CacheIdSnapshotCodec<I> cacheIdSnapshotCodec;
+    private final CacheEntrySnapshotCodec<K, V> cacheEntrySnapshotCodec;
     private final CacheResponseEncoder<I,K,V> encoder;
     private final CacheRequestDecoder<I,K,V> decoder;
 

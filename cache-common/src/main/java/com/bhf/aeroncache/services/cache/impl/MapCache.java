@@ -5,8 +5,8 @@ import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
-import com.bhf.aeroncache.services.cache.CacheEntryCodec;
-import com.bhf.aeroncache.services.cache.CacheIdCodec;
+import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
+import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
 import io.aeron.ExclusivePublication;
 import io.aeron.Publication;
 import lombok.extern.log4j.Log4j2;
@@ -29,13 +29,13 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
 
     final Map<K, V> cache;
     private final V emptyValue;
-    private final CacheIdCodec<I> cacheIdSnapshotCodec;
+    private final CacheIdSnapshotCodec<I> cacheIdSnapshotCodec;
     private final MutableDirectBuffer buffer = new ExpandableArrayBuffer();
-    private final CacheEntryCodec<K, V> cacheEntrySnapshotCodec;
+    private final CacheEntrySnapshotCodec<K, V> cacheEntrySnapshotCodec;
 
     public MapCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier,
-                    Supplier<Map<K, V>> mapSupplier, CacheIdCodec<I> cacheIdSnapshotCodec,
-                    CacheEntryCodec<K, V> cacheEntrySnapshotCodec) {
+                    Supplier<Map<K, V>> mapSupplier, CacheIdSnapshotCodec<I> cacheIdSnapshotCodec,
+                    CacheEntrySnapshotCodec<K, V> cacheEntrySnapshotCodec) {
         super(indexSupplier, keySupplier, valueSupplier);
         this.cache = mapSupplier.get();
         this.emptyValue = valueSupplier.get();
@@ -115,7 +115,7 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
             ++entriesSnapshotted;
             var key = entry.getKey();
             var value = entry.getValue();
-            length = cacheEntrySnapshotCodec.serialize(key, value, buffer, length);
+            length = cacheEntrySnapshotCodec.serializeCacheEntry(key, value, buffer, length);
         }
 
         log.info("Total entries snapshotted in cache {} is {}", cacheId, entriesSnapshotted);
@@ -136,7 +136,7 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
         log.info("Total entries to load: {} for cache Id: {}, added: {}", stats.size, stats.getCacheId(), stats.addedCount);
         int added = 0;
         while (added < stats.size) {
-            offset = cacheEntrySnapshotCodec.deserialize(buffer, offset, cache);
+            offset = cacheEntrySnapshotCodec.deserializeCacheEntry(buffer, offset, cache);
             added++;
         }
 

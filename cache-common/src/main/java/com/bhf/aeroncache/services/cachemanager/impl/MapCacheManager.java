@@ -3,8 +3,8 @@ package com.bhf.aeroncache.services.cachemanager.impl;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.Cache;
-import com.bhf.aeroncache.services.cache.CacheEntryCodec;
-import com.bhf.aeroncache.services.cache.CacheIdCodec;
+import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
+import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 import io.aeron.logbuffer.FragmentHandler;
@@ -28,13 +28,13 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
 
     private final Map<I, Cache<I, K, V>> caches = new Object2ObjectHashMap<>();
     private final Supplier<Map<K, V>> mapSupplier;
-    private final CacheIdCodec<I> cacheIdSnapshotCodec;
-    private final CacheEntryCodec<K, V> cacheEntrySnapshotCodec;
+    private final CacheIdSnapshotCodec<I> cacheIdSnapshotCodec;
+    private final CacheEntrySnapshotCodec<K, V> cacheEntrySnapshotCodec;
 
     public MapCacheManager(Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier,
                            Supplier<V> cacheValueSupplier, Supplier<Map<K, V>> mapSupplier,
-                           CacheIdCodec<I> cacheIdSnapshotCodec,
-                           CacheEntryCodec<K, V> cacheEntrySnapshotCodec) {
+                           CacheIdSnapshotCodec<I> cacheIdSnapshotCodec,
+                           CacheEntrySnapshotCodec<K, V> cacheEntrySnapshotCodec) {
         super(cacheIndexSupplier, cacheKeySupplier, cacheValueSupplier);
         this.mapSupplier = mapSupplier;
         this.cacheIdSnapshotCodec = cacheIdSnapshotCodec;
@@ -60,7 +60,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
 
         FragmentHandler handler = (buffer, offset, length, header) -> {
             I cacheId = indexSupplier.get();
-            offset = cacheIdSnapshotCodec.getCacheId(buffer, offset, cacheId);
+            offset = cacheIdSnapshotCodec.deserializeCacheId(buffer, offset, cacheId);
             var cacheCreateResult = createCache(cacheId);
 
             log.info("Loading snapshot on cache Id: "+cacheId);

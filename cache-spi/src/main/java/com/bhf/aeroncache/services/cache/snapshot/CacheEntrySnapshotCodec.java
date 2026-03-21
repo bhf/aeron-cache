@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.services.cache;
+package com.bhf.aeroncache.services.cache.snapshot;
 
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
@@ -11,7 +11,7 @@ import java.util.Map;
  * @param <K> The type of the key.
  * @param <V> The type of the value.
  */
-public interface CacheEntryCodec<K, V> {
+public interface CacheEntrySnapshotCodec<K, V> {
 
     /**
      * Serialize the key and value to a {@link DirectBuffer}.
@@ -22,7 +22,7 @@ public interface CacheEntryCodec<K, V> {
      * @param offset The starting offset to write at.
      * @return The next offset to write at.
      */
-    int serialize(K key, V value, MutableDirectBuffer buffer, int offset);
+    int serializeCacheEntry(K key, V value, MutableDirectBuffer buffer, int offset);
 
     /**
      * Deserialize key value pairs into the provided Map.
@@ -32,5 +32,5 @@ public interface CacheEntryCodec<K, V> {
      * @param cache  to be populated.
      * @return The next offset to read from.
      */
-    int deserialize(DirectBuffer buffer, int offset, Map<K, V> cache);
+    int deserializeCacheEntry(DirectBuffer buffer, int offset, Map<K, V> cache);
 }

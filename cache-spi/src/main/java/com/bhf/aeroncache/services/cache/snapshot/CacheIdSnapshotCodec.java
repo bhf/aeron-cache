@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.services.cache;
+package com.bhf.aeroncache.services.cache.snapshot;
 
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
@@ -7,7 +7,7 @@ import org.agrona.MutableDirectBuffer;
  * Encode and decode the cacheId for snapshotting and loading.
  * @param <I> The type used to identify the cache.
  */
-public interface CacheIdCodec<I> {
+public interface CacheIdSnapshotCodec<I> {
 
     /**
      * Serialize the cache Id as part of a snapshot.
@@ -25,5 +25,5 @@ public interface CacheIdCodec<I> {
      * @param cacheId to populate.
      * @return The next offset to read from.
      */
-    int getCacheId(DirectBuffer buffer, int offset, I cacheId);
+    int deserializeCacheId(DirectBuffer buffer, int offset, I cacheId);
 }
