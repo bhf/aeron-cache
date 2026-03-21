@@ -68,7 +68,7 @@ class GetCacheStatsTest {
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeAllCacheStatsResult(result, responseBuffer, 0);
+        cacheResponseDecoder.decodeAllCacheStatsResult(responseBuffer, 0, result);
 
         // Assert
         assertEquals(requestId, result.getRequestId());

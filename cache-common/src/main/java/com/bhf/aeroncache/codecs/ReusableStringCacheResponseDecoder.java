@@ -141,7 +141,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     }
 
     @Override
-    public void decodeAllCacheStatsResult(CacheStatsResult<ReusableString> cacheStatsResult, DirectBuffer buffer, int offset) {
+    public void decodeAllCacheStatsResult(DirectBuffer buffer, int offset, CacheStatsResult<ReusableString> cacheStatsResult) {
         allCacheStatsResultDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var status = allCacheStatsResultDecoder.status();
         cacheStatsResult.clear();

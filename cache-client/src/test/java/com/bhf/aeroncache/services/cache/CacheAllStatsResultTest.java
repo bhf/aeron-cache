@@ -56,9 +56,8 @@ class CacheAllStatsResultTest {
         // Assert
         verify(
                 cacheResponseDecoder, times(1)).decodeAllCacheStatsResult(
-                any(CacheStatsResult.class),
-                any(DirectBuffer.class),
-                anyInt());
+                any(DirectBuffer.class), anyInt(), any(CacheStatsResult.class)
+        );
 
         verify(callbackHandler, times(1))
                 .handleAllCacheStats(any(CacheStatsResult.class));
