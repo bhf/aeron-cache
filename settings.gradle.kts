@@ -2,6 +2,7 @@ rootProject.name = "aeron-cache"
 
 include("cache-spi")
 include("cache-common")
+include("cache-spi-impl:map-cache")
 
 include("cache-cluster")
 include("cache-client")

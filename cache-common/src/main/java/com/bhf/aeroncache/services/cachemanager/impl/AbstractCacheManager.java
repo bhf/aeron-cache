@@ -2,7 +2,6 @@ package com.bhf.aeroncache.services.cachemanager.impl;
 
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.services.cache.MapCacheFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 
 import java.util.function.Supplier;

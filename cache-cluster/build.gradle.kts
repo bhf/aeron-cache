@@ -17,6 +17,7 @@ dependencies {
     implementation(project(":cache-messages-sbe"))
     implementation(project(":cache-common"))
     implementation(project(":cache-spi"))
+    implementation(project(":cache-spi-impl:map-cache"))
     implementation(libs.opentelemetry.api)
     implementation(libs.opentelemetry.sdk)
     implementation(libs.opentelemetry.exporter.otlp)
