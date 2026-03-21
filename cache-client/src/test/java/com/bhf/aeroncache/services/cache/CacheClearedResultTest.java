@@ -56,9 +56,8 @@ class CacheClearedResultTest {
         // Assert
         verify(
                 cacheResponseDecoder, times(1)).decodeCacheCleared(
-                any(ClearCacheResult.class),
-                any(DirectBuffer.class),
-                anyInt());
+                any(DirectBuffer.class), anyInt(), any(ClearCacheResult.class)
+        );
 
         verify(callbackHandler, times(1))
                 .handleCacheCleared(any(ClearCacheResult.class));

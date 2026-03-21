@@ -113,7 +113,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     }
 
     @Override
-    public void decodeCacheCleared(ClearCacheResult<ReusableString> clearCacheResult, DirectBuffer buffer, int offset) {
+    public void decodeCacheCleared(DirectBuffer buffer, int offset, ClearCacheResult<ReusableString> clearCacheResult) {
         cacheClearedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
         var status = cacheClearedDecoder.status();

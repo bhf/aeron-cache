@@ -171,7 +171,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheCleared(DirectBuffer buffer, int offset) {
-        cacheResponseDecoder.decodeCacheCleared(clearCacheResult, buffer, offset);
+        cacheResponseDecoder.decodeCacheCleared(buffer, offset, clearCacheResult);
         log.info("Got cache cleared on cache {}, requestId: {}, status: {}",
                 clearCacheResult.getCacheId(), clearCacheResult.getRequestId(), clearCacheResult.getStatus());
 
