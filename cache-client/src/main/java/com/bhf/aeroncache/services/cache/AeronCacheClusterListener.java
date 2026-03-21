@@ -104,7 +104,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleAllCacheEntriesResult(DirectBuffer buffer, int offset) {
-        cacheResponseDecoder.decodeAllCacheEntriesResult(getCacheEntriesResult, buffer, offset);
+        cacheResponseDecoder.decodeAllCacheEntriesResult(buffer, offset, getCacheEntriesResult);
         log.info("Got cache content result from cache {}, requestId: {}, status {}",
                 getCacheEntriesResult.getCacheId(), getCacheEntriesResult.getRequestId(), getCacheEntriesResult.getStatus());
 

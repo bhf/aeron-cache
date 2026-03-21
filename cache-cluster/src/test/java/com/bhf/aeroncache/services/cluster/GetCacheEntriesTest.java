@@ -81,7 +81,7 @@ class GetCacheEntriesTest {
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeAllCacheEntriesResult(result, responseBuffer, 0);
+        cacheResponseDecoder.decodeAllCacheEntriesResult(responseBuffer, 0, result);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -116,7 +116,7 @@ class GetCacheEntriesTest {
         // Act
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeAllCacheEntriesResult(result, responseBuffer, 0);
+        cacheResponseDecoder.decodeAllCacheEntriesResult(responseBuffer, 0, result);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());

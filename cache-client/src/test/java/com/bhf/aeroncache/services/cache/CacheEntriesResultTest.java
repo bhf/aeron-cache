@@ -56,9 +56,8 @@ class CacheEntriesResultTest {
         // Assert
         verify(
                 cacheResponseDecoder, times(1)).decodeAllCacheEntriesResult(
-                any(GetAllCacheEntriesResult.class),
-                any(DirectBuffer.class),
-                anyInt());
+                any(DirectBuffer.class), anyInt(), any(GetAllCacheEntriesResult.class)
+        );
 
         verify(callbackHandler, times(1))
                 .handleAllCacheEntries(any(GetAllCacheEntriesResult.class));

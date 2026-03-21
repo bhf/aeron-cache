@@ -7,7 +7,7 @@ import org.agrona.DirectBuffer;
 public interface CacheResponseDecoder<I extends Reusable, K extends Reusable, V extends Reusable> {
     void decodeCacheCreated(DirectBuffer buffer, int offset, CreateCacheResult<I> createCacheResult);
 
-    void decodeAllCacheEntriesResult(GetAllCacheEntriesResult<I, K, V> getCacheEntriesResult, DirectBuffer buffer, int offset);
+    void decodeAllCacheEntriesResult(DirectBuffer buffer, int offset, GetAllCacheEntriesResult<I, K, V> getCacheEntriesResult);
 
     void decodeGetCacheEntryResult(GetCacheEntryResult<I, K, V> getCacheEntryResult, DirectBuffer buffer, int offset);
 

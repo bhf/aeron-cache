@@ -37,7 +37,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     }
 
     @Override
-    public void decodeAllCacheEntriesResult(GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> getCacheEntriesResult, DirectBuffer buffer, int offset) {
+    public void decodeAllCacheEntriesResult(DirectBuffer buffer, int offset, GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> getCacheEntriesResult) {
         allCacheEntriesResultDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var status = allCacheEntriesResultDecoder.status();
         var eob = allCacheEntriesResultDecoder.endOfBatch();
