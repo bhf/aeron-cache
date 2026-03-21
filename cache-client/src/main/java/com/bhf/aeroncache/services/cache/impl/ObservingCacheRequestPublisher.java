@@ -1,12 +1,10 @@
 package com.bhf.aeroncache.services.cache.impl;
 
-import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.CacheRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.CacheResponseHandler;
 import com.bhf.aeroncache.services.cache.ConsumingResponseHandler;
-import com.bhf.aeroncache.services.cluster.ClusterRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.types.ReusableString;
 import lombok.RequiredArgsConstructor;
@@ -18,9 +16,6 @@ import java.util.function.Consumer;
  * A simple observer that delegates methods which don't pass in a {@link Consumer} directly
  * to the {@link ClusterMessagePublisher}.
  * <p>
- * Methods which accept a {@link Consumer} and are implementations of the {@link ClusterRequestConsumingPublisher}
- * use a CoW observer style approach after wrapping the consumer into an
- * {@link IdentifiableConsumer} with an internally generated Id.
  */
 @RequiredArgsConstructor
 @Log4j2
