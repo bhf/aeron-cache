@@ -16,6 +16,7 @@ dependencies {
 
     implementation(project(":cache-spi"))
     implementation(project(":cache-common"))
+    implementation(project(":cache-messages-sbe"))
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")

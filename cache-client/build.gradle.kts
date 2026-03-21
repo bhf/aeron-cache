@@ -11,6 +11,7 @@ dependencies {
     implementation(project(":cache-cluster"))
     implementation(project(":cache-common"))
     implementation(project(":cache-spi"))
+    implementation(project(":cache-spi-impl:map-cache"))
     implementation(libs.aeron)
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
