@@ -11,7 +11,7 @@ public interface CacheResponseDecoder<I extends Reusable, K extends Reusable, V 
 
     void decodeGetCacheEntryResult(DirectBuffer buffer, int offset, GetCacheEntryResult<I, K, V> getCacheEntryResult);
 
-    void decodeAddCacheEntryResult(AddCacheEntryResult<I, K> addCacheEntryResult, DirectBuffer buffer, int offset);
+    void decodeAddCacheEntryResult(DirectBuffer buffer, int offset, AddCacheEntryResult<I, K> addCacheEntryResult);
 
     void decodeCacheEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult, DirectBuffer buffer, int offset);
 

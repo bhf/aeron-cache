@@ -75,7 +75,7 @@ class AddCacheEntryTest {
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeAddCacheEntryResult(result, responseBuffer, 0);
+        cacheResponseDecoder.decodeAddCacheEntryResult(responseBuffer, 0, result);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -115,7 +115,7 @@ class AddCacheEntryTest {
         requestId = UUID.randomUUID().toString();
         var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeAddCacheEntryResult(result, responseBuffer, 0);
+        cacheResponseDecoder.decodeAddCacheEntryResult(responseBuffer, 0, result);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());

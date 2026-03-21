@@ -80,7 +80,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     }
 
     @Override
-    public void decodeAddCacheEntryResult(AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, DirectBuffer buffer, int offset) {
+    public void decodeAddCacheEntryResult(DirectBuffer buffer, int offset, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult) {
         addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
         var status = addCacheEntryDecoder.status();
