@@ -2,7 +2,7 @@ package com.bhf.aeroncache.services.cachemanager.impl;
 
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.services.cache.CacheFactory;
+import com.bhf.aeroncache.services.cache.MapCacheFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 
 import java.util.function.Supplier;
@@ -22,8 +22,7 @@ public abstract class AbstractCacheManager<I extends Reusable, K extends Reusabl
     final RemoveCacheEntryResult<I, K> removeCacheEntryResult;
     final GetCacheEntryResult<I, K, V> getCacheEntryResult;
     final GetAllCacheEntriesResult<I, K, V> getAllCacheEntriesResult;
-    final CacheStatsResult allCacheStatsResult;
-    final CacheFactory<I, K, V> cacheFactory = new CacheFactory<>();
+    final CacheStatsResult<I> allCacheStatsResult;
     final Supplier<I> indexSupplier;
     final Supplier<K> keySupplier;
     final Supplier<V> valueSupplier;

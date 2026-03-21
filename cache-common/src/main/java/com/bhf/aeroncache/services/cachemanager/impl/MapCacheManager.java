@@ -3,6 +3,7 @@ package com.bhf.aeroncache.services.cachemanager.impl;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.Cache;
+import com.bhf.aeroncache.services.cache.MapCacheFactory;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
 import io.aeron.ExclusivePublication;
@@ -30,6 +31,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
     private final Supplier<Map<K, V>> mapSupplier;
     private final CacheIdSnapshotCodec<I> cacheIdSnapshotCodec;
     private final CacheEntrySnapshotCodec<K, V> cacheEntrySnapshotCodec;
+    private final MapCacheFactory<I, K, V> cacheFactory = new MapCacheFactory<>();
 
     public MapCacheManager(Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier,
                            Supplier<V> cacheValueSupplier, Supplier<Map<K, V>> mapSupplier,
