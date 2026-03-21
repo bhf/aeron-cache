@@ -3,7 +3,7 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
-import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.DeleteCacheRequestDetails;
 import com.bhf.aeroncache.models.results.DeleteCacheResult;
 import com.bhf.aeroncache.services.TestUtils;
@@ -35,10 +35,7 @@ import static org.mockito.Mockito.verify;
 class DeleteCacheTest {
 
     private final Header header = new Header(0, 0);
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    private final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
-    private final CacheDeletedDecoder cacheDeletedDecoder = new CacheDeletedDecoder();
+    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private DeleteCacheResult<ReusableString> result;
@@ -70,7 +67,7 @@ class DeleteCacheTest {
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheDeleted(cacheDeletedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheDeleted(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -101,7 +98,7 @@ class DeleteCacheTest {
         // Act
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheDeleted(cacheDeletedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheDeleted(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());

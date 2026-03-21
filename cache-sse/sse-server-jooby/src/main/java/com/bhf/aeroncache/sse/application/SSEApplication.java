@@ -2,6 +2,7 @@ package com.bhf.aeroncache.sse.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.CacheResponseDecoder;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -282,7 +283,7 @@ public class SSEApplication extends Jooby {
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
             }
 
-            client = new AeronCacheClusterListener();
+            client = new AeronCacheClusterListener(new CacheResponseDecoder());
             client.setCacheResultsCallbacks(subscriptionService);
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");

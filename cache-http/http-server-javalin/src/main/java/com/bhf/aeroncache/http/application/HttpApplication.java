@@ -2,6 +2,7 @@ package com.bhf.aeroncache.http.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.CacheResponseDecoder;
 import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
@@ -123,7 +124,7 @@ public class HttpApplication {
             }
 
 
-            client = new AeronCacheClusterListener();
+            client = new AeronCacheClusterListener(new CacheResponseDecoder());
             client.setCacheResultsCallbacks(observingPublisher);
 
             var podName = System.getenv("POD_ADDRESS");

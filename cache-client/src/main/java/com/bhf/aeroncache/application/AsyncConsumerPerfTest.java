@@ -2,6 +2,7 @@ package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.CacheResponseDecoder;
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
@@ -41,7 +42,7 @@ public class AsyncConsumerPerfTest {
 
         var idleStrategy = new BackoffIdleStrategy();
 
-        var client = new AeronCacheClusterListener();
+        var client = new AeronCacheClusterListener(new CacheResponseDecoder());
         client.setCacheResultsCallbacks(observingPublisher);
 
         var podName = System.getenv("POD_ADDRESS");

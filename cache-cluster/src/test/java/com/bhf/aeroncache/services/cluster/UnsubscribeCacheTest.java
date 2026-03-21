@@ -3,7 +3,7 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
-import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.CacheUnsubscribeRequestDetails;
 import com.bhf.aeroncache.models.results.CacheSubscriptionResult;
 import com.bhf.aeroncache.models.results.CacheUnsubscribeResult;
@@ -37,21 +37,14 @@ import static org.mockito.Mockito.verify;
  */
 class UnsubscribeCacheTest {
 
-    private static final long MAX_SBE_LONG = Long.MAX_VALUE;
-    private static final long MIN_SBE_LONG = -Long.MAX_VALUE;
     private final Header header = new Header(0, 0);
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    private final CacheUnsubscribeRequestEncoder unsubscribeCacheEncoder = new CacheUnsubscribeRequestEncoder();
-    private final CacheUnsubscribeResponseDecoder cacheUnsubscribedDecoder = new CacheUnsubscribeResponseDecoder();
+    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
     private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private CacheUnsubscribeResult<ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
-    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
-    private final CacheSubscriptionRequestEncoder subscribeCacheEncoder = new CacheSubscriptionRequestEncoder();
 
     @BeforeEach
     void setup() {
@@ -83,7 +76,7 @@ class UnsubscribeCacheTest {
         // Act
         cacheRequestEncoder.encodeCacheUnsubscribe(requestId, cacheId, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheUnsubscribeResult(cacheUnsubscribedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheUnsubscribeResult(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -107,7 +100,7 @@ class UnsubscribeCacheTest {
         // Act
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheUnsubscribeResult(cacheUnsubscribedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheUnsubscribeResult(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());

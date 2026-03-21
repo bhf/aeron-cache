@@ -3,8 +3,6 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
-import com.bhf.aeroncache.messages.AllCacheEntriesResultDecoder;
-import com.bhf.aeroncache.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.GetAllCacheEntriesRequestDetails;
 import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
@@ -38,8 +36,7 @@ import static org.mockito.Mockito.verify;
 class GetCacheEntriesTest {
 
     private final Header header = new Header(0, 0);
-    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    private final AllCacheEntriesResultDecoder allCacheEntriesResultDecoder = new AllCacheEntriesResultDecoder();
+    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> result;
@@ -82,7 +79,7 @@ class GetCacheEntriesTest {
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeAllCacheEntriesResult(allCacheEntriesResultDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeAllCacheEntriesResult(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -117,7 +114,7 @@ class GetCacheEntriesTest {
         // Act
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeAllCacheEntriesResult(allCacheEntriesResultDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeAllCacheEntriesResult(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());

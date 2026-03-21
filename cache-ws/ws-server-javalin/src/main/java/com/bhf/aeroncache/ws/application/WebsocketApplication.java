@@ -2,6 +2,7 @@ package com.bhf.aeroncache.ws.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.CacheResponseDecoder;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.ErrorMessages;
@@ -101,7 +102,7 @@ public class WebsocketApplication {
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
             }
 
-            client = new AeronCacheClusterListener();
+            client = new AeronCacheClusterListener(new CacheResponseDecoder());
             client.setCacheResultsCallbacks(subscriptionService);
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");

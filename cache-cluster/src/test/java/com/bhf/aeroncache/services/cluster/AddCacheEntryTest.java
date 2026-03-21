@@ -3,7 +3,7 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
-import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.AddCacheEntryRequestDetails;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.services.TestUtils;
@@ -35,16 +35,13 @@ import static org.mockito.Mockito.verify;
 class AddCacheEntryTest {
 
     private final Header header = new Header(0, 0);
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private AddCacheEntryResult<ReusableString, ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
     private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
-    private final AddCacheEntryEncoder addCacheEntryEncoder = new AddCacheEntryEncoder();
-    private final CacheEntryCreatedDecoder cacheEntryCreatedDecoder = new CacheEntryCreatedDecoder();
+    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
 
     @BeforeEach
     void setup() {
@@ -76,7 +73,7 @@ class AddCacheEntryTest {
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeAddCacheEntryResult(cacheEntryCreatedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeAddCacheEntryResult(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -116,7 +113,7 @@ class AddCacheEntryTest {
         requestId = UUID.randomUUID().toString();
         var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeAddCacheEntryResult(cacheEntryCreatedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeAddCacheEntryResult(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());

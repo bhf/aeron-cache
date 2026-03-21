@@ -35,10 +35,12 @@ class CacheSubscribeResultTest {
     private AeronCacheClusterListener sut;
     @Mock
     private CacheResponseHandler callbackHandler;
+    @Mock
+    private CacheResponseDecoder cacheResponseDecoder;
 
     @BeforeEach
     void setup() {
-        sut = new AeronCacheClusterListener();
+        sut = new AeronCacheClusterListener(cacheResponseDecoder);
         sut.setCacheResultsCallbacks(callbackHandler);
         requestBuffer = new ExpandableArrayBuffer(512);
     }
@@ -54,22 +56,17 @@ class CacheSubscribeResultTest {
         cacheSubscriptionResponseEncoder.wrapAndApplyHeader(requestBuffer, 0, headerEncoder);
 
         // Act
-        try (MockedStatic<CacheResponseDecoder> encoder = Mockito.mockStatic(CacheResponseDecoder.class)) {
-            sut.onMessage(sessionId, timeStamp, requestBuffer, 0, length, header);
+        sut.onMessage(sessionId, timeStamp, requestBuffer, 0, length, header);
 
-            // Assert
-            encoder.verify(() ->
-                            CacheResponseDecoder.decodeCacheSubscribeResult(
-                                    any(CacheSubscriptionResponseDecoder.class),
-                                    any(MessageHeaderDecoder.class),
-                                    any(CacheSubscriptionResult.class),
-                                    any(DirectBuffer.class),
-                                    anyInt()),
-                    times(1));
+        // Assert
+        verify(
+                cacheResponseDecoder, times(1)).decodeCacheSubscribeResult(
+                any(CacheSubscriptionResult.class),
+                any(DirectBuffer.class),
+                anyInt());
 
-            verify(callbackHandler, times(1))
-                    .handleCacheSubscribeResponse(any(CacheSubscriptionResult.class));
-        }
+        verify(callbackHandler, times(1))
+                .handleCacheSubscribeResponse(any(CacheSubscriptionResult.class));
     }
 
 }

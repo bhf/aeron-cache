@@ -3,7 +3,7 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
-import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.ClearCacheRequestDetails;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.services.TestUtils;
@@ -36,17 +36,13 @@ import static org.mockito.Mockito.verify;
 class ClearCacheTest {
 
     private final Header header = new Header(0, 0);
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    private final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
-    private final CacheClearedDecoder cacheClearedDecoder = new CacheClearedDecoder();
+    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
     private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private ClearCacheResult<ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
-    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
 
     @BeforeEach
     void setup() {
@@ -72,7 +68,7 @@ class ClearCacheTest {
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheCleared(cacheClearedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheCleared(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -102,7 +98,7 @@ class ClearCacheTest {
         // Act
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheCleared(cacheClearedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheCleared(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());

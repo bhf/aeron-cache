@@ -2,6 +2,7 @@ package com.bhf.aeroncache.http.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.CacheResponseDecoder;
 import com.bhf.aeroncache.http.config.HttpNearCacheIdleStrategies;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.responses.*;
@@ -113,7 +114,7 @@ public class NearCacheApplication {
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
             }
 
-            client = new AeronCacheClusterListener();
+            client = new AeronCacheClusterListener(new CacheResponseDecoder());
             client.setCacheResultsCallbacks(new GroupedResponseHandler(
                     List.of(observingPublisher,
                     subscriptionService)));

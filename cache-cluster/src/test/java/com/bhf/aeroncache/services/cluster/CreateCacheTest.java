@@ -2,7 +2,7 @@ package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
-import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.CreateCacheRequestDetails;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
 import com.bhf.aeroncache.services.TestUtils;
@@ -34,10 +34,8 @@ import static org.mockito.Mockito.verify;
 class CreateCacheTest {
 
     private final Header header = new Header(0, 0);
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
+    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
     private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
-    private final CacheCreatedDecoder cacheCreatedDecoder = new CacheCreatedDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private CreateCacheResult<ReusableString> result;
@@ -68,7 +66,7 @@ class CreateCacheTest {
         // Act
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheCreated(result, cacheCreatedDecoder, headerDecoder, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheCreated(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -94,7 +92,7 @@ class CreateCacheTest {
         // Act
         length = cacheRequestEncoder.encodeCreateCacheRequest(requestId, cacheId, requestBuffer);
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheCreated(result, cacheCreatedDecoder, headerDecoder, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheCreated(result, responseBuffer, 0);
 
         // Assert
         assertEquals(OperationStatus.CACHE_EXISTS, result.getStatus());

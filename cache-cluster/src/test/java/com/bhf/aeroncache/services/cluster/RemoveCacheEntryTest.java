@@ -3,7 +3,7 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
-import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.RemoveCacheEntryRequestDetails;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.services.TestUtils;
@@ -36,17 +36,13 @@ import static org.mockito.Mockito.verify;
 class RemoveCacheEntryTest {
 
     private final Header header = new Header(0, 0);
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private RemoveCacheEntryResult<ReusableString, ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
-    private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
-    private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
     private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
-    private final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
+    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
 
     @BeforeEach
     void setup() {
@@ -80,7 +76,7 @@ class RemoveCacheEntryTest {
         // Act
         length = cacheRequestEncoder.encodeRemoveCacheEntry(requestId, cacheId, key, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheEntryRemoved(cacheEntryRemovedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheEntryRemoved(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -112,7 +108,7 @@ class RemoveCacheEntryTest {
         requestId = UUID.randomUUID().toString();
         var length = cacheRequestEncoder.encodeRemoveCacheEntry(requestId, cacheId, key, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheEntryRemoved(cacheEntryRemovedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheEntryRemoved(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());

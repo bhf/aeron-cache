@@ -38,15 +38,12 @@ import static org.mockito.Mockito.verify;
 class SubscribeCacheTest {
     ;
     private final Header header = new Header(0, 0);
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    private final CacheSubscriptionRequestEncoder subscribeCacheEncoder = new CacheSubscriptionRequestEncoder();
-    private final CacheSubscriptionResponseDecoder cacheSubscribedDecoder = new CacheSubscriptionResponseDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private CacheSubscriptionResult<ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
+    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
     private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
 
     @BeforeEach
@@ -77,7 +74,7 @@ class SubscribeCacheTest {
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheSubscribeResult(cacheSubscribedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheSubscribeResult(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -101,7 +98,7 @@ class SubscribeCacheTest {
         // Act
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeCacheSubscribeResult(cacheSubscribedDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheSubscribeResult(result, responseBuffer, 0);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());

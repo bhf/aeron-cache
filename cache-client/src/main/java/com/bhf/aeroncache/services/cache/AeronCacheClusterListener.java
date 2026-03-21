@@ -11,6 +11,7 @@ import io.aeron.cluster.client.EgressListener;
 import io.aeron.cluster.codecs.EventCode;
 import io.aeron.logbuffer.Header;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
@@ -23,6 +24,7 @@ import org.agrona.concurrent.IdleStrategy;
  */
 @Setter
 @Log4j2
+@RequiredArgsConstructor
 public class AeronCacheClusterListener implements EgressListener {
 
     @Setter
@@ -33,17 +35,7 @@ public class AeronCacheClusterListener implements EgressListener {
 
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
 
-    private final CacheCreatedDecoder cacheCreatedDecoder = new CacheCreatedDecoder();
-    private final CacheEntryCreatedDecoder addCacheEntryDecoder = new CacheEntryCreatedDecoder();
-    private final CacheEntryResultDecoder getCacheEntryDecoder = new CacheEntryResultDecoder();
-    private final CacheClearedDecoder cacheClearedDecoder = new CacheClearedDecoder();
-    private final CacheDeletedDecoder cacheDeletedDecoder = new CacheDeletedDecoder();
-    private final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
-    private final AllCacheEntriesResultDecoder allCacheEntriesResultDecoder = new AllCacheEntriesResultDecoder();
-    private final AllCacheStatsResultDecoder allCacheStatsResultDecoder = new AllCacheStatsResultDecoder();
-    private final CacheSubscriptionResponseDecoder cacheSubscriptionResponseDecoder = new CacheSubscriptionResponseDecoder();
-    private final CacheUnsubscribeResponseDecoder cacheUnsubscribeResponseDecoder = new CacheUnsubscribeResponseDecoder();
-    private final CacheEntryUpdateDecoder cacheEntryUpdateDecoder = new CacheEntryUpdateDecoder();
+    private final CacheResponseDecoder cacheResponseDecoder;
 
     private final CreateCacheResult<ReusableString> createCacheResult = new CreateCacheResult<>(SupplierUtils.stringSupplier.get());
     private final AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult = new AddCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
@@ -95,7 +87,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheEntryResult(DirectBuffer buffer, int offset) {
-        CacheResponseDecoder.decodeGetCacheEntryResult(getCacheEntryDecoder, headerDecoder, getCacheEntryResult, buffer, offset);
+        cacheResponseDecoder.decodeGetCacheEntryResult(getCacheEntryResult, buffer, offset);
         log.info("Got cache entry result from cache {} with key {}, value: {}, requestId: {}, status {}",
                 getCacheEntryResult.getCacheId(), getCacheEntryResult.getEntryKey(), getCacheEntryResult.getEntryValue(),
                 getCacheEntryResult.getRequestId(), getCacheEntryResult.getStatus());
@@ -112,7 +104,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleAllCacheEntriesResult(DirectBuffer buffer, int offset) {
-        CacheResponseDecoder.decodeAllCacheEntriesResult(allCacheEntriesResultDecoder, headerDecoder, getCacheEntriesResult, buffer, offset);
+        cacheResponseDecoder.decodeAllCacheEntriesResult(getCacheEntriesResult, buffer, offset);
         log.info("Got cache content result from cache {}, requestId: {}, status {}",
                 getCacheEntriesResult.getCacheId(), getCacheEntriesResult.getRequestId(), getCacheEntriesResult.getStatus());
 
@@ -129,7 +121,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheCreated(DirectBuffer buffer, int offset) {
-        CacheResponseDecoder.decodeCacheCreated(createCacheResult, cacheCreatedDecoder, headerDecoder, buffer, offset);
+        cacheResponseDecoder.decodeCacheCreated(createCacheResult, buffer, offset);
         log.info("Created cache {}, requestId: {}, status {}",
                 createCacheResult.getCacheId(), createCacheResult.getRequestId(), createCacheResult.getStatus());
 
@@ -145,7 +137,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheEntryCreated(DirectBuffer buffer, int offset) {
-        CacheResponseDecoder.decodeAddCacheEntryResult(addCacheEntryDecoder, headerDecoder, addCacheEntryResult, buffer, offset);
+        cacheResponseDecoder.decodeAddCacheEntryResult(addCacheEntryResult, buffer, offset);
         log.info("Got cache entry created message for cache {} with key {}, requestId: {}, status {}",
                 addCacheEntryResult.getCacheId(), addCacheEntryResult.getEntryKey(),
                 addCacheEntryResult.getRequestId(), addCacheEntryResult.getStatus());
@@ -162,7 +154,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheEntryRemoved(DirectBuffer buffer, int offset) {
-        CacheResponseDecoder.decodeCacheEntryRemoved(cacheEntryRemovedDecoder, headerDecoder, removeCacheEntryResult, buffer, offset);
+        cacheResponseDecoder.decodeCacheEntryRemoved(removeCacheEntryResult, buffer, offset);
         log.info("Got cache entry removed for cache {} with key {}, requestId: {}, status {}",
                 removeCacheEntryResult.getCacheId(), removeCacheEntryResult.getKey(),
                 removeCacheEntryResult.getRequestId(), removeCacheEntryResult.getStatus());
@@ -179,7 +171,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheCleared(DirectBuffer buffer, int offset) {
-        CacheResponseDecoder.decodeCacheCleared(cacheClearedDecoder, headerDecoder, clearCacheResult, buffer, offset);
+        cacheResponseDecoder.decodeCacheCleared(clearCacheResult, buffer, offset);
         log.info("Got cache cleared on cache {}, requestId: {}, status: {}",
                 clearCacheResult.getCacheId(), clearCacheResult.getRequestId(), clearCacheResult.getStatus());
 
@@ -195,7 +187,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheDeleted(DirectBuffer buffer, int offset) {
-        CacheResponseDecoder.decodeCacheDeleted(cacheDeletedDecoder, headerDecoder, deleteCacheResult, buffer, offset);
+        cacheResponseDecoder.decodeCacheDeleted(deleteCacheResult, buffer, offset);
         log.info("Got cache deleted on cache {}, requestId: {}, status {}",
                 deleteCacheResult.getCacheId(), deleteCacheResult.getRequestId(), deleteCacheResult.getStatus());
 
@@ -211,7 +203,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleAllCacheStatsResult(DirectBuffer buffer, int offset) {
-        CacheResponseDecoder.decodeAllCacheStatsResult(allCacheStatsResultDecoder, headerDecoder, cacheStatsResult, buffer, offset);
+        cacheResponseDecoder.decodeAllCacheStatsResult(cacheStatsResult, buffer, offset);
         log.debug("Got cache stats result, requestId: {}", cacheStatsResult.getRequestId());
 
         if (cacheResultsCallbacks != null) {
@@ -226,7 +218,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheSubscribeResult(DirectBuffer buffer, int offset) {
-        CacheResponseDecoder.decodeCacheSubscribeResult(cacheSubscriptionResponseDecoder, headerDecoder, cacheSubscriptionResult, buffer, offset);
+        cacheResponseDecoder.decodeCacheSubscribeResult(cacheSubscriptionResult, buffer, offset);
         log.info("Got cache subscription result on cacheId {}, status {} requestId {}",
                 cacheSubscriptionResult.getCacheId(), cacheSubscriptionResult.getStatus(), cacheSubscriptionResult.getRequestId());
 
@@ -242,7 +234,7 @@ public class AeronCacheClusterListener implements EgressListener {
      * @param offset The offset at which to start decoding.
      */
     private void handleCacheUnsubscribeResult(DirectBuffer buffer, int offset) {
-        CacheResponseDecoder.decodeCacheUnsubscribeResult(cacheUnsubscribeResponseDecoder, headerDecoder, cacheUnsubscribeResult, buffer, offset);
+        cacheResponseDecoder.decodeCacheUnsubscribeResult(cacheUnsubscribeResult, buffer, offset);
         log.info("Got cache unsubscribe result on cacheId {}, status {} requestId {}",
                 cacheUnsubscribeResult.getCacheId(), cacheUnsubscribeResult.getStatus(), cacheUnsubscribeResult.getRequestId());
 
@@ -252,7 +244,7 @@ public class AeronCacheClusterListener implements EgressListener {
     }
 
     private void handleCacheEntryUpdated(DirectBuffer buffer, int offset) {
-        CacheResponseDecoder.decodeCacheEntryUpdated(cacheEntryUpdateDecoder, headerDecoder, cacheEntryUpdateResult, buffer, offset);
+        cacheResponseDecoder.decodeCacheEntryUpdated(cacheEntryUpdateResult, buffer, offset);
         log.info("Got cache entry updated on cacheId {}, key {} requestId {}",
                 cacheEntryUpdateResult.getCacheId(), cacheEntryUpdateResult.getKey(), cacheEntryUpdateResult.getRequestId());
         

@@ -3,7 +3,7 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
-import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.GetCacheStatsRequestDetails;
 import com.bhf.aeroncache.models.results.CacheStatsResult;
 import com.bhf.aeroncache.services.TestUtils;
@@ -33,10 +33,7 @@ import static org.mockito.Mockito.verify;
 class GetCacheStatsTest {
 
     private final Header header = new Header(0, 0);
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    private final GetCacheStatsEncoder getCacheStatsEncoder = new GetCacheStatsEncoder();
-    private final AllCacheStatsResultDecoder allCacheStatsResultDecoder = new AllCacheStatsResultDecoder();
+    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
     private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
@@ -69,7 +66,7 @@ class GetCacheStatsTest {
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        CacheResponseDecoder.decodeAllCacheStatsResult(allCacheStatsResultDecoder, headerDecoder, result, responseBuffer, 0);
+        cacheResponseDecoder.decodeAllCacheStatsResult(result, responseBuffer, 0);
 
         // Assert
         assertEquals(requestId, result.getRequestId());
