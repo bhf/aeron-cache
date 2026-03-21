@@ -2,9 +2,7 @@ package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
-import com.bhf.aeroncache.messages.CacheEntryRemovedDecoder;
 import com.bhf.aeroncache.messages.CacheEntryRemovedEncoder;
-import com.bhf.aeroncache.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.messages.MessageHeaderEncoder;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import io.aeron.logbuffer.Header;
@@ -16,8 +14,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.mockito.ArgumentMatchers.any;
