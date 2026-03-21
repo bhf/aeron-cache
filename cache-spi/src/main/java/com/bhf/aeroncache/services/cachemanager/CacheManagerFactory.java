@@ -1,8 +1,8 @@
 package com.bhf.aeroncache.services.cachemanager;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.codecs.CacheRequestDecoder;
-import com.bhf.aeroncache.codecs.CacheResponseEncoder;
+import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
+import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
 
 import java.util.function.Supplier;
 

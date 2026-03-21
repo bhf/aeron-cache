@@ -1,5 +1,6 @@
-package com.bhf.aeroncache.codecs;
+package com.bhf.aeroncache.codecs.request;
 
+import com.bhf.aeroncache.codecs.AppendableFlyweight;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.types.ReusableString;

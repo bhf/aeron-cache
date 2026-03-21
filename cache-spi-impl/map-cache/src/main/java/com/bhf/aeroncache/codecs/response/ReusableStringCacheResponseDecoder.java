@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.codecs;
+package com.bhf.aeroncache.codecs.response;
 
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;

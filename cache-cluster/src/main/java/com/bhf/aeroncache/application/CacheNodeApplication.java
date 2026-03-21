@@ -1,8 +1,8 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.application.unclustered.SingleNodeApplication;
-import com.bhf.aeroncache.codecs.ReusableStringCacheRequestDecoder;
-import com.bhf.aeroncache.codecs.ReusableStringCacheResponseEncoder;
+import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
+import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseEncoder;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;

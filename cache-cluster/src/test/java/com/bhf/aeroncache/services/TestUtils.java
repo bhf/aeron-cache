@@ -1,11 +1,11 @@
 package com.bhf.aeroncache.services;
 
 import com.bhf.aeroncache.application.CacheSnapshotCodecUtils;
-import com.bhf.aeroncache.codecs.CacheRequestEncoder;
-import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
-import com.bhf.aeroncache.codecs.ReusableStringCacheRequestDecoder;
-import com.bhf.aeroncache.codecs.ReusableStringCacheResponseEncoder;
+import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
+import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseEncoder;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;

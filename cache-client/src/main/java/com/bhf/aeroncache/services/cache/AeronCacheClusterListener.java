@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.services.cache;
 
-import com.bhf.aeroncache.codecs.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
 import com.bhf.aeroncache.handlers.ClusterSessionEventHandler;
 import com.bhf.aeroncache.handlers.NoOpClusterSessionEventHandler;
 import com.bhf.aeroncache.messages.*;

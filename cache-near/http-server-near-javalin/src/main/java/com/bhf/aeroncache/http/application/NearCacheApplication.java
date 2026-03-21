@@ -1,8 +1,8 @@
 package com.bhf.aeroncache.http.application;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
-import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
+import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.http.config.HttpNearCacheIdleStrategies;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.responses.*;

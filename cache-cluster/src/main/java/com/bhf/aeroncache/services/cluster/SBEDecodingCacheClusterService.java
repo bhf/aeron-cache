@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.services.cluster;
 
-import com.bhf.aeroncache.codecs.CacheRequestDecoder;
+import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
+import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
@@ -22,7 +23,7 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
 
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
     private final CacheRequestDecoder<I, K, V> decoder;
-    private final com.bhf.aeroncache.codecs.CacheResponseEncoder<I, K, V> encoder;
+    private final CacheResponseEncoder<I, K, V> encoder;
 
     public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory) {
         super(nodeId, tracingService, cacheManagerFactory);

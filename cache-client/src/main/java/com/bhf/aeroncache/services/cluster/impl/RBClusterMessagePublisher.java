@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;

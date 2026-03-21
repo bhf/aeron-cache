@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
+import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.messages.CacheClearedEncoder;
 import com.bhf.aeroncache.messages.MessageHeaderEncoder;
 import com.bhf.aeroncache.models.results.ClearCacheResult;

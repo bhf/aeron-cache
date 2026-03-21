@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.codecs;
+package com.bhf.aeroncache.codecs.response;
 
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.DeleteCacheRequestDetails;
