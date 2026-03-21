@@ -196,7 +196,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     }
 
     @Override
-    public void decodeCacheEntryUpdated(CacheEntryUpdateResult<ReusableString, ReusableString, ReusableString> cacheEntryUpdateResult, DirectBuffer buffer, int offset) {
+    public void decodeCacheEntryUpdated(DirectBuffer buffer, int offset, CacheEntryUpdateResult<ReusableString, ReusableString, ReusableString> cacheEntryUpdateResult) {
         cacheEntryUpdateDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
         var cacheId = cacheEntryUpdateDecoder.cacheId();

@@ -244,7 +244,7 @@ public class AeronCacheClusterListener implements EgressListener {
     }
 
     private void handleCacheEntryUpdated(DirectBuffer buffer, int offset) {
-        cacheResponseDecoder.decodeCacheEntryUpdated(cacheEntryUpdateResult, buffer, offset);
+        cacheResponseDecoder.decodeCacheEntryUpdated(buffer, offset, cacheEntryUpdateResult);
         log.info("Got cache entry updated on cacheId {}, key {} requestId {}",
                 cacheEntryUpdateResult.getCacheId(), cacheEntryUpdateResult.getKey(), cacheEntryUpdateResult.getRequestId());
         

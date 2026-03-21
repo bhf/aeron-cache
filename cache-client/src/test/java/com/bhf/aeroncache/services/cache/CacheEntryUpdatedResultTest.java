@@ -56,9 +56,8 @@ class CacheEntryUpdatedResultTest {
         // Assert
         verify(
                 cacheResponseDecoder, times(1)).decodeCacheEntryUpdated(
-                any(CacheEntryUpdateResult.class),
-                any(DirectBuffer.class),
-                anyInt());
+                any(DirectBuffer.class), anyInt(), any(CacheEntryUpdateResult.class)
+        );
 
         verify(callbackHandler, times(1))
                 .handleCacheEntryUpdated(any(CacheEntryUpdateResult.class));
