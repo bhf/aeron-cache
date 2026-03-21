@@ -1,8 +1,10 @@
 rootProject.name = "aeron-cache"
 
+include("cache-spi")
+include("cache-common")
+
 include("cache-cluster")
 include("cache-client")
-include("cache-common")
 include("cache-messages-sbe")
 include("cache-messages-http")
 

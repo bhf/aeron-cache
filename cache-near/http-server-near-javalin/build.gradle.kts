@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":cache-messages-http"))
     implementation(project(":cache-messages-sbe"))
     implementation(project(":cache-ws:ws-server-javalin"))
+    implementation(project(":cache-spi"))
     implementation(libs.aeron)
     implementation(libs.javalin)
     implementation(libs.log4j.api)

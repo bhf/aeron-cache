@@ -7,6 +7,7 @@ dependencies {
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
     implementation(project(":cache-messages-sbe"))
+    implementation(project(":cache-spi"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit)
     testImplementation(libs.junit.params)

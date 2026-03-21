@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.models;
 
-public class RequestId implements Reusable<RequestId>{
+public class RequestId implements Reusable<RequestId> {
 
     private final StringBuilder sb = new StringBuilder();
     @Override
