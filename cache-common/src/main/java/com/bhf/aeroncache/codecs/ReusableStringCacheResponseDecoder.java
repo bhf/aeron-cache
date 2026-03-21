@@ -182,7 +182,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     }
 
     @Override
-    public void decodeCacheUnsubscribeResult(CacheUnsubscribeResult<ReusableString> cacheUnsubscribeResult, DirectBuffer buffer, int offset) {
+    public void decodeCacheUnsubscribeResult(DirectBuffer buffer, int offset, CacheUnsubscribeResult<ReusableString> cacheUnsubscribeResult) {
         cacheUnsubscribeResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
         var status = cacheUnsubscribeResponseDecoder.status();

@@ -23,7 +23,7 @@ public interface CacheResponseDecoder<I extends Reusable, K extends Reusable, V 
 
     void decodeCacheSubscribeResult(DirectBuffer buffer, int offset, CacheSubscriptionResult<I> cacheSubscriptionResult);
 
-    void decodeCacheUnsubscribeResult(CacheUnsubscribeResult<I> cacheUnsubscribeResult, DirectBuffer buffer, int offset);
+    void decodeCacheUnsubscribeResult(DirectBuffer buffer, int offset, CacheUnsubscribeResult<I> cacheUnsubscribeResult);
 
     void decodeCacheEntryUpdated(CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult, DirectBuffer buffer, int offset);
 }
