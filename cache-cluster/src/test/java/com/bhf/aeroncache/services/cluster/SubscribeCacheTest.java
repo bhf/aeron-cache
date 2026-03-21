@@ -76,7 +76,7 @@ class SubscribeCacheTest {
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeCacheSubscribeResult(result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheSubscribeResult(responseBuffer, 0, result);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -100,7 +100,7 @@ class SubscribeCacheTest {
         // Act
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeCacheSubscribeResult(result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheSubscribeResult(responseBuffer, 0, result);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());

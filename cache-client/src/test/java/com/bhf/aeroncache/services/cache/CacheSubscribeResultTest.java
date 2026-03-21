@@ -57,9 +57,8 @@ class CacheSubscribeResultTest {
         // Assert
         verify(
                 cacheResponseDecoder, times(1)).decodeCacheSubscribeResult(
-                any(CacheSubscriptionResult.class),
-                any(DirectBuffer.class),
-                anyInt());
+                any(DirectBuffer.class), anyInt(), any(CacheSubscriptionResult.class)
+        );
 
         verify(callbackHandler, times(1))
                 .handleCacheSubscribeResponse(any(CacheSubscriptionResult.class));
