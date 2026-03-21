@@ -56,9 +56,8 @@ class CacheEntryRemovedResultTest {
         // Assert
         verify(
                 cacheResponseDecoder, times(1)).decodeCacheEntryRemoved(
-                any(RemoveCacheEntryResult.class),
-                any(DirectBuffer.class),
-                anyInt());
+                any(DirectBuffer.class), anyInt(), any(RemoveCacheEntryResult.class)
+        );
 
         verify(callbackHandler, times(1))
                 .handleCacheEntryRemoved(any(RemoveCacheEntryResult.class));
