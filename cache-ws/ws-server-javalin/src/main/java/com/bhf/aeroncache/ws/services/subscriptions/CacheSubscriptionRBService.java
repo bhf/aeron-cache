@@ -3,7 +3,6 @@ package com.bhf.aeroncache.ws.services.subscriptions;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
-import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.results.CacheEntryUpdateResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.DeleteCacheResult;
@@ -128,7 +127,7 @@ public class CacheSubscriptionRBService extends ObservingCacheRequestPublisher {
      */
     private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, String cacheId, WsContext wsContext) {
         sendCacheSubscribe(requestId, cacheId, subscriptionResult -> {
-            if (subscriptionResult.getStatus() != OperationStatus.SUCCESS) {
+            if (subscriptionResult.getStatus() != com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
                 var errorMsg = STR."Couldn't subscribe to cache \{cacheId}, status=\{subscriptionResult.getStatus()}";
                 log.warn(errorMsg);
                 wsContext.closeSession(WsCloseStatus.SERVER_ERROR, errorMsg);
@@ -145,7 +144,7 @@ public class CacheSubscriptionRBService extends ObservingCacheRequestPublisher {
      */
     private void sendCacheUnsubscribeRequest(AeronCache cluster, String requestId, String cacheId) {
         sendCacheUnsubscribe(requestId, cacheId, unsubscribeResult -> {
-            if (unsubscribeResult.getStatus() != OperationStatus.SUCCESS) {
+            if (unsubscribeResult.getStatus() != com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
                 log.warn("Couldn't unsubscribe from cache {}, request ID {}", cacheId, requestId);
             } else {
                 var wsSubscriptions = cacheSubscriptions.remove(cacheId);

@@ -1,7 +1,5 @@
 package com.bhf.aeroncache.utils;
 
-import com.bhf.aeroncache.messages.OperationStatus;
-
 /**
  * Mappings of internal statuses to HTTP codes.
  */
@@ -15,12 +13,12 @@ public class HTTPStatusUtils {
     public static final int OK = 200;
 
     /**
-     * Get the HTTP code associated with this {@link OperationStatus}.
+     * Get the HTTP code associated with this {@link com.bhf.aeroncache.messages.CacheOperationStatus}.
      *
      * @param status The status of the operation.
      * @return The associated HTTP status code.
      */
-    public static int getHTTPCode(OperationStatus status) {
+    public static int getHTTPCode(com.bhf.aeroncache.messages.CacheOperationStatus status) {
         return switch (status) {
             case NONE -> 218;
             case SUCCESS -> 200;

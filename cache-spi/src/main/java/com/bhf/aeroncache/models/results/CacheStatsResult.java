@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.models.results;
 
 import com.bhf.aeroncache.annotations.Flyweight;
-import com.bhf.aeroncache.messages.OperationStatus;
+import com.bhf.aeroncache.messages.CacheOperationStatus;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
@@ -15,7 +15,7 @@ import java.util.List;
 @Flyweight
 public class CacheStatsResult<I extends Reusable> implements Reusable<CacheStatsResult<I>> {
 
-    private OperationStatus operationStatus = OperationStatus.NONE;
+    private CacheOperationStatus operationStatus = CacheOperationStatus.NONE;
     private RequestId requestId = new RequestId();
     private final List<CacheStats<I>> stats = new ArrayList<>();
 
@@ -31,7 +31,7 @@ public class CacheStatsResult<I extends Reusable> implements Reusable<CacheStats
     public void clear() {
         stats.clear();
         requestId.clear();
-        operationStatus = OperationStatus.NONE;
+        operationStatus = CacheOperationStatus.NONE;
     }
 
     @Override

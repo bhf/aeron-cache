@@ -5,7 +5,6 @@ import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
 import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
-import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.GetCacheStatsRequestDetails;
 import com.bhf.aeroncache.models.results.CacheStatsResult;
 import com.bhf.aeroncache.services.TestUtils;
@@ -72,7 +71,7 @@ class GetCacheStatsTest {
 
         // Assert
         assertEquals(requestId, result.getRequestId());
-        assertEquals(OperationStatus.SUCCESS, result.getOperationStatus());
+        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS, result.getOperationStatus());
 
         // Calling the tracing service is part of the public API of the SUT
         verify(tracingService, times(1)).startGetAllStatsRequest(any(GetCacheStatsRequestDetails.class));

@@ -4,7 +4,6 @@ import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
-import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -307,7 +306,7 @@ public class WebsocketApplication {
             log.warn("Cluster not connected");
             ctx.status(HTTPStatusUtils.SERVICE_NOT_LIVE);
             var errorResponse = new RequestErrorResponse("Cluster not connected", ErrorMessages.CHECK_ALL_VALUES,
-                    OperationStatus.ERROR);
+                    com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.json(errorResponse);
             ((JavalinServletContext) ctx).getTasks().clear();
         }

@@ -227,7 +227,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param requestId The original request ID.
      */
     private void handleMissingCacheOnAddEntry(ClientSession session, DirectBuffer buffer, int offset, I cacheId, K key, V value, String requestId) {
-        addEntryFailureResult.setStatus(OperationStatus.UNKNOWN_CACHE);
+        addEntryFailureResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
         addEntryFailureResult.setRequestId(requestId);
         addEntryFailureResult.setCacheId(cacheId);
         log.info("Cache {} doesn't exist, tried to add on key key: {}", cacheId, addEntryFailureResult.getEntryKey());

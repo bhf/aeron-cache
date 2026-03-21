@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.models.results;
 
 import com.bhf.aeroncache.annotations.Flyweight;
-import com.bhf.aeroncache.messages.OperationStatus;
+import com.bhf.aeroncache.messages.CacheOperationStatus;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
@@ -16,7 +16,7 @@ public class CacheUnsubscribeResult<I extends Reusable> implements Reusable<Cach
 
     final RequestId requestId = new RequestId();
     final I cacheId;
-    OperationStatus status = OperationStatus.NONE;
+    CacheOperationStatus status = CacheOperationStatus.NONE;
 
     public String getRequestId() {
         return requestId.getRequestId();
@@ -30,7 +30,7 @@ public class CacheUnsubscribeResult<I extends Reusable> implements Reusable<Cach
     public void clear() {
         requestId.clear();
         cacheId.clear();
-        status = OperationStatus.NONE;
+        status = CacheOperationStatus.NONE;
     }
 
     @Override

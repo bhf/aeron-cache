@@ -5,7 +5,6 @@ import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
 import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
-import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.requests.CacheSubscriptionRequestDetails;
 import com.bhf.aeroncache.models.results.CacheSubscriptionResult;
 import com.bhf.aeroncache.models.results.CacheUnsubscribeResult;
@@ -81,7 +80,7 @@ class SubscribeCacheTest {
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
-        assertEquals(OperationStatus.SUCCESS, result.getStatus());
+        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS, result.getStatus());
 
         // Calling the tracing service is part of the public API of the SUT
         verify(tracingService, times(1)).startCacheSubscriptionRequest(any(CacheSubscriptionRequestDetails.class));
@@ -105,7 +104,7 @@ class SubscribeCacheTest {
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
-        assertEquals(OperationStatus.SUCCESS, result.getStatus());
+        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS, result.getStatus());
     }
 
 }

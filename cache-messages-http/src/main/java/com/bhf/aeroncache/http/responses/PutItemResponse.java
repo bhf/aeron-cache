@@ -1,7 +1,5 @@
 package com.bhf.aeroncache.http.responses;
 
-import com.bhf.aeroncache.messages.OperationStatus;
-
 /**
  * Response from putting an item into a cache.
  *
@@ -9,5 +7,5 @@ import com.bhf.aeroncache.messages.OperationStatus;
  * @param key             The key under which the item was added.
  * @param operationStatus The status of the operation.
  */
-public record PutItemResponse(String cacheId, String key, OperationStatus operationStatus) {
+public record PutItemResponse(String cacheId, String key, com.bhf.aeroncache.messages.CacheOperationStatus operationStatus) {
 }

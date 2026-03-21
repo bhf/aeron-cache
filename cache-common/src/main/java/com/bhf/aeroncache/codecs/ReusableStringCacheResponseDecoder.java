@@ -26,7 +26,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     @Override
     public void decodeCacheCreated(DirectBuffer buffer, int offset, CreateCacheResult<ReusableString> createCacheResult) {
         cacheCreatedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var status = cacheCreatedDecoder.status();
+        var status = getOperationStatus(cacheCreatedDecoder.status());
         var cacheId = cacheCreatedDecoder.cacheId();
         var requestId = cacheCreatedDecoder.requestId();
 
@@ -36,10 +36,44 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
         createCacheResult.setStatus(status);
     }
 
+    private CacheOperationStatus getOperationStatus(OperationStatus status) {
+        switch(status){
+            case OperationStatus.CACHE_EXISTS -> {
+                return CacheOperationStatus.CACHE_EXISTS;
+            }
+            case OperationStatus.DUPLICATE_SUBSCRIPTION -> {
+                return CacheOperationStatus.DUPLICATE_SUBSCRIPTION;
+            }
+            case OperationStatus.UNKNOWN_CACHE -> {
+                return CacheOperationStatus.UNKNOWN_CACHE;
+            }
+            case OperationStatus.UNKNOWN_KEY -> {
+                return CacheOperationStatus.UNKNOWN_KEY;
+            }
+            case OperationStatus.UNKNOWN_SUBSCRIPTION -> {
+                return CacheOperationStatus.UNKNOWN_SUBSCRIPTION;
+            }
+            case OperationStatus.SUCCESS -> {
+                return CacheOperationStatus.SUCCESS;
+            }
+            case OperationStatus.NULL_VAL -> {
+                return CacheOperationStatus.NULL_VAL;
+            }
+            case OperationStatus.NONE -> {
+                return CacheOperationStatus.NONE;
+            }
+            case OperationStatus.ERROR -> {
+                return CacheOperationStatus.ERROR;
+            }
+        }
+
+        return CacheOperationStatus.NONE;
+    }
+
     @Override
     public void decodeAllCacheEntriesResult(DirectBuffer buffer, int offset, GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> getCacheEntriesResult) {
         allCacheEntriesResultDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var status = allCacheEntriesResultDecoder.status();
+        var status = getOperationStatus(allCacheEntriesResultDecoder.status());
         var eob = allCacheEntriesResultDecoder.endOfBatch();
 
         getCacheEntriesResult.clear();
@@ -65,7 +99,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     @Override
     public void decodeGetCacheEntryResult(DirectBuffer buffer, int offset, GetCacheEntryResult<ReusableString, ReusableString, ReusableString> getCacheEntryResult) {
         getCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var status = getCacheEntryDecoder.status();
+        var status = getOperationStatus(getCacheEntryDecoder.status());
         var cacheID = getCacheEntryDecoder.cacheId();
         var key = getCacheEntryDecoder.key();
         var value = getCacheEntryDecoder.value();
@@ -83,7 +117,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     public void decodeAddCacheEntryResult(DirectBuffer buffer, int offset, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult) {
         addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
-        var status = addCacheEntryDecoder.status();
+        var status = getOperationStatus(addCacheEntryDecoder.status());
         var cacheId = addCacheEntryDecoder.cacheId();
         var key = addCacheEntryDecoder.key();
         var requestId = addCacheEntryDecoder.requestId();
@@ -100,7 +134,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     public void decodeCacheEntryRemoved(DirectBuffer buffer, int offset, RemoveCacheEntryResult<ReusableString, ReusableString> removeCacheEntryResult) {
         cacheEntryRemovedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
-        var status = cacheEntryRemovedDecoder.status();
+        var status = getOperationStatus(cacheEntryRemovedDecoder.status());
         var cacheId = cacheEntryRemovedDecoder.cacheId();
         var key = cacheEntryRemovedDecoder.key();
         var requestId = cacheEntryRemovedDecoder.requestId();
@@ -116,7 +150,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     public void decodeCacheCleared(DirectBuffer buffer, int offset, ClearCacheResult<ReusableString> clearCacheResult) {
         cacheClearedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
-        var status = cacheClearedDecoder.status();
+        var status = getOperationStatus(cacheClearedDecoder.status());
         var cacheId = cacheClearedDecoder.cacheId();
         var requestId = cacheClearedDecoder.requestId();
 
@@ -130,7 +164,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     public void decodeCacheDeleted(DirectBuffer buffer, int offset, DeleteCacheResult<ReusableString> deleteCacheResult) {
         cacheDeletedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
-        var status = cacheDeletedDecoder.status();
+        var status = getOperationStatus(cacheDeletedDecoder.status());
         var cacheId = cacheDeletedDecoder.cacheId();
         var requestId = cacheDeletedDecoder.requestId();
 
@@ -143,7 +177,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     @Override
     public void decodeAllCacheStatsResult(DirectBuffer buffer, int offset, CacheStatsResult<ReusableString> cacheStatsResult) {
         allCacheStatsResultDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var status = allCacheStatsResultDecoder.status();
+        var status = getOperationStatus(allCacheStatsResultDecoder.status());
         cacheStatsResult.clear();
         cacheStatsResult.setOperationStatus(status);
 
@@ -171,7 +205,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     public void decodeCacheSubscribeResult(DirectBuffer buffer, int offset, CacheSubscriptionResult<ReusableString> cacheSubscriptionResult) {
         cacheSubscriptionResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
-        var status = cacheSubscriptionResponseDecoder.status();
+        var status = getOperationStatus(cacheSubscriptionResponseDecoder.status());
         var cacheId = cacheSubscriptionResponseDecoder.cacheId();
         var requestId = cacheSubscriptionResponseDecoder.requestId();
 
@@ -185,7 +219,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     public void decodeCacheUnsubscribeResult(DirectBuffer buffer, int offset, CacheUnsubscribeResult<ReusableString> cacheUnsubscribeResult) {
         cacheUnsubscribeResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
-        var status = cacheUnsubscribeResponseDecoder.status();
+        var status = getOperationStatus(cacheUnsubscribeResponseDecoder.status());
         var cacheId = cacheUnsubscribeResponseDecoder.cacheId();
         var requestId = cacheUnsubscribeResponseDecoder.requestId();
 

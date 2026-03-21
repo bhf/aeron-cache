@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.models.results;
 
 import com.bhf.aeroncache.annotations.Flyweight;
-import com.bhf.aeroncache.messages.OperationStatus;
+import com.bhf.aeroncache.messages.CacheOperationStatus;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
@@ -24,7 +24,7 @@ public class AddCacheEntryResult<I extends Reusable, K extends Reusable> impleme
     boolean entryAdded;
     K entryKey;
     final RequestId requestId = new RequestId();
-    OperationStatus status = OperationStatus.NONE;
+    CacheOperationStatus status = CacheOperationStatus.NONE;
 
     public AddCacheEntryResult(I cacheID, K entryKey) {
         this.cacheId = cacheID;
@@ -48,7 +48,7 @@ public class AddCacheEntryResult<I extends Reusable, K extends Reusable> impleme
         entryKey.clear();
         cacheId.clear();
         requestId.clear();
-        status = OperationStatus.NONE;
+        status = CacheOperationStatus.NONE;
     }
 
     /**

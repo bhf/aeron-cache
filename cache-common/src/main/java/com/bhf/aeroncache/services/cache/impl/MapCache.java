@@ -1,6 +1,5 @@
 package com.bhf.aeroncache.services.cache.impl;
 
-import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
@@ -54,7 +53,7 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
         newValue.copyFrom(value);
         cache.put(newKey, newValue);
         addCacheEntryResult.setEntryAdded(true);
-        addCacheEntryResult.setStatus(OperationStatus.SUCCESS);
+        addCacheEntryResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS);
         stats.addedCount++;
         stats.size = cache.size();
         return addCacheEntryResult;
@@ -67,10 +66,10 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
 
         if (cache.containsKey(key)) {
             getCacheEntryResult.getEntryValue().copyFrom(cache.get(key));
-            getCacheEntryResult.setStatus(OperationStatus.SUCCESS);
+            getCacheEntryResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS);
         } else {
             getCacheEntryResult.getEntryValue().copyFrom(emptyValue);
-            getCacheEntryResult.setStatus(OperationStatus.UNKNOWN_KEY);
+            getCacheEntryResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_KEY);
         }
 
         return getCacheEntryResult;
@@ -83,7 +82,7 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
         var removed = cache.remove(key);
         removeCacheEntryResult.setRemoved(removed != null);
         removeCacheEntryResult.setStatus(removed != null ?
-                OperationStatus.SUCCESS : OperationStatus.UNKNOWN_KEY);
+                com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS : com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_KEY);
         stats.removedCount++;
         stats.size = cache.size();
         return removeCacheEntryResult;
@@ -93,7 +92,7 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
     public ClearCacheResult<I> clearEntries() {
         clearCacheResult.clear();
         cache.clear();
-        clearCacheResult.setStatus(OperationStatus.SUCCESS);
+        clearCacheResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS);
         stats.clearedCount++;
         stats.size = 0;
         return clearCacheResult;

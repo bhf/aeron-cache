@@ -1,6 +1,5 @@
 package com.bhf.aeroncache.services.cachemanager.impl;
 
-import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.Cache;
@@ -66,7 +65,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
 
             log.info("Loading snapshot on cache Id: "+cacheId);
 
-            if (cacheCreateResult.getStatus() == OperationStatus.SUCCESS) {
+            if (cacheCreateResult.getStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
                 var cache = getCache(cacheId);
                 cache.loadSnapshot(buffer, offset);
                 cache.getCacheStats().getCacheId().copyFrom(cacheId);
@@ -96,9 +95,9 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
         var cache = getCache(cacheId);
         if (cache != null) {
             cache.clearEntries();
-            clearCacheResult.setStatus(OperationStatus.SUCCESS);
+            clearCacheResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS);
         } else {
-            clearCacheResult.setStatus(OperationStatus.UNKNOWN_CACHE);
+            clearCacheResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
         }
         return clearCacheResult;
     }
@@ -109,7 +108,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
         cacheCreationResult.getCacheId().copyFrom(cacheId);
 
         if (caches.containsKey(cacheId)) {
-            cacheCreationResult.setStatus(OperationStatus.CACHE_EXISTS);
+            cacheCreationResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.CACHE_EXISTS);
             return cacheCreationResult;
         }
 
@@ -117,7 +116,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
         I newKey = indexSupplier.get();
         newKey.copyFrom(cacheId);
         caches.put(newKey, cache);
-        cacheCreationResult.setStatus(OperationStatus.SUCCESS);
+        cacheCreationResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS);
         return cacheCreationResult;
     }
 
@@ -132,7 +131,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
         }
 
         deleteCacheResult.setStatus(removed != null ?
-                OperationStatus.SUCCESS : OperationStatus.UNKNOWN_CACHE);
+                com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS : com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
         return deleteCacheResult;
     }
 
@@ -146,7 +145,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
             removeCacheEntryResult.getKey().copyFrom(result.getKey());
             removeCacheEntryResult.setStatus(result.getStatus());
         } else {
-            removeCacheEntryResult.setStatus(OperationStatus.UNKNOWN_CACHE);
+            removeCacheEntryResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
         }
         return removeCacheEntryResult;
     }
@@ -162,7 +161,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
             getCacheEntryResult.getEntryValue().copyFrom(result.getEntryValue());
             getCacheEntryResult.setStatus(result.getStatus());
         } else {
-            getCacheEntryResult.setStatus(OperationStatus.UNKNOWN_CACHE);
+            getCacheEntryResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
         }
         return getCacheEntryResult;
     }
@@ -173,10 +172,10 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
         getAllCacheEntriesResult.getCacheId().copyFrom(cacheId);
         var cache = getCache(cacheId);
         if (cache != null) {
-            getAllCacheEntriesResult.setStatus(OperationStatus.SUCCESS);
+            getAllCacheEntriesResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS);
             getAllCacheEntriesResult.getValues().putAll(cache.getAllEntries());
         } else {
-            getAllCacheEntriesResult.setStatus(OperationStatus.UNKNOWN_CACHE);
+            getAllCacheEntriesResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
         }
         return getAllCacheEntriesResult;
     }

@@ -6,7 +6,6 @@ import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.http.config.HttpNearCacheIdleStrategies;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.responses.*;
-import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -313,7 +312,7 @@ public class NearCacheApplication {
             log.warn("Cluster not connected");
             ctx.status(HTTPStatusUtils.SERVICE_NOT_LIVE);
             var errorResponse = new RequestErrorResponse("Cluster not connected", ErrorMessages.CHECK_ALL_VALUES,
-                    OperationStatus.ERROR);
+                    com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.json(errorResponse);
             ((JavalinServletContext) ctx).getTasks().clear();
         }
@@ -392,7 +391,7 @@ public class NearCacheApplication {
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
-                    OperationStatus.ERROR);
+                    com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -412,7 +411,7 @@ public class NearCacheApplication {
         CompletableFuture<GetItemResponse> future = getItemFromSourceCache(ctx, cacheId, key);
         var response = future.get();
 
-        if(response.operationStatus() == OperationStatus.SUCCESS){
+        if(response.operationStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS){
             nearCacheManager.put(cacheId, key, response.value());
             subscribeToCache(cacheId);
         }
@@ -436,7 +435,7 @@ public class NearCacheApplication {
         if(localCache.containsKey(key)){
             var result = localCache.get(key);
             ctx.status(HTTPStatusUtils.OK);
-            ctx.json(new GetItemResponse(cacheId, key, result, OperationStatus.SUCCESS));
+            ctx.json(new GetItemResponse(cacheId, key, result, com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS));
         }
         else{
             returnItemFromSourceCache(ctx, key, cacheId);
@@ -457,7 +456,7 @@ public class NearCacheApplication {
         CompletableFuture<GetItemResponse> future = getItemFromSourceCache(ctx, cacheId, key);
         var response = future.get();
 
-        if(response.operationStatus() == OperationStatus.SUCCESS){
+        if(response.operationStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS){
             nearCacheManager.put(cacheId, key, response.value());
         }
         ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
@@ -470,7 +469,7 @@ public class NearCacheApplication {
         CompletableFuture.runAsync(() -> observingPublisher.getCacheEntry(requestId, cacheId, key, c -> {
             log.info("Get item response from cluster on cacheId {}, key {}, value {}", c.getCacheId(),
                     c.getEntryKey(), c.getEntryValue());
-            var noCache = c.getStatus() == OperationStatus.UNKNOWN_CACHE;
+            var noCache = c.getStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE;
             var response = noCache ?
                     new GetItemResponse("0", "NA", "NA", c.getStatus()) :
                     new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(),
@@ -493,7 +492,7 @@ public class NearCacheApplication {
             if (specialCharacters.matcher(request.cacheId()).find()) {
                 var errorMsg = "Cache ID shouldn't contain special characters";
                 var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_SPECIAL_CHARACTERS,
-                        OperationStatus.ERROR);
+                        com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
                 ctx.status(HTTPStatusUtils.BAD_REQUEST);
                 ctx.json(badRequest);
                 return;
@@ -511,12 +510,12 @@ public class NearCacheApplication {
 
             var response = future.get();
 
-            if (response.operationStatus() == OperationStatus.SUCCESS ||
-                    response.operationStatus() == OperationStatus.CACHE_EXISTS) {
+            if (response.operationStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS ||
+                    response.operationStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.CACHE_EXISTS) {
                 subscribeToCache(request.cacheId());
             }
 
-            if(response.operationStatus() == OperationStatus.SUCCESS){
+            if(response.operationStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS){
                 statsTracker.getTotalCaches().incrementAndGet();
             }
 
@@ -526,7 +525,7 @@ public class NearCacheApplication {
             var errorMsg = STR."Badly formed request to create cache from request: \{ctx.body()}";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, OperationStatus.ERROR);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }

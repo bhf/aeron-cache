@@ -3,7 +3,6 @@ package com.bhf.aeroncache.ws.application;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
-import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.results.CacheEntryUpdateResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.DeleteCacheResult;
@@ -74,11 +73,11 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
      */
     private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, String cacheId, Consumer<Void> subscriptionFailureHandler) {
         sendCacheSubscribe(requestId, cacheId, subscriptionResult -> {
-            if (subscriptionResult.getStatus() != OperationStatus.SUCCESS) {
+            if (subscriptionResult.getStatus() != com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
                 var errorMsg = STR."Couldn't subscribe to cache \{cacheId}, status=\{subscriptionResult.getStatus()}";
                 log.warn(errorMsg);
 
-                if (subscriptionResult.getStatus() != OperationStatus.DUPLICATE_SUBSCRIPTION) {
+                if (subscriptionResult.getStatus() != com.bhf.aeroncache.messages.CacheOperationStatus.DUPLICATE_SUBSCRIPTION) {
                     log.warn("Calling subscription failure handler to close WS session");
                     subscriptionFailureHandler.accept(null);
                 }
@@ -98,7 +97,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
      */
     private void sendCacheUnsubscribeRequest(AeronCache cluster, String requestId, String cacheId) {
         sendCacheUnsubscribe(requestId, cacheId, unsubscribeResult -> {
-            if (unsubscribeResult.getStatus() != OperationStatus.SUCCESS) {
+            if (unsubscribeResult.getStatus() != com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
                 log.warn("Couldn't unsubscribe from cache {}, request ID {}", cacheId, requestId);
             } else {
                 var wsSubscriptions = cacheSubscriptions.remove(cacheId);

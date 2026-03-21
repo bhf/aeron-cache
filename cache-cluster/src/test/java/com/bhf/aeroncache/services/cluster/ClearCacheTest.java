@@ -5,7 +5,6 @@ import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
 import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
-import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.ClearCacheRequestDetails;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.services.TestUtils;
@@ -75,7 +74,7 @@ class ClearCacheTest {
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
-        assertEquals(OperationStatus.SUCCESS, result.getStatus());
+        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS, result.getStatus());
 
         // Calling the tracing service is part of the public API of the SUT
         verify(tracingService, times(1)).startHandleClearCache(any(ClearCacheRequestDetails.class));
@@ -105,7 +104,7 @@ class ClearCacheTest {
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
-        assertEquals(OperationStatus.UNKNOWN_CACHE, result.getStatus());
+        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE, result.getStatus());
     }
 
 }

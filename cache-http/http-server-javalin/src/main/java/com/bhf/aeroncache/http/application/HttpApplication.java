@@ -7,7 +7,6 @@ import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
-import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
@@ -337,7 +336,7 @@ public class HttpApplication {
             log.warn("Cluster not connected");
             ctx.status(HTTPStatusUtils.SERVICE_NOT_LIVE);
             var errorResponse = new RequestErrorResponse("Cluster not connected", ErrorMessages.CHECK_ALL_VALUES,
-                    OperationStatus.ERROR);
+                    com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.json(errorResponse);
             ((JavalinServletContext) ctx).getTasks().clear();
         }
@@ -395,7 +394,7 @@ public class HttpApplication {
             var errorMsg = "Badly formed request to get cache stats";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, OperationStatus.ERROR);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -488,7 +487,7 @@ public class HttpApplication {
 
             var response = future.get();
 
-            if (response.operationStatus() == OperationStatus.SUCCESS) {
+            if (response.operationStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
                 allCaches.remove(response.cacheId());
                 statsTracker.getTotalCaches().decrementAndGet();
             }
@@ -500,7 +499,7 @@ public class HttpApplication {
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
-                    OperationStatus.ERROR);
+                    com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -529,7 +528,7 @@ public class HttpApplication {
 
             var response = future.get();
 
-            if (response.operationStatus() == OperationStatus.SUCCESS) {
+            if (response.operationStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
                 statsTracker.getTotalItems().decrementAndGet();
             }
 
@@ -541,7 +540,7 @@ public class HttpApplication {
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
-                    OperationStatus.ERROR);
+                    com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -572,7 +571,7 @@ public class HttpApplication {
             var errorMsg = STR."Badly formed request to clear cache with ID \{ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, OperationStatus.ERROR);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -595,7 +594,7 @@ public class HttpApplication {
             CompletableFuture.runAsync(() -> observingPublisher.getCacheEntry(requestId, cacheId, key, c -> {
                 log.info("Get item response from cluster on cacheId {}, key {}, value {}", c.getCacheId(),
                         c.getEntryKey(), c.getEntryValue());
-                var noCache = c.getStatus() == OperationStatus.UNKNOWN_CACHE;
+                var noCache = c.getStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE;
                 var response = noCache ?
                         new GetItemResponse("0", "NA", "NA", c.getStatus()) :
                         new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(),
@@ -612,7 +611,7 @@ public class HttpApplication {
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
-                    OperationStatus.ERROR);
+                    com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -641,7 +640,7 @@ public class HttpApplication {
 
             var response = future.get();
 
-            if (response.operationStatus() == OperationStatus.SUCCESS) {
+            if (response.operationStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
                 statsTracker.getTotalItems().incrementAndGet();
             }
 
@@ -651,7 +650,7 @@ public class HttpApplication {
             var errorMsg = STR."Badly formed request to put item from request: \{ctx.body()}";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, OperationStatus.ERROR);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -670,7 +669,7 @@ public class HttpApplication {
             if (specialCharacters.matcher(request.cacheId()).find()) {
                 var errorMsg = "Cache ID shouldn't contain special characters";
                 var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_SPECIAL_CHARACTERS,
-                        OperationStatus.ERROR);
+                        com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
                 ctx.status(HTTPStatusUtils.BAD_REQUEST);
                 ctx.json(badRequest);
                 return;
@@ -688,7 +687,7 @@ public class HttpApplication {
 
             var response = future.get();
 
-            if (response.operationStatus() == OperationStatus.SUCCESS) {
+            if (response.operationStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
                 allCaches.add(response.cacheId());
                 statsTracker.getTotalCaches().incrementAndGet();
             }
@@ -699,7 +698,7 @@ public class HttpApplication {
             var errorMsg = STR."Badly formed request to create cache from request: \{ctx.body()}";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, OperationStatus.ERROR);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
@@ -719,9 +718,9 @@ public class HttpApplication {
             CompletableFuture<GetCacheResponse> future = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> observingPublisher.getCacheEntries(requestId, cacheId, c -> {
                 log.info("Get cache content response from cluster on cacheId {}", c.getCacheId());
-                var noCache = c.getStatus() == OperationStatus.UNKNOWN_CACHE;
+                var noCache = c.getStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE;
                 var response = noCache ?
-                        new GetCacheResponse("0", OperationStatus.UNKNOWN_CACHE, List.of()) :
+                        new GetCacheResponse("0", com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE, List.of()) :
                         new GetCacheResponse("0", c.getStatus(), buildItemsList(c));
                 future.complete(response);
             }));
@@ -733,7 +732,7 @@ public class HttpApplication {
             var errorMsg = STR."Badly formed request to get cache content for cache ID \{ctx.pathParam("cacheId")}";
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, OperationStatus.ERROR);
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, com.bhf.aeroncache.messages.CacheOperationStatus.ERROR);
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }

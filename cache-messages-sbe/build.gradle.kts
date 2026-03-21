@@ -21,7 +21,6 @@ version = "1.0-SNAPSHOT"
 
 dependencies {
     implementation(libs.sbetool)
-    implementation(project(":cache-spi"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit)
     testImplementation(libs.junit.params)
