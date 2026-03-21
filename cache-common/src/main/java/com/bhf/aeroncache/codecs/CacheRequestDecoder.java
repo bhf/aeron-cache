@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.services.cluster;
+package com.bhf.aeroncache.codecs;
 
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;

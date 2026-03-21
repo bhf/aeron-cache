@@ -2,6 +2,8 @@ package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.CreateCacheRequestDetails;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
@@ -34,8 +36,8 @@ import static org.mockito.Mockito.verify;
 class CreateCacheTest {
 
     private final Header header = new Header(0, 0);
-    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
-    private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
+    private final CacheResponseDecoder cacheResponseDecoder = new ReusableStringCacheResponseDecoder();
+    private final CacheRequestEncoder cacheRequestEncoder = new RegularStringCacheRequestEncoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private CreateCacheResult<ReusableString> result;

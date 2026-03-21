@@ -1,8 +1,8 @@
 package com.bhf.aeroncache.sse.application;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.codecs.CacheRequestEncoder;
-import com.bhf.aeroncache.codecs.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -283,7 +283,7 @@ public class SSEApplication extends Jooby {
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
             }
 
-            client = new AeronCacheClusterListener(new CacheResponseDecoder());
+            client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder());
             client.setCacheResultsCallbacks(subscriptionService);
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
@@ -321,9 +321,9 @@ public class SSEApplication extends Jooby {
             var clusterMessagePublisherIdleStrategy = SSEIdleStrategies.clusterMessagePublisherIdleStrategy.get();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
                     new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, new CacheRequestEncoder()), "AeronCache-CacheClient-Agent") :
+                            clusterMessagePublisherIdleStrategy, new RegularStringCacheRequestEncoder()), "AeronCache-CacheClient-Agent") :
                     new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, new CacheRequestEncoder()), "AeronCache-CacheClient-Agent");
+                            clusterMessagePublisherIdleStrategy, new RegularStringCacheRequestEncoder()), "AeronCache-CacheClient-Agent");
 
             var errorHandler = aeronCluster != null ? ClusterUtils.getAgentRunnerErrorHandler(aeronCluster) :
                     new RethrowingErrorHandler();

@@ -2,7 +2,7 @@ package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.codecs.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +23,7 @@ class DeleteCachePublisherTest {
     ClusterMessagePublisher sut;
 
     @Mock
-    CacheRequestEncoder cacheRequestEncoder;
+    RegularStringCacheRequestEncoder cacheRequestEncoder;
 
     @Mock
     private AeronCache cluster;

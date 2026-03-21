@@ -3,6 +3,8 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.GetAllCacheEntriesRequestDetails;
 import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
@@ -36,13 +38,13 @@ import static org.mockito.Mockito.verify;
 class GetCacheEntriesTest {
 
     private final Header header = new Header(0, 0);
-    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
+    private final CacheResponseDecoder cacheResponseDecoder = new ReusableStringCacheResponseDecoder();
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
     private GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
-    private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
+    private final CacheRequestEncoder cacheRequestEncoder = new RegularStringCacheRequestEncoder();
 
     @BeforeEach
     void setup() {

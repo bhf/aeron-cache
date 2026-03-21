@@ -1,8 +1,8 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.codecs.CacheRequestEncoder;
-import com.bhf.aeroncache.codecs.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
@@ -42,7 +42,7 @@ public class AsyncConsumerPerfTest {
 
         var idleStrategy = new BackoffIdleStrategy();
 
-        var client = new AeronCacheClusterListener(new CacheResponseDecoder());
+        var client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder());
         client.setCacheResultsCallbacks(observingPublisher);
 
         var podName = System.getenv("POD_ADDRESS");
@@ -93,7 +93,7 @@ public class AsyncConsumerPerfTest {
             }
         };
 
-        var agent = new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy(), new CacheRequestEncoder()), "AeronCache-CacheClient-Agent");
+        var agent = new CacheClientAgent(cluster, rb, idleStrategy, new ClusterMessagePublisher(cluster, new BusySpinIdleStrategy(), new RegularStringCacheRequestEncoder()), "AeronCache-CacheClient-Agent");
         return agent;
     }
 

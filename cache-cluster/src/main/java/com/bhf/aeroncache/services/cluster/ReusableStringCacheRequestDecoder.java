@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cluster;
 
+import com.bhf.aeroncache.codecs.CacheRequestDecoder;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.types.ReusableString;

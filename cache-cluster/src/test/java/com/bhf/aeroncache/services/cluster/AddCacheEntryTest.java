@@ -3,6 +3,8 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.messages.OperationStatus;
 import com.bhf.aeroncache.models.requests.AddCacheEntryRequestDetails;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
@@ -40,8 +42,8 @@ class AddCacheEntryTest {
     private AddCacheEntryResult<ReusableString, ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
-    private final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
-    private final CacheResponseDecoder cacheResponseDecoder = new CacheResponseDecoder();
+    private final CacheRequestEncoder cacheRequestEncoder = new RegularStringCacheRequestEncoder();
+    private final CacheResponseDecoder cacheResponseDecoder = new ReusableStringCacheResponseDecoder();
 
     @BeforeEach
     void setup() {

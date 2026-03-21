@@ -7,7 +7,7 @@ import com.bhf.aeroncache.types.ReusableString;
 import org.agrona.MutableDirectBuffer;
 import org.apache.logging.log4j.util.Strings;
 
-public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<ReusableString, ReusableString, ReusableString> {
+public class ReusableStringCacheResponseEncoder implements com.bhf.aeroncache.codecs.CacheResponseEncoder<ReusableString, ReusableString, ReusableString> {
 
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final CacheCreatedEncoder cacheCreatedEncoder = new CacheCreatedEncoder();

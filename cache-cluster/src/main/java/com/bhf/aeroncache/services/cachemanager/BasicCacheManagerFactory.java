@@ -4,8 +4,8 @@ import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cache.CacheEntryCodec;
 import com.bhf.aeroncache.services.cache.CacheIdCodec;
 import com.bhf.aeroncache.services.cachemanager.impl.MapCacheManager;
-import com.bhf.aeroncache.services.cluster.CacheRequestDecoder;
-import com.bhf.aeroncache.services.cluster.CacheResponseEncoder;
+import com.bhf.aeroncache.codecs.CacheRequestDecoder;
+import com.bhf.aeroncache.codecs.CacheResponseEncoder;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;

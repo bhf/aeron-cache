@@ -1,8 +1,8 @@
 package com.bhf.aeroncache.http.application;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.codecs.CacheRequestEncoder;
-import com.bhf.aeroncache.codecs.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.http.config.HttpNearCacheIdleStrategies;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.responses.*;
@@ -101,7 +101,7 @@ public class NearCacheApplication {
                 CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cache, rb);
 
                 BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cache,
-                        HttpNearCacheIdleStrategies.blockingPublisherIdleStrategy.get(), new CacheRequestEncoder());
+                        HttpNearCacheIdleStrategies.blockingPublisherIdleStrategy.get(), new RegularStringCacheRequestEncoder());
                 observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher,
                         blockingRequestPublisher);
 
@@ -114,7 +114,7 @@ public class NearCacheApplication {
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
             }
 
-            client = new AeronCacheClusterListener(new CacheResponseDecoder());
+            client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder());
             client.setCacheResultsCallbacks(new GroupedResponseHandler(
                     List.of(observingPublisher,
                     subscriptionService)));
@@ -157,9 +157,9 @@ public class NearCacheApplication {
             var clusterMessagePublisherIdleStrategy = HttpNearCacheIdleStrategies.clusterMessagePublisherIdleStrategy.get();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
                     new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, new CacheRequestEncoder()), "AeronCache-ClusterClient-Agent") :
+                            clusterMessagePublisherIdleStrategy, new RegularStringCacheRequestEncoder()), "AeronCache-ClusterClient-Agent") :
                     new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, new CacheRequestEncoder()), "AeronCache-CacheClient-Agent");
+                            clusterMessagePublisherIdleStrategy, new RegularStringCacheRequestEncoder()), "AeronCache-CacheClient-Agent");
 
             var errorHandler = aeronCluster != null ? ClusterUtils.getAgentRunnerErrorHandler(aeronCluster) :
                     new RethrowingErrorHandler();

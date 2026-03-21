@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services;
 
 import com.bhf.aeroncache.application.CacheSnapshotCodecUtils;
 import com.bhf.aeroncache.codecs.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.ReusableStringCacheRequestDecoder;
 import com.bhf.aeroncache.services.cluster.ReusableStringCacheResponseEncoder;
@@ -19,7 +20,7 @@ import java.util.UUID;
 
 public class TestUtils {
 
-    private static final CacheRequestEncoder cacheRequestEncoder = new CacheRequestEncoder();
+    private static final CacheRequestEncoder cacheRequestEncoder = new RegularStringCacheRequestEncoder();
     private static final Header header = new Header(0, 0);
     /**
      * The mocked session copies response data over to the

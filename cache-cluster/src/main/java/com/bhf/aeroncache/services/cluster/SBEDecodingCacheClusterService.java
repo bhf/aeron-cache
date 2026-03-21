@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cluster;
 
+import com.bhf.aeroncache.codecs.CacheRequestDecoder;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
@@ -11,8 +12,6 @@ import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 
-import java.util.function.Supplier;
-
 /**
  * Decode SBE messages representing cache actions. This level of
  * abstraction is an implementation which does have responsibility for
@@ -23,7 +22,7 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
 
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
     private final CacheRequestDecoder<I, K, V> decoder;
-    private final CacheResponseEncoder<I, K, V> encoder;
+    private final com.bhf.aeroncache.codecs.CacheResponseEncoder<I, K, V> encoder;
 
     public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory) {
         super(nodeId, tracingService, cacheManagerFactory);

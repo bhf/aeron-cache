@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.codecs.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.messages.CacheEntryResultEncoder;
 import com.bhf.aeroncache.messages.MessageHeaderEncoder;
 import com.bhf.aeroncache.models.results.GetCacheEntryResult;
@@ -31,7 +31,7 @@ class CacheEntryResultTest {
     @Mock
     private CacheResponseHandler callbackHandler;
     @Mock
-    private CacheResponseDecoder cacheResponseDecoder;
+    private ReusableStringCacheResponseDecoder cacheResponseDecoder;
 
     @BeforeEach
     void setup() {

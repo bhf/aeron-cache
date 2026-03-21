@@ -1,8 +1,8 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.codecs.CacheRequestEncoder;
-import com.bhf.aeroncache.codecs.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
@@ -87,7 +87,7 @@ public class ControlledDutyCyclePerfTest {
         System.out.println("EGRESS_IP: " + egressIP);
         final var ingressEndpoints = ingressEndpoints(Arrays.asList(hostnames));
 
-        final var client = new AeronCacheClusterListener(new CacheResponseDecoder());
+        final var client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder());
 
         Map<Integer, StringBuilder> payloadSizeToDistro = new TreeMap<>();
 
@@ -128,7 +128,7 @@ public class ControlledDutyCyclePerfTest {
 
             ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(aeronCache, rb);
-            BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(aeronCache, new BusySpinIdleStrategy(), new CacheRequestEncoder());
+            BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(aeronCache, new BusySpinIdleStrategy(), new RegularStringCacheRequestEncoder());
             var observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher, blockingRequestPublisher);
 
             client.setCacheResultsCallbacks(observingPublisher);
