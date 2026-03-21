@@ -5,7 +5,7 @@ import com.bhf.aeroncache.models.results.*;
 import org.agrona.DirectBuffer;
 
 public interface CacheResponseDecoder<I extends Reusable, K extends Reusable, V extends Reusable> {
-    void decodeCacheCreated(CreateCacheResult<I> createCacheResult, DirectBuffer buffer, int offset);
+    void decodeCacheCreated(DirectBuffer buffer, int offset, CreateCacheResult<I> createCacheResult);
 
     void decodeAllCacheEntriesResult(GetAllCacheEntriesResult<I, K, V> getCacheEntriesResult, DirectBuffer buffer, int offset);
 

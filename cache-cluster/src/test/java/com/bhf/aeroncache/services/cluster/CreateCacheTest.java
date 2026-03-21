@@ -68,7 +68,7 @@ class CreateCacheTest {
         // Act
         long ts = System.currentTimeMillis();
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeCacheCreated(result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheCreated(responseBuffer, 0, result);
 
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
@@ -94,7 +94,7 @@ class CreateCacheTest {
         // Act
         length = cacheRequestEncoder.encodeCreateCacheRequest(requestId, cacheId, requestBuffer);
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeCacheCreated(result, responseBuffer, 0);
+        cacheResponseDecoder.decodeCacheCreated(responseBuffer, 0, result);
 
         // Assert
         assertEquals(OperationStatus.CACHE_EXISTS, result.getStatus());

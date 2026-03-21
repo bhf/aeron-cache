@@ -24,7 +24,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     private final CacheEntryUpdateDecoder cacheEntryUpdateDecoder = new CacheEntryUpdateDecoder();
 
     @Override
-    public void decodeCacheCreated(CreateCacheResult<ReusableString> createCacheResult, DirectBuffer buffer, int offset) {
+    public void decodeCacheCreated(DirectBuffer buffer, int offset, CreateCacheResult<ReusableString> createCacheResult) {
         cacheCreatedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var status = cacheCreatedDecoder.status();
         var cacheId = cacheCreatedDecoder.cacheId();

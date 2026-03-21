@@ -56,9 +56,8 @@ class CacheCreatedResultTest {
         // Assert
         verify(
                 cacheResponseDecoder, times(1)).decodeCacheCreated(
-                any(CreateCacheResult.class),
-                any(DirectBuffer.class),
-                anyInt());
+                any(DirectBuffer.class), anyInt(), any(CreateCacheResult.class)
+        );
 
         verify(callbackHandler, times(1))
                 .handleCacheCreated((any(CreateCacheResult.class)));
