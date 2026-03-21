@@ -56,9 +56,8 @@ class CacheDeletedResultTest {
         // Assert
         verify(
                 cacheResponseDecoder, times(1)).decodeCacheDeleted(
-                any(DeleteCacheResult.class),
-                any(DirectBuffer.class),
-                anyInt());
+                any(DirectBuffer.class), anyInt(), any(DeleteCacheResult.class)
+        );
 
         verify(callbackHandler, times(1))
                 .handleCacheDeleted(any(DeleteCacheResult.class));
