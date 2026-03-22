@@ -1,10 +1,7 @@
 package com.bhf.aeroncache.application;
 
 import com.bhf.aeroncache.application.unclustered.SingleNodeApplication;
-import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
-import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseEncoder;
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.*;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
@@ -32,7 +29,8 @@ import org.agrona.concurrent.ShutdownSignalBarrier;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Supplier;
+import java.util.Optional;
+import java.util.ServiceLoader;
 
 import static java.lang.Integer.parseInt;
 
@@ -270,13 +268,15 @@ public class CacheNodeApplication {
         return new SBEDecodingCacheClusterService<>(String.valueOf(nodeId), getTracingService(nodeId), cacheManagerFactory);
     }
 
-    private static CacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> getCacheManagerFactory() {
-        var encoder = new ReusableStringCacheResponseEncoder();
-        var decoder = new ReusableStringCacheRequestDecoder();
-        return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
-                SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, (Supplier)SupplierUtils.mapSupplier,
-                CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(), CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec(),
-                encoder, decoder);
+    private static CacheManagerFactory getCacheManagerFactory() {
+        ServiceLoader<CacheManagerFactory> service = ServiceLoader.load(CacheManagerFactory.class);
+        Optional<CacheManagerFactory> first = service.findFirst();
+
+        if (first.isPresent()) {
+            return first.get();
+        } else {
+            throw new IllegalStateException("No CacheManagerFactory found.");
+        }
     }
 
     private static CacheTracingService getTracingService(int nodeId) {
