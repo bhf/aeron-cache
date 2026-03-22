@@ -9,7 +9,6 @@ import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
 import com.bhf.aeroncache.services.cacheclient.CacheClientFactory;
-import com.bhf.aeroncache.services.cacheclient.MapCacheClientFactory;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
