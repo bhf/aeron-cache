@@ -3,7 +3,6 @@ package com.bhf.aeroncache.services.cache;
 import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
 import com.bhf.aeroncache.handlers.ClusterSessionEventHandler;
 import com.bhf.aeroncache.handlers.NoOpClusterSessionEventHandler;
-import com.bhf.aeroncache.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cacheclient.CacheClientSchemDetailsProvider;
 import com.bhf.aeroncache.types.ReusableString;
@@ -34,8 +33,6 @@ public class AeronCacheClusterListener implements EgressListener {
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
 
-    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-
     private final CacheResponseDecoder cacheResponseDecoder;
     private final CacheClientSchemDetailsProvider schemaDetails;
 
@@ -61,8 +58,8 @@ public class AeronCacheClusterListener implements EgressListener {
             final int offset,
             final int length,
             final Header header) {
-        headerDecoder.wrap(buffer, offset);
-        final int templateId = headerDecoder.templateId();
+
+        final int templateId = (buffer.getShort(offset + 2, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
 
         log.debug("Got client side message with TID {}", templateId);
 

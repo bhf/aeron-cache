@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.model;
+package com.bhf.aeroncache.models;
 
 /**
  * Message types for the {@link org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer}

@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.concurrent.ringbuffer.RingBuffer;
 
-import static com.bhf.aeroncache.model.CacheRequestMessageTypes.*;
-
 /**
  * Publish Aeron Cache requests into a {@link RingBuffer} to be processed by the
  * {@link org.agrona.concurrent.AgentRunner}.
@@ -23,7 +21,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
-        while ((claimIndex = rb.tryClaim(CREATE_CACHE_MSG_ID, desiredLength)) < 0) {
+        while ((claimIndex = rb.tryClaim(com.bhf.aeroncache.models.CacheRequestMessageTypes.CREATE_CACHE_MSG_ID, desiredLength)) < 0) {
         }
 
         try {
@@ -45,7 +43,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
-        while ((claimIndex = rb.tryClaim(ADD_CACHE_ENTRY_MSG_ID, desiredLength)) < 0) {
+        while ((claimIndex = rb.tryClaim(com.bhf.aeroncache.models.CacheRequestMessageTypes.ADD_CACHE_ENTRY_MSG_ID, desiredLength)) < 0) {
         }
 
         try {
@@ -69,7 +67,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
-        while ((claimIndex = rb.tryClaim(GET_CACHE_ENTRY_MSG_ID, desiredLength)) < 0) {
+        while ((claimIndex = rb.tryClaim(com.bhf.aeroncache.models.CacheRequestMessageTypes.GET_CACHE_ENTRY_MSG_ID, desiredLength)) < 0) {
         }
 
         try {
@@ -92,7 +90,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
-        while ((claimIndex = rb.tryClaim(CLEAR_CACHE_MSG_ID, desiredLength)) < 0) {
+        while ((claimIndex = rb.tryClaim(com.bhf.aeroncache.models.CacheRequestMessageTypes.CLEAR_CACHE_MSG_ID, desiredLength)) < 0) {
         }
 
         try {
@@ -114,7 +112,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
-        while ((claimIndex = rb.tryClaim(DELETE_CACHE_MSG_ID, desiredLength)) < 0) {
+        while ((claimIndex = rb.tryClaim(com.bhf.aeroncache.models.CacheRequestMessageTypes.DELETE_CACHE_MSG_ID, desiredLength)) < 0) {
         }
 
         try {
@@ -137,7 +135,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
-        while ((claimIndex = rb.tryClaim(REMOVE_CACHE_ENTRY_MSG_ID, desiredLength)) < 0) {
+        while ((claimIndex = rb.tryClaim(com.bhf.aeroncache.models.CacheRequestMessageTypes.REMOVE_CACHE_ENTRY_MSG_ID, desiredLength)) < 0) {
         }
 
         try {
@@ -160,7 +158,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
-        while ((claimIndex = rb.tryClaim(GET_CACHE_ENTRIES_MSG_ID, desiredLength)) < 0) {
+        while ((claimIndex = rb.tryClaim(com.bhf.aeroncache.models.CacheRequestMessageTypes.GET_CACHE_ENTRIES_MSG_ID, desiredLength)) < 0) {
         }
 
         try {
@@ -182,7 +180,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
-        while ((claimIndex = rb.tryClaim(GET_CACHE_STATS_MSG_ID, desiredLength)) < 0) {
+        while ((claimIndex = rb.tryClaim(com.bhf.aeroncache.models.CacheRequestMessageTypes.GET_CACHE_STATS_MSG_ID, desiredLength)) < 0) {
         }
 
         try {
@@ -203,7 +201,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
-        while ((claimIndex = rb.tryClaim(SUBSCRIBE_TO_CACHE_MSG_ID, desiredLength)) < 0) {
+        while ((claimIndex = rb.tryClaim(com.bhf.aeroncache.models.CacheRequestMessageTypes.SUBSCRIBE_TO_CACHE_MSG_ID, desiredLength)) < 0) {
         }
 
         try {
@@ -225,7 +223,7 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
-        while ((claimIndex = rb.tryClaim(UNSUBSCRIBE_TO_CACHE_MSG_ID, desiredLength)) < 0) {
+        while ((claimIndex = rb.tryClaim(com.bhf.aeroncache.models.CacheRequestMessageTypes.UNSUBSCRIBE_TO_CACHE_MSG_ID, desiredLength)) < 0) {
         }
 
         try {

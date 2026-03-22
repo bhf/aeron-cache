@@ -8,7 +8,7 @@ import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
-import static com.bhf.aeroncache.model.CacheRequestMessageTypes.*;
+import static com.bhf.aeroncache.models.CacheRequestMessageTypes.*;
 
 /**
  * An {@link Agent} implementation of an AeronCache Client that is run

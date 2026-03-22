@@ -5,7 +5,6 @@ import com.bhf.aeroncache.services.cache.CacheRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.CacheResponseHandler;
 import com.bhf.aeroncache.services.cache.ConsumingResponseHandler;
-import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.types.ReusableString;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -13,8 +12,7 @@ import lombok.extern.log4j.Log4j2;
 import java.util.function.Consumer;
 
 /**
- * A simple observer that delegates methods which don't pass in a {@link Consumer} directly
- * to the {@link ClusterMessagePublisher}.
+ * A simple observer that delegates methods which don't pass in a {@link Consumer}.
  * <p>
  */
 @RequiredArgsConstructor

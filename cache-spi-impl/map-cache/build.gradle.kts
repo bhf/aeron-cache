@@ -1,13 +1,10 @@
 plugins {
     id("java")
+    alias(libs.plugins.jmh)
 }
 
 group = "com.bhf.aeroncache"
 version = "1.0-SNAPSHOT"
-
-repositories {
-    mavenCentral()
-}
 
 dependencies {
     implementation(libs.aeron)
@@ -24,10 +21,17 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.mockito)
     testImplementation(libs.mockito.junit)
+    testImplementation(project(":cache-client"))
 }
 
 tasks.test {
     useJUnitPlatform()
     jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED")
     jvmArgs("--add-opens", "java.base/java.util.zip=ALL-UNNAMED")
+}
+
+jmh {
+    warmupIterations = 1
+    iterations = 5
+    fork = 1
 }

@@ -7,7 +7,6 @@ plugins {
 project.setProperty("mainClassName", "com.bhf.aeroncache.application.BasicPerfTest")
 
 dependencies {
-    implementation(project(":cache-messages-sbe"))
     implementation(project(":cache-cluster"))
     implementation(project(":cache-common"))
     implementation(project(":cache-spi"))
