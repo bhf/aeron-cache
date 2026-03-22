@@ -1,7 +1,8 @@
 package com.bhf.aeroncache.services.cache;
 
-import com.bhf.aeroncache.application.CacheSnapshotCodecUtils;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapshotCodec;
+import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,8 +26,8 @@ class MapCacheTest {
     void setup() {
         cache = new MapCache<>(SupplierUtils.stringSupplier, SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
-                CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(),
-                CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec());
+                new ReusableStringCacheIdSnapshotCodec(),
+                new ReusableStringCacheEntrySnapshotCodec());
     }
 
     /**
