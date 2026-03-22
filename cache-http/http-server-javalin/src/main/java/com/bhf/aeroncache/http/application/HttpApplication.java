@@ -2,7 +2,6 @@ package com.bhf.aeroncache.http.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
-import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
@@ -14,6 +13,8 @@ import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
+import com.bhf.aeroncache.services.cacheclient.CacheClientFactory;
+import com.bhf.aeroncache.services.cacheclient.MapCacheClientFactory;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
@@ -106,10 +107,15 @@ public class HttpApplication {
             final ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             System.out.println("Starting AeronCache Cluster Interface");
 
+            CacheClientFactory clientFactory = new MapCacheClientFactory();
+            var cacheRequestEncoder = clientFactory.getCacheRequestEncoder();
+            var responseDecoder = clientFactory.getCacheResponseDecoder();
+
             if (PRE_ENCODE_CACHE_REQUESTS) {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
                 // sending directly to the cluster
-                CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cache, rb);
+                CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cache, rb,
+                        HttpIdleStrategies.clusterMessagePublisherIdleStrategy.get(), cacheRequestEncoder);
 
                 BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cache,
                         HttpIdleStrategies.blockingPublisherIdleStrategy.get(), new RegularStringCacheRequestEncoder());
@@ -122,8 +128,7 @@ public class HttpApplication {
                 observingPublisher = new ObservingCacheRequestPublisher(rbPublisher);
             }
 
-
-            client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder());
+            client = new AeronCacheClusterListener(responseDecoder);
             client.setCacheResultsCallbacks(observingPublisher);
 
             var podName = System.getenv("POD_ADDRESS");
@@ -159,9 +164,9 @@ public class HttpApplication {
             var clusterMessagePublisherIdleStrategy = HttpIdleStrategies.clusterMessagePublisherIdleStrategy.get();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
                     new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, new RegularStringCacheRequestEncoder()), "AeronCache-ClusterClient-Agent") :
+                            clusterMessagePublisherIdleStrategy, cacheRequestEncoder), "AeronCache-ClusterClient-Agent") :
                     new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, new RegularStringCacheRequestEncoder()), "AeronCache-CacheClient-Agent");
+                            clusterMessagePublisherIdleStrategy, cacheRequestEncoder), "AeronCache-CacheClient-Agent");
 
             var errorHandler = aeronCluster != null ? ClusterUtils.getAgentRunnerErrorHandler(aeronCluster) :
                     new RethrowingErrorHandler();

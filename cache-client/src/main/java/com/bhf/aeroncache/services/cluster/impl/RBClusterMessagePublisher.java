@@ -1,9 +1,9 @@
 package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.BusySpinIdleStrategy;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 /**
@@ -16,8 +16,8 @@ public class RBClusterMessagePublisher extends ClusterMessagePublisher {
 
     final ManyToOneRingBuffer rb;
 
-    public RBClusterMessagePublisher(AeronCache cluster, ManyToOneRingBuffer rb) {
-        super(cluster, new BusySpinIdleStrategy(), new RegularStringCacheRequestEncoder());
+    public RBClusterMessagePublisher(AeronCache cluster, ManyToOneRingBuffer rb, IdleStrategy idleStrategy, CacheRequestEncoder cacheRequestEncoder) {
+        super(cluster, idleStrategy, cacheRequestEncoder);
         this.rb = rb;
     }
 

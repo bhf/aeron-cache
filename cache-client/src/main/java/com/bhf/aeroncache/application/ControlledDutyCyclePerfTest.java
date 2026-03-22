@@ -127,7 +127,7 @@ public class ControlledDutyCyclePerfTest {
             };
 
             ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
-            CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(aeronCache, rb);
+            CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(aeronCache, rb, new BusySpinIdleStrategy(), new RegularStringCacheRequestEncoder());
             BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(aeronCache, new BusySpinIdleStrategy(), new RegularStringCacheRequestEncoder());
             var observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher, blockingRequestPublisher);
 
