@@ -12,7 +12,6 @@ dependencies {
     implementation(project(":cache-client"))
     implementation(project(":cache-common"))
     implementation(project(":cache-messages-http"))
-    implementation(project(":cache-messages-sbe"))
     implementation(project(":cache-ws:ws-server-javalin"))
     implementation(project(":cache-spi"))
     implementation(project(":cache-spi-impl:map-cache"))
