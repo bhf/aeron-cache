@@ -13,7 +13,7 @@ dependencies {
 
     implementation(project(":cache-spi"))
     implementation(project(":cache-common"))
-    implementation(project(":cache-messages-sbe"))
+    implementation(project(":cache-spi-impl:map-cache:map-cache-sbe"))
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit)

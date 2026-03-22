@@ -2,11 +2,11 @@ rootProject.name = "aeron-cache"
 
 include("cache-spi")
 include("cache-common")
-include("cache-spi-impl:map-cache")
+include("cache-spi-impl:map-cache:map-cache-core")
+include("cache-spi-impl:map-cache:map-cache-sbe")
 
 include("cache-cluster")
 include("cache-client")
-include("cache-messages-sbe")
 include("cache-messages-http")
 
 include("cache-http:http-server-javalin")
