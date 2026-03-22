@@ -6,6 +6,7 @@ import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
 import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.models.requests.GetCacheEntryRequestDetails;
+import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.services.TestUtils;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
@@ -82,7 +83,7 @@ class GetCacheEntryTest {
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
-        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS, result.getStatus());
+        assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
         assertEquals(result.getEntryKey().value(), key);
         assertEquals(result.getEntryValue().value(), value);
 
@@ -110,7 +111,7 @@ class GetCacheEntryTest {
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
-        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_KEY, result.getStatus());
+        assertEquals(CacheOperationStatus.UNKNOWN_KEY, result.getStatus());
     }
 
 }

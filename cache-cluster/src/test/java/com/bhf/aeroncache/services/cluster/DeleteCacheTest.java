@@ -6,6 +6,7 @@ import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
 import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.models.requests.DeleteCacheRequestDetails;
+import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.DeleteCacheResult;
 import com.bhf.aeroncache.services.TestUtils;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
@@ -73,7 +74,7 @@ class DeleteCacheTest {
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
-        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS, result.getStatus());
+        assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
 
         // Calling the tracing service is part of the public API of the SUT
         verify(tracingService, times(1)).startHandleDeleteCache(any(DeleteCacheRequestDetails.class));
@@ -104,7 +105,7 @@ class DeleteCacheTest {
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
-        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE, result.getStatus());
+        assertEquals(CacheOperationStatus.UNKNOWN_CACHE, result.getStatus());
     }
 
 }

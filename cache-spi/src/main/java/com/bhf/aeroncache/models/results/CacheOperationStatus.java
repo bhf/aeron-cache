@@ -1,5 +1,5 @@
 /* Generated SBE (Simple Binary Encoding) message codec. */
-package com.bhf.aeroncache.messages;
+package com.bhf.aeroncache.models.results;
 
 public enum CacheOperationStatus
 {

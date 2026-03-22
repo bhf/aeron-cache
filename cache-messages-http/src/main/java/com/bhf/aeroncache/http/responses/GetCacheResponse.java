@@ -1,5 +1,7 @@
 package com.bhf.aeroncache.http.responses;
 
+import com.bhf.aeroncache.models.results.CacheOperationStatus;
+
 import java.util.List;
 
 /**
@@ -8,5 +10,5 @@ import java.util.List;
  * @param operationStatus The status of the operation.
  * @param items The items in the cache.
  */
-public record GetCacheResponse(String cacheId, com.bhf.aeroncache.messages.CacheOperationStatus operationStatus, List<CacheItem> items) {
+public record GetCacheResponse(String cacheId, CacheOperationStatus operationStatus, List<CacheItem> items) {
 }

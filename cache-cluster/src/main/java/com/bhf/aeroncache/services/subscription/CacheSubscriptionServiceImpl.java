@@ -42,9 +42,9 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
         subscriptionResult.getCacheId().copyFrom(requestDetails.getCacheId());
         if (!existingSubscribers.contains(session)) {
             existingSubscribers.add(session);
-            subscriptionResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS);
+            subscriptionResult.setStatus(CacheOperationStatus.SUCCESS);
         } else {
-            subscriptionResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.DUPLICATE_SUBSCRIPTION);
+            subscriptionResult.setStatus(CacheOperationStatus.DUPLICATE_SUBSCRIPTION);
         }
 
         log.debug("Total subscriptions: {}", existingSubscribers.size());
@@ -63,12 +63,12 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
         if (cacheIdToClientSessions.containsKey(cacheId)) {
             if (cacheIdToClientSessions.get(cacheId).remove(session)) {
                 log.info("Unsubscribed on cache {}, session {}", cacheId, session.id());
-                unsubscribeResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS);
+                unsubscribeResult.setStatus(CacheOperationStatus.SUCCESS);
             } else {
-                unsubscribeResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_SUBSCRIPTION);
+                unsubscribeResult.setStatus(CacheOperationStatus.UNKNOWN_SUBSCRIPTION);
             }
         } else {
-            unsubscribeResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
+            unsubscribeResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
         }
 
         return unsubscribeResult;

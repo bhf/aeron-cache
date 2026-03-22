@@ -57,7 +57,7 @@ class CacheSubscriptionServiceImplTest {
         result = subscribeToCache();
 
         // Assert
-        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.DUPLICATE_SUBSCRIPTION, result.getStatus());
+        assertEquals(CacheOperationStatus.DUPLICATE_SUBSCRIPTION, result.getStatus());
         assertEquals(KNOWN_CACHE, result.getCacheId().value());
     }
 
@@ -76,7 +76,7 @@ class CacheSubscriptionServiceImplTest {
         var result = sut.unsubscribe(unsubscribeRequest, unknownSession);
 
         // Assert
-        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_SUBSCRIPTION, result.getStatus());
+        assertEquals(CacheOperationStatus.UNKNOWN_SUBSCRIPTION, result.getStatus());
         assertEquals(KNOWN_CACHE, result.getCacheId().value());
     }
 

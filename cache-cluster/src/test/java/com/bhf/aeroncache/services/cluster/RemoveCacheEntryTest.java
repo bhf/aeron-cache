@@ -6,6 +6,7 @@ import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
 import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.models.requests.RemoveCacheEntryRequestDetails;
+import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.services.TestUtils;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
@@ -82,7 +83,7 @@ class RemoveCacheEntryTest {
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
-        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS, result.getStatus());
+        assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
 
         // Calling the tracing service is part of the public API of the SUT
         verify(tracingService, times(1)).startRemoveCacheEntry(any(RemoveCacheEntryRequestDetails.class));
@@ -114,7 +115,7 @@ class RemoveCacheEntryTest {
         // Assert
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
-        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_KEY, result.getStatus());
+        assertEquals(CacheOperationStatus.UNKNOWN_KEY, result.getStatus());
     }
 
 }

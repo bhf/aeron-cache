@@ -4,6 +4,7 @@ import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
+import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -106,7 +107,7 @@ public class AsyncConsumerPerfTest {
 
         while (true) {
             Consumer<AddCacheEntryResult<ReusableString, ReusableString>> addEntryConsumer = ReusableStringReusableStringAddCacheEntryResult -> {
-                if (ReusableStringReusableStringAddCacheEntryResult.getStatus() != com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
+                if (ReusableStringReusableStringAddCacheEntryResult.getStatus() != CacheOperationStatus.SUCCESS) {
                     var errors = errorCount.incrementAndGet();
                     System.out.println("TOTAL ERRORS: " + errors);
                 }

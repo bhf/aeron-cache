@@ -1,7 +1,6 @@
 package com.bhf.aeroncache.models.results;
 
 import com.bhf.aeroncache.annotations.Flyweight;
-import com.bhf.aeroncache.messages.CacheOperationStatus;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;

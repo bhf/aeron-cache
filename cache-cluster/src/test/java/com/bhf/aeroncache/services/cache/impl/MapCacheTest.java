@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.services.cache.impl;
 
 import com.bhf.aeroncache.application.CacheSnapshotCodecUtils;
+import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -104,7 +105,7 @@ class MapCacheTest {
         var getResult = cache.get(reusableKey);
 
         // Assert
-        assertEquals(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_KEY, getResult.getStatus());
+        assertEquals(CacheOperationStatus.UNKNOWN_KEY, getResult.getStatus());
     }
 
     @ParameterizedTest

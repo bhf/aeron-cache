@@ -3,10 +3,7 @@ package com.bhf.aeroncache.sse.application;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
-import com.bhf.aeroncache.models.results.CacheEntryUpdateResult;
-import com.bhf.aeroncache.models.results.ClearCacheResult;
-import com.bhf.aeroncache.models.results.DeleteCacheResult;
-import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
+import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.types.ReusableString;
@@ -73,10 +70,10 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
      */
     private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, String cacheId, Consumer<Void> subscriptionFailureHandler) {
         sendCacheSubscribe(requestId, cacheId, subscriptionResult -> {
-            if (subscriptionResult.getStatus() != com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
+            if (subscriptionResult.getStatus() != CacheOperationStatus.SUCCESS) {
                 var errorMsg = STR."Couldn't subscribe to cache \{cacheId}, status=\{subscriptionResult.getStatus()}";
                 log.warn(errorMsg);
-                if (subscriptionResult.getStatus() != com.bhf.aeroncache.messages.CacheOperationStatus.DUPLICATE_SUBSCRIPTION) {
+                if (subscriptionResult.getStatus() != CacheOperationStatus.DUPLICATE_SUBSCRIPTION) {
                     log.warn("Calling subscription failure handler to close SSE session");
                     subscriptionFailureHandler.accept(null);
                 }
@@ -96,7 +93,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
      */
     private void sendCacheUnsubscribeRequest(AeronCache cluster, String requestId, String cacheId) {
         sendCacheUnsubscribe(requestId, cacheId, unsubscribeResult -> {
-            if (unsubscribeResult.getStatus() != com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
+            if (unsubscribeResult.getStatus() != CacheOperationStatus.SUCCESS) {
                 log.warn("Couldn't unsubscribe from cache {}, request ID {}", cacheId, requestId);
             } else {
                 var sseSubscriptions = cacheSubscriptions.remove(cacheId);

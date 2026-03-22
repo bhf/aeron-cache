@@ -1,4 +1,6 @@
 package com.bhf.aeroncache.http.responses;
 
-public record ClearCacheResponse(String cacheId, com.bhf.aeroncache.messages.CacheOperationStatus operationStatus) {
+import com.bhf.aeroncache.models.results.CacheOperationStatus;
+
+public record ClearCacheResponse(String cacheId, CacheOperationStatus operationStatus) {
 }

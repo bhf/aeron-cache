@@ -1,5 +1,7 @@
 package com.bhf.aeroncache.http.responses;
 
+import com.bhf.aeroncache.models.results.CacheOperationStatus;
+
 /**
  * The response from getting an item from the cache.
  *
@@ -8,5 +10,5 @@ package com.bhf.aeroncache.http.responses;
  * @param value           The value of the item.
  * @param operationStatus The status of the operation.
  */
-public record GetItemResponse(String cacheId, String key, String value, com.bhf.aeroncache.messages.CacheOperationStatus operationStatus) {
+public record GetItemResponse(String cacheId, String key, String value, CacheOperationStatus operationStatus) {
 }

@@ -67,7 +67,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
 
             log.info("Loading snapshot on cache Id: "+cacheId);
 
-            if (cacheCreateResult.getStatus() == com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
+            if (cacheCreateResult.getStatus() == CacheOperationStatus.SUCCESS) {
                 var cache = getCache(cacheId);
                 cache.loadSnapshot(buffer, offset);
                 cache.getCacheStats().getCacheId().copyFrom(cacheId);
@@ -97,9 +97,9 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
         var cache = getCache(cacheId);
         if (cache != null) {
             cache.clearEntries();
-            clearCacheResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS);
+            clearCacheResult.setStatus(CacheOperationStatus.SUCCESS);
         } else {
-            clearCacheResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
+            clearCacheResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
         }
         return clearCacheResult;
     }
@@ -110,7 +110,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
         cacheCreationResult.getCacheId().copyFrom(cacheId);
 
         if (caches.containsKey(cacheId)) {
-            cacheCreationResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.CACHE_EXISTS);
+            cacheCreationResult.setStatus(CacheOperationStatus.CACHE_EXISTS);
             return cacheCreationResult;
         }
 
@@ -118,7 +118,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
         I newKey = indexSupplier.get();
         newKey.copyFrom(cacheId);
         caches.put(newKey, cache);
-        cacheCreationResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS);
+        cacheCreationResult.setStatus(CacheOperationStatus.SUCCESS);
         return cacheCreationResult;
     }
 
@@ -133,7 +133,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
         }
 
         deleteCacheResult.setStatus(removed != null ?
-                com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS : com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
+                CacheOperationStatus.SUCCESS : CacheOperationStatus.UNKNOWN_CACHE);
         return deleteCacheResult;
     }
 
@@ -147,7 +147,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
             removeCacheEntryResult.getKey().copyFrom(result.getKey());
             removeCacheEntryResult.setStatus(result.getStatus());
         } else {
-            removeCacheEntryResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
+            removeCacheEntryResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
         }
         return removeCacheEntryResult;
     }
@@ -163,7 +163,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
             getCacheEntryResult.getEntryValue().copyFrom(result.getEntryValue());
             getCacheEntryResult.setStatus(result.getStatus());
         } else {
-            getCacheEntryResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
+            getCacheEntryResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
         }
         return getCacheEntryResult;
     }
@@ -174,10 +174,10 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
         getAllCacheEntriesResult.getCacheId().copyFrom(cacheId);
         var cache = getCache(cacheId);
         if (cache != null) {
-            getAllCacheEntriesResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS);
+            getAllCacheEntriesResult.setStatus(CacheOperationStatus.SUCCESS);
             getAllCacheEntriesResult.getValues().putAll(cache.getAllEntries());
         } else {
-            getAllCacheEntriesResult.setStatus(com.bhf.aeroncache.messages.CacheOperationStatus.UNKNOWN_CACHE);
+            getAllCacheEntriesResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
         }
         return getAllCacheEntriesResult;
     }

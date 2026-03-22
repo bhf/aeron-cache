@@ -3,10 +3,7 @@ package com.bhf.aeroncache.ws.services.subscriptions;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
-import com.bhf.aeroncache.models.results.CacheEntryUpdateResult;
-import com.bhf.aeroncache.models.results.ClearCacheResult;
-import com.bhf.aeroncache.models.results.DeleteCacheResult;
-import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
+import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.types.ReusableString;
@@ -127,7 +124,7 @@ public class CacheSubscriptionRBService extends ObservingCacheRequestPublisher {
      */
     private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, String cacheId, WsContext wsContext) {
         sendCacheSubscribe(requestId, cacheId, subscriptionResult -> {
-            if (subscriptionResult.getStatus() != com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
+            if (subscriptionResult.getStatus() != CacheOperationStatus.SUCCESS) {
                 var errorMsg = STR."Couldn't subscribe to cache \{cacheId}, status=\{subscriptionResult.getStatus()}";
                 log.warn(errorMsg);
                 wsContext.closeSession(WsCloseStatus.SERVER_ERROR, errorMsg);
@@ -144,7 +141,7 @@ public class CacheSubscriptionRBService extends ObservingCacheRequestPublisher {
      */
     private void sendCacheUnsubscribeRequest(AeronCache cluster, String requestId, String cacheId) {
         sendCacheUnsubscribe(requestId, cacheId, unsubscribeResult -> {
-            if (unsubscribeResult.getStatus() != com.bhf.aeroncache.messages.CacheOperationStatus.SUCCESS) {
+            if (unsubscribeResult.getStatus() != CacheOperationStatus.SUCCESS) {
                 log.warn("Couldn't unsubscribe from cache {}, request ID {}", cacheId, requestId);
             } else {
                 var wsSubscriptions = cacheSubscriptions.remove(cacheId);
