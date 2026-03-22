@@ -16,6 +16,7 @@ import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
 import com.bhf.aeroncache.services.cacheclient.CacheClientFactory;
 import com.bhf.aeroncache.services.cacheclient.MapCacheClientFactory;
+import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
@@ -53,6 +54,7 @@ import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.*;
@@ -108,7 +110,7 @@ public class HttpApplication {
             final ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             System.out.println("Starting AeronCache Cluster Interface");
 
-            CacheClientFactory clientFactory = new MapCacheClientFactory();
+            CacheClientFactory clientFactory = getCacheClientFactory();
             var cacheRequestEncoder = clientFactory.getCacheRequestEncoder();
             var responseDecoder = clientFactory.getCacheResponseDecoder();
             var schemaDetailsProvider = clientFactory.getSchemaDetails();
@@ -186,6 +188,17 @@ public class HttpApplication {
         var httpPort = app.port();
         log.info("Started HTTP interface on port "+httpPort);
         return httpPort;
+    }
+
+    private static CacheClientFactory getCacheClientFactory() {
+        ServiceLoader<CacheClientFactory> service = ServiceLoader.load(CacheClientFactory.class);
+        Optional<CacheClientFactory> first = service.findFirst();
+
+        if (first.isPresent()) {
+            return first.get();
+        } else {
+            throw new IllegalStateException("No CacheClientFactory found.");
+        }
     }
 
     private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {

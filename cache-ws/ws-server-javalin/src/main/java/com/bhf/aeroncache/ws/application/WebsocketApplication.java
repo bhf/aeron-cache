@@ -49,6 +49,8 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.io.File;
 import java.util.List;
+import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -90,7 +92,7 @@ public class WebsocketApplication {
             ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             System.out.println("Starting AeronCache Cluster Interface");
 
-            CacheClientFactory clientFactory = new MapCacheClientFactory();
+            CacheClientFactory clientFactory = getCacheClientFactory();
             var cacheRequestEncoder = clientFactory.getCacheRequestEncoder();
             var responseDecoder = clientFactory.getCacheResponseDecoder();
             var schemaDetailsProvider = clientFactory.getSchemaDetails();
@@ -165,6 +167,17 @@ public class WebsocketApplication {
 
         log.info("Started websocket on port {}", app.port());
         return app.port();
+    }
+
+    private static CacheClientFactory getCacheClientFactory() {
+        ServiceLoader<CacheClientFactory> service = ServiceLoader.load(CacheClientFactory.class);
+        Optional<CacheClientFactory> first = service.findFirst();
+
+        if (first.isPresent()) {
+            return first.get();
+        } else {
+            throw new IllegalStateException("No CacheClientFactory found.");
+        }
     }
 
     private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {

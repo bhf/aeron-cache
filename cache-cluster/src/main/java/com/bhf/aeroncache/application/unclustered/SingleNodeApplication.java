@@ -24,6 +24,8 @@ import org.agrona.concurrent.IdleStrategy;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -44,7 +46,7 @@ public class SingleNodeApplication {
                 .aeronDirectoryName(mediaDriver.aeronDirectoryName());
         final Aeron aeron = Aeron.connect(aeronCtx);
 
-        final var cacheManagerFactory = getCacheManager();
+        final var cacheManagerFactory = getCacheManagerFactory();
 
         final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0",
                 new NoOpTracingService(), cacheManagerFactory);
@@ -89,12 +91,15 @@ public class SingleNodeApplication {
         AgentRunner.startOnThread(serverAgentRunner);
     }
 
-    private static CacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManager() {
-        var encoder = new ReusableStringCacheResponseEncoder();
-        var decoder = new ReusableStringCacheRequestDecoder();
-        return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
-                SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
-                CacheSnapshotCodecUtils.getCacheIdSnapshotCodec(), CacheSnapshotCodecUtils.getCacheEntrySnapshotCodec(), encoder, decoder);
+    private static CacheManagerFactory getCacheManagerFactory() {
+        ServiceLoader<CacheManagerFactory> service = ServiceLoader.load(CacheManagerFactory.class);
+        Optional<CacheManagerFactory> first = service.findFirst();
+
+        if (first.isPresent()) {
+            return first.get();
+        } else {
+            throw new IllegalStateException("No CacheManagerFactory found.");
+        }
     }
 
     private static Cluster getCluster(Aeron aeron) {
