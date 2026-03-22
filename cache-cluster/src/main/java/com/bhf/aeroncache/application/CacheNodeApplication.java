@@ -133,6 +133,11 @@ public class CacheNodeApplication {
         } else {
             System.out.println("Starting Aeron Cache server node in clustered mode");
             var clusterNode = System.getenv("CLUSTER_NODE");
+
+            if (clusterNode == null) {
+                clusterNode = args[0];
+            }
+
             int nodeId = Integer.parseInt(clusterNode);
             try {
                 startClusteredMode(nodeId, baseDirectory);
