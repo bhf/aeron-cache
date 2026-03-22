@@ -93,6 +93,7 @@ public class WebsocketApplication {
             CacheClientFactory clientFactory = new MapCacheClientFactory();
             var cacheRequestEncoder = clientFactory.getCacheRequestEncoder();
             var responseDecoder = clientFactory.getCacheResponseDecoder();
+            var schemaDetailsProvider = clientFactory.getSchemaDetails();
 
             if (PRE_ENCODE_CACHE_REQUESTS) {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
@@ -107,7 +108,7 @@ public class WebsocketApplication {
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
             }
 
-            client = new AeronCacheClusterListener(responseDecoder);
+            client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider);
             client.setCacheResultsCallbacks(subscriptionService);
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");

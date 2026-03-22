@@ -15,4 +15,9 @@ public class MapCacheClientFactory implements CacheClientFactory{
     public CacheResponseDecoder getCacheResponseDecoder() {
         return new ReusableStringCacheResponseDecoder();
     }
+
+    @Override
+    public CacheClientSchemDetailsProvider getSchemaDetails() {
+        return new MapCacheClientSchemDetailsProvider();
+    }
 }

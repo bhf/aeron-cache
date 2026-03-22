@@ -5,7 +5,6 @@ plugins {
 
 
 dependencies {
-    implementation(project(":cache-messages-sbe"))
     implementation(project(":cache-spi"))
 }
 

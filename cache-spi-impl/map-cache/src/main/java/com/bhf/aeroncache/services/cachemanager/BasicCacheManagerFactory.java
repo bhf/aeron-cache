@@ -59,4 +59,9 @@ public class BasicCacheManagerFactory<I extends Reusable, K extends Reusable, V 
     public CacheRequestDecoder<I, K, V> getCacheRequestDecoder() {
         return decoder;
     }
+
+    @Override
+    public CacheSchemaDetailsProvider getSchemaDetailsProvider() {
+        return new MapCacheSchemaDetailsProvider();
+    }
 }

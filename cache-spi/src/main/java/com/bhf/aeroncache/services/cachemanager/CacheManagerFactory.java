@@ -19,4 +19,6 @@ public interface CacheManagerFactory<I extends Reusable, K extends Reusable, V e
     CacheResponseEncoder<I, K, V> getCacheResponseEncoder();
 
     CacheRequestDecoder<I, K, V> getCacheRequestDecoder();
+
+    CacheSchemaDetailsProvider getSchemaDetailsProvider();
 }

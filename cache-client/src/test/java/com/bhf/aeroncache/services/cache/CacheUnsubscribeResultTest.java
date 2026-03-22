@@ -5,6 +5,7 @@ import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.messages.CacheUnsubscribeResponseEncoder;
 import com.bhf.aeroncache.messages.MessageHeaderEncoder;
 import com.bhf.aeroncache.models.results.CacheUnsubscribeResult;
+import com.bhf.aeroncache.services.cacheclient.MapCacheClientSchemDetailsProvider;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
@@ -36,7 +37,7 @@ class CacheUnsubscribeResultTest {
 
     @BeforeEach
     void setup() {
-        sut = new AeronCacheClusterListener(cacheResponseDecoder);
+        sut = new AeronCacheClusterListener(cacheResponseDecoder, new MapCacheClientSchemDetailsProvider());
         sut.setCacheResultsCallbacks(callbackHandler);
         requestBuffer = new ExpandableArrayBuffer(512);
     }

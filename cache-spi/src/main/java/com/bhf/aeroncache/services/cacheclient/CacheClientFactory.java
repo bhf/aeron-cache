@@ -10,4 +10,5 @@ import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
 public interface CacheClientFactory {
     CacheRequestEncoder getCacheRequestEncoder();
     CacheResponseDecoder getCacheResponseDecoder();
+    CacheClientSchemDetailsProvider getSchemaDetails();
 }

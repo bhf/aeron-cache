@@ -18,9 +18,12 @@ dependencies {
     implementation(project(":cache-common"))
     implementation(project(":cache-messages-sbe"))
 
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit)
+    testImplementation(libs.junit.params)
+    testRuntimeOnly(libs.junit.platform.launcher)
+    testImplementation(libs.mockito)
+    testImplementation(libs.mockito.junit)
 }
 
 tasks.test {

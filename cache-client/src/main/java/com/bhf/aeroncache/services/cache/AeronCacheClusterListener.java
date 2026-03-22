@@ -3,8 +3,9 @@ package com.bhf.aeroncache.services.cache;
 import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
 import com.bhf.aeroncache.handlers.ClusterSessionEventHandler;
 import com.bhf.aeroncache.handlers.NoOpClusterSessionEventHandler;
-import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.services.cacheclient.CacheClientSchemDetailsProvider;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.client.EgressListener;
@@ -36,6 +37,7 @@ public class AeronCacheClusterListener implements EgressListener {
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
 
     private final CacheResponseDecoder cacheResponseDecoder;
+    private final CacheClientSchemDetailsProvider schemaDetails;
 
     private final CreateCacheResult<ReusableString> createCacheResult = new CreateCacheResult<>(SupplierUtils.stringSupplier.get());
     private final AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult = new AddCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
@@ -64,20 +66,32 @@ public class AeronCacheClusterListener implements EgressListener {
 
         log.debug("Got client side message with TID {}", templateId);
 
-        switch (templateId) {
-            case CacheCreatedDecoder.TEMPLATE_ID -> handleCacheCreated(buffer, offset);
-            case CacheEntryCreatedDecoder.TEMPLATE_ID -> handleCacheEntryCreated(buffer, offset);
-            case CacheEntryResultDecoder.TEMPLATE_ID -> handleCacheEntryResult(buffer, offset);
-            case CacheClearedDecoder.TEMPLATE_ID -> handleCacheCleared(buffer, offset);
-            case CacheDeletedDecoder.TEMPLATE_ID -> handleCacheDeleted(buffer, offset);
-            case CacheEntryRemovedDecoder.TEMPLATE_ID -> handleCacheEntryRemoved(buffer, offset);
-            case AllCacheEntriesResultDecoder.TEMPLATE_ID -> handleAllCacheEntriesResult(buffer, offset);
-            case AllCacheStatsResultDecoder.TEMPLATE_ID -> handleAllCacheStatsResult(buffer, offset);
-            case CacheSubscriptionResponseDecoder.TEMPLATE_ID -> handleCacheSubscribeResult(buffer, offset);
-            case CacheUnsubscribeResponseDecoder.TEMPLATE_ID -> handleCacheUnsubscribeResult(buffer, offset);
-            case CacheEntryUpdateDecoder.TEMPLATE_ID -> handleCacheEntryUpdated(buffer, offset);
-            default -> log.warn("Got unknown message with TID {}", templateId);
+        if (templateId == schemaDetails.getCacheCreatedDecoder()) {
+            handleCacheCreated(buffer, offset);
+        } else if (templateId == schemaDetails.getCacheEntryCreatedDecoder()) {
+            handleCacheEntryCreated(buffer, offset);
+        } else if (templateId == schemaDetails.getCacheEntryResultDecoder()) {
+            handleCacheEntryResult(buffer, offset);
+        } else if (templateId == schemaDetails.getCacheClearedDecoder()) {
+            handleCacheCleared(buffer, offset);
+        } else if (templateId == schemaDetails.getCacheDeletedDecoder()) {
+            handleCacheDeleted(buffer, offset);
+        } else if (templateId == schemaDetails.getCacheEntryRemovedDecoder()) {
+            handleCacheEntryRemoved(buffer, offset);
+        } else if (templateId == schemaDetails.getAllCacheEntriesResultDecoder()) {
+            handleAllCacheEntriesResult(buffer, offset);
+        } else if (templateId == schemaDetails.getAllCacheStatsResultDecoder()) {
+            handleAllCacheStatsResult(buffer, offset);
+        } else if (templateId == schemaDetails.getCacheSubscriptionResponseDecoder()) {
+            handleCacheSubscribeResult(buffer, offset);
+        } else if (templateId == schemaDetails.getCacheUnsubscribeResponseDecoder()) {
+            handleCacheUnsubscribeResult(buffer, offset);
+        } else if (templateId == schemaDetails.getCacheEntryUpdateDecoder()) {
+            handleCacheEntryUpdated(buffer, offset);
+        } else {
+            log.warn("Got unknown message with TID {}", templateId);
         }
+
     }
 
     /**

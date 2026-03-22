@@ -11,6 +11,7 @@ import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
+import com.bhf.aeroncache.services.cacheclient.MapCacheClientSchemDetailsProvider;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.ClusterUtils;
@@ -42,7 +43,7 @@ public class AsyncConsumerPerfTest {
 
         var idleStrategy = new BackoffIdleStrategy();
 
-        var client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder());
+        var client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder(), new MapCacheClientSchemDetailsProvider());
         client.setCacheResultsCallbacks(observingPublisher);
 
         var podName = System.getenv("POD_ADDRESS");

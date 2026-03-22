@@ -2,12 +2,12 @@ package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
 import com.bhf.aeroncache.handlers.PublicationFailureHandler;
-import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
+import com.bhf.aeroncache.services.cachemanager.CacheSchemaDetailsProvider;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionServiceImpl;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
@@ -35,9 +35,8 @@ import java.util.function.Supplier;
 @Log4j2
 public abstract class AbstractCacheClusterService<I extends Reusable, K extends Reusable, V extends Reusable> implements ClusteredService {
 
-    final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final Supplier<I> indexSupplier;
+    private final CacheSchemaDetailsProvider schemaDetails;
     private Cluster cluster;
     private final CacheTracingService tracingService;
     CacheSubscriptionService<I, K, V> subscriptionService;
@@ -79,6 +78,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.nodeId = nodeId;
         this.tracingService = tracingService;
         this.indexSupplier = cacheManagerFactory.getIndexSupplier();
+        this.schemaDetails = cacheManagerFactory.getSchemaDetailsProvider();
     }
 
     private String nodeId;
@@ -94,22 +94,33 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param header    aeron header for the incoming message.
      */
     public void onSessionMessage(final ClientSession session, final long timestamp, final DirectBuffer buffer, final int offset, final int length, final Header header) {
-        headerDecoder.wrap(buffer, offset);
-        final int templateId = headerDecoder.templateId();
 
-        switch (templateId) {
-            case CreateCacheEncoder.TEMPLATE_ID -> handleCreateCache(session, buffer, offset);
-            case AddCacheEntryEncoder.TEMPLATE_ID -> handleAddCacheEntry(session, buffer, offset);
-            case GetCacheEntryEncoder.TEMPLATE_ID -> handleGetCacheEntry(session, buffer, offset);
-            case RemoveCacheEntryEncoder.TEMPLATE_ID -> handleRemoveCacheEntry(session, buffer, offset);
-            case ClearCacheEncoder.TEMPLATE_ID -> handleClearCache(session, buffer, offset);
-            case DeleteCacheEncoder.TEMPLATE_ID -> handleDeleteCache(session, buffer, offset);
-            case GetAllCacheEntriesEncoder.TEMPLATE_ID -> handleGetAllCacheEntries(session, buffer, offset);
-            case GetCacheStatsEncoder.TEMPLATE_ID -> handleGetCacheStats(session, buffer, offset);
-            case CacheSubscriptionRequestEncoder.TEMPLATE_ID -> handleCacheSubscriptionRequest(session, buffer, offset);
-            case CacheUnsubscribeRequestEncoder.TEMPLATE_ID -> handleCacheUnsubscribeRequest(session, buffer, offset);
-            default -> throw new IllegalStateException("Unexpected value: " + templateId);
+        final int templateId = (buffer.getShort(offset + 2, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
+
+        if (templateId == schemaDetails.getCreateCacheId()) {
+            handleCreateCache(session, buffer, offset);
+        } else if (templateId == schemaDetails.getAddCacheEntryId()) {
+            handleAddCacheEntry(session, buffer, offset);
+        } else if (templateId == schemaDetails.getGetCacheEntryId()) {
+            handleGetCacheEntry(session, buffer, offset);
+        } else if (templateId == schemaDetails.getRemoveCacheEntryId()) {
+            handleRemoveCacheEntry(session, buffer, offset);
+        } else if (templateId == schemaDetails.getClearCacheId()) {
+            handleClearCache(session, buffer, offset);
+        } else if (templateId == schemaDetails.getDeleteCacheId()) {
+            handleDeleteCache(session, buffer, offset);
+        } else if (templateId == schemaDetails.getGetAllCacheEntriesId()) {
+            handleGetAllCacheEntries(session, buffer, offset);
+        } else if (templateId == schemaDetails.getGetCacheStatsId()) {
+            handleGetCacheStats(session, buffer, offset);
+        } else if (templateId == schemaDetails.getCacheSubscriptionRequestId()) {
+            handleCacheSubscriptionRequest(session, buffer, offset);
+        } else if (templateId == schemaDetails.getCacheUnsubscribeRequestId()) {
+            handleCacheUnsubscribeRequest(session, buffer, offset);
+        } else {
+            throw new IllegalStateException("Unexpected value: " + templateId);
         }
+
     }
 
     /**

@@ -5,6 +5,7 @@ import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
+import com.bhf.aeroncache.services.cacheclient.MapCacheClientSchemDetailsProvider;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
@@ -87,7 +88,7 @@ public class ControlledDutyCyclePerfTest {
         System.out.println("EGRESS_IP: " + egressIP);
         final var ingressEndpoints = ingressEndpoints(Arrays.asList(hostnames));
 
-        final var client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder());
+        final var client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder(), new MapCacheClientSchemDetailsProvider());
 
         Map<Integer, StringBuilder> payloadSizeToDistro = new TreeMap<>();
 
