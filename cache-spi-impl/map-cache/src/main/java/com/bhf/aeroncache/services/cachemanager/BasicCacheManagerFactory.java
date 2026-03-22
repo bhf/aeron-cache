@@ -52,12 +52,12 @@ public class BasicCacheManagerFactory<I extends Reusable, K extends Reusable, V 
     }
 
     @Override
-    public CacheResponseEncoder<I, K, V> getEncoder() {
+    public CacheResponseEncoder<I, K, V> getCacheResponseEncoder() {
         return encoder;
     }
 
     @Override
-    public CacheRequestDecoder<I, K, V> getDecoder() {
+    public CacheRequestDecoder<I, K, V> getCacheRequestDecoder() {
         return decoder;
     }
 }

@@ -27,8 +27,8 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
 
     public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory) {
         super(nodeId, tracingService, cacheManagerFactory);
-        this.decoder = cacheManagerFactory.getDecoder();
-        this.encoder = cacheManagerFactory.getEncoder();
+        this.decoder = cacheManagerFactory.getCacheRequestDecoder();
+        this.encoder = cacheManagerFactory.getCacheResponseEncoder();
     }
 
     @Override
