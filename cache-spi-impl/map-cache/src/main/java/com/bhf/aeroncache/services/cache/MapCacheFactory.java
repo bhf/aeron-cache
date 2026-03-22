@@ -1,7 +1,6 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.services.cache.impl.MapCache;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
 

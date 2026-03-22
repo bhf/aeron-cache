@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.services.cachemanager.impl;
+package com.bhf.aeroncache.services.cachemanager;
 
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;

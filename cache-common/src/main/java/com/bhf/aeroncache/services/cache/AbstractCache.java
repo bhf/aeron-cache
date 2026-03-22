@@ -1,8 +1,7 @@
-package com.bhf.aeroncache.services.cache.impl;
+package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.services.cache.Cache;
 
 import java.util.function.Supplier;
 
