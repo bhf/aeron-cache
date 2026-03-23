@@ -38,7 +38,7 @@ import static org.mockito.Mockito.verify;
  * Test decoding a subscribe to cache request.
  */
 class SubscribeCacheTest {
-    ;
+
     private final Header header = new Header(0, 0);
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
