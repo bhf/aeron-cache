@@ -14,7 +14,7 @@ dependencies {
     implementation(project(":cache-common"))
     implementation(project(":cache-messages-http"))
     implementation(project(":cache-spi"))
-    implementation(project(":cache-spi-impl:map-cache:map-cache-core"))
+    runtimeOnly(project(":cache-spi-impl:map-cache:map-cache-core"))
     implementation(libs.aeron)
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
