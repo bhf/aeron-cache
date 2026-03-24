@@ -45,7 +45,7 @@ public class ControlledDutyCyclePerfTest {
         for (int i = 0; i < hostnames.size(); i++) {
             sb.append(i).append('=');
             sb.append(hostnames.get(i)).append(':').append(
-                    calculatePort(i, CacheNodeApplication.CLIENT_FACING_PORT_OFFSET));
+                    CacheNodeApplication.calculatePort(i, CacheNodeApplication.CLIENT_FACING_PORT_OFFSET));
             sb.append(',');
         }
 
