@@ -13,7 +13,7 @@ import com.bhf.aeroncache.utils.SupplierUtils;
 
 import java.util.function.Supplier;
 
-public class DefaultCacheManagerFactory extends BasicCacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> {
+public class DefaultCacheManagerFactory extends MapCacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> {
 
     public DefaultCacheManagerFactory() {
         super((Supplier) SupplierUtils.stringSupplier,

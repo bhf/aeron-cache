@@ -18,7 +18,7 @@ import java.util.function.Supplier;
  * @param <V> The type of the value for cache entries which this factory will create.
  */
 @RequiredArgsConstructor
-public class BasicCacheManagerFactory<I extends Reusable, K extends Reusable, V extends Reusable> implements CacheManagerFactory<I, K, V> {
+public class MapCacheManagerFactory<I extends Reusable, K extends Reusable, V extends Reusable> implements CacheManagerFactory<I, K, V> {
 
     private final Supplier<I> cacheIndexSupplier;
     private final Supplier<K> cacheKeySupplier;

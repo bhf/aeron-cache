@@ -6,7 +6,7 @@ import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseEncoder;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
-import com.bhf.aeroncache.services.cachemanager.BasicCacheManagerFactory;
+import com.bhf.aeroncache.services.cachemanager.MapCacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
@@ -94,10 +94,10 @@ public class TestUtils {
         sut.onSessionMessage(session, ts, requestBuffer, 0, length, header);
     }
 
-    public static BasicCacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManagerFactory(){
+    public static MapCacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManagerFactory(){
         var encoder = new ReusableStringCacheResponseEncoder();
         var decoder = new ReusableStringCacheRequestDecoder();
-        return new BasicCacheManagerFactory<>(SupplierUtils.stringSupplier,
+        return new MapCacheManagerFactory<>(SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
                 new ReusableStringCacheIdSnapshotCodec(), new ReusableStringCacheEntrySnapshotCodec(), encoder, decoder);
     }
