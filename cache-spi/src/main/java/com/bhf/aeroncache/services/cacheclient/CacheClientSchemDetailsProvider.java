@@ -2,16 +2,26 @@ package com.bhf.aeroncache.services.cacheclient;
 
 public interface CacheClientSchemDetailsProvider {
 
-    int getCacheCreatedDecoder();
-    int getCacheEntryCreatedDecoder();
-    int getCacheEntryResultDecoder();
-    int getCacheClearedDecoder();
-    int getCacheDeletedDecoder();
-    int getCacheEntryRemovedDecoder();
-    int getAllCacheEntriesResultDecoder();
-    int getAllCacheStatsResultDecoder();
-    int getCacheSubscriptionResponseDecoder();
-    int getCacheUnsubscribeResponseDecoder();
-    int getCacheEntryUpdateDecoder();
+    int getCacheCreatedId();
+
+    int getCacheEntryCreatedId();
+
+    int getCacheEntryResultId();
+
+    int getCacheClearedId();
+
+    int getCacheDeletedId();
+
+    int getCacheEntryRemovedId();
+
+    int getAllCacheEntriesResultId();
+
+    int getAllCacheStatsResultId();
+
+    int getCacheSubscriptionResponseId();
+
+    int getCacheUnsubscribeResponseId();
+
+    int getCacheEntryUpdateId();
 
 }

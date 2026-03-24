@@ -1,8 +1,8 @@
 package com.bhf.aeroncache.services.cache.impl;
 
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.ConsumingResponseHandler;
-import com.bhf.aeroncache.types.ReusableString;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -20,82 +20,82 @@ import java.util.function.Consumer;
 @Getter
 @Setter
 @Log4j2
-public class CacheResponseMapObservers implements ConsumingResponseHandler {
+public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V extends Reusable> implements ConsumingResponseHandler<I,K,V> {
 
-    final Map<String, Consumer<CreateCacheResult<ReusableString>>> createCacheObservers = new ConcurrentHashMap<>();
-    final Map<String, Consumer<AddCacheEntryResult<ReusableString, ReusableString>>> addCacheEntryObservers = new ConcurrentHashMap<>();
-    final Map<String, Consumer<GetCacheEntryResult<ReusableString, ReusableString, ReusableString>>> getCacheEntryObservers = new ConcurrentHashMap<>();
-    final Map<String, Consumer<DeleteCacheResult<ReusableString>>> deleteCacheObservers = new ConcurrentHashMap<>();
-    final Map<String, Consumer<RemoveCacheEntryResult<ReusableString, ReusableString>>> removeCacheEntryObservers = new ConcurrentHashMap<>();
-    final Map<String, Consumer<ClearCacheResult<ReusableString>>> clearCacheObservers = new ConcurrentHashMap<>();
-    final Map<String, Consumer<GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString>>> getCacheEntriesObservers = new ConcurrentHashMap<>();
-    final Map<String, Consumer<CacheStatsResult<ReusableString>>> allCacheStatsObservers = new ConcurrentHashMap<>();
-    final Map<String, Consumer<CacheSubscriptionResult<ReusableString>>> cacheSubscribeObservers = new ConcurrentHashMap<>();
-    final Map<String, Consumer<CacheUnsubscribeResult<ReusableString>>> cacheUnsubscribeObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<CreateCacheResult<I>>> createCacheObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<AddCacheEntryResult<I, K>>> addCacheEntryObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<GetCacheEntryResult<I, K, V>>> getCacheEntryObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<DeleteCacheResult<I>>> deleteCacheObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<RemoveCacheEntryResult<I, K>>> removeCacheEntryObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<ClearCacheResult<I>>> clearCacheObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<GetAllCacheEntriesResult<I, K, V>>> getCacheEntriesObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<CacheStatsResult<I>>> allCacheStatsObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<CacheSubscriptionResult<I>>> cacheSubscribeObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<CacheUnsubscribeResult<I>>> cacheUnsubscribeObservers = new ConcurrentHashMap<>();
 
-    Consumer<CreateCacheResult<ReusableString>> createCacheConsumer;
-    Consumer<AddCacheEntryResult<ReusableString, ReusableString>> addCacheEntryConsumer;
-    Consumer<ClearCacheResult<ReusableString>> clearCacheConsumer;
-    Consumer<DeleteCacheResult<ReusableString>> deleteCacheConsumer;
-    Consumer<RemoveCacheEntryResult<ReusableString, ReusableString>> removeCacheEntryConsumer;
-    Consumer<GetCacheEntryResult<ReusableString, ReusableString, ReusableString>> getCacheEntryConsumer;
-    Consumer<GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString>> getCacheEntriesConsumer;
+    Consumer<CreateCacheResult<I>> createCacheConsumer;
+    Consumer<AddCacheEntryResult<I, K>> addCacheEntryConsumer;
+    Consumer<ClearCacheResult<I>> clearCacheConsumer;
+    Consumer<DeleteCacheResult<I>> deleteCacheConsumer;
+    Consumer<RemoveCacheEntryResult<I, K>> removeCacheEntryConsumer;
+    Consumer<GetCacheEntryResult<I, K, V>> getCacheEntryConsumer;
+    Consumer<GetAllCacheEntriesResult<I, K, V>> getCacheEntriesConsumer;
 
     public CacheResponseMapObservers() {
     }
 
     @Override
-    public void sendCreateCache(String requestId, String cacheId, Consumer<CreateCacheResult<ReusableString>> consumer) {
+    public void sendCreateCache(String requestId, String cacheId, Consumer<CreateCacheResult<I>> consumer) {
         createCacheObservers.put(requestId, consumer);
     }
 
     @Override
-    public void addCacheEntry(String requestId, String cacheId, String key, String value, Consumer<AddCacheEntryResult<ReusableString, ReusableString>> c) {
+    public void addCacheEntry(String requestId, String cacheId, String key, String value, Consumer<AddCacheEntryResult<I, K>> c) {
         addCacheEntryObservers.put(requestId, c);
     }
 
     @Override
-    public void getCacheEntry(String requestId, String cacheId, String key, Consumer<GetCacheEntryResult<ReusableString, ReusableString, ReusableString>> c) {
+    public void getCacheEntry(String requestId, String cacheId, String key, Consumer<GetCacheEntryResult<I, K, V>> c) {
         getCacheEntryObservers.put(requestId, c);
     }
 
     @Override
-    public void deleteCache(String requestId, String cacheId, Consumer<DeleteCacheResult<ReusableString>> consumer) {
+    public void deleteCache(String requestId, String cacheId, Consumer<DeleteCacheResult<I>> consumer) {
         deleteCacheObservers.put(requestId, consumer);
     }
 
     @Override
-    public void removeCacheEntry(String requestId, String cacheId, String key, Consumer<RemoveCacheEntryResult<ReusableString, ReusableString>> c) {
+    public void removeCacheEntry(String requestId, String cacheId, String key, Consumer<RemoveCacheEntryResult<I, K>> c) {
         removeCacheEntryObservers.put(requestId, c);
     }
 
     @Override
-    public void clearCache(String requestId, String cacheId, Consumer<ClearCacheResult<ReusableString>> c) {
+    public void clearCache(String requestId, String cacheId, Consumer<ClearCacheResult<I>> c) {
         clearCacheObservers.put(requestId, c);
     }
 
     @Override
-    public void getCacheEntries(String requestId, String cacheId, Consumer<GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString>> c) {
+    public void getCacheEntries(String requestId, String cacheId, Consumer<GetAllCacheEntriesResult<I, K, V>> c) {
         getCacheEntriesObservers.put(requestId, c);
     }
 
     @Override
-    public void getAllCacheStats(String requestId, Consumer<CacheStatsResult<ReusableString>> c) {
+    public void getAllCacheStats(String requestId, Consumer<CacheStatsResult<I>> c) {
         allCacheStatsObservers.put(requestId, c);
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId, Consumer<CacheSubscriptionResult<ReusableString>> c) {
+    public void sendCacheSubscribe(String requestId, String cacheId, Consumer<CacheSubscriptionResult<I>> c) {
         cacheSubscribeObservers.put(requestId, c);
     }
 
     @Override
-    public void sendCacheUnsubscribe(String requestId, String cacheId, Consumer<CacheUnsubscribeResult<ReusableString>> c) {
+    public void sendCacheUnsubscribe(String requestId, String cacheId, Consumer<CacheUnsubscribeResult<I>> c) {
         cacheUnsubscribeObservers.put(requestId, c);
     }
 
     @Override
-    public void handleCacheEntryResult(GetCacheEntryResult<ReusableString, ReusableString, ReusableString> getCacheEntryResult) {
+    public void handleCacheEntryResult(GetCacheEntryResult<I, K, V> getCacheEntryResult) {
         var targetId = getCacheEntryResult.getRequestId();
         var observer = getCacheEntryObservers.remove(targetId);
         if (observer != null) {
@@ -108,7 +108,7 @@ public class CacheResponseMapObservers implements ConsumingResponseHandler {
     }
 
     @Override
-    public void handleAllCacheEntries(GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> getCacheEntriesResult) {
+    public void handleAllCacheEntries(GetAllCacheEntriesResult<I, K, V> getCacheEntriesResult) {
         var targetId = getCacheEntriesResult.getRequestId();
         var observer = getCacheEntriesObservers.remove(targetId);
         if (observer != null) {
@@ -121,7 +121,7 @@ public class CacheResponseMapObservers implements ConsumingResponseHandler {
     }
 
     @Override
-    public void handleCacheCreated(CreateCacheResult<ReusableString> createCacheResult) {
+    public void handleCacheCreated(CreateCacheResult<I> createCacheResult) {
         var targetId = createCacheResult.getRequestId();
         var observer = createCacheObservers.remove(targetId);
         if (observer != null) {
@@ -134,7 +134,7 @@ public class CacheResponseMapObservers implements ConsumingResponseHandler {
     }
 
     @Override
-    public void handleCacheEntryCreated(AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult) {
+    public void handleCacheEntryCreated(AddCacheEntryResult<I, K> addCacheEntryResult) {
         var targetId = addCacheEntryResult.getRequestId();
         var observer = addCacheEntryObservers.remove(targetId);
         if (observer != null) {
@@ -147,7 +147,7 @@ public class CacheResponseMapObservers implements ConsumingResponseHandler {
     }
 
     @Override
-    public void handleCacheEntryRemoved(RemoveCacheEntryResult<ReusableString, ReusableString> removeCacheEntryResult) {
+    public void handleCacheEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult) {
         var targetId = removeCacheEntryResult.getRequestId();
         var observer = removeCacheEntryObservers.remove(targetId);
         if (observer != null) {
@@ -160,7 +160,7 @@ public class CacheResponseMapObservers implements ConsumingResponseHandler {
     }
 
     @Override
-    public void handleCacheCleared(ClearCacheResult<ReusableString> clearCacheResult) {
+    public void handleCacheCleared(ClearCacheResult<I> clearCacheResult) {
         var targetId = clearCacheResult.getRequestId();
         var observer = clearCacheObservers.remove(targetId);
         if (observer != null) {
@@ -173,7 +173,7 @@ public class CacheResponseMapObservers implements ConsumingResponseHandler {
     }
 
     @Override
-    public void handleCacheDeleted(DeleteCacheResult<ReusableString> deleteCacheResult) {
+    public void handleCacheDeleted(DeleteCacheResult<I> deleteCacheResult) {
         var targetId = deleteCacheResult.getRequestId();
         var observer = deleteCacheObservers.remove(targetId);
         if (observer != null) {
@@ -186,7 +186,7 @@ public class CacheResponseMapObservers implements ConsumingResponseHandler {
     }
 
     @Override
-    public void handleAllCacheStats(CacheStatsResult<ReusableString> cacheStatsResult) {
+    public void handleAllCacheStats(CacheStatsResult<I> cacheStatsResult) {
         var targetId = cacheStatsResult.getRequestId();
         var observer = allCacheStatsObservers.remove(targetId);
         if (observer != null) {
@@ -195,7 +195,7 @@ public class CacheResponseMapObservers implements ConsumingResponseHandler {
     }
 
     @Override
-    public void handleCacheSubscribeResponse(CacheSubscriptionResult<ReusableString> cacheSubscriptionResult) {
+    public void handleCacheSubscribeResponse(CacheSubscriptionResult<I> cacheSubscriptionResult) {
         var targetId = cacheSubscriptionResult.getRequestId();
         log.info("Got cache subscribe response on requestId {}", targetId);
         var observer = cacheSubscribeObservers.remove(targetId);
@@ -205,7 +205,7 @@ public class CacheResponseMapObservers implements ConsumingResponseHandler {
     }
 
     @Override
-    public void handleCacheUnsubscribeResponse(CacheUnsubscribeResult<ReusableString> cacheUnsubscribeResult) {
+    public void handleCacheUnsubscribeResponse(CacheUnsubscribeResult<I> cacheUnsubscribeResult) {
         var targetId = cacheUnsubscribeResult.getRequestId();
         log.info("Got cache unsubscribe response on requestId {}", targetId);
         var observer = cacheUnsubscribeObservers.remove(targetId);
@@ -215,7 +215,7 @@ public class CacheResponseMapObservers implements ConsumingResponseHandler {
     }
 
     @Override
-    public void handleCacheEntryUpdated(CacheEntryUpdateResult<ReusableString, ReusableString, ReusableString> cacheEntryUpdateResult) {
+    public void handleCacheEntryUpdated(CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult) {
 
     }
 }

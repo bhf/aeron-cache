@@ -6,6 +6,7 @@ import com.bhf.aeroncache.messages.CacheClearedEncoder;
 import com.bhf.aeroncache.messages.MessageHeaderEncoder;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.services.cacheclient.MapCacheClientSchemDetailsProvider;
+import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
@@ -36,7 +37,7 @@ class CacheClearedResultTest {
 
     @BeforeEach
     void setup() {
-        sut = new AeronCacheClusterListener(cacheResponseDecoder, new MapCacheClientSchemDetailsProvider());
+        sut = new AeronCacheClusterListener(cacheResponseDecoder, new MapCacheClientSchemDetailsProvider(), SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier);
         sut.setCacheResultsCallbacks(callbackHandler);
         requestBuffer = new ExpandableArrayBuffer(512);
     }

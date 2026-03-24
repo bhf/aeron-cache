@@ -17,6 +17,7 @@ import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
+import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.client.AeronCluster;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.AgentRunner;
@@ -43,7 +44,7 @@ public class AsyncConsumerPerfTest {
 
         var idleStrategy = new BackoffIdleStrategy();
 
-        var client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder(), new MapCacheClientSchemDetailsProvider());
+        var client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder(), new MapCacheClientSchemDetailsProvider(), SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier);
         client.setCacheResultsCallbacks(observingPublisher);
 
         var podName = System.getenv("POD_ADDRESS");

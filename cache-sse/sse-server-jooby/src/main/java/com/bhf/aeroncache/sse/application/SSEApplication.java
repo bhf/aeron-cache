@@ -14,6 +14,7 @@ import com.bhf.aeroncache.sse.config.SSEIdleStrategies;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
+import com.bhf.aeroncache.utils.SupplierUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -276,6 +277,9 @@ public class SSEApplication extends Jooby {
             var cacheRequestEncoder = clientFactory.getCacheRequestEncoder();
             var responseDecoder = clientFactory.getCacheResponseDecoder();
             var schemaDetailsProvider = clientFactory.getSchemaDetails();
+            var indexSupplier = clientFactory.getIndexSupplier();
+            var keySupplier = clientFactory.getKeySupplier();
+            var valueSupplier = clientFactory.getValueSupplier();
 
             if (PRE_ENCODE_CACHE_REQUESTS) {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
@@ -290,7 +294,7 @@ public class SSEApplication extends Jooby {
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
             }
 
-            client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider);
+            client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);
             client.setCacheResultsCallbacks(subscriptionService);
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");

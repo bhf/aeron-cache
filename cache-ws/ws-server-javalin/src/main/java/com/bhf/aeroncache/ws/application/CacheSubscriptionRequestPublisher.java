@@ -3,10 +3,10 @@ package com.bhf.aeroncache.ws.application;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
-import com.bhf.aeroncache.types.ReusableString;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
@@ -16,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 @Log4j2
-public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPublisher implements WebsocketStatusHandler, CacheSubscriptions  {
+public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reusable, V extends Reusable> extends ObservingCacheRequestPublisher<I,K,V> implements WebsocketStatusHandler, CacheSubscriptions  {
 
     private final Map<String, List<IdentifiableConsumer<String, CacheUpdateEvent>>> cacheSubscriptions = new ConcurrentHashMap<>();
 
@@ -139,7 +139,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
     }
 
     @Override
-    public void handleCacheCleared(ClearCacheResult<ReusableString> clearCacheResult) {
+    public void handleCacheCleared(ClearCacheResult<I> clearCacheResult) {
         log.info("Got cache cleared to send to ws");
         var subscribers = cacheSubscriptions.get(clearCacheResult.getCacheId().value());
 
@@ -151,7 +151,7 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
     }
 
     @Override
-    public void handleCacheDeleted(DeleteCacheResult<ReusableString> deleteCacheResult) {
+    public void handleCacheDeleted(DeleteCacheResult<I> deleteCacheResult) {
         log.info("Got cache deleted to send to ws");
         var subscribers = cacheSubscriptions.get(deleteCacheResult.getCacheId().value());
 
@@ -163,29 +163,31 @@ public class CacheSubscriptionRequestPublisher extends ObservingCacheRequestPubl
     }
 
     @Override
-    public void handleCacheEntryRemoved(RemoveCacheEntryResult<ReusableString, ReusableString> removeCacheEntryResult) {
+    public void handleCacheEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult) {
         log.info("Got cache entry removed to send to ws");
         var subscribers = cacheSubscriptions.get(removeCacheEntryResult.getCacheId().value());
 
         if (subscribers != null) {
             var cacheId = String.valueOf(removeCacheEntryResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.REMOVE_ITEM;
-            var key = removeCacheEntryResult.getKey().value();
-            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, key, null, removeCacheEntryResult.getRequestId())));
+            var key = removeCacheEntryResult.getKey().value().toString();
+            subscribers.forEach(c -> c.accept(
+                    new CacheUpdateEvent(cacheId, eventType, key, null, removeCacheEntryResult.getRequestId())));
         }
     }
 
     @Override
-    public void handleCacheEntryUpdated(CacheEntryUpdateResult<ReusableString, ReusableString, ReusableString> cacheEntryUpdateResult) {
+    public void handleCacheEntryUpdated(CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult) {
         log.info("Got cache entry updated to send to ws");
         var subscribers = cacheSubscriptions.get(cacheEntryUpdateResult.getCacheId().value());
 
         if (subscribers != null) {
             var cacheId = String.valueOf(cacheEntryUpdateResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
-            var key = cacheEntryUpdateResult.getKey().value();
-            var value = cacheEntryUpdateResult.getValue().value();
-            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, cacheEntryUpdateResult.getRequestId())));
+            var key = cacheEntryUpdateResult.getKey().value().toString();
+            var value = cacheEntryUpdateResult.getValue().value().toString();
+            subscribers.forEach(c -> c.accept(
+                    new CacheUpdateEvent(cacheId, eventType, key, value, cacheEntryUpdateResult.getRequestId())));
         }
     }
 }

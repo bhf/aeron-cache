@@ -9,6 +9,8 @@ import com.bhf.aeroncache.http.responses.GetItemResponse;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
@@ -21,10 +23,7 @@ import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
-import com.bhf.aeroncache.utils.ClusterUtils;
-import com.bhf.aeroncache.utils.DNSUtils;
-import com.bhf.aeroncache.utils.HTTPStatusUtils;
-import com.bhf.aeroncache.utils.RingBufferUtils;
+import com.bhf.aeroncache.utils.*;
 import com.bhf.aeroncache.ws.application.CacheSubscriptionRequestPublisher;
 import io.aeron.Aeron;
 import io.aeron.RethrowingErrorHandler;
@@ -53,6 +52,7 @@ import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.List;
@@ -104,6 +104,9 @@ public class NearCacheApplication {
             var cacheRequestEncoder = clientFactory.getCacheRequestEncoder();
             var responseDecoder = clientFactory.getCacheResponseDecoder();
             var schemaDetailsProvider = clientFactory.getSchemaDetails();
+            var indexSupplier = clientFactory.getIndexSupplier();
+            var keySupplier = clientFactory.getKeySupplier();
+            var valueSupplier = clientFactory.getValueSupplier();
 
             if (PRE_ENCODE_CACHE_REQUESTS) {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
@@ -125,7 +128,7 @@ public class NearCacheApplication {
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
             }
 
-            client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider);
+            client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);
             client.setCacheResultsCallbacks(new GroupedResponseHandler(
                     List.of(observingPublisher,
                     subscriptionService)));
@@ -489,17 +492,25 @@ public class NearCacheApplication {
     private static CompletableFuture<GetItemResponse> getItemFromSourceCache(Context ctx, String cacheId, String key) {
         var requestId = getRequestId(ctx);
         CompletableFuture<GetItemResponse> future = new CompletableFuture<>();
-        CompletableFuture.runAsync(() -> observingPublisher.getCacheEntry(requestId, cacheId, key, c -> {
+        Consumer<GetCacheEntryResult> consumer = getGetCacheEntryResultConsumer(future);
+        CompletableFuture.runAsync(() -> observingPublisher.getCacheEntry(requestId, cacheId, key, consumer));
+        return future;
+    }
+
+    @NotNull
+    private static Consumer<GetCacheEntryResult> getGetCacheEntryResultConsumer(CompletableFuture<GetItemResponse> future) {
+        Consumer<GetCacheEntryResult> consumer = c -> {
+
             log.info("Get item response from cluster on cacheId {}, key {}, value {}", c.getCacheId(),
                     c.getEntryKey(), c.getEntryValue());
             var noCache = c.getStatus() == CacheOperationStatus.UNKNOWN_CACHE;
             var response = noCache ?
                     new GetItemResponse("0", "NA", "NA", c.getStatus()) :
-                    new GetItemResponse(c.getCacheId().value(), c.getEntryKey().value(),
-                            c.getEntryValue().value(), c.getStatus());
+                    new GetItemResponse(c.getCacheId().value().toString(), c.getEntryKey().value().toString(),
+                            c.getEntryValue().value().toString(), c.getStatus());
             future.complete(response);
-        }));
-        return future;
+        };
+        return consumer;
     }
 
     /**
@@ -524,12 +535,8 @@ public class NearCacheApplication {
             var requestId = getRequestId(ctx);
 
             CompletableFuture<CreateCacheResponse> future = new CompletableFuture<>();
-            CompletableFuture.runAsync(() -> observingPublisher.sendCreateCache(requestId, request.cacheId(), c -> {
-                var cacheId = c.getCacheId();
-                log.info("Got create cache response from cluster on cacheId {}", cacheId);
-                var response = new CreateCacheResponse(cacheId.value(), c.getStatus());
-                future.complete(response);
-            }));
+            Consumer<CreateCacheResult> consumer = getCreateCacheResultConsumer(future);
+            CompletableFuture.runAsync(() -> observingPublisher.sendCreateCache(requestId, request.cacheId(), consumer));
 
             var response = future.get();
 
@@ -552,6 +559,18 @@ public class NearCacheApplication {
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
+    }
+
+    @NotNull
+    private static Consumer<CreateCacheResult> getCreateCacheResultConsumer(CompletableFuture<CreateCacheResponse> future) {
+        Consumer<CreateCacheResult> consumer = c -> {
+
+            var cacheId = c.getCacheId();
+            log.info("Got create cache response from cluster on cacheId {}", cacheId);
+            var response = new CreateCacheResponse(cacheId.value().toString(), c.getStatus());
+            future.complete(response);
+        };
+        return consumer;
     }
 
     /**

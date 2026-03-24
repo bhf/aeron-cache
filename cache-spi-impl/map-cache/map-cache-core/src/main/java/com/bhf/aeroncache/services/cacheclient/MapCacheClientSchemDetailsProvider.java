@@ -5,57 +5,57 @@ import com.bhf.aeroncache.messages.*;
 public class MapCacheClientSchemDetailsProvider implements CacheClientSchemDetailsProvider {
 
     @Override
-    public int getCacheCreatedDecoder() {
+    public int getCacheCreatedId() {
         return CacheCreatedDecoder.TEMPLATE_ID ;
     }
 
     @Override
-    public int getCacheEntryCreatedDecoder() {
+    public int getCacheEntryCreatedId() {
         return CacheEntryCreatedDecoder.TEMPLATE_ID;
     }
 
     @Override
-    public int getCacheEntryResultDecoder() {
+    public int getCacheEntryResultId() {
         return CacheEntryResultDecoder.TEMPLATE_ID;
     }
 
     @Override
-    public int getCacheClearedDecoder() {
+    public int getCacheClearedId() {
         return CacheClearedDecoder.TEMPLATE_ID;
     }
 
     @Override
-    public int getCacheDeletedDecoder() {
+    public int getCacheDeletedId() {
         return CacheDeletedDecoder.TEMPLATE_ID;
     }
 
     @Override
-    public int getCacheEntryRemovedDecoder() {
+    public int getCacheEntryRemovedId() {
         return CacheEntryRemovedDecoder.TEMPLATE_ID;
     }
 
     @Override
-    public int getAllCacheEntriesResultDecoder() {
+    public int getAllCacheEntriesResultId() {
         return AllCacheEntriesResultDecoder.TEMPLATE_ID;
     }
 
     @Override
-    public int getAllCacheStatsResultDecoder() {
+    public int getAllCacheStatsResultId() {
         return AllCacheStatsResultDecoder.TEMPLATE_ID;
     }
 
     @Override
-    public int getCacheSubscriptionResponseDecoder() {
+    public int getCacheSubscriptionResponseId() {
         return CacheSubscriptionResponseDecoder.TEMPLATE_ID;
     }
 
     @Override
-    public int getCacheUnsubscribeResponseDecoder() {
+    public int getCacheUnsubscribeResponseId() {
         return CacheUnsubscribeResponseDecoder.TEMPLATE_ID;
     }
 
     @Override
-    public int getCacheEntryUpdateDecoder() {
+    public int getCacheEntryUpdateId() {
         return CacheEntryUpdateDecoder.TEMPLATE_ID;
     }
 }

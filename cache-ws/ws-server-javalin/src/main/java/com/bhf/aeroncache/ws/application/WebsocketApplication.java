@@ -12,10 +12,7 @@ import com.bhf.aeroncache.services.cacheclient.CacheClientFactory;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
-import com.bhf.aeroncache.utils.ClusterUtils;
-import com.bhf.aeroncache.utils.DNSUtils;
-import com.bhf.aeroncache.utils.HTTPStatusUtils;
-import com.bhf.aeroncache.utils.RingBufferUtils;
+import com.bhf.aeroncache.utils.*;
 import com.bhf.aeroncache.ws.config.WsIdleStrategies;
 import io.aeron.Aeron;
 import io.aeron.RethrowingErrorHandler;
@@ -95,6 +92,9 @@ public class WebsocketApplication {
             var cacheRequestEncoder = clientFactory.getCacheRequestEncoder();
             var responseDecoder = clientFactory.getCacheResponseDecoder();
             var schemaDetailsProvider = clientFactory.getSchemaDetails();
+            var indexSupplier = clientFactory.getIndexSupplier();
+            var keySupplier = clientFactory.getKeySupplier();
+            var valueSupplier = clientFactory.getValueSupplier();
 
             if (PRE_ENCODE_CACHE_REQUESTS) {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
@@ -109,7 +109,7 @@ public class WebsocketApplication {
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
             }
 
-            client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider);
+            client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);
             client.setCacheResultsCallbacks(subscriptionService);
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");

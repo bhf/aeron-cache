@@ -11,6 +11,7 @@ import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
 import com.bhf.aeroncache.utils.RingBufferUtils;
+import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
@@ -88,7 +89,7 @@ public class ControlledDutyCyclePerfTest {
         System.out.println("EGRESS_IP: " + egressIP);
         final var ingressEndpoints = ingressEndpoints(Arrays.asList(hostnames));
 
-        final var client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder(), new MapCacheClientSchemDetailsProvider());
+        final var client = new AeronCacheClusterListener(new ReusableStringCacheResponseDecoder(), new MapCacheClientSchemDetailsProvider(), SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier);
 
         Map<Integer, StringBuilder> payloadSizeToDistro = new TreeMap<>();
 

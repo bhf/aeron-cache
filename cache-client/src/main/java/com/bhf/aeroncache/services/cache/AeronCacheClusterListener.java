@@ -3,20 +3,20 @@ package com.bhf.aeroncache.services.cache;
 import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
 import com.bhf.aeroncache.handlers.ClusterSessionEventHandler;
 import com.bhf.aeroncache.handlers.NoOpClusterSessionEventHandler;
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cacheclient.CacheClientSchemDetailsProvider;
-import com.bhf.aeroncache.types.ReusableString;
-import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.client.EgressListener;
 import io.aeron.cluster.codecs.EventCode;
 import io.aeron.logbuffer.Header;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
+
+import java.util.function.Supplier;
 
 /**
  * Decode SBE messages related to cache requests and pass the result
@@ -24,8 +24,7 @@ import org.agrona.concurrent.IdleStrategy;
  */
 @Setter
 @Log4j2
-@RequiredArgsConstructor
-public class AeronCacheClusterListener implements EgressListener {
+public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V extends Reusable> implements EgressListener {
 
     @Setter
     private CacheResponseHandler cacheResultsCallbacks;
@@ -35,20 +34,40 @@ public class AeronCacheClusterListener implements EgressListener {
 
     private final CacheResponseDecoder cacheResponseDecoder;
     private final CacheClientSchemDetailsProvider schemaDetails;
+    private final Supplier<I> indexSupplier;
+    private final Supplier<K> keySupplier;
+    private final Supplier<V> valueSupplier;
 
-    private final CreateCacheResult<ReusableString> createCacheResult = new CreateCacheResult<>(SupplierUtils.stringSupplier.get());
-    private final AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult = new AddCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
-    private final ClearCacheResult<ReusableString> clearCacheResult = new ClearCacheResult<>(SupplierUtils.stringSupplier.get());
-    private final DeleteCacheResult<ReusableString> deleteCacheResult = new DeleteCacheResult<>(SupplierUtils.stringSupplier.get());
-    private final RemoveCacheEntryResult<ReusableString, ReusableString> removeCacheEntryResult = new RemoveCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
-    private final GetCacheEntryResult<ReusableString, ReusableString, ReusableString> getCacheEntryResult = new GetCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
-    private final GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> getCacheEntriesResult = new GetAllCacheEntriesResult<>(SupplierUtils.stringSupplier.get());
-    private final CacheStatsResult<ReusableString> cacheStatsResult = new CacheStatsResult<>();
-    private final CacheSubscriptionResult<ReusableString> cacheSubscriptionResult = new CacheSubscriptionResult<>(SupplierUtils.stringSupplier.get());
-    private final CacheUnsubscribeResult<ReusableString> cacheUnsubscribeResult = new CacheUnsubscribeResult<>(SupplierUtils.stringSupplier.get());
-    private final CacheEntryUpdateResult<ReusableString, ReusableString, ReusableString> cacheEntryUpdateResult = new CacheEntryUpdateResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
-
+    private final CreateCacheResult<I> createCacheResult;
+    private final AddCacheEntryResult<I, K> addCacheEntryResult;
+    private final ClearCacheResult<I> clearCacheResult;
+    private final DeleteCacheResult<I> deleteCacheResult;
+    private final RemoveCacheEntryResult<I, K> removeCacheEntryResult;
+    private final GetCacheEntryResult<I, K, V> getCacheEntryResult;
+    private final GetAllCacheEntriesResult<I, K, V> getCacheEntriesResult;
+    private final CacheSubscriptionResult<I> cacheSubscriptionResult;
+    private final CacheUnsubscribeResult<I> cacheUnsubscribeResult;
+    private final CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult;
     private final ClusterSessionEventHandler sessionEventHandler = new NoOpClusterSessionEventHandler();
+    private final CacheStatsResult<I> cacheStatsResult = new CacheStatsResult<>();
+
+    public AeronCacheClusterListener(CacheResponseDecoder cacheResponseDecoder, CacheClientSchemDetailsProvider schemaDetails, Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier) {
+        this.cacheResponseDecoder = cacheResponseDecoder;
+        this.schemaDetails = schemaDetails;
+        this.indexSupplier = indexSupplier;
+        this.keySupplier = keySupplier;
+        this.valueSupplier = valueSupplier;
+        createCacheResult = new CreateCacheResult<>(indexSupplier.get());
+        addCacheEntryResult = new AddCacheEntryResult<>(indexSupplier.get(), keySupplier.get());
+        clearCacheResult = new ClearCacheResult<>(indexSupplier.get());
+        deleteCacheResult = new DeleteCacheResult<>(indexSupplier.get());
+        removeCacheEntryResult = new RemoveCacheEntryResult<>(indexSupplier.get(), keySupplier.get());
+        getCacheEntryResult = new GetCacheEntryResult<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
+        getCacheEntriesResult = new GetAllCacheEntriesResult<>(indexSupplier.get());
+        cacheSubscriptionResult = new CacheSubscriptionResult<>(indexSupplier.get());
+        cacheUnsubscribeResult = new CacheUnsubscribeResult<>(indexSupplier.get());
+        cacheEntryUpdateResult = new CacheEntryUpdateResult<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
+    }
 
     @Override
     public void onMessage(
@@ -63,27 +82,27 @@ public class AeronCacheClusterListener implements EgressListener {
 
         log.debug("Got client side message with TID {}", templateId);
 
-        if (templateId == schemaDetails.getCacheCreatedDecoder()) {
+        if (templateId == schemaDetails.getCacheCreatedId()) {
             handleCacheCreated(buffer, offset);
-        } else if (templateId == schemaDetails.getCacheEntryCreatedDecoder()) {
+        } else if (templateId == schemaDetails.getCacheEntryCreatedId()) {
             handleCacheEntryCreated(buffer, offset);
-        } else if (templateId == schemaDetails.getCacheEntryResultDecoder()) {
+        } else if (templateId == schemaDetails.getCacheEntryResultId()) {
             handleCacheEntryResult(buffer, offset);
-        } else if (templateId == schemaDetails.getCacheClearedDecoder()) {
+        } else if (templateId == schemaDetails.getCacheClearedId()) {
             handleCacheCleared(buffer, offset);
-        } else if (templateId == schemaDetails.getCacheDeletedDecoder()) {
+        } else if (templateId == schemaDetails.getCacheDeletedId()) {
             handleCacheDeleted(buffer, offset);
-        } else if (templateId == schemaDetails.getCacheEntryRemovedDecoder()) {
+        } else if (templateId == schemaDetails.getCacheEntryRemovedId()) {
             handleCacheEntryRemoved(buffer, offset);
-        } else if (templateId == schemaDetails.getAllCacheEntriesResultDecoder()) {
+        } else if (templateId == schemaDetails.getAllCacheEntriesResultId()) {
             handleAllCacheEntriesResult(buffer, offset);
-        } else if (templateId == schemaDetails.getAllCacheStatsResultDecoder()) {
+        } else if (templateId == schemaDetails.getAllCacheStatsResultId()) {
             handleAllCacheStatsResult(buffer, offset);
-        } else if (templateId == schemaDetails.getCacheSubscriptionResponseDecoder()) {
+        } else if (templateId == schemaDetails.getCacheSubscriptionResponseId()) {
             handleCacheSubscribeResult(buffer, offset);
-        } else if (templateId == schemaDetails.getCacheUnsubscribeResponseDecoder()) {
+        } else if (templateId == schemaDetails.getCacheUnsubscribeResponseId()) {
             handleCacheUnsubscribeResult(buffer, offset);
-        } else if (templateId == schemaDetails.getCacheEntryUpdateDecoder()) {
+        } else if (templateId == schemaDetails.getCacheEntryUpdateId()) {
             handleCacheEntryUpdated(buffer, offset);
         } else {
             log.warn("Got unknown message with TID {}", templateId);
