@@ -16,7 +16,7 @@ dependencies {
     implementation(libs.log4j.core)
     implementation(project(":cache-common"))
     implementation(project(":cache-spi"))
-    implementation(project(":cache-spi-impl:map-cache:map-cache-core"))
+    runtimeOnly(project(":cache-spi-impl:map-cache:map-cache-core"))
     implementation(libs.opentelemetry.api)
     implementation(libs.opentelemetry.sdk)
     implementation(libs.opentelemetry.exporter.otlp)

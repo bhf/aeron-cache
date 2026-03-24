@@ -27,3 +27,4 @@ include("cache-integration:clustered:multistream-integration-tests")
 include("cache-integration:clustered:shutdown-integration-tests")
 
 include("cache-integration:singlenode:core-integration-tests")
+include("cache-spi-impl:map-cache:map-cache-test")
