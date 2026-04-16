@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -40,7 +41,7 @@ public abstract class AbstractMultiStreamPutItemTests {
     @HappyPath
     void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
         // Arrange
-        var futures = Arrays.stream(streamingHelpers)
+        var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
                 .map(helper -> helper.getEvents(backend, 1))
                 .collect(Collectors.toList());
 
@@ -51,16 +52,20 @@ public abstract class AbstractMultiStreamPutItemTests {
         Awaitility.await()
                 .atMost(60, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
-                    for (var future : futures) {
-                        var updateEvents = future.get(60, TimeUnit.SECONDS);
-                        var updateEvent = updateEvents.get(0);
-                        MatcherAssert.assertThat("Expected event data to be available", updateEvent, Matchers.notNullValue());
-                        MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
-                        MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
-                        MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
-                        MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+                    for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
+                        var streamingSoureEvents = streamingSourceEventsFuture.get(60, TimeUnit.SECONDS);
+                        assertOnSingleStreamingSourceEvents(streamingSoureEvents);
                     }
                 });
+    }
+
+    private static void assertOnSingleStreamingSourceEvents(List<CacheUpdateEvent> streamingSoureEvents) {
+        var updateEvent = streamingSoureEvents.get(0);
+        MatcherAssert.assertThat("Expected event data to be available", updateEvent, Matchers.notNullValue());
+        MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+        MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+        MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
+        MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
     }
 
 }
