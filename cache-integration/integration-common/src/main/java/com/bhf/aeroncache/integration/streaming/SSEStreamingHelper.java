@@ -15,6 +15,8 @@ import org.hamcrest.Matchers;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -27,9 +29,10 @@ public class SSEStreamingHelper implements StreamingHelper{
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
-    public CompletableFuture<CacheUpdateEvent> getSingleValue(BackendTestResource backend) {
-        CountDownLatch latch = new CountDownLatch(1);
-        CompletableFuture<CacheUpdateEvent> eventData = new CompletableFuture<>();
+    public CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, int count) {
+        CountDownLatch latch = new CountDownLatch(count);
+        List<CacheUpdateEvent> events = new ArrayList<>();
+        CompletableFuture<List<CacheUpdateEvent>> eventData = new CompletableFuture<>();
         AtomicBoolean isOpen = new AtomicBoolean();
 
         var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
@@ -47,11 +50,17 @@ public class SSEStreamingHelper implements StreamingHelper{
             public void onEvent(@NotNull okhttp3.sse.EventSource eventSource, @Nullable String id, @Nullable String type, @NotNull String data) {
                 try {
                     CacheUpdateEvent event = OBJECT_MAPPER.readValue(data.toString(), CacheUpdateEvent.class);
-                    eventData.complete(event);
+                    synchronized (events) {
+                        events.add(event);
+                    }
                 } catch (JsonProcessingException e) {
                     eventData.completeExceptionally(e);
                 }
                 latch.countDown();
+                if (latch.getCount() == 0) {
+                    eventData.complete(events);
+                    //eventSource.cancel();
+                }
             }
 
             @Override

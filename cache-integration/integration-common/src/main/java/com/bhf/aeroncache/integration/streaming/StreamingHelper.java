@@ -3,8 +3,9 @@ package com.bhf.aeroncache.integration.streaming;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestResource;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public interface StreamingHelper {
-    CompletableFuture<CacheUpdateEvent> getSingleValue(BackendTestResource backend);
+    CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, int count);
 }

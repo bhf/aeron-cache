@@ -41,7 +41,7 @@ public abstract class AbstractMultiStreamPutItemTests {
     void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
         // Arrange
         var futures = Arrays.stream(streamingHelpers)
-                .map(helper -> helper.getSingleValue(backend))
+                .map(helper -> helper.getEvents(backend, 1))
                 .collect(Collectors.toList());
 
         // Act
@@ -52,7 +52,8 @@ public abstract class AbstractMultiStreamPutItemTests {
                 .atMost(60, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
                     for (var future : futures) {
-                        var updateEvent = future.get(60, TimeUnit.SECONDS);
+                        var updateEvents = future.get(60, TimeUnit.SECONDS);
+                        var updateEvent = updateEvents.get(0);
                         MatcherAssert.assertThat("Expected event data to be available", updateEvent, Matchers.notNullValue());
                         MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
                         MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));

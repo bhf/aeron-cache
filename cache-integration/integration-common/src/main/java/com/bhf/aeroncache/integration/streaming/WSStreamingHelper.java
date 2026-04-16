@@ -10,8 +10,11 @@ import org.hamcrest.Matchers;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -22,8 +25,10 @@ public class WSStreamingHelper implements StreamingHelper{
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
-    public CompletableFuture<CacheUpdateEvent> getSingleValue(BackendTestResource backend) {
-        CompletableFuture<CacheUpdateEvent> messageFuture = new CompletableFuture<>();
+    public CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, int count) {
+        CountDownLatch latch = new CountDownLatch(count);
+        CompletableFuture<List<CacheUpdateEvent>> messageFuture = new CompletableFuture<>();
+        List<CacheUpdateEvent> events = new ArrayList<>();
 
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
                 + backend.getWsPort() + STREAMING_API_PREFIX + KNOWN_CACHE_ID;
@@ -49,15 +54,24 @@ public class WSStreamingHelper implements StreamingHelper{
                     public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
                         try {
                             CacheUpdateEvent event = OBJECT_MAPPER.readValue(data.toString(), CacheUpdateEvent.class);
-                            messageFuture.complete(event);
+                            synchronized (events) {
+                                events.add(event);
+                            }
                         } catch (JsonProcessingException e) {
                             messageFuture.completeExceptionally(e);
                         }
-                        return messageFuture;
+
+                        latch.countDown();
+                        if (latch.getCount() == 0) {
+                            messageFuture.complete(events);
+                            webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Done");
+                        }
+                        return null;
                     }
 
                     @Override
                     public void onError(WebSocket webSocket, Throwable error) {
+                        messageFuture.completeExceptionally(error);
                         WebSocket.Listener.super.onError(webSocket, error);
                     }
                 });

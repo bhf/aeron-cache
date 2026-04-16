@@ -39,7 +39,7 @@ public abstract class AbstractPutItemTests {
     @HappyPath
     void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
         // Arrange
-        var eventData = streamingHelper.getSingleValue(backend);
+        var eventData = streamingHelper.getEvents(backend, 1);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
@@ -48,7 +48,8 @@ public abstract class AbstractPutItemTests {
         Awaitility.await()
                 .atMost(60, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
-                            var updateEvent = eventData.get();
+                            var updateEvents = eventData.get();
+                            var updateEvent = updateEvents.get(0);
                             MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
                             MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
                             MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));

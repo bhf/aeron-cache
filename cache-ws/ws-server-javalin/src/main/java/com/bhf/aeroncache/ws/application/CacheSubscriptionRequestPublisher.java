@@ -186,8 +186,14 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
             var key = cacheEntryUpdateResult.getKey().value().toString();
             var value = cacheEntryUpdateResult.getValue().value().toString();
-            subscribers.forEach(c -> c.accept(
-                    new CacheUpdateEvent(cacheId, eventType, key, value, cacheEntryUpdateResult.getRequestId())));
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(
+                            new CacheUpdateEvent(cacheId, eventType, key, value, cacheEntryUpdateResult.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
         }
     }
 }
