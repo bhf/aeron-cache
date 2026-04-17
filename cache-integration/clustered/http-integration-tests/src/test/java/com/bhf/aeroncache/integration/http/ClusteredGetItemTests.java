@@ -4,4 +4,8 @@ import com.bhf.aeroncache.integration.config.BackendTestConfig;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
 class ClusteredGetItemTests extends GetItemTests{
+
+    ClusteredGetItemTests() {
+        super("/api/v1/cache/");
+    }
 }
