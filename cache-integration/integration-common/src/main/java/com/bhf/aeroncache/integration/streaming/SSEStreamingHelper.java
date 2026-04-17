@@ -10,8 +10,6 @@ import okhttp3.Response;
 import okhttp3.sse.EventSource;
 import okhttp3.sse.EventSourceListener;
 import okhttp3.sse.EventSources;
-import org.awaitility.Awaitility;
-import org.hamcrest.Matchers;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,8 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SSEStreamingHelper implements StreamingHelper{
 
@@ -29,11 +25,10 @@ public class SSEStreamingHelper implements StreamingHelper{
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
-    public CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, int count) {
+    public CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, int count, CompletableFuture<Void> connectionReady) {
         CountDownLatch latch = new CountDownLatch(count);
         List<CacheUpdateEvent> events = new ArrayList<>();
         CompletableFuture<List<CacheUpdateEvent>> eventData = new CompletableFuture<>();
-        AtomicBoolean isOpen = new AtomicBoolean();
 
         var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
                 + backend.getSsePort() + STREAMING_API_PREFIX + KNOWN_CACHE_ID;
@@ -45,45 +40,37 @@ public class SSEStreamingHelper implements StreamingHelper{
         var httpClient = new OkHttpClient();
         var factory = EventSources.createFactory(httpClient);
         factory.newEventSource(request, new EventSourceListener() {
-
             @Override
-            public void onEvent(@NotNull okhttp3.sse.EventSource eventSource, @Nullable String id, @Nullable String type, @NotNull String data) {
+            public void onEvent(@NotNull EventSource eventSource, @Nullable String id, @Nullable String type, @NotNull String data) {
                 try {
-                    CacheUpdateEvent event = OBJECT_MAPPER.readValue(data.toString(), CacheUpdateEvent.class);
+                    CacheUpdateEvent event = OBJECT_MAPPER.readValue(data, CacheUpdateEvent.class);
                     synchronized (events) {
                         events.add(event);
+                        latch.countDown();
                     }
                 } catch (JsonProcessingException e) {
                     eventData.completeExceptionally(e);
                 }
-                latch.countDown();
                 if (latch.getCount() == 0) {
                     eventData.complete(events);
-                    //eventSource.cancel();
                 }
             }
 
             @Override
             public void onOpen(@NotNull EventSource eventSource, @NotNull Response response) {
-                isOpen.set(true);
-            }
-
-            @Override
-            public void onClosed(@NotNull EventSource eventSource) {
-                super.onClosed(eventSource);
-                isOpen.set(false);
+                System.out.println("SSE CONNECTION NOW OPEN");
+                connectionReady.complete(null);
             }
 
             @Override
             public void onFailure(@NotNull EventSource eventSource, @Nullable Throwable t, @Nullable Response response) {
-                super.onFailure(eventSource, t, response);
                 System.out.println("GOT SSE FAILURE:"+eventSource.request());
+                connectionReady.completeExceptionally(t != null ? t : new RuntimeException("SSE Failure"));
+                eventData.completeExceptionally(t != null ? t : new RuntimeException("SSE Failure"));
             }
         });
 
-        Awaitility.await().atMost(60, TimeUnit.SECONDS).untilAtomic(isOpen, Matchers.equalTo(true));
-
         return eventData;
-
     }
+
 }

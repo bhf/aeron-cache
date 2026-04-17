@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @ExtendWith(BackendTestLauncher.class)
-public abstract class AbstractMultiStreamPutItemTests {
+public abstract class AbstractMultiStreamRemoveItemTest {
 
     private static final String KNOWN_CACHE_ID = "1";
     private static final String KNOWN_KEY = "SomeKey";
@@ -29,7 +29,7 @@ public abstract class AbstractMultiStreamPutItemTests {
 
     private final StreamingHelper[] streamingHelpers;
 
-    protected AbstractMultiStreamPutItemTests(StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamRemoveItemTest(StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
     }
 
@@ -39,16 +39,16 @@ public abstract class AbstractMultiStreamPutItemTests {
     }
 
     @Test
-    @DisplayName("Should get a streaming update when putting into a known cache")
+    @DisplayName("Should get a streaming update when removing an existing item")
     @HappyPath
-    void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
+    void shouldGetStreamingUpdateWhenRemovingExistingItem(BackendTestResource backend) {
         // Arrange
         List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
         var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
                 .map(helper -> {
                     CompletableFuture<Void> ready = new CompletableFuture<>();
                     readyFutures.add(ready);
-                    return helper.getEvents(backend, 1, ready);
+                    return helper.getEvents(backend, 2, ready);
                 })
                 .collect(Collectors.toList());
 
@@ -56,6 +56,7 @@ public abstract class AbstractMultiStreamPutItemTests {
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
+        CacheTestUtils.removeItem(KNOWN_CACHE_ID, KNOWN_KEY, backend);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -67,13 +68,18 @@ public abstract class AbstractMultiStreamPutItemTests {
         }
     }
 
+
     private static void assertOnSingleStreamingSourceEvents(List<CacheUpdateEvent> streamingSoureEvents) {
-        var updateEvent = streamingSoureEvents.get(0);
-        MatcherAssert.assertThat("Expected event data to be available", updateEvent, Matchers.notNullValue());
-        MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
-        MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
-        MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
-        MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+        var addEvent = streamingSoureEvents.get(0);
+        MatcherAssert.assertThat(addEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+        MatcherAssert.assertThat(addEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+        MatcherAssert.assertThat(addEvent.itemKey(), Matchers.is(KNOWN_KEY));
+        MatcherAssert.assertThat(addEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+
+        var removeEvent = streamingSoureEvents.get(1);
+        MatcherAssert.assertThat(removeEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.REMOVE_ITEM));
+        MatcherAssert.assertThat(removeEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+        MatcherAssert.assertThat(removeEvent.itemKey(), Matchers.is(KNOWN_KEY));
     }
 
 }

@@ -5,7 +5,6 @@ import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
-import lombok.Getter;
 import org.awaitility.Awaitility;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -14,6 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 @ExtendWith(BackendTestLauncher.class)
@@ -39,7 +39,10 @@ public abstract class AbstractPutItemTests {
     @HappyPath
     void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
         // Arrange
-        var eventData = streamingHelper.getEvents(backend, 1);
+        var readyFuture = new CompletableFuture<Void>();
+        var eventData = streamingHelper.getEvents(backend, 1, readyFuture);
+
+        Awaitility.await().atMost(60, TimeUnit.SECONDS).until(readyFuture::isDone);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
