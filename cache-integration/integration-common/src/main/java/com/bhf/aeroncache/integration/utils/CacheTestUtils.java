@@ -15,6 +15,7 @@ public class CacheTestUtils {
     private static final String CREATE_ENDPOINT = "/api/v1/cache/";
     private static final String PUT_ITEM_ENDPOINT = "/api/v1/cache/";
     private static final String DELETE_ENDPOINT = "/api/v1/cache/";
+    private static final String CLEAR_ENDPOINT = "/api/v1/cache/";
 
     /**
      * Create a cache as part of setting up a test case.
@@ -65,7 +66,7 @@ public class CacheTestUtils {
     }
 
     /**
-     * Delete a cache as part of setting up a test scenario,
+     * Delete a cache as part of setting up a test scenario.
      *
      * @param cacheId THe cache to be deleted.
      */
@@ -76,5 +77,18 @@ public class CacheTestUtils {
                 .accept(ContentType.JSON)
                 .body(jsonObj.toString())
                 .request(Method.DELETE, DELETE_ENDPOINT + cacheId);
+    }
+
+    /**
+     * Clear the contents of a cache.
+     *
+     * @param cacheId
+     * @param backend
+     */
+    public static void clearCache(String cacheId, BackendTestResource backend) {
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .request(Method.PATCH, CLEAR_ENDPOINT + cacheId);
     }
 }
