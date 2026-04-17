@@ -26,6 +26,7 @@ public abstract class AbstractMultiStreamPutItemTests {
     private static final String KNOWN_CACHE_ID = "1";
     private static final String KNOWN_KEY = "SomeKey";
     private static final String KNOWN_VALUE = "SomeValue";
+    private static final String ANOTHER_KNOWN_VALUE = "SomeOtherValue";
 
     private final StreamingHelper[] streamingHelpers;
 
@@ -39,7 +40,7 @@ public abstract class AbstractMultiStreamPutItemTests {
     }
 
     @Test
-    @DisplayName("Should get a streaming update when putting into a known cache")
+    @DisplayName("Should get a streaming updates when putting into a known cache")
     @HappyPath
     void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
         // Arrange
@@ -63,17 +64,57 @@ public abstract class AbstractMultiStreamPutItemTests {
                     .atMost(60, TimeUnit.SECONDS)
                     .until(streamingSourceEventsFuture::isDone);
 
-            assertOnSingleStreamingSourceEvents(streamingSourceEventsFuture.join());
+            var streamingSoureEvents = streamingSourceEventsFuture.join();
+
+            var updateEvent = streamingSoureEvents.get(0);
+            MatcherAssert.assertThat("Expected event data to be available", updateEvent, Matchers.notNullValue());
+            MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+            MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
+            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
         }
     }
 
-    private static void assertOnSingleStreamingSourceEvents(List<CacheUpdateEvent> streamingSoureEvents) {
-        var updateEvent = streamingSoureEvents.get(0);
-        MatcherAssert.assertThat("Expected event data to be available", updateEvent, Matchers.notNullValue());
-        MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
-        MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
-        MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
-        MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+    @Test
+    @DisplayName("Should get a streaming updates when putting on existing key into a known cache")
+    @HappyPath
+    void shouldGetStreamingUpdateWhenPuttingExistingKeyIntoKnownCache(BackendTestResource backend) {
+        // Arrange
+        List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
+        var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
+                .map(helper -> {
+                    CompletableFuture<Void> ready = new CompletableFuture<>();
+                    readyFutures.add(ready);
+                    return helper.getEvents(backend, 2, ready);
+                })
+                .collect(Collectors.toList());
+
+        readyFutures.forEach(f -> Awaitility.await().atMost(60, TimeUnit.SECONDS).until(f::isDone));
+
+        // Act
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, ANOTHER_KNOWN_VALUE, backend);
+
+        // Assert
+        for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
+            Awaitility.await()
+                    .atMost(60, TimeUnit.SECONDS)
+                    .until(streamingSourceEventsFuture::isDone);
+
+            var streamingSoureEvents = streamingSourceEventsFuture.join();
+
+            var updateEvent = streamingSoureEvents.get(0);
+            MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+            MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
+            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+
+            var secondUpdateEvent = streamingSoureEvents.get(1);
+            MatcherAssert.assertThat(secondUpdateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(secondUpdateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+            MatcherAssert.assertThat(secondUpdateEvent.itemKey(), Matchers.is(KNOWN_KEY));
+            MatcherAssert.assertThat(secondUpdateEvent.itemValue(), Matchers.is(ANOTHER_KNOWN_VALUE));
+        }
     }
 
 }
