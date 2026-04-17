@@ -1,6 +1,7 @@
 plugins {
     application
     alias(libs.plugins.shadow)
+    alias(libs.plugins.jib)
 }
 
 project.setProperty("mainClassName", "com.bhf.aeroncache.http.application.NearCacheApplication")
@@ -58,4 +59,42 @@ tasks.compileJava{
 tasks.build {
     dependsOn(copyAgent)
     dependsOn(copyExtension)
+}
+
+apply(plugin = "com.google.cloud.tools.jib")
+
+configure<com.google.cloud.tools.jib.gradle.JibExtension> {
+    from {
+        image = "docker://eclipse-temurin:21"
+    }
+    to {
+        image = "aeroncache-http-near-javalin"
+        tags = setOf("latest", project.version.toString())
+    }
+    container {
+        mainClass = "com.bhf.aeroncache.http.application.NearCacheApplication"
+        jvmFlags = listOf(
+            "--enable-preview",
+            "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
+            "-javaagent:/app/agent/opentelemetry-javaagent.jar",
+            "-Dotel.javaagent.extensions=/app/agent/opentelemetry-javaagent-extension.jar"
+        )
+        ports = listOf("8080")
+    }
+    extraDirectories {
+        paths {
+            path {
+                setFrom(layout.buildDirectory.dir("agent"))
+                into = "/app/agent"
+            }
+        }
+    }
+}
+
+tasks.named("jib") {
+    dependsOn(copyAgent, copyExtension)
+}
+
+tasks.named("jibDockerBuild") {
+    dependsOn(copyAgent, copyExtension)
 }

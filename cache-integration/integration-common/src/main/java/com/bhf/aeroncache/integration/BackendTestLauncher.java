@@ -76,13 +76,16 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
         cacheNodes.forEach(GenericContainer::start);
 
         var baseHttpUri = "http://localhost";
+        var baseHttpNearUri = "http://localhost";
         var baseWsUri = "ws://localhost";
         var baseSseUri = "http://localhost";
         int httpPort = 0;
+        int httpNearPort = 0;
         int wsPort = 0;
         int ssePort = 0;
 
         GenericContainer<?> httpContainer = null;
+        GenericContainer<?> httpNearContainer = null;
         GenericContainer<?> wsContainer = null;
         GenericContainer<?> sseContainer = null;
 
@@ -104,9 +107,16 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
             baseSseUri = "http://"+sseContainer.getHost();
             ssePort = sseContainer.getMappedPort(7072);
         }
+        if (config.httpNearCacheEnabled()){
+            httpNearContainer = TestContainersEnvironmentFactory.getClusteredHTTPNearContainer(3, network);
+            httpNearContainer.start();
+            baseHttpNearUri = "http://"+httpNearContainer.getHost();
+            httpNearPort = httpNearContainer.getMappedPort(7073);
+        }
 
-        var backendTestContainers = new BackendTestContainers(cacheNodes, httpContainer, wsContainer, sseContainer);
-        return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSseUri, ssePort, functionalityKey, true, backendTestContainers);
+        var backendTestContainers = new BackendTestContainers(cacheNodes, httpContainer, httpNearContainer, wsContainer, sseContainer);
+        return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSseUri, ssePort, baseHttpNearUri,
+                httpNearPort, functionalityKey, true, backendTestContainers);
     }
 
     private static @NotNull BackendTestResource setupNonClusteredEnvironment(BackendTestConfig config, Network network) {
@@ -117,13 +127,16 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
         cacheNode.start();
 
         var baseHttpUri = "http://localhost";
+        var baseHttpNearUri = "http://localhost";
         var baseWsUri = "ws://localhost";
         var baseSseUri = "http://localhost";
         int httpPort = 0;
+        int httpNearPort = 0;
         int wsPort = 0;
         int ssePort = 0;
 
         GenericContainer<?> httpContainer = null;
+        GenericContainer<?> httpNearContainer = null;
         GenericContainer<?> wsContainer = null;
         GenericContainer<?> sseContainer = null;
 
@@ -145,9 +158,16 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
             baseSseUri = "http://"+sseContainer.getHost();
             ssePort = sseContainer.getMappedPort(7072);
         }
+        if (config.httpNearCacheEnabled()){
+            httpNearContainer = TestContainersEnvironmentFactory.getClusteredHTTPNearContainer(3, network);
+            httpNearContainer.start();
+            baseHttpNearUri = "http://"+httpNearContainer.getHost();
+            httpNearPort = httpNearContainer.getMappedPort(7073);
+        }
 
-        var backendTestContainers = new BackendTestContainers(cacheNodeList, httpContainer, wsContainer, sseContainer);
-        return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSseUri, ssePort, functionalityKey, true, backendTestContainers);
+        var backendTestContainers = new BackendTestContainers(cacheNodeList, httpContainer, httpNearContainer, wsContainer, sseContainer);
+        return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSseUri, ssePort, baseHttpNearUri,
+                httpNearPort, functionalityKey, true, backendTestContainers);
     }
 
     /**
@@ -183,7 +203,8 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
             ssePort = SSEApplication.startSSEInterface(null, 0);
         }
 
-        return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseHttpUri, ssePort, functionalityKey, false, null);
+        return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseHttpUri, ssePort,
+                null, 0, functionalityKey, false, null);
     }
 
     @Override

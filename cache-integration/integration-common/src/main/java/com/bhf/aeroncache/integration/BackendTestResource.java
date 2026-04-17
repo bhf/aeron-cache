@@ -19,6 +19,9 @@ public class BackendTestResource implements ExtensionContext.Store.CloseableReso
     private final int wsPort;
     private final String baseSSEUri;
     private final int ssePort;
+    private final String baseHttpNearUri;
+    private final int httpNearPort;
+
     private final String functionalityKey;
     private final boolean useTestContainers;
     private final BackendTestContainers containers;
@@ -45,6 +48,9 @@ public class BackendTestResource implements ExtensionContext.Store.CloseableReso
             }
             if (containers.sseContainer() != null) {
                 shutdownContainer(containers.sseContainer());
+            }
+            if(containers.httpNearContainer() != null) {
+                shutdownContainer(containers.httpNearContainer());
             }
         }
     }

@@ -96,6 +96,9 @@ public class NearCacheApplication {
 
         var app = startHTTPServer();
 
+        var httpPort = app.port();
+        log.info("Started HTTP near cache interface on port "+httpPort);
+
         try {
             final ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
             System.out.println("Starting AeronCache Cluster Interface");
@@ -309,7 +312,7 @@ public class NearCacheApplication {
     private static Javalin startHTTPServer() {
 
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-        registry.config().commonTags("application", "aeron-cache-http");
+        registry.config().commonTags("application", "aeron-cache-http-near");
 
         new ClassLoaderMetrics().bindTo(registry);
         new JvmMemoryMetrics().bindTo(registry);

@@ -29,6 +29,7 @@ subprojects {
             enabled = !skipIntegrationTests
             if (enabled || jibOnBuild) {
                 dependsOn(":cache-http:http-server-javalin:jibDockerBuild")
+                dependsOn(":cache-near:http-server-near-javalin:jibDockerBuild")
                 dependsOn(":cache-sse:sse-server-jooby:jibDockerBuild")
                 dependsOn(":cache-ws:ws-server-javalin:jibDockerBuild")
                 dependsOn(":cache-cluster:jibDockerBuild")

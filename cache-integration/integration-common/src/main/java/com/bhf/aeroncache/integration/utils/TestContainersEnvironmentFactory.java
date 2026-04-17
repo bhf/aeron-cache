@@ -87,6 +87,31 @@ public class TestContainersEnvironmentFactory {
     }
 
     /**
+     * Get a container for a single near cache HTTP interface configured for using cluster mode.
+     *
+     * @param nodes
+     * @param network
+     * @return
+     */
+    public static GenericContainer<?> getClusteredHTTPNearContainer(int nodes, Network network) {
+        String clusterAddresses = getClusterAddresses(nodes);
+
+        return new GenericContainer<>("aeroncache-http-near-javalin")
+                .withNetwork(network)
+                .withNetworkAliases("cache-http-near-client")
+                .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
+                .withExposedPorts(7073)
+                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
+                .withEnv("EGRESS_IP", "172.16.202.5")
+                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-http-near")
+                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("CACHE_MODE", "RAFT")
+                .waitingFor(Wait.forHttp("/readiness"));
+    }
+
+    /**
      * Get a container for a single WS interface configured for using cluster mode.
      *
      * @param nodes
@@ -173,6 +198,28 @@ public class TestContainersEnvironmentFactory {
      */
     public static GenericContainer<?> getSingleNodeHTTPContainer(Network network) {
         return new GenericContainer<>("aeroncache-http-javalin:latest")
+                .withNetwork(network)
+                .withNetworkAliases("cache-http-client")
+                .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
+                .withExposedPorts(7070)
+                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-http")
+                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("CLUSTER_ADDRESSES", "node0")
+                .withEnv("CACHE_MODE", "SINGLE")
+                .withEnv("REQUEST_PUB_HOST", "node0")
+                .waitingFor(Wait.forHttp("/readiness"));
+    }
+
+    /**
+     * Get a container for a single near cache HTTP interface configured for single node mode.
+     *
+     * @param network
+     * @return
+     */
+    public static GenericContainer<?> getSingleNodeHTTPNearContainer(Network network) {
+        return new GenericContainer<>("aeroncache-http-near-javalin:latest")
                 .withNetwork(network)
                 .withNetworkAliases("cache-http-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)

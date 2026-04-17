@@ -38,4 +38,10 @@ public @interface BackendTestConfig {
      * @return
      */
     boolean useTestContainersEnvironment() default false;
+
+    /**
+     * Whether the HTTP near cache is enabled for tests - false by default.
+     * @return
+     */
+    boolean httpNearCacheEnabled() default false;
 }

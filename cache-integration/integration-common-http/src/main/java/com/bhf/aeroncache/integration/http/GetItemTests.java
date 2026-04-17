@@ -15,12 +15,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(BackendTestLauncher.class)
 abstract class GetItemTests {
 
-    private static final String GET_ENDPOINT = "/api/v1/cache/";
+    //static String GET_ENDPOINT = "/api/v1/cache/";
     private static final String KNOWN_CACHE_ID = "1";
     private static final String UNKNOWN_CACHE_ID = "123";
     private static final String KNOWN_KEY = "SomeKey";
     private static final String KNOWN_VALUE = "SomeValue";
     private static final String UNKNOWN_KEY = "UNKNOWN_KEY";
+
+    private final String GET_ENDPOINT;
+
+    GetItemTests(String getEndpoint) {
+        GET_ENDPOINT = getEndpoint;
+    }
 
     @BeforeAll
     static void setup(BackendTestResource backend) {
@@ -35,7 +41,7 @@ abstract class GetItemTests {
     @HappyPath
     void shouldGetExistingCacheValue(BackendTestResource backend) {
         // Arrange
-        RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+        RestAssured.given().port(getHttpPort(backend)).baseUri(getHttpUri(backend))
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -54,7 +60,7 @@ abstract class GetItemTests {
         // Arrange
         CacheTestUtils.removeItem(KNOWN_CACHE_ID, UNKNOWN_KEY, backend);
 
-        RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+        RestAssured.given().port(getHttpPort(backend)).baseUri(getHttpUri(backend))
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -71,7 +77,7 @@ abstract class GetItemTests {
     @DisplayName("Should get 404 on unknown cache")
     void shouldGet404OnUnknownCache(BackendTestResource backend) {
         // Arrange
-        RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+        RestAssured.given().port(getHttpPort(backend)).baseUri(getHttpUri(backend))
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
 
@@ -84,6 +90,14 @@ abstract class GetItemTests {
                 .body("cacheId", Matchers.comparesEqualTo("0"))
                 .body("key", Matchers.comparesEqualTo("NA"))
                 .body("value", Matchers.comparesEqualTo("NA"));
+    }
+
+    String getHttpUri(BackendTestResource backend) {
+        return backend.getBaseHttpUri();
+    }
+
+    int getHttpPort(BackendTestResource backend) {
+        return backend.getHttpPort();
     }
 
 }

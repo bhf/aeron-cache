@@ -21,6 +21,7 @@ include("cache-integration:integration-common-streaming")
 include("cache-integration:streaming-integration-common")
 
 include("cache-integration:clustered:http-integration-tests")
+include("cache-integration:clustered:http-near-integration-tests")
 include("cache-integration:clustered:ws-integration-tests")
 include("cache-integration:clustered:sse-integration-tests")
 include("cache-integration:clustered:multistream-integration-tests")
