@@ -40,6 +40,10 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          command:
+            - "/bin/bash"
+            - "-c"
+            - "export CLUSTER_NODE=$(echo $POD_NAME | rev | cut -d- -f1 | rev) && java -jar --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED cache-cluster-all.jar"
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
@@ -59,6 +63,37 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        - name: aeroncache-http-clustertools
+          image: "{{ .Values.clustertools.image.repository }}:{{ .Values.clustertools.image.tag }}"
+          imagePullPolicy: {{ .Values.clustertools.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.clustertools.port }}
+              protocol: TCP
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.aeroncacheClusterConfigmap }}
+          {{- with .Values.clustertools.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.clustertools.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.clustertools.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}

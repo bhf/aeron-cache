@@ -2,7 +2,7 @@ PROFILE := aeroncache
 
 all: build-backend build-frontend
 
-build-backend: clean-build build-cluster build-http build-ws build-sse build-near
+build-backend: clean-build build-cluster build-http build-ws build-sse build-near build-clustertools
 	minikube image ls --profile $(PROFILE)
 
 clean-build:
@@ -27,6 +27,10 @@ build-sse:
 build-near:
 	cd cache-near/http-server-near-javalin && docker build . -t aeroncache-http-near-javalin
 	minikube image load aeroncache-http-near-javalin:latest --profile $(PROFILE)
+
+build-clustertools:
+	cd cache-http/http-clustertools && docker build . -t aeroncache-http-clustertools
+	minikube image load aeroncache-http-clustertools:latest --profile $(PROFILE)
 
 
 build-frontend: build-ui

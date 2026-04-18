@@ -1,5 +1,5 @@
-install-backend: install-cluster install-http install-ws install-sse install-http-near install-http-clustertools
-uninstall-backend: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near uninstall-http-clustertools
+install-backend: install-cluster install-http install-ws install-sse install-http-near
+uninstall-backend: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near
 
 install-frontend: install-ui
 uninstall-frontend: uninstall-ui
