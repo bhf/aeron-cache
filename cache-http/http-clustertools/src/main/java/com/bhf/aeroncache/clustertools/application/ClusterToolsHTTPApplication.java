@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.clustertools.application;
 
-import com.bhf.aeroncache.clustertools.model.ClusterToolsRequest;
-import com.bhf.aeroncache.clustertools.model.ClusterToolsResponse;
+import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
+import com.bhf.aeroncache.http.responses.ClusterToolsResponse;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;

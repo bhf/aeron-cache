@@ -15,6 +15,7 @@ dependencies {
     implementation(libs.micrometer.javalin)
     implementation(libs.aeron)
     implementation(project(":cache-common"))
+    implementation(project(":cache-messages-http"))
 }
 
 tasks.test {

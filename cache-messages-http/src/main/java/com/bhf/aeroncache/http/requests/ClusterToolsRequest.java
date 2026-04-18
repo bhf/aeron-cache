@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.clustertools.model;
+package com.bhf.aeroncache.http.requests;
 
 public record ClusterToolsRequest(String tool, String clusterFolder){
 

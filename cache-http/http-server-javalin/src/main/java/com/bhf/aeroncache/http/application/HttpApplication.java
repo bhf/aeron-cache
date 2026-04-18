@@ -2,6 +2,7 @@ package com.bhf.aeroncache.http.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.config.HttpIdleStrategies;
+import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.responses.*;
@@ -51,6 +52,10 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,12 +63,14 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Log4j2
 public class HttpApplication {
 
     public static final String PROMO_MICROMETER_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
     private static final int DEFAULT_HTTP_PORT = 7070;
+    private static final String DEFAULT_CLUSTER_TOOLS_ENDPOINT = "http://localhost:7080/api/v1/clustertools/";
     private static final String API_PREFIX = "/api/v1/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
@@ -83,6 +90,9 @@ public class HttpApplication {
     private static MediaDriver mediaDriver;
 
     private static final Pattern specialCharacters = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!]");
+
+    private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public static void main(String[] args) {
 
@@ -340,12 +350,59 @@ public class HttpApplication {
                 .patch(API_PREFIX + "<cacheId>", HttpApplication::handleClearCacheRequest)
                 .get("/api/v1/caches", HttpApplication::handleGetCachesRequest)
                 .get("/api/v1/stats", HttpApplication::handleGetStatsRequest)
+                .post("/api/v1/shutdown", HttpApplication::handleShutdownCluster)
+                .post("/api/v1/snapshot", HttpApplication::handleTakeSnapshot)
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
                 .get(READINESS, HttpApplication::handleGetReadiness)
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
                 .post("baselinePost", HttpApplication::postActionBaseline)
                 .get("baselineGet", HttpApplication::getActionBaseline)
                 .start(port);
+    }
+
+    private static void handleShutdownCluster(@NotNull Context context) {
+        log.info("Got shutdown cluster request");
+        makeClusterToolsRequest(context, "shutdown");
+    }
+
+    private static void handleTakeSnapshot(@NotNull Context context) {
+        log.info("Got take snapshot request");
+        makeClusterToolsRequest(context, "snapshot");
+    }
+
+    private static void makeClusterToolsRequest(Context context, String command) {
+        var clusterToolsEndpoint = System.getenv().getOrDefault("CLUSTER_TOOLS_ENDPOINT", DEFAULT_CLUSTER_TOOLS_ENDPOINT);
+        var clusterToolsFolder = System.getenv().getOrDefault("CLUSTER_FOLDER", "/tmp/aeron-cluster");
+
+        var requestBody = new ClusterToolsRequest(command, clusterToolsFolder);
+
+        try {
+            var jsonBody = OBJECT_MAPPER.writeValueAsString(requestBody);
+
+            var httpRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(clusterToolsEndpoint))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                    .build();
+
+            HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+
+            if (httpResponse.statusCode() == HTTPStatusUtils.OK) {
+                var response = OBJECT_MAPPER.readValue(httpResponse.body(), ClusterToolsResponse.class);
+                context.status(HTTPStatusUtils.OK);
+                context.json(response);
+            } else {
+                log.error("Cluster tools request failed with status code: {}", httpResponse.statusCode());
+                context.status(httpResponse.statusCode());
+                context.result(httpResponse.body());
+            }
+        } catch (Exception e) {
+            log.error("Error making cluster tools request", e);
+            context.status(HTTPStatusUtils.BAD_REQUEST);
+            var errorResponse = new RequestErrorResponse("Error making cluster tools request for "+command, e.getMessage(),
+                    CacheOperationStatus.ERROR);
+            context.json(errorResponse);
+        }
     }
 
     private static void checkClusterConnectivity(Context ctx) {
