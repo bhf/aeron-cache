@@ -13,11 +13,16 @@ public class ContainerRestartUtils {
      * Wait for the HTTP interface to be restarted.
      *
      * @param backend
+     * @return
      */
-    public static void awaitHTTPInterfaceRestart(BackendTestResource backend) {
+    public static MappedHostDetails awaitHTTPInterfaceRestart(BackendTestResource backend) {
         backend.getContainers().httpContainer().start();
         startWithRetry(backend.getContainers().httpContainer());
         backend.getContainers().httpContainer().waitingFor(Wait.forHttp("/readiness"));
+
+        var mappedPort = backend.getContainers().httpContainer().getMappedPort(7070);
+        var mappedHost = "http://" + backend.getContainers().httpContainer().getHost();
+        return new MappedHostDetails(mappedHost, mappedPort);
     }
 
     /**

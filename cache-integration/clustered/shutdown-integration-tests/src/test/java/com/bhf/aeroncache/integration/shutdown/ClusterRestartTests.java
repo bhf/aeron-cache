@@ -36,10 +36,9 @@ class ClusterRestartTests {
         backend.getContainers().clusterContainers().forEach(GenericContainer::stop);
 
         ContainerRestartUtils.awaitAeronCacheClusterRestart(backend);
-        ContainerRestartUtils.awaitHTTPInterfaceRestart(backend);
-
-        var mappedPort = backend.getContainers().httpContainer().getMappedPort(7070);
-        var mappedHost = "http://"+backend.getContainers().httpContainer().getHost();
+        var postRestartMappedHostDetails = ContainerRestartUtils.awaitHTTPInterfaceRestart(backend);
+        var mappedPort = postRestartMappedHostDetails.mappedPort();
+        var mappedHost = postRestartMappedHostDetails.mappedHost();
 
         // Assert
         RestAssured.given().port(mappedPort)
