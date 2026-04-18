@@ -3,6 +3,7 @@ package com.bhf.aeroncache.services.cache.snapshot;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 
+import java.util.Comparator;
 import java.util.Map;
 
 /**
@@ -33,4 +34,12 @@ public interface CacheEntrySnapshotCodec<K, V> {
      * @return The next offset to read from.
      */
     int deserializeCacheEntry(DirectBuffer buffer, int offset, Map<K, V> cache);
+
+    /**
+     * Get a comparator allowing us to sort on the key.
+     * This is to ensure formal correctness around determinism for serialization.
+     *
+     * @return
+     */
+    Comparator<K> getKeyComparator();
 }

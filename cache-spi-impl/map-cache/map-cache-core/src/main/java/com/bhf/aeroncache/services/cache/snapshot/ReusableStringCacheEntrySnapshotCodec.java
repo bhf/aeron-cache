@@ -5,6 +5,7 @@ import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 
+import java.util.Comparator;
 import java.util.Map;
 
 @Log4j2
@@ -51,5 +52,10 @@ public class ReusableStringCacheEntrySnapshotCodec implements CacheEntrySnapshot
         log.debug("Decoded key="+k.value()+", value="+v.value());
 
         return offset+read;
+    }
+
+    @Override
+    public Comparator<ReusableString> getKeyComparator() {
+        return Comparator.comparing(ReusableString::value);
     }
 }

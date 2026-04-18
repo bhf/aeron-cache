@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 
-import java.util.Map;
+import java.util.*;
 import java.util.function.Supplier;
 
 /**
@@ -107,11 +107,12 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
         int length = offset;
 
         var allEntries = getAllEntries();
+        var sortedKeys = getSortedKeys(allEntries);
         int entriesSnapshotted = 0;
-        for (var entry : allEntries.entrySet()) {
+
+        for (var key : sortedKeys) {
             ++entriesSnapshotted;
-            var key = entry.getKey();
-            var value = entry.getValue();
+            var value = allEntries.get(key);
             length = cacheEntrySnapshotCodec.serializeCacheEntry(key, value, buffer, length);
         }
 
@@ -123,6 +124,13 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
             var errorString = Publication.errorString(result);
             log.warn("Failed to snapshot cache {}, reason: {}", cacheId.value(), errorString);
         }
+    }
+
+    private List<K> getSortedKeys(Map<K, V> allEntries) {
+        List<K> res = new ArrayList<>(allEntries.keySet());
+        Comparator<K> keyComparator = cacheEntrySnapshotCodec.getKeyComparator();
+        res.sort(keyComparator);
+        return res;
     }
 
     @Override
