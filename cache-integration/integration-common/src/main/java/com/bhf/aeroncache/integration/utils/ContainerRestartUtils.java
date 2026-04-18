@@ -22,6 +22,29 @@ public class ContainerRestartUtils {
 
         var mappedPort = backend.getContainers().httpContainer().getMappedPort(7070);
         var mappedHost = "http://" + backend.getContainers().httpContainer().getHost();
+        backend.updateHTTPMappings(mappedHost, mappedPort);
+        return new MappedHostDetails(mappedHost, mappedPort);
+    }
+
+    public static MappedHostDetails awaitWSInterfaceRestart(BackendTestResource backend) {
+        backend.getContainers().wsContainer().start();
+        startWithRetry(backend.getContainers().wsContainer());
+        backend.getContainers().wsContainer().waitingFor(Wait.forHttp("/readiness"));
+
+        var mappedPort = backend.getContainers().wsContainer().getMappedPort(7071);
+        var mappedHost = "ws://" + backend.getContainers().wsContainer().getHost();
+        backend.updateWSMappings(mappedHost, mappedPort);
+        return new MappedHostDetails(mappedHost, mappedPort);
+    }
+
+    public static MappedHostDetails awaitSSEInterfaceRestart(BackendTestResource backend) {
+        backend.getContainers().sseContainer().start();
+        startWithRetry(backend.getContainers().sseContainer());
+        backend.getContainers().sseContainer().waitingFor(Wait.forHttp("/readiness"));
+
+        var mappedPort = backend.getContainers().sseContainer().getMappedPort(7072);
+        var mappedHost = "http://" + backend.getContainers().sseContainer().getHost();
+        backend.updateSSEMappings(mappedHost, mappedPort);
         return new MappedHostDetails(mappedHost, mappedPort);
     }
 

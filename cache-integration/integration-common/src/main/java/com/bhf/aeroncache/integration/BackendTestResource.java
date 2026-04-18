@@ -2,28 +2,26 @@ package com.bhf.aeroncache.integration;
 
 import com.bhf.aeroncache.application.ClusterLauncher;
 import com.bhf.aeroncache.integration.config.BackendTestContainers;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.testcontainers.containers.GenericContainer;
 
-import java.util.List;
-
-@RequiredArgsConstructor
+@AllArgsConstructor
 @Getter
 public class BackendTestResource implements ExtensionContext.Store.CloseableResource {
 
-    private final String baseHttpUri;
-    private final int httpPort;
-    private final String baseWsUri;
-    private final int wsPort;
-    private final String baseSSEUri;
-    private final int ssePort;
-    private final String baseHttpNearUri;
-    private final int httpNearPort;
+    private String baseHttpUri;
+    private int httpPort;
+    private String baseWsUri;
+    private int wsPort;
+    private String baseSSEUri;
+    private int ssePort;
+    private String baseHttpNearUri;
+    private int httpNearPort;
 
-    private final String functionalityKey;
-    private final boolean useTestContainers;
+    private String functionalityKey;
+    private boolean useTestContainers;
     private final BackendTestContainers containers;
 
     @Override
@@ -93,4 +91,18 @@ public class BackendTestResource implements ExtensionContext.Store.CloseableReso
         }
     }
 
+    public void updateWSMappings(String mappedHost, Integer mappedPort) {
+        this.baseWsUri = mappedHost;
+        this.wsPort = mappedPort;
+    }
+
+    public void updateHTTPMappings(String mappedHost, Integer mappedPort) {
+        this.baseHttpUri = mappedHost;
+        this.httpPort = mappedPort;
+    }
+
+    public void updateSSEMappings(String mappedHost, Integer mappedPort) {
+        this.baseSSEUri = mappedHost;
+        this.ssePort = mappedPort;
+    }
 }
