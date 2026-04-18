@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.integration.ws;
+package com.bhf.aeroncache.integration.multistream;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamRemoveItemTest;

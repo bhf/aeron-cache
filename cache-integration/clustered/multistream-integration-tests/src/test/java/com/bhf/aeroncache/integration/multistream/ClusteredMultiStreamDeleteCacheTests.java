@@ -1,15 +1,14 @@
-package com.bhf.aeroncache.integration.ws;
+package com.bhf.aeroncache.integration.multistream;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
-import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamClearCacheTest;
-import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamRemoveItemTest;
+import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamDeleteCacheTest;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = true, useTestContainersEnvironment = true)
-class ClusteredMultiStreamClearCacheTests extends AbstractMultiStreamClearCacheTest {
+class ClusteredMultiStreamDeleteCacheTests extends AbstractMultiStreamDeleteCacheTest {
 
-    public ClusteredMultiStreamClearCacheTests() {
+    public ClusteredMultiStreamDeleteCacheTests() {
         super(new WSStreamingHelper(), new SSEStreamingHelper());
     }
 
