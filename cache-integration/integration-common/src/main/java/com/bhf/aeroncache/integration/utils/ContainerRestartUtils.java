@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.integration.shutdown;
+package com.bhf.aeroncache.integration.utils;
 
 import com.bhf.aeroncache.integration.BackendTestResource;
 import org.testcontainers.containers.GenericContainer;
