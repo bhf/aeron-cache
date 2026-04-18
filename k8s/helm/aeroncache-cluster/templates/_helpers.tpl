@@ -60,3 +60,40 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Clustertools container
+*/}}
+{{- define "aeroncache-cluster.clustertools" -}}
+- name: aeroncache-http-clustertools
+  image: "{{ .Values.clustertools.image.repository }}:{{ .Values.clustertools.image.tag }}"
+  imagePullPolicy: {{ .Values.clustertools.image.pullPolicy }}
+  ports:
+    - name: http
+      containerPort: {{ .Values.clustertools.port }}
+      protocol: TCP
+  env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+  envFrom:
+    - configMapRef:
+        name: {{ .Values.aeroncacheClusterConfigmap }}
+  {{- with .Values.clustertools.livenessProbe }}
+  livenessProbe:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.clustertools.readinessProbe }}
+  readinessProbe:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.clustertools.resources }}
+  resources:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.volumeMounts }}
+  volumeMounts:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
