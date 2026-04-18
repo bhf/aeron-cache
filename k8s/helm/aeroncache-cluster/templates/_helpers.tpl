@@ -95,5 +95,9 @@ Clustertools container
   {{- with .Values.volumeMounts }}
   volumeMounts:
     {{- toYaml . | nindent 4 }}
+    {{- if $.Values.persistence.enabled }}
+    - name: data
+      mountPath: {{ $.Values.persistence.mountPath }}
+    {{- end }}
   {{- end }}
 {{- end }}

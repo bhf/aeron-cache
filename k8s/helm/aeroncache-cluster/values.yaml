@@ -131,6 +131,13 @@ volumes:
       sizeLimit: 1Gi
     name: shm
 
+# Persistence configuration
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: ""
+  mountPath: /data
+
 # Additional volumeMounts on the output Deployment definition.
 volumeMounts:
   - mountPath: /dev/shm

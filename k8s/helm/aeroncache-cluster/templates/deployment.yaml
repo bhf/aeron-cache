@@ -51,6 +51,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            {{- if .Values.persistence.enabled }}
+            - name: CACHE_DATA_DIR
+              value: {{ .Values.persistence.mountPath }}
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ .Values.aeroncacheClusterConfigmap }}
@@ -69,6 +73,10 @@ spec:
           {{- with .Values.volumeMounts }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}
+            {{- if $.Values.persistence.enabled }}
+            - name: data
+              mountPath: {{ $.Values.persistence.mountPath }}
+            {{- end }}
           {{- end }}
         {{- include "aeroncache-cluster.clustertools" . | nindent 8 }}
       {{- with .Values.volumes }}
@@ -87,3 +95,17 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}
