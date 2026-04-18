@@ -80,16 +80,7 @@ public abstract class AbstractMultiStreamPutItemTests {
     @HappyPath
     void shouldGetStreamingUpdateWhenPuttingExistingKeyIntoKnownCache(BackendTestResource backend) {
         // Arrange
-        List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
-        var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
-                .map(helper -> {
-                    CompletableFuture<Void> ready = new CompletableFuture<>();
-                    readyFutures.add(ready);
-                    return helper.getEvents(backend, 2, ready);
-                })
-                .collect(Collectors.toList());
-
-        readyFutures.forEach(f -> Awaitility.await().atMost(60, TimeUnit.SECONDS).until(f::isDone));
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, 2);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);

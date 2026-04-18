@@ -13,12 +13,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @ExtendWith(BackendTestLauncher.class)
 public abstract class AbstractMultiStreamClearCacheTest {
@@ -43,16 +39,7 @@ public abstract class AbstractMultiStreamClearCacheTest {
     @HappyPath
     void shouldGetStreamingUpdateWhenClearingExistingCache(BackendTestResource backend) {
         // Arrange
-        List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
-        var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
-                .map(helper -> {
-                    CompletableFuture<Void> ready = new CompletableFuture<>();
-                    readyFutures.add(ready);
-                    return helper.getEvents(backend, 2, ready);
-                })
-                .collect(Collectors.toList());
-
-        readyFutures.forEach(f -> Awaitility.await().atMost(60, TimeUnit.SECONDS).until(f::isDone));
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, 2);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
@@ -67,7 +54,6 @@ public abstract class AbstractMultiStreamClearCacheTest {
             assertOnSingleStreamingSourceEvents(streamingSourceEventsFuture.join());
         }
     }
-
 
     private static void assertOnSingleStreamingSourceEvents(List<CacheUpdateEvent> streamingSoureEvents) {
         var addEvent = streamingSoureEvents.get(0);
