@@ -21,7 +21,11 @@ import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
 import com.bhf.aeroncache.types.ReusableString;
-import com.bhf.aeroncache.utils.*;
+import com.bhf.aeroncache.utils.ClusterUtils;
+import com.bhf.aeroncache.utils.DNSUtils;
+import com.bhf.aeroncache.utils.HTTPStatusUtils;
+import com.bhf.aeroncache.utils.RingBufferUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aeron.Aeron;
 import io.aeron.RethrowingErrorHandler;
 import io.aeron.cluster.client.AeronCluster;
@@ -63,7 +67,6 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Log4j2
 public class HttpApplication {
@@ -93,6 +96,7 @@ public class HttpApplication {
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static List<String> hostArray = new ArrayList<>();
 
     public static void main(String[] args) {
 
@@ -149,7 +153,7 @@ public class HttpApplication {
             System.out.println("CLUSTER_ADDRESSES=" + allHosts);
 
             var egressIP = DNSUtils.getThisHostName();
-            var hostArray = List.of(allHosts.split(","));
+            hostArray = List.of(allHosts.split(","));
             var ingressEndpoints = ClusterUtils.ingressEndpoints(hostArray);
 
             System.out.println("Awaiting DNS Resolution");
@@ -371,35 +375,39 @@ public class HttpApplication {
     }
 
     private static void makeClusterToolsRequest(Context context, String command) {
-        var clusterToolsEndpoint = System.getenv().getOrDefault("CLUSTER_TOOLS_ENDPOINT", DEFAULT_CLUSTER_TOOLS_ENDPOINT);
         var clusterToolsFolder = System.getenv().getOrDefault("CLUSTER_FOLDER", "/tmp/aeron-cluster");
-
         var requestBody = new ClusterToolsRequest(command, clusterToolsFolder);
+        List<ClusterToolsResponse> responses = new ArrayList<>();
 
         try {
             var jsonBody = OBJECT_MAPPER.writeValueAsString(requestBody);
 
-            var httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(clusterToolsEndpoint))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                    .build();
+            for (String host : hostArray) {
+                String hostUri = "http://" + host + ":7080/api/v1/clustertools/";
+                log.info("Sending {} request to host: {}", command, hostUri);
 
-            HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+                var httpRequest = HttpRequest.newBuilder()
+                        .uri(URI.create(hostUri))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                        .build();
 
-            if (httpResponse.statusCode() == HTTPStatusUtils.OK) {
-                var response = OBJECT_MAPPER.readValue(httpResponse.body(), ClusterToolsResponse.class);
-                context.status(HTTPStatusUtils.OK);
-                context.json(response);
-            } else {
-                log.error("Cluster tools request failed with status code: {}", httpResponse.statusCode());
-                context.status(httpResponse.statusCode());
-                context.result(httpResponse.body());
+                HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+
+                if (httpResponse.statusCode() == HTTPStatusUtils.OK) {
+                    var response = OBJECT_MAPPER.readValue(httpResponse.body(), ClusterToolsResponse.class);
+                    responses.add(response);
+                } else {
+                    log.error("Cluster tools request failed for host {} with status code: {}", host, httpResponse.statusCode());
+                }
             }
+
+            context.status(HTTPStatusUtils.OK);
+            context.json(responses);
         } catch (Exception e) {
             log.error("Error making cluster tools request", e);
             context.status(HTTPStatusUtils.BAD_REQUEST);
-            var errorResponse = new RequestErrorResponse("Error making cluster tools request for "+command, e.getMessage(),
+            var errorResponse = new RequestErrorResponse("Error making cluster tools request for " + command, e.getMessage(),
                     CacheOperationStatus.ERROR);
             context.json(errorResponse);
         }

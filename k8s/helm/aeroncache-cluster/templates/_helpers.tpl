@@ -72,11 +72,24 @@ Clustertools container
     - name: http
       containerPort: {{ .Values.clustertools.port }}
       protocol: TCP
+  command:
+    - "/bin/bash"
+    - "-c"
+    - |
+      if [ -n "$CACHE_DATA_DIR_BASE" ]; then
+        CLUSTER_NODE=$(echo $POD_NAME | rev | cut -d- -f1 | rev)
+        export CACHE_DATA_DIR="${CACHE_DATA_DIR_BASE}/node${CLUSTER_NODE}/cluster"
+      fi
+      java -jar http-clustertools-all.jar
   env:
     - name: POD_NAME
       valueFrom:
         fieldRef:
           fieldPath: metadata.name
+    {{- if .Values.persistence.enabled }}
+    - name: CACHE_DATA_DIR_BASE
+      value: {{ .Values.persistence.mountPath }}
+    {{- end }}
   envFrom:
     - configMapRef:
         name: {{ .Values.aeroncacheClusterConfigmap }}

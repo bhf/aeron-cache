@@ -4,8 +4,8 @@ uninstall-backend: uninstall-cluster uninstall-http uninstall-ws uninstall-sse u
 install-frontend: install-ui
 uninstall-frontend: uninstall-ui
 
-install-all: install-cluster install-http install-ws install-sse install-http-near install-ui install-http-clustertools
-uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near uninstall-ui uninstall-http-clustertools
+install-all: install-cluster install-http install-ws install-sse install-http-near install-ui
+uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near uninstall-ui
 
 install-all-singlenode: install-singlenode install-http-singlenode install-ws-singlenode install-sse-singlenode install-ui
 uninstall-all-singlenode: uninstall-singlenode uninstall-http uninstall-ws uninstall-sse uninstall-ui

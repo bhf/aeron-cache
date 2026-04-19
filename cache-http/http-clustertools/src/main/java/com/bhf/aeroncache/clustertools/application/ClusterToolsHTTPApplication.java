@@ -96,10 +96,18 @@ public class ClusterToolsHTTPApplication {
             args.add("java.base/jdk.internal.misc=ALL-UNNAMED");
             System.getProperties().forEach((key, value) -> args.add("-D" + key + "=" + value));
 
+            String requestFolder = request.clusterFolder();
+
+            String cacheDataDir = System.getenv("CACHE_DATA_DIR");
+            if (cacheDataDir != null && !cacheDataDir.isBlank()) {
+                log.info("Using cache data dir: {}", cacheDataDir);
+                requestFolder = cacheDataDir;
+            }
+
             args.add("-cp");
             args.add(classpath);
             args.add("io.aeron.cluster.ClusterTool");
-            args.add(request.clusterFolder());
+            args.add(requestFolder);
             args.add(command);
 
             ProcessBuilder pb = new ProcessBuilder(args);
@@ -108,7 +116,7 @@ public class ClusterToolsHTTPApplication {
             int exitCode = process.waitFor();
             log.info("Aeron Cache cluster tools command {} request exited with code: {}", command, exitCode);
 
-            var clusterToolsResponse = new ClusterToolsResponse(request.tool(), request.clusterFolder(), exitCode);
+            var clusterToolsResponse = new ClusterToolsResponse(request.tool(), requestFolder, exitCode);
             ctx.status(200);
             ctx.json(clusterToolsResponse);
         } catch (Exception e) {
