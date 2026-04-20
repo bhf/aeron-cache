@@ -19,13 +19,13 @@ export default function CopyToClipboard(props: { value: string, tooltip: string,
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button variant="outline" className={"outline px-2 py-1 rounded-sm text-lg bg-white shadow-md hover:bg-aeroncache"} onClick={
+                    <Button variant="outline" className={"outline px-1.5 py-0 h-6 rounded-sm bg-white shadow-sm hover:bg-aeroncache"} onClick={
                         () => {
                             navigator.clipboard.writeText(props.value)
                             toastCopied(props.element)
                         }
                     }>
-                        <ClipboardCopyIcon/>
+                        <ClipboardCopyIcon size={10}/>
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent>

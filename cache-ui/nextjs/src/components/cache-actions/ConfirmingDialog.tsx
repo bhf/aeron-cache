@@ -33,13 +33,13 @@ export function ConfirmingDialog(props: ConfirmingDialogProps) {
 
     let actionTriggerElement
     if (isDelete) {
-        actionTriggerElement = <Trash2Icon className="size-5"/>
+        actionTriggerElement = <Trash2Icon className="size-4"/>
     }
     else if (isClear) {
-        actionTriggerElement = <RecycleIcon className="size-5"/>
+        actionTriggerElement = <RecycleIcon className="size-4"/>
     }
     else if (isRemove) {
-        actionTriggerElement = <XIcon className="size-5"/>
+        actionTriggerElement = <XIcon className="size-3"/>
     }
 
     const isCacheAction = isDelete || isClear || isRemove;

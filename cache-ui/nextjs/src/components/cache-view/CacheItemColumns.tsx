@@ -33,12 +33,9 @@ export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
                 itemKey.substring(0, MAX_CHARACTERS_SM_PLUS) + "....." : itemKey
 
             return (
-                <div className={"flex flex-row space-x-2 mb-2"}>
+                <div className={"mb-2"}>
                     <div className={"max-md:hidden"}>{formattedKeyMD}</div>
                     <div className={"min-md:hidden"}>{formattedKeySM}</div>
-                    <CopyToClipboard value={itemKey as string} tooltip={"Copy Key"}
-                                     element={"Key"}></CopyToClipboard>
-
                 </div>
             )
         }
@@ -54,15 +51,28 @@ export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
                 itemValue.substring(0, MAX_CHARACTERS_SM_PLUS) + "....." : itemValue
 
             return (
-                <div className={"flex flex-row space-x-2 mb-2"}>
+                <div className={"mb-2"}>
                     <div className={"max-md:hidden"}>{formattedValueMD}</div>
                     <div className={"min-md:hidden"}>{formattedValueSM}</div>
-                    <CopyToClipboard value={itemValue as string} tooltip={"Copy Value"}
-                                     element={"Value"}></CopyToClipboard>
-
                 </div>
             )
         },
+    },
+    {
+        id: "actions",
+        header: "Actions",
+        cell: ({row}) => {
+            const itemKey = row.getValue("key") as string
+            const itemValue = row.getValue("value") as string
+            return (
+                <div className={"flex flex-row space-x-2 mb-1"}>
+                    <CopyToClipboard value={itemKey as string} tooltip={"Copy Key"}
+                                     element={"Key"}></CopyToClipboard>
+                    <CopyToClipboard value={itemValue as string} tooltip={"Copy Value"}
+                                     element={"Value"}></CopyToClipboard>
+                </div>
+            )
+        }
     },
     {
         accessorKey: "cacheId",

@@ -57,7 +57,7 @@ export function CacheItemsDataTable<TData, TValue>({
         },
         initialState: {
             pagination: {
-                pageSize: 6, //custom default page size
+                pageSize: 9, //custom default page size
             },
         },
     })
