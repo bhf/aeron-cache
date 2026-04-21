@@ -18,7 +18,7 @@ include("cache-http:http-clustertools")
 include("cache-integration:integration-common")
 include("cache-integration:integration-common-http")
 include("cache-integration:integration-common-streaming")
-include("cache-integration:streaming-integration-common")
+include("cache-integration:integration-common-streaming")
 
 include("cache-integration:clustered:http-integration-tests")
 include("cache-integration:clustered:http-near-integration-tests")

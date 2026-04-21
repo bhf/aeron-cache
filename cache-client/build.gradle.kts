@@ -1,10 +1,9 @@
 plugins {
-    application
+    java
     alias(libs.plugins.jmh)
     alias(libs.plugins.shadow)
 }
 
-project.setProperty("mainClassName", "com.bhf.aeroncache.application.BasicPerfTest")
 
 dependencies {
     implementation(project(":cache-cluster"))

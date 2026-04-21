@@ -71,7 +71,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
     private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, String cacheId, Consumer<Void> subscriptionFailureHandler) {
         sendCacheSubscribe(requestId, cacheId, subscriptionResult -> {
             if (subscriptionResult.getStatus() != CacheOperationStatus.SUCCESS) {
-                var errorMsg = STR."Couldn't subscribe to cache \{cacheId}, status=\{subscriptionResult.getStatus()}";
+                var errorMsg = "Couldn't subscribe to cache " + cacheId + ", status=" + subscriptionResult.getStatus();
                 log.warn(errorMsg);
 
                 if (subscriptionResult.getStatus() != CacheOperationStatus.DUPLICATE_SUBSCRIPTION) {

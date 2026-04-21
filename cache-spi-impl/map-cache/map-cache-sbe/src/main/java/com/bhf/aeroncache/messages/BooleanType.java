@@ -5,6 +5,7 @@ package com.bhf.aeroncache.messages;
 /**
  * Boolean Type.
  */
+@SuppressWarnings("all")
 public enum BooleanType
 {
 

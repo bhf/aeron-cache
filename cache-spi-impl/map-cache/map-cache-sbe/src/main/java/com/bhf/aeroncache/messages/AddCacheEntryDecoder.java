@@ -15,11 +15,11 @@ public final class AddCacheEntryDecoder
     public static final int TEMPLATE_ID = 4;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
+    public static final String SEMANTIC_VERSION = "0.1";
     public static final java.nio.ByteOrder BYTE_ORDER = java.nio.ByteOrder.LITTLE_ENDIAN;
 
     private final AddCacheEntryDecoder parentMessage = this;
     private DirectBuffer buffer;
-    private int initialOffset;
     private int offset;
     private int limit;
     int actingBlockLength;
@@ -55,11 +55,6 @@ public final class AddCacheEntryDecoder
         return buffer;
     }
 
-    public int initialOffset()
-    {
-        return initialOffset;
-    }
-
     public int offset()
     {
         return offset;
@@ -75,7 +70,6 @@ public final class AddCacheEntryDecoder
         {
             this.buffer = buffer;
         }
-        this.initialOffset = offset;
         this.offset = offset;
         this.actingBlockLength = actingBlockLength;
         this.actingVersion = actingVersion;
@@ -102,6 +96,26 @@ public final class AddCacheEntryDecoder
             offset + MessageHeaderDecoder.ENCODED_LENGTH,
             headerDecoder.blockLength(),
             headerDecoder.version());
+    }
+
+    public AddCacheEntryDecoder sbeRewind()
+    {
+        return wrap(buffer, offset, actingBlockLength, actingVersion);
+    }
+
+    public int sbeDecodedLength()
+    {
+        final int currentLimit = limit();
+        sbeSkip();
+        final int decodedLength = encodedLength();
+        limit(currentLimit);
+
+        return decodedLength;
+    }
+
+    public int actingVersion()
+    {
+        return actingVersion;
     }
 
     public int encodedLength()
@@ -131,7 +145,7 @@ public final class AddCacheEntryDecoder
 
     public static String cacheIdCharacterEncoding()
     {
-        return "UTF-8";
+        return java.nio.charset.StandardCharsets.UTF_8.name();
     }
 
     public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
@@ -152,14 +166,14 @@ public final class AddCacheEntryDecoder
     public int cacheIdLength()
     {
         final int limit = parentMessage.limit();
-        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        return (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
     }
 
     public int skipCacheId()
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int dataOffset = limit + headerLength;
         parentMessage.limit(dataOffset + dataLength);
 
@@ -170,7 +184,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int bytesCopied = Math.min(length, dataLength);
         parentMessage.limit(limit + headerLength + dataLength);
         buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -182,7 +196,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int bytesCopied = Math.min(length, dataLength);
         parentMessage.limit(limit + headerLength + dataLength);
         buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -194,7 +208,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         parentMessage.limit(limit + headerLength + dataLength);
         wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
     }
@@ -203,7 +217,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         parentMessage.limit(limit + headerLength + dataLength);
 
         if (0 == dataLength)
@@ -214,17 +228,7 @@ public final class AddCacheEntryDecoder
         final byte[] tmp = new byte[dataLength];
         buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
 
-        final String value;
-        try
-        {
-            value = new String(tmp, "UTF-8");
-        }
-        catch (final java.io.UnsupportedEncodingException ex)
-        {
-            throw new RuntimeException(ex);
-        }
-
-        return value;
+        return new String(tmp, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     public void cacheId(Appendable sb)
@@ -253,7 +257,7 @@ public final class AddCacheEntryDecoder
 
     public static String requestIdCharacterEncoding()
     {
-        return "UTF-8";
+        return java.nio.charset.StandardCharsets.UTF_8.name();
     }
 
     public static String requestIdMetaAttribute(final MetaAttribute metaAttribute)
@@ -274,14 +278,14 @@ public final class AddCacheEntryDecoder
     public int requestIdLength()
     {
         final int limit = parentMessage.limit();
-        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        return (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
     }
 
     public int skipRequestId()
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int dataOffset = limit + headerLength;
         parentMessage.limit(dataOffset + dataLength);
 
@@ -292,7 +296,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int bytesCopied = Math.min(length, dataLength);
         parentMessage.limit(limit + headerLength + dataLength);
         buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -304,7 +308,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int bytesCopied = Math.min(length, dataLength);
         parentMessage.limit(limit + headerLength + dataLength);
         buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -316,7 +320,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         parentMessage.limit(limit + headerLength + dataLength);
         wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
     }
@@ -325,7 +329,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         parentMessage.limit(limit + headerLength + dataLength);
 
         if (0 == dataLength)
@@ -336,17 +340,7 @@ public final class AddCacheEntryDecoder
         final byte[] tmp = new byte[dataLength];
         buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
 
-        final String value;
-        try
-        {
-            value = new String(tmp, "UTF-8");
-        }
-        catch (final java.io.UnsupportedEncodingException ex)
-        {
-            throw new RuntimeException(ex);
-        }
-
-        return value;
+        return new String(tmp, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     public static int keyId()
@@ -361,7 +355,7 @@ public final class AddCacheEntryDecoder
 
     public static String keyCharacterEncoding()
     {
-        return "UTF-8";
+        return java.nio.charset.StandardCharsets.UTF_8.name();
     }
 
     public static String keyMetaAttribute(final MetaAttribute metaAttribute)
@@ -382,14 +376,14 @@ public final class AddCacheEntryDecoder
     public int keyLength()
     {
         final int limit = parentMessage.limit();
-        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        return (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
     }
 
     public int skipKey()
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int dataOffset = limit + headerLength;
         parentMessage.limit(dataOffset + dataLength);
 
@@ -400,7 +394,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int bytesCopied = Math.min(length, dataLength);
         parentMessage.limit(limit + headerLength + dataLength);
         buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -412,7 +406,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int bytesCopied = Math.min(length, dataLength);
         parentMessage.limit(limit + headerLength + dataLength);
         buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -424,7 +418,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         parentMessage.limit(limit + headerLength + dataLength);
         wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
     }
@@ -433,7 +427,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         parentMessage.limit(limit + headerLength + dataLength);
 
         if (0 == dataLength)
@@ -444,17 +438,7 @@ public final class AddCacheEntryDecoder
         final byte[] tmp = new byte[dataLength];
         buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
 
-        final String value;
-        try
-        {
-            value = new String(tmp, "UTF-8");
-        }
-        catch (final java.io.UnsupportedEncodingException ex)
-        {
-            throw new RuntimeException(ex);
-        }
-
-        return value;
+        return new String(tmp, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     public void key(Appendable sb)
@@ -483,7 +467,7 @@ public final class AddCacheEntryDecoder
 
     public static String entryValueCharacterEncoding()
     {
-        return "UTF-8";
+        return java.nio.charset.StandardCharsets.UTF_8.name();
     }
 
     public static String entryValueMetaAttribute(final MetaAttribute metaAttribute)
@@ -504,14 +488,14 @@ public final class AddCacheEntryDecoder
     public int entryValueLength()
     {
         final int limit = parentMessage.limit();
-        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        return (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
     }
 
     public int skipEntryValue()
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int dataOffset = limit + headerLength;
         parentMessage.limit(dataOffset + dataLength);
 
@@ -522,7 +506,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int bytesCopied = Math.min(length, dataLength);
         parentMessage.limit(limit + headerLength + dataLength);
         buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -534,7 +518,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int bytesCopied = Math.min(length, dataLength);
         parentMessage.limit(limit + headerLength + dataLength);
         buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -546,7 +530,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         parentMessage.limit(limit + headerLength + dataLength);
         wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
     }
@@ -555,7 +539,7 @@ public final class AddCacheEntryDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         parentMessage.limit(limit + headerLength + dataLength);
 
         if (0 == dataLength)
@@ -566,17 +550,7 @@ public final class AddCacheEntryDecoder
         final byte[] tmp = new byte[dataLength];
         buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
 
-        final String value;
-        try
-        {
-            value = new String(tmp, "UTF-8");
-        }
-        catch (final java.io.UnsupportedEncodingException ex)
-        {
-            throw new RuntimeException(ex);
-        }
-
-        return value;
+        return new String(tmp, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     public void entryValue(Appendable sb)
@@ -601,7 +575,7 @@ public final class AddCacheEntryDecoder
         }
 
         final AddCacheEntryDecoder decoder = new AddCacheEntryDecoder();
-        decoder.wrap(buffer, initialOffset, actingBlockLength, actingVersion);
+        decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
 
         return decoder.appendTo(new StringBuilder()).toString();
     }
@@ -614,7 +588,7 @@ public final class AddCacheEntryDecoder
         }
 
         final int originalLimit = limit();
-        limit(initialOffset + actingBlockLength);
+        limit(offset + actingBlockLength);
         builder.append("[AddCacheEntry](sbeTemplateId=");
         builder.append(TEMPLATE_ID);
         builder.append("|sbeSchemaId=");
@@ -649,5 +623,16 @@ public final class AddCacheEntryDecoder
         limit(originalLimit);
 
         return builder;
+    }
+    
+    public AddCacheEntryDecoder sbeSkip()
+    {
+        sbeRewind();
+        skipCacheId();
+        skipRequestId();
+        skipKey();
+        skipEntryValue();
+
+        return this;
     }
 }

@@ -1,6 +1,5 @@
 plugins {
     id("java")
-    alias(libs.plugins.sbegenerator)
 }
 
 

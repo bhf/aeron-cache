@@ -3,7 +3,9 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-project.setProperty("mainClassName", "com.bhf.aeroncache.clustertools.application.ClusterToolsHTTPApplication")
+application {
+    mainClass.set("com.bhf.aeroncache.clustertools.application.ClusterToolsHTTPApplication")
+}
 
 dependencies {
     implementation(libs.javalin)

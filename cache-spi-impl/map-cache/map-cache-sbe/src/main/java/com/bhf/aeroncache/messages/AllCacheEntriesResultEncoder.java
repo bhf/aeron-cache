@@ -15,11 +15,11 @@ public final class AllCacheEntriesResultEncoder
     public static final int TEMPLATE_ID = 13;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
+    public static final String SEMANTIC_VERSION = "0.1";
     public static final java.nio.ByteOrder BYTE_ORDER = java.nio.ByteOrder.LITTLE_ENDIAN;
 
     private final AllCacheEntriesResultEncoder parentMessage = this;
     private MutableDirectBuffer buffer;
-    private int initialOffset;
     private int offset;
     private int limit;
 
@@ -53,11 +53,6 @@ public final class AllCacheEntriesResultEncoder
         return buffer;
     }
 
-    public int initialOffset()
-    {
-        return initialOffset;
-    }
-
     public int offset()
     {
         return offset;
@@ -69,7 +64,6 @@ public final class AllCacheEntriesResultEncoder
         {
             this.buffer = buffer;
         }
-        this.initialOffset = offset;
         this.offset = offset;
         limit(offset + BLOCK_LENGTH);
 
@@ -221,8 +215,8 @@ public final class AllCacheEntriesResultEncoder
             final int limit = parentMessage.limit();
             initialLimit = limit;
             parentMessage.limit(limit + HEADER_SIZE);
-            buffer.putShort(limit + 0, (short)0, java.nio.ByteOrder.LITTLE_ENDIAN);
-            buffer.putShort(limit + 2, (short)count, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putShort(limit + 0, (short)0, BYTE_ORDER);
+            buffer.putShort(limit + 2, (short)count, BYTE_ORDER);
         }
 
         public ItemsEncoder next()
@@ -242,7 +236,7 @@ public final class AllCacheEntriesResultEncoder
         public int resetCountToIndex()
         {
             count = index;
-            buffer.putShort(initialLimit + 2, (short)count, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putShort(initialLimit + 2, (short)count, BYTE_ORDER);
 
             return count;
         }
@@ -274,7 +268,7 @@ public final class AllCacheEntriesResultEncoder
 
         public static String keyCharacterEncoding()
         {
-            return "UTF-8";
+            return java.nio.charset.StandardCharsets.UTF_8.name();
         }
 
         public static String keyMetaAttribute(final MetaAttribute metaAttribute)
@@ -302,7 +296,7 @@ public final class AllCacheEntriesResultEncoder
             final int headerLength = 4;
             final int limit = parentMessage.limit();
             parentMessage.limit(limit + headerLength + length);
-            buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putInt(limit, length, BYTE_ORDER);
             buffer.putBytes(limit + headerLength, src, srcOffset, length);
 
             return this;
@@ -318,7 +312,7 @@ public final class AllCacheEntriesResultEncoder
             final int headerLength = 4;
             final int limit = parentMessage.limit();
             parentMessage.limit(limit + headerLength + length);
-            buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putInt(limit, length, BYTE_ORDER);
             buffer.putBytes(limit + headerLength, src, srcOffset, length);
 
             return this;
@@ -326,15 +320,7 @@ public final class AllCacheEntriesResultEncoder
 
         public ItemsEncoder key(final String value)
         {
-            final byte[] bytes;
-            try
-            {
-                bytes = null == value || value.isEmpty() ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes("UTF-8");
-            }
-            catch (final java.io.UnsupportedEncodingException ex)
-            {
-                throw new RuntimeException(ex);
-            }
+            final byte[] bytes = (null == value || value.isEmpty()) ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
             final int length = bytes.length;
             if (length > 1073741824)
@@ -345,7 +331,7 @@ public final class AllCacheEntriesResultEncoder
             final int headerLength = 4;
             final int limit = parentMessage.limit();
             parentMessage.limit(limit + headerLength + length);
-            buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putInt(limit, length, BYTE_ORDER);
             buffer.putBytes(limit + headerLength, bytes, 0, length);
 
             return this;
@@ -358,7 +344,7 @@ public final class AllCacheEntriesResultEncoder
 
         public static String valueCharacterEncoding()
         {
-            return "UTF-8";
+            return java.nio.charset.StandardCharsets.UTF_8.name();
         }
 
         public static String valueMetaAttribute(final MetaAttribute metaAttribute)
@@ -386,7 +372,7 @@ public final class AllCacheEntriesResultEncoder
             final int headerLength = 4;
             final int limit = parentMessage.limit();
             parentMessage.limit(limit + headerLength + length);
-            buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putInt(limit, length, BYTE_ORDER);
             buffer.putBytes(limit + headerLength, src, srcOffset, length);
 
             return this;
@@ -402,7 +388,7 @@ public final class AllCacheEntriesResultEncoder
             final int headerLength = 4;
             final int limit = parentMessage.limit();
             parentMessage.limit(limit + headerLength + length);
-            buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putInt(limit, length, BYTE_ORDER);
             buffer.putBytes(limit + headerLength, src, srcOffset, length);
 
             return this;
@@ -410,15 +396,7 @@ public final class AllCacheEntriesResultEncoder
 
         public ItemsEncoder value(final String value)
         {
-            final byte[] bytes;
-            try
-            {
-                bytes = null == value || value.isEmpty() ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes("UTF-8");
-            }
-            catch (final java.io.UnsupportedEncodingException ex)
-            {
-                throw new RuntimeException(ex);
-            }
+            final byte[] bytes = (null == value || value.isEmpty()) ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
             final int length = bytes.length;
             if (length > 1073741824)
@@ -429,7 +407,7 @@ public final class AllCacheEntriesResultEncoder
             final int headerLength = 4;
             final int limit = parentMessage.limit();
             parentMessage.limit(limit + headerLength + length);
-            buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+            buffer.putInt(limit, length, BYTE_ORDER);
             buffer.putBytes(limit + headerLength, bytes, 0, length);
 
             return this;
@@ -443,7 +421,7 @@ public final class AllCacheEntriesResultEncoder
 
     public static String requestIdCharacterEncoding()
     {
-        return "UTF-8";
+        return java.nio.charset.StandardCharsets.UTF_8.name();
     }
 
     public static String requestIdMetaAttribute(final MetaAttribute metaAttribute)
@@ -471,7 +449,7 @@ public final class AllCacheEntriesResultEncoder
         final int headerLength = 4;
         final int limit = parentMessage.limit();
         parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putInt(limit, length, BYTE_ORDER);
         buffer.putBytes(limit + headerLength, src, srcOffset, length);
 
         return this;
@@ -487,7 +465,7 @@ public final class AllCacheEntriesResultEncoder
         final int headerLength = 4;
         final int limit = parentMessage.limit();
         parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putInt(limit, length, BYTE_ORDER);
         buffer.putBytes(limit + headerLength, src, srcOffset, length);
 
         return this;
@@ -495,15 +473,7 @@ public final class AllCacheEntriesResultEncoder
 
     public AllCacheEntriesResultEncoder requestId(final String value)
     {
-        final byte[] bytes;
-        try
-        {
-            bytes = null == value || value.isEmpty() ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes("UTF-8");
-        }
-        catch (final java.io.UnsupportedEncodingException ex)
-        {
-            throw new RuntimeException(ex);
-        }
+        final byte[] bytes = (null == value || value.isEmpty()) ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
         final int length = bytes.length;
         if (length > 1073741824)
@@ -514,7 +484,7 @@ public final class AllCacheEntriesResultEncoder
         final int headerLength = 4;
         final int limit = parentMessage.limit();
         parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putInt(limit, length, BYTE_ORDER);
         buffer.putBytes(limit + headerLength, bytes, 0, length);
 
         return this;
@@ -527,7 +497,7 @@ public final class AllCacheEntriesResultEncoder
 
     public static String cacheIdCharacterEncoding()
     {
-        return "UTF-8";
+        return java.nio.charset.StandardCharsets.UTF_8.name();
     }
 
     public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
@@ -555,7 +525,7 @@ public final class AllCacheEntriesResultEncoder
         final int headerLength = 4;
         final int limit = parentMessage.limit();
         parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putInt(limit, length, BYTE_ORDER);
         buffer.putBytes(limit + headerLength, src, srcOffset, length);
 
         return this;
@@ -571,7 +541,7 @@ public final class AllCacheEntriesResultEncoder
         final int headerLength = 4;
         final int limit = parentMessage.limit();
         parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putInt(limit, length, BYTE_ORDER);
         buffer.putBytes(limit + headerLength, src, srcOffset, length);
 
         return this;
@@ -579,15 +549,7 @@ public final class AllCacheEntriesResultEncoder
 
     public AllCacheEntriesResultEncoder cacheId(final String value)
     {
-        final byte[] bytes;
-        try
-        {
-            bytes = null == value || value.isEmpty() ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes("UTF-8");
-        }
-        catch (final java.io.UnsupportedEncodingException ex)
-        {
-            throw new RuntimeException(ex);
-        }
+        final byte[] bytes = (null == value || value.isEmpty()) ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
         final int length = bytes.length;
         if (length > 1073741824)
@@ -598,7 +560,7 @@ public final class AllCacheEntriesResultEncoder
         final int headerLength = 4;
         final int limit = parentMessage.limit();
         parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.putInt(limit, length, BYTE_ORDER);
         buffer.putBytes(limit + headerLength, bytes, 0, length);
 
         return this;
@@ -622,7 +584,7 @@ public final class AllCacheEntriesResultEncoder
         }
 
         final AllCacheEntriesResultDecoder decoder = new AllCacheEntriesResultDecoder();
-        decoder.wrap(buffer, initialOffset, BLOCK_LENGTH, SCHEMA_VERSION);
+        decoder.wrap(buffer, offset, BLOCK_LENGTH, SCHEMA_VERSION);
 
         return decoder.appendTo(builder);
     }

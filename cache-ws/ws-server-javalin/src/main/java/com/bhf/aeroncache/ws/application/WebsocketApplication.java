@@ -495,7 +495,7 @@ public class WebsocketApplication {
         var currentSpanId = Span.current().getSpanContext().getSpanId();
         var currentTraceId = Span.current().getSpanContext().getTraceId();
         log.info("Creating requestId using traceID {} and spanID {}", currentTraceId, currentSpanId);
-        return STR."\{currentTraceId}@\{currentSpanId}";
+        return currentTraceId + "@" + currentSpanId;
     }
 
 }

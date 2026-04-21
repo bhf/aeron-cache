@@ -5,7 +5,10 @@ plugins {
     alias(libs.plugins.jib)
 }
 
-project.setProperty("mainClassName", "com.bhf.aeroncache.application.CacheNodeApplication")
+application {
+    mainClass.set("com.bhf.aeroncache.application.CacheNodeApplication")
+}
+
 
 val agent = configurations.create("agent")
 val extension = configurations.create("extension")
@@ -64,7 +67,7 @@ apply(plugin = "com.google.cloud.tools.jib")
 
 configure<com.google.cloud.tools.jib.gradle.JibExtension> {
     from {
-        image = "docker://eclipse-temurin:21"
+        image = "docker://eclipse-temurin:25"
     }
     to {
         image = "aeroncache-cluster"

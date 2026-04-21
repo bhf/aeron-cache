@@ -15,11 +15,11 @@ public final class AllCacheStatsResultDecoder
     public static final int TEMPLATE_ID = 16;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
+    public static final String SEMANTIC_VERSION = "0.1";
     public static final java.nio.ByteOrder BYTE_ORDER = java.nio.ByteOrder.LITTLE_ENDIAN;
 
     private final AllCacheStatsResultDecoder parentMessage = this;
     private DirectBuffer buffer;
-    private int initialOffset;
     private int offset;
     private int limit;
     int actingBlockLength;
@@ -55,11 +55,6 @@ public final class AllCacheStatsResultDecoder
         return buffer;
     }
 
-    public int initialOffset()
-    {
-        return initialOffset;
-    }
-
     public int offset()
     {
         return offset;
@@ -75,7 +70,6 @@ public final class AllCacheStatsResultDecoder
         {
             this.buffer = buffer;
         }
-        this.initialOffset = offset;
         this.offset = offset;
         this.actingBlockLength = actingBlockLength;
         this.actingVersion = actingVersion;
@@ -102,6 +96,26 @@ public final class AllCacheStatsResultDecoder
             offset + MessageHeaderDecoder.ENCODED_LENGTH,
             headerDecoder.blockLength(),
             headerDecoder.version());
+    }
+
+    public AllCacheStatsResultDecoder sbeRewind()
+    {
+        return wrap(buffer, offset, actingBlockLength, actingVersion);
+    }
+
+    public int sbeDecodedLength()
+    {
+        final int currentLimit = limit();
+        sbeSkip();
+        final int decodedLength = encodedLength();
+        limit(currentLimit);
+
+        return decodedLength;
+    }
+
+    public int actingVersion()
+    {
+        return actingVersion;
     }
 
     public int encodedLength()
@@ -204,8 +218,8 @@ public final class AllCacheStatsResultDecoder
             index = 0;
             final int limit = parentMessage.limit();
             parentMessage.limit(limit + HEADER_SIZE);
-            blockLength = (buffer.getShort(limit + 0, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
-            count = (buffer.getShort(limit + 2, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
+            blockLength = (buffer.getShort(limit + 0, BYTE_ORDER) & 0xFFFF);
+            count = (buffer.getShort(limit + 2, BYTE_ORDER) & 0xFFFF);
         }
 
         public StatsDecoder next()
@@ -245,6 +259,11 @@ public final class AllCacheStatsResultDecoder
         public int actingBlockLength()
         {
             return blockLength;
+        }
+
+        public int actingVersion()
+        {
+            return parentMessage.actingVersion;
         }
 
         public int count()
@@ -314,7 +333,7 @@ public final class AllCacheStatsResultDecoder
 
         public long added()
         {
-            return buffer.getLong(offset + 0, java.nio.ByteOrder.LITTLE_ENDIAN);
+            return buffer.getLong(offset + 0, BYTE_ORDER);
         }
 
 
@@ -365,7 +384,7 @@ public final class AllCacheStatsResultDecoder
 
         public long removed()
         {
-            return buffer.getLong(offset + 8, java.nio.ByteOrder.LITTLE_ENDIAN);
+            return buffer.getLong(offset + 8, BYTE_ORDER);
         }
 
 
@@ -416,7 +435,7 @@ public final class AllCacheStatsResultDecoder
 
         public long cleared()
         {
-            return buffer.getLong(offset + 16, java.nio.ByteOrder.LITTLE_ENDIAN);
+            return buffer.getLong(offset + 16, BYTE_ORDER);
         }
 
 
@@ -467,7 +486,7 @@ public final class AllCacheStatsResultDecoder
 
         public long size()
         {
-            return buffer.getLong(offset + 24, java.nio.ByteOrder.LITTLE_ENDIAN);
+            return buffer.getLong(offset + 24, BYTE_ORDER);
         }
 
 
@@ -483,7 +502,7 @@ public final class AllCacheStatsResultDecoder
 
         public static String cacheIdCharacterEncoding()
         {
-            return "UTF-8";
+            return java.nio.charset.StandardCharsets.UTF_8.name();
         }
 
         public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
@@ -504,14 +523,14 @@ public final class AllCacheStatsResultDecoder
         public int cacheIdLength()
         {
             final int limit = parentMessage.limit();
-            return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            return (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         }
 
         public int skipCacheId()
         {
             final int headerLength = 4;
             final int limit = parentMessage.limit();
-            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
             final int dataOffset = limit + headerLength;
             parentMessage.limit(dataOffset + dataLength);
 
@@ -522,7 +541,7 @@ public final class AllCacheStatsResultDecoder
         {
             final int headerLength = 4;
             final int limit = parentMessage.limit();
-            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
             final int bytesCopied = Math.min(length, dataLength);
             parentMessage.limit(limit + headerLength + dataLength);
             buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -534,7 +553,7 @@ public final class AllCacheStatsResultDecoder
         {
             final int headerLength = 4;
             final int limit = parentMessage.limit();
-            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
             final int bytesCopied = Math.min(length, dataLength);
             parentMessage.limit(limit + headerLength + dataLength);
             buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -546,7 +565,7 @@ public final class AllCacheStatsResultDecoder
         {
             final int headerLength = 4;
             final int limit = parentMessage.limit();
-            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
             parentMessage.limit(limit + headerLength + dataLength);
             wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
         }
@@ -555,7 +574,7 @@ public final class AllCacheStatsResultDecoder
         {
             final int headerLength = 4;
             final int limit = parentMessage.limit();
-            final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+            final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
             parentMessage.limit(limit + headerLength + dataLength);
 
             if (0 == dataLength)
@@ -566,17 +585,7 @@ public final class AllCacheStatsResultDecoder
             final byte[] tmp = new byte[dataLength];
             buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
 
-            final String value;
-            try
-            {
-                value = new String(tmp, "UTF-8");
-            }
-            catch (final java.io.UnsupportedEncodingException ex)
-            {
-                throw new RuntimeException(ex);
-            }
-
-            return value;
+            return new String(tmp, java.nio.charset.StandardCharsets.UTF_8);
         }
 
         public StringBuilder appendTo(final StringBuilder builder)
@@ -588,22 +597,29 @@ public final class AllCacheStatsResultDecoder
 
             builder.append('(');
             builder.append("added=");
-            builder.append(added());
+            builder.append(this.added());
             builder.append('|');
             builder.append("removed=");
-            builder.append(removed());
+            builder.append(this.removed());
             builder.append('|');
             builder.append("cleared=");
-            builder.append(cleared());
+            builder.append(this.cleared());
             builder.append('|');
             builder.append("size=");
-            builder.append(size());
+            builder.append(this.size());
             builder.append('|');
             builder.append("cacheId=");
             builder.append('\'').append(cacheId()).append('\'');
             builder.append(')');
 
             return builder;
+        }
+        
+        public StatsDecoder sbeSkip()
+        {
+            skipCacheId();
+
+            return this;
         }
     }
 
@@ -619,7 +635,7 @@ public final class AllCacheStatsResultDecoder
 
     public static String requestIdCharacterEncoding()
     {
-        return "UTF-8";
+        return java.nio.charset.StandardCharsets.UTF_8.name();
     }
 
     public static String requestIdMetaAttribute(final MetaAttribute metaAttribute)
@@ -640,14 +656,14 @@ public final class AllCacheStatsResultDecoder
     public int requestIdLength()
     {
         final int limit = parentMessage.limit();
-        return (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        return (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
     }
 
     public int skipRequestId()
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int dataOffset = limit + headerLength;
         parentMessage.limit(dataOffset + dataLength);
 
@@ -658,7 +674,7 @@ public final class AllCacheStatsResultDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int bytesCopied = Math.min(length, dataLength);
         parentMessage.limit(limit + headerLength + dataLength);
         buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -670,7 +686,7 @@ public final class AllCacheStatsResultDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         final int bytesCopied = Math.min(length, dataLength);
         parentMessage.limit(limit + headerLength + dataLength);
         buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
@@ -682,7 +698,7 @@ public final class AllCacheStatsResultDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         parentMessage.limit(limit + headerLength + dataLength);
         wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
     }
@@ -691,7 +707,7 @@ public final class AllCacheStatsResultDecoder
     {
         final int headerLength = 4;
         final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
+        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
         parentMessage.limit(limit + headerLength + dataLength);
 
         if (0 == dataLength)
@@ -702,17 +718,7 @@ public final class AllCacheStatsResultDecoder
         final byte[] tmp = new byte[dataLength];
         buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
 
-        final String value;
-        try
-        {
-            value = new String(tmp, "UTF-8");
-        }
-        catch (final java.io.UnsupportedEncodingException ex)
-        {
-            throw new RuntimeException(ex);
-        }
-
-        return value;
+        return new String(tmp, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     public String toString()
@@ -723,7 +729,7 @@ public final class AllCacheStatsResultDecoder
         }
 
         final AllCacheStatsResultDecoder decoder = new AllCacheStatsResultDecoder();
-        decoder.wrap(buffer, initialOffset, actingBlockLength, actingVersion);
+        decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
 
         return decoder.appendTo(new StringBuilder()).toString();
     }
@@ -736,7 +742,7 @@ public final class AllCacheStatsResultDecoder
         }
 
         final int originalLimit = limit();
-        limit(initialOffset + actingBlockLength);
+        limit(offset + actingBlockLength);
         builder.append("[AllCacheStatsResult](sbeTemplateId=");
         builder.append(TEMPLATE_ID);
         builder.append("|sbeSchemaId=");
@@ -757,10 +763,12 @@ public final class AllCacheStatsResultDecoder
         builder.append(BLOCK_LENGTH);
         builder.append("):");
         builder.append("status=");
-        builder.append(status());
+        builder.append(this.status());
         builder.append('|');
         builder.append("stats=[");
-        StatsDecoder stats = stats();
+        final int statsOriginalOffset = stats.offset;
+        final int statsOriginalIndex = stats.index;
+        final StatsDecoder stats = this.stats();
         if (stats.count() > 0)
         {
             while (stats.hasNext())
@@ -770,6 +778,8 @@ public final class AllCacheStatsResultDecoder
             }
             builder.setLength(builder.length() - 1);
         }
+        stats.offset = statsOriginalOffset;
+        stats.index = statsOriginalIndex;
         builder.append(']');
         builder.append('|');
         builder.append("requestId=");
@@ -778,5 +788,22 @@ public final class AllCacheStatsResultDecoder
         limit(originalLimit);
 
         return builder;
+    }
+    
+    public AllCacheStatsResultDecoder sbeSkip()
+    {
+        sbeRewind();
+        StatsDecoder stats = this.stats();
+        if (stats.count() > 0)
+        {
+            while (stats.hasNext())
+            {
+                stats.next();
+                stats.sbeSkip();
+            }
+        }
+        skipRequestId();
+
+        return this;
     }
 }

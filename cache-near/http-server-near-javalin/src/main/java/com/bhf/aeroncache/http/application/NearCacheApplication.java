@@ -415,8 +415,7 @@ public class NearCacheApplication {
                 handleNewNearCacheRequest(ctx, cacheId, key);
             }
         } catch (Exception e) {
-            var errorMsg =
-                    STR."Badly formed request to get item with key \{ctx.pathParam("key")} from cache with Id: \{ctx.pathParam("cacheId")}";
+            var errorMsg = "Badly formed request to get item with key " + ctx.pathParam("key") + " from cache with Id: " + ctx.pathParam("cacheId");
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
@@ -555,7 +554,7 @@ public class NearCacheApplication {
             ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
             ctx.json(response);
         } catch (Exception e) {
-            var errorMsg = STR."Badly formed request to create cache from request: \{ctx.body()}";
+            var errorMsg = "Badly formed request to create cache from request: " + ctx.body();
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
@@ -618,7 +617,7 @@ public class NearCacheApplication {
         var currentSpanId = Span.current().getSpanContext().getSpanId();
         var currentTraceId = Span.current().getSpanContext().getTraceId();
         log.info("Creating requestId using traceID {} and spanID {}", currentTraceId, currentSpanId);
-        return STR."\{currentTraceId}@\{currentSpanId}";
+        return currentTraceId + "@" + currentSpanId;
     }
 
 }

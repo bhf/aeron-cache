@@ -1,31 +1,28 @@
 plugins {
-    id("java")
-    alias(libs.plugins.sbegenerator)
+    java
 }
 
-val schema = "schema.xml"
-
-sbeGenerator {
-    src {
-        dir = "src/main/resources/sbe"
-        includes = listOf(schema)
-    }
-
-    javaCodecsDir = "src/main/java"
-}
-
-
-group = "com.bhf"
-version = "1.0-SNAPSHOT"
-
+val sbeToolConfig by configurations.creating
 
 dependencies {
+    sbeToolConfig(libs.sbetool)
     implementation(libs.sbetool)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit)
     testImplementation(libs.junit.params)
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.mockito)
+}
+
+tasks.register<JavaExec>("generateSbeCodecs") {
+    mainClass.set("uk.co.real_logic.sbe.SbeTool")
+    classpath = sbeToolConfig
+    systemProperty("sbe.output.dir", "src/main/java")
+    args("src/main/resources/sbe/schema.xml")
+}
+
+tasks.compileJava {
+    dependsOn("generateSbeCodecs")
 }
 
 tasks.test {

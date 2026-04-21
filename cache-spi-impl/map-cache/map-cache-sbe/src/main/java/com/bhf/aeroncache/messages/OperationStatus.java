@@ -1,6 +1,7 @@
 /* Generated SBE (Simple Binary Encoding) message codec. */
 package com.bhf.aeroncache.messages;
 
+@SuppressWarnings("all")
 public enum OperationStatus
 {
     NONE((short)0),
