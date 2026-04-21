@@ -34,6 +34,15 @@ export async function getSSEURL(): Promise<string> {
     return process.env.AERON_CACHE_SSE_API ? process.env.AERON_CACHE_SSE_API : "http://localhost:7072";
 }
 
+export async function isUrlAccessible(url: string): Promise<boolean> {
+    try {
+        const response = await fetch(url, { method: 'HEAD', next: { revalidate: 3600 } });
+        return response.ok;
+    } catch (e) {
+        return false;
+    }
+}
+
 /**
  * Create a cache.
  * @param currentState
