@@ -377,7 +377,6 @@ public class HttpApplication {
     private static void makeClusterToolsRequest(Context context, String command) {
         var clusterToolsFolder = System.getenv().getOrDefault("CLUSTER_FOLDER", "/tmp/aeron-cluster");
         var requestBody = new ClusterToolsRequest(command, clusterToolsFolder);
-        List<ClusterToolsResponse> responses = new ArrayList<>();
 
         try {
             var jsonBody = OBJECT_MAPPER.writeValueAsString(requestBody);
@@ -396,14 +395,20 @@ public class HttpApplication {
 
                 if (httpResponse.statusCode() == HTTPStatusUtils.OK) {
                     var response = OBJECT_MAPPER.readValue(httpResponse.body(), ClusterToolsResponse.class);
-                    responses.add(response);
+
+                    if(response.exitCode()==0) {
+                        context.status(HTTPStatusUtils.OK);
+                        context.json(response);
+                        break;
+                    }
                 } else {
                     log.error("Cluster tools request failed for host {} with status code: {}", host, httpResponse.statusCode());
                 }
             }
 
             context.status(HTTPStatusUtils.OK);
-            context.json(responses);
+            ClusterToolsResponse response = new ClusterToolsResponse(command, clusterToolsFolder, -1);
+            context.json(response);
         } catch (Exception e) {
             log.error("Error making cluster tools request", e);
             context.status(HTTPStatusUtils.BAD_REQUEST);
