@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="All Clustered Singlenode" type="CompoundRunConfigurationType">
+    <toRun name="ClusterLauncher (1)" type="Application" />
+    <toRun name="ClusterToolsHTTPApplication (1)" type="Application" />
+    <toRun name="HttpApplication (1)" type="Application" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -22,7 +22,7 @@ tasks.register<JavaExec>("generateSbeCodecs") {
 }
 
 tasks.compileJava {
-    dependsOn("generateSbeCodecs")
+    //dependsOn("generateSbeCodecs")
 }
 
 tasks.test {

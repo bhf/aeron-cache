@@ -176,7 +176,7 @@ public class CacheNodeApplication {
 
         if (hostnames == null) {
             nodeId = nodeId_;
-            hostnames = new String[]{"localhost", "localhost", "localhost"};
+            hostnames = new String[]{"localhost"};
         }
 
         final String hostname = hostnames[nodeId];

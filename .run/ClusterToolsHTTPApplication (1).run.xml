@@ -1,7 +1,10 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="ClusterToolsHTTPApplication" type="Application" factoryName="Application" nameIsGenerated="true">
+  <configuration default="false" name="ClusterToolsHTTPApplication (1)" type="Application" factoryName="Application" folderName="Clustered-Singlenode">
     <option name="ALTERNATIVE_JRE_PATH" value="azul-25" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <envs>
+      <env name="CACHE_DATA_DIR" value="node0/cluster" />
+    </envs>
     <option name="MAIN_CLASS_NAME" value="com.bhf.aeroncache.clustertools.application.ClusterToolsHTTPApplication" />
     <module name="aeron-cache.cache-http.http-clustertools.main" />
     <option name="VM_PARAMETERS" value="--enable-preview --add-opens java.base/jdk.internal.misc=ALL-UNNAMED" />

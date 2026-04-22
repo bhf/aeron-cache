@@ -10,7 +10,7 @@ import java.util.concurrent.Executors;
  */
 public class ClusterLauncher {
     public static void main(String[] args) {
-        int clusterNodes = 3;
+        int clusterNodes = 1;
         launchTestCluster(clusterNodes);
     }
 

@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="ClusterLauncher" type="Application" factoryName="Application" folderName="Clustered" nameIsGenerated="true">
+  <configuration default="false" name="ClusterLauncher (1)" type="Application" factoryName="Application" folderName="Clustered-Singlenode">
     <option name="ALTERNATIVE_JRE_PATH" value="azul-25" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="MAIN_CLASS_NAME" value="com.bhf.aeroncache.application.ClusterLauncher" />

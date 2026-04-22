@@ -11,7 +11,7 @@ interface CacheAdminActionsProps {
 export default function CacheAdminActions({baseUri}: CacheAdminActionsProps) {
     const handleSnapshot = async () => {
         try {
-            const res = await fetch(baseUri+'/api/v1/snapshot', {method: 'POST'});
+            const res = await fetch(baseUri+'/snapshot', {method: 'POST'});
             if (!res.ok) throw new Error("Couldn't take a snapshot");
             const props = {
                 title: "Snapshot Requested",
@@ -46,7 +46,7 @@ export default function CacheAdminActions({baseUri}: CacheAdminActionsProps) {
 
     const handleShutdown = async () => {
         try {
-            const res = await fetch(baseUri+'/api/v1/shutdown', {method: 'POST'});
+            const res = await fetch(baseUri+'/shutdown', {method: 'POST'});
             if (!res.ok) throw new Error("Couldn't request shutdown");
             const props = {
                 title: "Shutdown Requested",
