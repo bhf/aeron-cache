@@ -7,5 +7,5 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public interface StreamingHelper {
-    CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, int count, CompletableFuture<Void> ready);
+    CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready);
 }

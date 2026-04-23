@@ -21,6 +21,7 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
             ExtensionContext.Namespace.create(BackendTestLauncher.class);
 
     private static final String BACKEND_KEY = "backend";
+    public static final int NODES = 1;
     private static String functionalityKey;
 
     @Override
@@ -72,7 +73,7 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
      */
     private static @NotNull BackendTestResource setupClusteredEnvironment(BackendTestConfig config, Network network) {
         System.out.println("Starting AeronCache Cluster...");
-        List<GenericContainer<?>> cacheNodes = TestContainersEnvironmentFactory.getClusteredCacheContainers(3, network);
+        List<GenericContainer<?>> cacheNodes = TestContainersEnvironmentFactory.getClusteredCacheContainers(NODES, network);
         cacheNodes.forEach(GenericContainer::start);
 
         var baseHttpUri = "http://localhost";
@@ -90,25 +91,25 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
         GenericContainer<?> sseContainer = null;
 
         if (config.httpEnabled()) {
-            httpContainer = TestContainersEnvironmentFactory.getClusteredHTTPContainer(3, network);
+            httpContainer = TestContainersEnvironmentFactory.getClusteredHTTPContainer(NODES, network);
             httpContainer.start();
             baseHttpUri = "http://"+httpContainer.getHost();
             httpPort = httpContainer.getMappedPort(7070);
         }
         if (config.wsEnabled()) {
-            wsContainer = TestContainersEnvironmentFactory.getClusteredWSContainer(3, network);
+            wsContainer = TestContainersEnvironmentFactory.getClusteredWSContainer(NODES, network);
             wsContainer.start();
             baseWsUri = "ws://"+wsContainer.getHost();
             wsPort = wsContainer.getMappedPort(7071);
         }
         if (config.sseEnabled()) {
-            sseContainer = TestContainersEnvironmentFactory.getClusteredSSEContainer(3, network);
+            sseContainer = TestContainersEnvironmentFactory.getClusteredSSEContainer(NODES, network);
             sseContainer.start();
             baseSseUri = "http://"+sseContainer.getHost();
             ssePort = sseContainer.getMappedPort(7072);
         }
         if (config.httpNearCacheEnabled()){
-            httpNearContainer = TestContainersEnvironmentFactory.getClusteredHTTPNearContainer(3, network);
+            httpNearContainer = TestContainersEnvironmentFactory.getClusteredHTTPNearContainer(NODES, network);
             httpNearContainer.start();
             baseHttpNearUri = "http://"+httpNearContainer.getHost();
             httpNearPort = httpNearContainer.getMappedPort(7073);

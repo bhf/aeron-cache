@@ -39,7 +39,7 @@ public abstract class AbstractMultiStreamClearCacheTest {
     @HappyPath
     void shouldGetStreamingUpdateWhenClearingExistingCache(BackendTestResource backend) {
         // Arrange
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, 2);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID,2);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);

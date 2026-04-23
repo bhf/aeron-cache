@@ -4,23 +4,22 @@ plugins {
 
 
 dependencies {
-    implementation(libs.restassured)
-    implementation(platform(libs.junit.bom))
-    implementation(libs.junit)
-    implementation(libs.junit.params)
-    implementation(libs.json)
-    implementation(libs.hamcrest)
-    implementation(libs.jackson.core)
-    implementation(libs.awaitility)
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.sse)
-    implementation(libs.testcontainers)
+    testImplementation(libs.restassured)
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit)
+    testImplementation(libs.junit.params)
+    testImplementation(libs.json)
+    testImplementation(libs.hamcrest)
+    testImplementation(libs.jackson.core)
+    testImplementation(libs.awaitility)
+    testImplementation(libs.testcontainers)
 
-    implementation(project(":cache-cluster"))
-    implementation(project(":cache-messages-http"))
-    implementation(project(":cache-http:http-server-javalin"))
-    implementation(project(":cache-common"))
-    implementation(project(":cache-integration:integration-common"))
+    testImplementation(project(":cache-cluster"))
+    testImplementation(project(":cache-http:http-server-javalin"))
+    testImplementation(project(":cache-common"))
+    testImplementation(project(":cache-messages-http"))
+    testImplementation(project(":cache-integration:integration-common"))
+    testImplementation(project(":cache-integration:integration-common-streaming"))
 
     testRuntimeOnly(libs.junit.platform.launcher)
 }
@@ -35,6 +34,8 @@ tasks.withType<Test>().configureEach {
 
 tasks.withType<JavaExec>().configureEach {
     jvmArgs("--enable-preview")
+    jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED")
+    jvmArgs("--add-opens", "java.base/java.util.zip=ALL-UNNAMED")
 }
 
 tasks.test {
@@ -42,6 +43,7 @@ tasks.test {
     jvmArgs("--add-opens", "java.base/java.util.zip=ALL-UNNAMED")
     jvmArgs("--enable-preview")
     systemProperty("aeron.dir.delete.on.shutdown", "true")
+    systemProperty("aeron.cluster.message.timeout", "30000000000")
 
     environment(loadTestEnv())
     useJUnitPlatform()
@@ -49,7 +51,7 @@ tasks.test {
 }
 
 tasks.register<Delete>("cleanTestNodes") {
-    delete("backend_http_sse_0", "backend_http_sse_1", "backend_http_sse_2")
+    delete("backend_http_ws_0", "backend_http_ws_1", "backend_http_ws_2")
 }
 
 fun loadTestEnv(): Map<String, String> {

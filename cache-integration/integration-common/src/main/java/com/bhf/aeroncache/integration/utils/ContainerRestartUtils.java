@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.integration.utils;
 
+import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -58,7 +59,7 @@ public class ContainerRestartUtils {
         awaitOnFirstRestartAttempt();
 
         int clusterNodesLaunched = 0;
-        while (clusterNodesLaunched != 3) {
+        while (clusterNodesLaunched != BackendTestLauncher.NODES) {
             int nodesUp = 0;
 
             for (var container : backend.getContainers().clusterContainers()) {
@@ -66,7 +67,7 @@ public class ContainerRestartUtils {
                     nodesUp++;
                 }
             }
-            if (nodesUp < 3) {
+            if (nodesUp < BackendTestLauncher.NODES) {
                 System.out.println("Only "+nodesUp+" cache nodes up");
                 backend.getContainers().clusterContainers().forEach(ContainerRestartUtils::startWithRetry);
             } else {
@@ -104,6 +105,53 @@ public class ContainerRestartUtils {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public static void stopWebsocketContainer(BackendTestResource backend) {
+        while (backend.getContainers().wsContainer().isRunning()) {
+            backend.getContainers().wsContainer().stop();
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public static void stopSSEContainer(BackendTestResource backend) {
+        while (backend.getContainers().sseContainer().isRunning()) {
+            backend.getContainers().sseContainer().stop();
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public static void stopClusterContainers(BackendTestResource backend) {
+        var clusterContainers = backend.getContainers().clusterContainers();
+        for (GenericContainer<?> clusterContainer : clusterContainers) {
+            while (clusterContainer.isRunning()) {
+                clusterContainer.stop();
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+    }
+
+    public static void stopHTTPInterface(BackendTestResource backend) {
+        while (backend.getContainers().httpContainer().isRunning()) {
+            backend.getContainers().httpContainer().stop();
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }

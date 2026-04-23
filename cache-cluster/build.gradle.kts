@@ -81,6 +81,7 @@ configure<com.google.cloud.tools.jib.gradle.JibExtension> {
             "-javaagent:/app/agent/opentelemetry-javaagent.jar",
             "-Dotel.javaagent.extensions=/app/agent/opentelemetry-javaagent-extension.jar"
         )
+        ports = listOf("8080")
     }
     extraDirectories {
         paths {

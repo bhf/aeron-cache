@@ -53,7 +53,10 @@ public class TestContainersEnvironmentFactory {
                             .withEnv("OTEL_SERVICE_NAME", "aeron-cache-cluster-node")
                             .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")
                             .withEnv("CACHE_MODE", "RAFT")
-                            .withEnv("CACHE_DATA_DIR", "/tmp/data");
+                            .withEnv("CACHE_DATA_DIR", "/tmp/data")
+                            .withEnv("OTEL_TRACES_EXPORTER", "none")
+                            .withEnv("OTEL_METRICS_EXPORTER", "none")
+                            .withEnv("OTEL_LOGS_EXPORTER", "none");
 
             containers.add(container);
         }
@@ -83,6 +86,9 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
                 .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
                 .withEnv("CACHE_MODE", "RAFT")
+                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                .withEnv("OTEL_METRICS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -108,6 +114,9 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
                 .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
                 .withEnv("CACHE_MODE", "RAFT")
+                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                .withEnv("OTEL_METRICS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -133,6 +142,9 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
                 .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
                 .withEnv("CACHE_MODE", "RAFT")
+                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                .withEnv("OTEL_METRICS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -159,6 +171,9 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
                 .withEnv("CACHE_MODE", "RAFT")
                 .withEnv("REQUEST_PUB_HOST", "node0")
+                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                .withEnv("OTEL_METRICS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")
                 .waitingFor(Wait.forHttp("/readiness/"));
     }
 
@@ -209,6 +224,9 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
+                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                .withEnv("OTEL_METRICS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -231,6 +249,9 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
+                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                .withEnv("OTEL_METRICS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -253,6 +274,9 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
+                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                .withEnv("OTEL_METRICS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -275,6 +299,9 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
+                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                .withEnv("OTEL_METRICS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")
                 .waitingFor(Wait.forHttp("/readiness/"));
     }
 

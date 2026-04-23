@@ -14,18 +14,23 @@ import java.util.stream.Collectors;
 public class StreamingHelperUtil {
 
     public static List<CompletableFuture<List<CacheUpdateEvent>>> getPerStreamEvents(StreamingHelper[] streamingHelpers,
-                                                                                     BackendTestResource backend, int eventCount) {
+                                                                                     BackendTestResource backend, String cacheId, int eventCount) {
         List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
         var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
                 .map(helper -> {
                     CompletableFuture<Void> ready = new CompletableFuture<>();
                     readyFutures.add(ready);
-                    return helper.getEvents(backend, eventCount, ready);
+                    return helper.getEvents(backend, cacheId, eventCount, ready);
                 })
                 .collect(Collectors.toList());
 
         readyFutures.forEach(f -> Awaitility.await().atMost(60, TimeUnit.SECONDS).until(f::isDone));
 
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         return perStreamingSourceEvents;
     }
 

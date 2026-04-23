@@ -40,7 +40,7 @@ public abstract class AbstractPutItemTests {
     void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
         // Arrange
         var readyFuture = new CompletableFuture<Void>();
-        var eventData = streamingHelper.getEvents(backend, 1, readyFuture);
+        var eventData = streamingHelper.getEvents(backend, KNOWN_CACHE_ID, 1, readyFuture);
 
         Awaitility.await().atMost(60, TimeUnit.SECONDS).until(readyFuture::isDone);
 

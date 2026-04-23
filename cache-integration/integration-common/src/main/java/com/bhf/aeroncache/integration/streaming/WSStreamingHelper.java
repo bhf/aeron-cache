@@ -4,82 +4,105 @@ import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.WebSocket;
+import okhttp3.WebSocketListener;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.WebSocket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WSStreamingHelper implements StreamingHelper {
 
     private static final String STREAMING_API_PREFIX = "/api/ws/v1/cache/";
-    private static final String KNOWN_CACHE_ID = "1";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
-    public CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, int count, CompletableFuture<Void> ready) {
+    public CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready) {
         CountDownLatch latch = new CountDownLatch(count);
         CompletableFuture<List<CacheUpdateEvent>> messageFuture = new CompletableFuture<>();
         List<CacheUpdateEvent> events = new ArrayList<>();
 
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
-                + backend.getWsPort() + STREAMING_API_PREFIX + KNOWN_CACHE_ID;
+                + backend.getWsPort() + STREAMING_API_PREFIX + cacheId;
 
-        var httpClient = HttpClient.newHttpClient();
-        AtomicBoolean isOpen = new AtomicBoolean();
-
-        var socketFuture = httpClient.newWebSocketBuilder()
-                .buildAsync(URI.create(cacheSubscriptionURI), new WebSocket.Listener() {
-                    @Override
-                    public void onOpen(WebSocket webSocket) {
-                        System.out.println("WS OPEN");
-                        isOpen.set(true);
-                        ready.complete(null);
-                        webSocket.request(1);
-                    }
-
-                    @Override
-                    public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
-                        System.out.println("WS CLOSED");
-                        isOpen.set(false);
-                        return WebSocket.Listener.super.onClose(webSocket, statusCode, reason);
-                    }
-
-                    @Override
-                    public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-                        try {
-                            CacheUpdateEvent event = OBJECT_MAPPER.readValue(data.toString(), CacheUpdateEvent.class);
-                            synchronized (events) {
-                                events.add(event);
-                                latch.countDown();
-                            }
-                        } catch (JsonProcessingException e) {
-                            messageFuture.completeExceptionally(e);
-                        }
-
-                        if (latch.getCount() == 0) {
-                            System.out.println("COMPLETING ON WS DATA");
-                            messageFuture.complete(events);
-                            webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Done");
-                        } else {
-                            webSocket.request(1);
-                        }
-                        return null;
-                    }
-
-                    @Override
-                    public void onError(WebSocket webSocket, Throwable error) {
-                        System.out.println("GOT WS ERROR");
-                        ready.completeExceptionally(error != null ? error : new RuntimeException("WS Failure"));
-                        messageFuture.completeExceptionally(error);
-                    }
-                });
+        connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
 
         return messageFuture;
+    }
+
+    private void connect(String uri, CountDownLatch latch, CompletableFuture<List<CacheUpdateEvent>> messageFuture, List<CacheUpdateEvent> events, CompletableFuture<Void> ready) {
+
+        var client = new OkHttpClient();
+        var request = new Request.Builder().url(uri).build();
+
+        client.newWebSocket(request, new WebSocketListener() {
+            @Override
+            public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
+                System.out.println("WS OPEN");
+                ready.complete(null);
+            }
+
+            @Override
+            public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
+                try {
+                    CacheUpdateEvent event = OBJECT_MAPPER.readValue(text, CacheUpdateEvent.class);
+                    synchronized (events) {
+                        events.add(event);
+                        latch.countDown();
+                    }
+                } catch (JsonProcessingException e) {
+                    messageFuture.completeExceptionally(e);
+                    return;
+                }
+                if (latch.getCount() == 0) {
+                    System.out.println("COMPLETING ON WS DATA");
+                    messageFuture.complete(events);
+                    webSocket.close(1000, "Done");
+                }
+            }
+
+            @Override
+            public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
+                System.out.println("WS CLOSING: " + code + " " + reason);
+                if (!messageFuture.isDone()) {
+                    System.out.println("WS closed before all events received – reconnecting");
+                    scheduleReconnect(uri, latch, messageFuture, events, ready);
+                }
+            }
+
+            @Override
+            public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
+                System.out.println("GOT WS FAILURE: " + t);
+                if (!messageFuture.isDone()) {
+                    System.out.println("WS failure before all events received – reconnecting");
+                    scheduleReconnect(uri, latch, messageFuture, events, ready);
+                }
+            }
+        });
+    }
+
+    private void scheduleReconnect(String uri,
+                                   CountDownLatch latch,
+                                   CompletableFuture<List<CacheUpdateEvent>> messageFuture,
+                                   List<CacheUpdateEvent> events,
+                                   CompletableFuture<Void> ready) {
+        if (messageFuture.isDone()) return;
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            messageFuture.completeExceptionally(e);
+            return;
+        }
+        if (!messageFuture.isDone()) {
+            System.out.println("WS reconnecting to " + uri);
+            connect(uri, latch, messageFuture, events, ready);
+        }
     }
 }

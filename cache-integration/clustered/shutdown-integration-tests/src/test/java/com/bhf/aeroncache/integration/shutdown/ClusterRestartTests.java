@@ -12,7 +12,6 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.testcontainers.containers.GenericContainer;
 
 @ExtendWith(BackendTestLauncher.class)
 @BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
@@ -32,8 +31,9 @@ class ClusterRestartTests {
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
 
         // Act
-        backend.getContainers().httpContainer().stop();
-        backend.getContainers().clusterContainers().forEach(GenericContainer::stop);
+        ContainerRestartUtils.stopHTTPInterface(backend);
+
+        ContainerRestartUtils.stopClusterContainers(backend);
 
         ContainerRestartUtils.awaitAeronCacheClusterRestart(backend);
         var postRestartMappedHostDetails = ContainerRestartUtils.awaitHTTPInterfaceRestart(backend);
@@ -51,4 +51,5 @@ class ClusterRestartTests {
                 .body("value", Matchers.comparesEqualTo(KNOWN_VALUE));
 
     }
+
 }
