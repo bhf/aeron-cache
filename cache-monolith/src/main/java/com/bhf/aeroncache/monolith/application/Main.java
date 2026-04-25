@@ -43,7 +43,7 @@ public class Main {
 
 
     private static void generateUIConfig(int httpPort, int clusterToolsPort, int wsPort, int ssePort) {
-        String template = "NEXT_PUBLIC_API_BASE=http://localhost:3000\n" +
+        String template =
                 "AERON_CACHE_API=http://localhost:" + httpPort + "/api/v1\n" +
                 "AERON_CACHE_NEAR_API=http://localhost:7073/api/v1/near\n" +
                 "AERON_CACHE_WS_API=ws:localhost:" + wsPort + "\n" +
