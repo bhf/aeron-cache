@@ -45,10 +45,7 @@ public class Main {
     private static void generateUIConfig(int httpPort, int clusterToolsPort, int wsPort, int ssePort) {
         String template =
                 "AERON_CACHE_API=http://localhost:" + httpPort + "/api/v1\n" +
-                "AERON_CACHE_NEAR_API=http://localhost:7073/api/v1/near\n" +
                 "AERON_CACHE_WS_API=ws:localhost:" + wsPort + "\n" +
-                "JAEGER=http://localhost:16686\n" +
-                "PROMETHEUS=http://localhost:9090\n" +
                 "AERON_CACHE_SSE_API=http://localhost:" + ssePort;
 
         try {
