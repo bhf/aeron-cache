@@ -5,34 +5,42 @@ import com.bhf.aeroncache.application.ClusterLauncher;
 import com.bhf.aeroncache.clustertools.application.ClusterToolsHTTPApplication;
 import com.bhf.aeroncache.http.application.HttpApplication;
 import com.bhf.aeroncache.sse.application.SSEApplication;
+import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.ws.application.WebsocketApplication;
+import org.agrona.concurrent.ShutdownSignalBarrier;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class Main {
     static void main() {
-        System.out.println("Launching single node Aeron Cache cluster");
-        ClusterLauncher.main(new String[]{});
+        String aeronDirectory = "/dev/shm/aeron/";
+        try (var mediaDriver = ClusterUtils.launchEmbeddedMediaDriver(aeronDirectory);
+             final ShutdownSignalBarrier barrier = new ShutdownSignalBarrier()) {
+            System.out.println("Launching single node Aeron Cache cluster");
+            ClusterLauncher.main(new String[]{});
 
-        System.out.println("Launching HTTP ClusterTools");
-        ClusterToolsHTTPApplication.main(null);
-        int clusterToolsPort = ClusterToolsHTTPApplication.BOUND_PORT;
+            System.out.println("Launching HTTP ClusterTools");
+            ClusterToolsHTTPApplication.main(null);
+            int clusterToolsPort = ClusterToolsHTTPApplication.BOUND_PORT;
 
-        System.out.println("Launching HTTP interface");
-        HttpApplication.main(null);
-        int httpPort = HttpApplication.BOUND_PORT;
+            System.out.println("Launching HTTP interface");
+            HttpApplication.main(null);
+            int httpPort = HttpApplication.BOUND_PORT;
 
-        System.out.println("Launching WS interface");
-        WebsocketApplication.main(null);
-        int wsPort = WebsocketApplication.BOUND_PORT;
+            System.out.println("Launching WS interface");
+            WebsocketApplication.main(null);
+            int wsPort = WebsocketApplication.BOUND_PORT;
 
-        System.out.println("Launching SSE interface");
-        SSEApplication.main(null);
-        int ssePort = SSEApplication.BOUND_PORT;
+            System.out.println("Launching SSE interface");
+            SSEApplication.main(null);
+            int ssePort = SSEApplication.BOUND_PORT;
 
-        generateUIConfig(httpPort, clusterToolsPort, wsPort, ssePort);
+            generateUIConfig(httpPort, clusterToolsPort, wsPort, ssePort);
+            barrier.await();
+        }
     }
+
 
     private static void generateUIConfig(int httpPort, int clusterToolsPort, int wsPort, int ssePort) {
         String template = "NEXT_PUBLIC_API_BASE=http://localhost:3000\n" +

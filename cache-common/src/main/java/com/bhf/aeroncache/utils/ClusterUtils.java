@@ -61,12 +61,29 @@ public class ClusterUtils {
                 .dirDeleteOnShutdown(true));
     }
 
+    public static MediaDriver launchEmbeddedMediaDriver(String aeronDirectory) {
+        return MediaDriver.launchEmbedded(new MediaDriver.Context().aeronDirectoryName(aeronDirectory)
+                .threadingMode(ThreadingMode.SHARED)
+                .dirDeleteOnStart(true)
+                .dirDeleteOnShutdown(true));
+    }
+
     public static AeronCluster buildClusterConnection(String egressIP, String ingressEndpoints, EgressListener client, String alias, MediaDriver mediaDriver) {
         return AeronCluster.connect(
                 new AeronCluster.Context()
                         .egressListener(client)
                         .egressChannel("aeron:udp?endpoint=" + egressIP + ":0|alias="+alias+"-ClusterEgress")
                         .aeronDirectoryName(mediaDriver.aeronDirectoryName())
+                        .ingressChannel("aeron:udp")
+                        .ingressEndpoints(ingressEndpoints));
+    }
+
+    public static AeronCluster buildClusterConnection(String egressIP, String ingressEndpoints, EgressListener client, String alias, String aeronDirectory) {
+        return AeronCluster.connect(
+                new AeronCluster.Context()
+                        .egressListener(client)
+                        .egressChannel("aeron:udp?endpoint=" + egressIP + ":0|alias="+alias+"-ClusterEgress")
+                        .aeronDirectoryName(aeronDirectory)
                         .ingressChannel("aeron:udp")
                         .ingressEndpoints(ingressEndpoints));
     }

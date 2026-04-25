@@ -126,7 +126,21 @@ public class WebsocketApplication {
             }
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
-            mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
+            var launchEmbeddedStr = System.getenv("LAUNCH_EMBEDDED");
+            boolean launchEmbedded = launchEmbeddedStr == null || Boolean.parseBoolean(launchEmbeddedStr);
+            if (launchEmbedded) {
+                mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
+            }
+
+            final Aeron.Context aeronCtx = new Aeron.Context();
+            if (launchEmbedded) {
+                aeronCtx.aeronDirectoryName(mediaDriver.aeronDirectoryName());
+            } else {
+                String externalAeronDir = System.getenv("AERON_DIR");
+                if (externalAeronDir != null) {
+                    aeronCtx.aeronDirectoryName(externalAeronDir);
+                }
+            }
 
             var cacheMode = System.getenv("CACHE_MODE");
             CLUSTERED_MODE = cacheMode==null || cacheMode.toUpperCase().equals("RAFT");
@@ -134,10 +148,8 @@ public class WebsocketApplication {
             System.out.println("Cache mode: "+cacheMode+", using clustered mode: "+CLUSTERED_MODE);
 
             if (CLUSTERED_MODE) {
-                buildClusterConnection(egressIP, ingressEndpoints);
+                buildClusterConnection(egressIP, ingressEndpoints, aeronCtx.aeronDirectoryName());
             } else {
-                final Aeron.Context aeronCtx = new Aeron.Context()
-                        .aeronDirectoryName(mediaDriver.aeronDirectoryName());
                 final Aeron aeron = Aeron.connect(aeronCtx);
                 var requestPubHost = System.getenv("REQUEST_PUB_HOST");
                 buildUnclusteredConnection(aeron, requestPubHost);
@@ -244,10 +256,10 @@ public class WebsocketApplication {
         AgentRunner.startOnThread(serverAgentRunner);
     }
 
-    private static void buildClusterConnection(String egressIP, String ingressEndpoints) {
+    private static void buildClusterConnection(String egressIP, String ingressEndpoints, String aeronDirectory) {
         try {
             aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "WSClient",
-                    mediaDriver);
+                    aeronDirectory);
             addClusterErrorHandler(aeronCluster);
 
             cache = new AeronCache() {
@@ -274,7 +286,7 @@ public class WebsocketApplication {
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Will try to reconnect");
-            buildClusterConnection(egressIP, ingressEndpoints);
+            buildClusterConnection(egressIP, ingressEndpoints, aeronDirectory);
         }
     }
 

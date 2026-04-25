@@ -16,12 +16,14 @@ repositories {
 
 dependencies {
     implementation(project(":cache-cluster"))
+    implementation(project(":cache-common"))
     implementation(project(":cache-http:http-server-javalin"))
     implementation(project(":cache-http:http-clustertools"))
     implementation(project(":cache-ws:ws-server-javalin"))
     implementation(project(":cache-sse:sse-server-jooby"))
     runtimeOnly(project(":cache-spi-impl:map-cache:map-cache-core"))
 
+    implementation(libs.aeron)
     implementation(libs.jooby.kotlin)
     implementation(libs.jooby.netty)
     implementation(libs.jooby.jackson)
