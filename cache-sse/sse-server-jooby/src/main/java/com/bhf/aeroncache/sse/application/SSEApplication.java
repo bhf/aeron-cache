@@ -14,7 +14,6 @@ import com.bhf.aeroncache.sse.config.SSEIdleStrategies;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
-import com.bhf.aeroncache.utils.SupplierUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -65,9 +64,10 @@ public class SSEApplication extends Jooby {
     private static MediaDriver mediaDriver;
     private static final ObjectWriter writer = new ObjectMapper().writer();
     private static boolean CLUSTERED_MODE;
+    public static int BOUND_PORT;
 
     public static void main(final String[] args) {
-        startSSEInterface(args, DEFAULT_SSE_PORT);
+        BOUND_PORT = startSSEInterface(args, DEFAULT_SSE_PORT);
     }
 
     public static int startSSEInterface(String[] args, int port) {

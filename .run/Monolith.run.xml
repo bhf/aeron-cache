@@ -1,0 +1,21 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Monolith" type="Application" factoryName="Application">
+    <option name="ALTERNATIVE_JRE_PATH" value="azul-25" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <option name="envFilePaths">
+      <option value="$PROJECT_DIR$/cache-monolith/src/main/resources/dev-cluster-singlenode.env" />
+    </option>
+    <option name="MAIN_CLASS_NAME" value="com.bhf.aeroncache.monolith.application.Main" />
+    <module name="aeron-cache.cache-monolith.main" />
+    <option name="VM_PARAMETERS" value="--add-opens java.base/jdk.internal.misc=ALL-UNNAMED" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="com.bhf.aeroncache.monolith.application.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

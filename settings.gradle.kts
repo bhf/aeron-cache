@@ -14,6 +14,7 @@ include("cache-near:http-server-near-javalin")
 include("cache-ws:ws-server-javalin")
 include("cache-sse:sse-server-jooby")
 include("cache-http:http-clustertools")
+include("cache-monolith")
 
 include("cache-integration:integration-common")
 include("cache-integration:integration-common-http")

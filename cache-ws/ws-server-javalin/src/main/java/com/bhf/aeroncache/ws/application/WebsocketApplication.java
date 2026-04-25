@@ -73,9 +73,10 @@ public class WebsocketApplication {
     private static AeronCluster aeronCluster;
     private static MediaDriver mediaDriver;
     private static boolean CLUSTERED_MODE;
+    public static int BOUND_PORT;
 
     public static void main(String[] args) {
-        startWebsocketInterface(DEFAULT_WS_PORT);
+        BOUND_PORT = startWebsocketInterface(DEFAULT_WS_PORT);
     }
 
     public static int startWebsocketInterface(int port) {

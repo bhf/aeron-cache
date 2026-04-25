@@ -31,9 +31,11 @@ public class ClusterToolsHTTPApplication {
     private static final String API_PREFIX = "/api/v1/clustertools/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
+    public static int BOUND_PORT;
 
     public static void main(String[] args) {
-        startHTTPServer();
+        var app = startHTTPServer();
+        BOUND_PORT = app.port();
     }
 
     /**

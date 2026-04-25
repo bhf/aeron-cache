@@ -97,14 +97,14 @@ public class HttpApplication {
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static List<String> hostArray = new ArrayList<>();
+    public static int BOUND_PORT;
 
     public static void main(String[] args) {
-
         var cacheMode = System.getenv("CACHE_MODE");
         final boolean CLUSTERED_MODE = cacheMode == null || cacheMode.toUpperCase().equals("RAFT");
 
         System.out.println("Cache mode: " + cacheMode + ", using clustered mode: " + CLUSTERED_MODE);
-        startHTTPInterface(DEFAULT_HTTP_PORT, CLUSTERED_MODE);
+        BOUND_PORT = startHTTPInterface(DEFAULT_HTTP_PORT, CLUSTERED_MODE);
     }
 
     public static int startHTTPInterface(int port, boolean useClusteredMode) {
@@ -153,7 +153,7 @@ public class HttpApplication {
             System.out.println("CLUSTER_ADDRESSES=" + allHosts);
 
             var egressIP = DNSUtils.getThisHostName();
-            hostArray = List.of(allHosts.split(","));
+            hostArray = allHosts!=null ? List.of(allHosts.split(",")) : List.of();
             var ingressEndpoints = ClusterUtils.ingressEndpoints(hostArray);
 
             System.out.println("Awaiting DNS Resolution");
