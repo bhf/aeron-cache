@@ -36,7 +36,7 @@ jobs:
       - name: Find Integration Modules
         id: set-matrix
         run: |
-          MODULES=$(./gradlew -q projects | grep -oE "':cache-integration:(clustered|singlenode):[^']+'" | tr -d "'" | jq -R -s -c 'split("\n")[:-1]')
+          MODULES=$(./gradlew -q projects | grep -oE "':cache-integration:(clustered|singlenode):[^']+'" | tr -d "'" | sort -u | jq -R -s -c 'split("\n")[:-1]')
           echo "matrix=$MODULES" >> $GITHUB_OUTPUT
 
   integration-tests:
@@ -59,6 +59,6 @@ jobs:
         run: |
           docker pull eclipse-temurin:25
           ./gradlew jibDockerBuild -PjibDockerOnBuild=true
-        
+          
       - name: Run Module Integration Test
         run: ./gradlew ${{ matrix.module }}:test -PskipIntegrationTests=false
