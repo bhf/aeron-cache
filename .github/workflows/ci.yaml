@@ -1,0 +1,62 @@
+name: CI Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+      - name: Run Unit Tests
+        # skipIntegrationTests=true is set in gradle.properties by default,
+        # so this will purely run unit tests without integration overhead
+        run: ./gradlew test
+
+  discover-test-modules:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          
+      - name: Find Integration Modules
+        id: set-matrix
+        run: |
+          MODULES=$(./gradlew -q projects | grep -oE "':cache-integration:(clustered|singlenode):[^']+'" | tr -d "'" | jq -R -H -c -s 'split("\n")[:-1]')
+          echo "matrix=$MODULES" >> $GITHUB_OUTPUT
+
+  integration-tests:
+    needs: discover-test-modules
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.discover-test-modules.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Build Local Target Docker Images
+        run: ./gradlew jibDockerBuild -PjibDockerOnBuild=true
+        
+      - name: Run Module Integration Test
+        run: ./gradlew ${{ matrix.module }}:test -PskipIntegrationTests=false

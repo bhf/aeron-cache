@@ -80,7 +80,7 @@ Clustertools container
         CLUSTER_NODE=$(echo $POD_NAME | rev | cut -d- -f1 | rev)
         export CACHE_DATA_DIR="${CACHE_DATA_DIR_BASE}/node${CLUSTER_NODE}/cluster"
       fi
-      java -jar http-clustertools-all.jar
+      exec java --enable-preview --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED -jar http-clustertools-*-all.jar
   env:
     - name: POD_NAME
       valueFrom:

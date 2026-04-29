@@ -24,9 +24,9 @@ spec:
               protocol: TCP
           env:
             - name: AERON_CACHE_API
-              value: "http://aeroncache-http-javalin-0:7070/api/v1"
+              value: "http://aeroncache-http-0:7070/api/v1"
             - name: AERON_CACHE_WS_API
-              value: ws:aeroncache-ws-javalin-0:7071
+              value: ws:aeroncache-ws-0:7071
             - name: JAEGER
               value: http://jaeger:16686
             - name: PROMETHEUS

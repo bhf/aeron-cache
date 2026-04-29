@@ -43,7 +43,7 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - "export CLUSTER_NODE=$(echo $POD_NAME | rev | cut -d- -f1 | rev) && java -jar --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED cache-cluster-all.jar"
+            - "export CLUSTER_NODE=$(echo $POD_NAME | rev | cut -d- -f1 | rev) && exec java --enable-preview --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED -cp @/app/jib-classpath-file com.bhf.aeroncache.application.CacheNodeApplication"
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:

@@ -26,37 +26,37 @@ uninstall-singlenode:
 	$(MAKE) -C aeroncache-singlenode uninstall
 
 install-http:
-	$(MAKE) -C aeroncache-http-javalin install
+	$(MAKE) -C aeroncache-http install
 
 install-http-singlenode:
-	$(MAKE) -C aeroncache-http-javalin install-singlenode
+	$(MAKE) -C aeroncache-http install-singlenode
 
 uninstall-http:
-	$(MAKE) -C aeroncache-http-javalin uninstall
+	$(MAKE) -C aeroncache-http uninstall
 
 install-ws:
-	$(MAKE) -C aeroncache-ws-javalin install
+	$(MAKE) -C aeroncache-ws install
 
 install-ws-singlenode:
-	$(MAKE) -C aeroncache-ws-javalin install-singlenode
+	$(MAKE) -C aeroncache-ws install-singlenode
 
 uninstall-ws:
-	$(MAKE) -C aeroncache-ws-javalin uninstall
+	$(MAKE) -C aeroncache-ws uninstall
 
 install-sse:
-	$(MAKE) -C aeroncache-sse-jooby install
+	$(MAKE) -C aeroncache-sse install
 
 install-sse-singlenode:
-	$(MAKE) -C aeroncache-sse-jooby install-singlenode
+	$(MAKE) -C aeroncache-sse install-singlenode
 
 uninstall-sse:
-	$(MAKE) -C aeroncache-sse-jooby uninstall
+	$(MAKE) -C aeroncache-sse uninstall
 
 install-http-near:
-	$(MAKE) -C aeroncache-http-near-javalin install
+	$(MAKE) -C aeroncache-http-near install
 
 uninstall-http-near:
-	$(MAKE) -C aeroncache-http-near-javalin uninstall
+	$(MAKE) -C aeroncache-http-near uninstall
 
 install-ui:
 	$(MAKE) -C aeroncache-ui-nextjs install

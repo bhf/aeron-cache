@@ -4,9 +4,9 @@ metadata:
   name: aeroncache-singlenode-config
   namespace: {{ .Release.Namespace }}
 data:
-  HTTP_RESPONSE_PUB_HOST: aeroncache-http-javalin
-  WS_RESPONSE_PUB_HOST: aeroncache-ws-javalin
-  SSE_RESPONSE_PUB_HOST: aeroncache-sse-jooby
+  HTTP_RESPONSE_PUB_HOST: aeroncache-http
+  WS_RESPONSE_PUB_HOST: aeroncache-ws
+  SSE_RESPONSE_PUB_HOST: aeroncache-sse
   DNS_DELAY: "true"
   CACHE_MODE: {{ .Values.cacheMode | quote }}
   CLUSTER_ADDRESSES: "aeroncache-singlenode-0.aeroncache-singlenode.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-singlenode-1.aeroncache-singlenode.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-singlenode-2.aeroncache-singlenode.{{ .Release.Namespace }}.svc.cluster.local"

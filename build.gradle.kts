@@ -1,12 +1,15 @@
-group = "com.bhf.aeroncache"
-version = "1.0-SNAPSHOT"
-
 plugins{
     alias(libs.plugins.lombok)
     application
 }
 
+val appVersion = project.findProperty("appVersion")?.toString() ?: "1.0-SNAPSHOT"
+val dockerRegistry = project.findProperty("dockerRegistry")?.toString() ?: ""
+
 allprojects {
+    group = "com.bhf.aeroncache"
+    version = appVersion
+    
     apply { from("$rootDir/gradle/lombok.gradle") }
 
     repositories {
@@ -22,7 +25,7 @@ allprojects {
     }
 }
 
-val skipIntegrationTests = project.hasProperty("skipIntegrationTests")
+val skipIntegrationTests = project.findProperty("skipIntegrationTests")?.toString()?.toBoolean() ?: false
 val jibOnBuild = project.hasProperty("jibDockerOnBuild")
 
 abstract class TestLock : BuildService<BuildServiceParameters.None>
@@ -33,6 +36,9 @@ val testLock = gradle.sharedServices.registerIfAbsent("testLock", TestLock::clas
 
 subprojects {
     tasks.withType<Test>().configureEach {
+        systemProperty("aeroncache.image.tag", appVersion)
+        systemProperty("aeroncache.image.registry", dockerRegistry)
+
         if (project.path.startsWith(":cache-integration:")) {
             enabled = !skipIntegrationTests
             if (enabled || jibOnBuild) {

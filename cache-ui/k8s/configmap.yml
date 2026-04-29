@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   name: aeroncache-ui-config
 data:
-  AERON_CACHE_API: http://aeroncache-http-javalin:7070/api/v1
-  AERON_CACHE_WS_API: ws:aeroncache-ws-javalin:7071
+  AERON_CACHE_API: http://aeroncache-http:7070/api/v1
+  AERON_CACHE_WS_API: ws:aeroncache-ws:7071
   JAEGER: http://jaeger:16686
   PROMETHEUS: http://prometheus:9090

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: aeroncache-http
+description: A Helm chart for Aeron Cache HTTP using Javalin.
+type: application
+version: 0.0.1
+appVersion: "0.0.1"

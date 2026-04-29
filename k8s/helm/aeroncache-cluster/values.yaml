@@ -9,7 +9,7 @@ cacheMode: "RAFT"
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: docker.io/library/aeroncache-cluster
+  repository: aeroncache-cluster
   # This sets the pull policy for images.
   pullPolicy: Never
   # Overrides the image tag whose default is the chart appVersion.
@@ -17,7 +17,7 @@ image:
 
 clustertools:
   image:
-    repository: docker.io/library/aeroncache-http-clustertools
+    repository: aeroncache-http-clustertools
     tag: "latest"
     pullPolicy: Never
   port: 7080

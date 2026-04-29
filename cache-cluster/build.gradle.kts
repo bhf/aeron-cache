@@ -70,16 +70,15 @@ configure<com.google.cloud.tools.jib.gradle.JibExtension> {
         image = "docker://eclipse-temurin:25"
     }
     to {
-        image = "aeroncache-cluster"
-        tags = setOf("latest", project.version.toString())
+        val reg = project.findProperty("dockerRegistry")?.toString() ?: ""
+        image = if (reg.isEmpty()) "aeroncache-cluster" else "$reg/aeroncache-cluster"
+        tags = setOf(project.version.toString(), "latest")
     }
     container {
         mainClass = "com.bhf.aeroncache.application.CacheNodeApplication"
         jvmFlags = listOf(
             "--enable-preview",
             "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
-            "-javaagent:/app/agent/opentelemetry-javaagent.jar",
-            "-Dotel.javaagent.extensions=/app/agent/opentelemetry-javaagent-extension.jar"
         )
         ports = listOf("8080")
     }

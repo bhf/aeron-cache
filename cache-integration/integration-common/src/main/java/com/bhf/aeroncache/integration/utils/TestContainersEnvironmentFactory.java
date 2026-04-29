@@ -20,6 +20,13 @@ public class TestContainersEnvironmentFactory {
 
     public static final long SHM_SIZE_MBS = 512L;
 
+    public static String getImageName(String imageName) {
+        String registry = System.getProperty("aeroncache.image.registry", "");
+        String tag = System.getProperty("aeroncache.image.tag", "latest");
+        String fullImageName = imageName + ":" + tag;
+        return registry.isEmpty() ? fullImageName : registry + "/" + fullImageName;
+    }
+
     /**
      * Get containers for an AeronCache Cluster.
      *
@@ -40,7 +47,7 @@ public class TestContainersEnvironmentFactory {
             new File(hostPath).mkdirs();
 
             GenericContainer<?> container =
-                    new GenericContainer<>("aeroncache-cluster:latest")
+                    new GenericContainer<>(getImageName("aeroncache-cluster"))
                             .withNetwork(network)
                             .withNetworkAliases(name)
                             .withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
@@ -74,7 +81,7 @@ public class TestContainersEnvironmentFactory {
     public static GenericContainer<?> getClusteredHTTPContainer(int nodes, Network network) {
         String clusterAddresses = getClusterAddresses(nodes);
 
-        return new GenericContainer<>("aeroncache-http-javalin:latest")
+        return new GenericContainer<>(getImageName("aeroncache-http"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-http-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
@@ -102,7 +109,7 @@ public class TestContainersEnvironmentFactory {
     public static GenericContainer<?> getClusteredHTTPNearContainer(int nodes, Network network) {
         String clusterAddresses = getClusterAddresses(nodes);
 
-        return new GenericContainer<>("aeroncache-http-near-javalin")
+        return new GenericContainer<>(getImageName("aeroncache-http-near"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-http-near-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
@@ -130,7 +137,7 @@ public class TestContainersEnvironmentFactory {
     public static GenericContainer<?> getClusteredWSContainer(int nodes, Network network) {
         String clusterAddresses = getClusterAddresses(nodes);
 
-        return new GenericContainer<>("aeroncache-ws-javalin:latest")
+        return new GenericContainer<>(getImageName("aeroncache-ws"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-ws-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
@@ -158,7 +165,7 @@ public class TestContainersEnvironmentFactory {
     public static GenericContainer<?> getClusteredSSEContainer(int nodes, Network network) {
         String clusterAddresses = getClusterAddresses(nodes);
 
-        return new GenericContainer<>("aeroncache-sse-jooby:latest")
+        return new GenericContainer<>(getImageName("aeroncache-sse"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-sse-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
@@ -188,7 +195,7 @@ public class TestContainersEnvironmentFactory {
         String hostPath = "/tmp/aeron-cache/" + name + "-" + UUID.randomUUID();
         new File(hostPath).mkdirs();
 
-        return new GenericContainer<>("aeroncache-cluster:latest")
+        return new GenericContainer<>(getImageName("aeroncache-cluster"))
                 .withNetwork(network)
                 .withNetworkAliases(name)
                 .withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
@@ -212,7 +219,7 @@ public class TestContainersEnvironmentFactory {
      * @return
      */
     public static GenericContainer<?> getSingleNodeHTTPContainer(Network network) {
-        return new GenericContainer<>("aeroncache-http-javalin:latest")
+        return new GenericContainer<>(getImageName("aeroncache-http"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-http-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
@@ -237,7 +244,7 @@ public class TestContainersEnvironmentFactory {
      * @return
      */
     public static GenericContainer<?> getSingleNodeHTTPNearContainer(Network network) {
-        return new GenericContainer<>("aeroncache-http-near-javalin:latest")
+        return new GenericContainer<>(getImageName("aeroncache-http-near"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-http-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
@@ -262,7 +269,7 @@ public class TestContainersEnvironmentFactory {
      * @return
      */
     public static GenericContainer<?> getSingleNodeWSContainer(Network network) {
-        return new GenericContainer<>("aeroncache-ws-javalin:latest")
+        return new GenericContainer<>(getImageName("aeroncache-ws"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-ws-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
@@ -287,7 +294,7 @@ public class TestContainersEnvironmentFactory {
      * @return
      */
     public static GenericContainer<?> getSingleNodeSSEContainer(Network network) {
-        return new GenericContainer<>("aeroncache-sse-jooby:latest")
+        return new GenericContainer<>(getImageName("aeroncache-sse"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-sse-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)

@@ -1,4 +1,4 @@
 FROM eclipse-temurin:25
 COPY build/libs /tmp
 WORKDIR /tmp
-ENTRYPOINT ["java","-jar", "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED", "cache-cluster-all.jar"]
+ENTRYPOINT ["sh", "-c", "exec java --enable-preview --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED -jar cache-cluster-*-all.jar"]
