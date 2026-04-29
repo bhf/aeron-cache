@@ -1,6 +1,8 @@
 # Aeron Cache
 ![img.png](docs/images/header.png)
 
+[![CI Build and Test](https://github.com/bhf/aeron-cache/actions/workflows/ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/ci.yaml)
+
 *__Written and designed without LLMs or AI Agents.__*
 
 A key value store built using Aeron, Agrona and SBE. RAFT clustered and fast by default. UI with NextJS, Shadcn and Tailwind. 
