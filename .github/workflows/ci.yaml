@@ -56,7 +56,9 @@ jobs:
           distribution: 'temurin'
 
       - name: Build Local Target Docker Images
-        run: ./gradlew jibDockerBuild -PjibDockerOnBuild=true
+        run: |
+          docker pull eclipse-temurin:25
+          ./gradlew jibDockerBuild -PjibDockerOnBuild=true
         
       - name: Run Module Integration Test
         run: ./gradlew ${{ matrix.module }}:test -PskipIntegrationTests=false
