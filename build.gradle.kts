@@ -25,8 +25,8 @@ allprojects {
     }
 }
 
-val skipIntegrationTests = project.findProperty("skipIntegrationTests")?.toString()?.toBoolean() ?: false
-val jibOnBuild = project.hasProperty("jibDockerOnBuild")
+val skipIntegrationTests = project.findProperty("skipIntegrationTests")?.toString()?.replace(";", "")?.toBoolean() ?: false
+val jibOnBuild = project.findProperty("jibDockerOnBuild")?.toString()?.replace(";", "")?.toBoolean() ?: false
 
 abstract class TestLock : BuildService<BuildServiceParameters.None>
 
@@ -41,7 +41,7 @@ subprojects {
 
         if (project.path.startsWith(":cache-integration:")) {
             enabled = !skipIntegrationTests
-            if (enabled || jibOnBuild) {
+            if (!skipIntegrationTests && jibOnBuild) {
                 dependsOn(":cache-http:http-server-javalin:jibDockerBuild")
                 dependsOn(":cache-near:http-server-near-javalin:jibDockerBuild")
                 dependsOn(":cache-sse:sse-server-jooby:jibDockerBuild")
