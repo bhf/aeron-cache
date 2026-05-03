@@ -46,6 +46,7 @@ import io.micrometer.core.instrument.binder.system.UptimeMetrics;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.opentelemetry.api.trace.Span;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.CloseHelper;
 import org.agrona.MutableDirectBuffer;
@@ -72,7 +73,8 @@ import java.util.regex.Pattern;
 public class HttpApplication {
 
     public static final String PROMO_MICROMETER_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
-    private static final int DEFAULT_HTTP_PORT = 7070;
+    @Setter
+    private static int DEFAULT_HTTP_PORT = 7070;
     private static final String DEFAULT_CLUSTER_TOOLS_ENDPOINT = "http://localhost:7080/api/v1/clustertools/";
     private static final String API_PREFIX = "/api/v1/cache/";
     private static final String LIVENESS = "/liveness/";

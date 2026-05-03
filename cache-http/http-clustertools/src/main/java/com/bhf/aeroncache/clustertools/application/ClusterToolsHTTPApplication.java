@@ -16,6 +16,7 @@ import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.binder.system.UptimeMetrics;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
 import java.io.File;
@@ -27,7 +28,8 @@ import java.util.function.Consumer;
 public class ClusterToolsHTTPApplication {
 
     public static final String PROMO_MICROMETER_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
-    private static final int PORT = 7080;
+    @Setter
+    private static int PORT = 7080;
     private static final String API_PREFIX = "/api/v1/clustertools/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";

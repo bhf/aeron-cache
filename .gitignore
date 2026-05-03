@@ -174,3 +174,7 @@ cache-cluster/build/
 cache-ui/.idea
 .profileconfig.json
 *.jfr
+
+aeron
+aeron-cache-ui.env
+node0

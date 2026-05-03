@@ -29,6 +29,7 @@ import io.jooby.handler.CorsHandler;
 import io.jooby.jackson.JacksonModule;
 import io.jooby.netty.NettyServer;
 import io.opentelemetry.api.trace.Span;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.CloseHelper;
 import org.agrona.MutableDirectBuffer;
@@ -48,7 +49,8 @@ import java.util.function.Consumer;
 @Log4j2
 public class SSEApplication extends Jooby {
 
-    private static final int DEFAULT_SSE_PORT = 7072;
+    @Setter
+    private static int DEFAULT_SSE_PORT = 7072;
     private static final String API_PREFIX = "/api/sse/v1/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
