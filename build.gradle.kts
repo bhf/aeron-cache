@@ -1,9 +1,16 @@
 plugins{
+    id("pl.allegro.tech.build.axion-release") version "1.18.0"
     alias(libs.plugins.lombok)
     application
 }
 
-val appVersion = project.findProperty("appVersion")?.toString() ?: "1.0-SNAPSHOT"
+scmVersion {
+    tag {
+        prefix.set("v")
+    }
+}
+
+val appVersion = scmVersion.version
 val dockerRegistry = project.findProperty("dockerRegistry")?.toString() ?: ""
 
 allprojects {
