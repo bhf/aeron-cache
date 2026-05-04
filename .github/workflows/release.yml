@@ -1,0 +1,116 @@
+name: Release Cache Monolith
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on tags starting with v (e.g., v1.0.0)
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Cache Node Modules
+        uses: actions/cache@v4
+        with:
+          path: cache-ui/nextjs/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('cache-ui/nextjs/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Build Backend (Shadow JAR)
+        run: ./gradlew :cache-monolith:shadowJar
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Frontend (Next.js)
+        working-directory: ./cache-ui/nextjs
+        run: |
+          npm install
+          npm run build
+
+      - name: Prepare Release Package
+        run: |
+          mkdir -p package/cache-monolith/build/libs
+          mkdir -p package/cache-ui/nextjs
+          mkdir -p package/config
+
+          # Copy Backend JAR
+          cp cache-monolith/build/libs/*-all.jar package/cache-monolith/build/libs/
+
+          # Copy Runtime Scripts
+          cp cache-monolith/brew_services_start.sh package/cache-monolith/
+          cp cache-monolith/run_with_env.sh package/cache-monolith/
+          cp cache-monolith/launch_mcp.sh package/cache-monolith/
+          chmod +x package/cache-monolith/*.sh
+
+          # Copy Frontend Built Assets (Next.js Standalone mode)
+          cp -R cache-ui/nextjs/.next/standalone/* package/cache-ui/nextjs/
+          mkdir -p package/cache-ui/nextjs/.next
+          cp -R cache-ui/nextjs/.next/static package/cache-ui/nextjs/.next/
+          cp -R cache-ui/nextjs/public package/cache-ui/nextjs/ 2>/dev/null || true
+
+          # Copy Config overrides
+          cp -R config/* package/config/ 2>/dev/null || true
+
+          # Copy our brew-runner script
+          cp packaging/brew-runner.sh package/aeron-cache
+          chmod +x package/aeron-cache
+
+      - name: Create Tarball
+        run: |
+          cd package
+          tar -czvf ../cache-monolith-${{ github.ref_name }}.tar.gz .
+          cd ..
+
+      - name: Calculate Checksum
+        id: checksum
+        run: |
+          CHECKSUM=$(sha256sum cache-monolith-${{ github.ref_name }}.tar.gz | awk '{ print $1 }')
+          echo "SHA256: $CHECKSUM"
+          echo "sha256=$CHECKSUM" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: cache-monolith-${{ github.ref_name }}.tar.gz
+          generate_release_notes: true
+          tag_name: ${{ github.ref_name }}
+
+      - name: Update Homebrew Tap Formula
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          # Only run if a token exists to avoid failing in forks / local testing
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "HOMEBREW_TAP_TOKEN is not set. Skipping Homebrew tap update."
+            exit 0
+          fi
+          
+          # Clone the tap repository
+          git clone https://x-access-token:${TAP_TOKEN}@github.com/bhf/homebrew-aeroncache.git
+          cd homebrew-aeroncache
+          
+          # Use sed to update the URL and SHA256 in the formula
+          FORMULA_FILE="Formula/aeron-cache.rb"
+          sed -i "s|url \".*\"|url \"https://github.com/bhf/aeron-cache/releases/download/${{ github.ref_name }}/cache-monolith-${{ github.ref_name }}.tar.gz\"|" $FORMULA_FILE
+          sed -i "s|sha256 \".*\"|sha256 \"${{ steps.checksum.outputs.sha256 }}\"|" $FORMULA_FILE
+          
+          # Commit and Push
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add $FORMULA_FILE
+          git commit -m "Automated update: aeron-cache to ${{ github.ref_name }}"
+          git push
