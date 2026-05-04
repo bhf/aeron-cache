@@ -27,8 +27,18 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# Start Next.js development server for now
-npm run dev &
+echo "📦 Building Next.js frontend..."
+npm run build
+
+# Find a free port starting from 3000
+PORT=3000
+while (echo >/dev/tcp/localhost/$PORT) >/dev/null 2>&1; do
+    echo "⚠️ Port $PORT is in use, trying next..."
+    PORT=$((PORT + 1))
+done
+
+echo "🚀 Starting cache-ui frontend on port $PORT..."
+PORT=$PORT npm start &
 FRONTEND_PID=$!
 
 # Clean up children on exit

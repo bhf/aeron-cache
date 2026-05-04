@@ -451,7 +451,12 @@ public class WebsocketApplication {
         return config -> {
             config.bundledPlugins.enableCors(cors -> {
                 cors.addRule(it -> {
-                    it.allowHost("http://localhost:3000", "http://localhost");
+                    it.allowHost("http://localhost:3000",
+                            "http://localhost:3001",
+                            "http://localhost:3002",
+                            "http://localhost:3003",
+                            "http://localhost:3004",
+                            "http://localhost:3005", "http://localhost");
                 });
             });
 

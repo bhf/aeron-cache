@@ -83,7 +83,12 @@ public class SSEApplication extends Jooby {
 
     {
         install(new JacksonModule());
-        use(new CorsHandler(new Cors().setOrigin("http://localhost:3000")));
+        use(new CorsHandler(new Cors().setOrigin("http://localhost:3000",
+                "http://localhost:3001",
+                "http://localhost:3002",
+                "http://localhost:3003",
+                "http://localhost:3004",
+                "http://localhost:3005")));
         sse(API_PREFIX + "{cacheId}", SSEApplication::handleSingleCacheSSE);
         sse(MULTI_SUB_API_PREFIX + "{cacheIds}", SSEApplication::handleMultiCacheSSE);
         get(LIVENESS, SSEApplication::handleGetLiveness);
