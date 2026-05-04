@@ -119,7 +119,7 @@ public class WebsocketApplication {
             System.out.println("CLUSTER_ADDRESSES=" + allHosts);
 
             var egressIP = DNSUtils.getThisHostName();
-            var hostArray = List.of(allHosts.split(","));
+            var hostArray = allHosts!=null ? List.of(allHosts.split(",")) : List.of("localhost");
             var ingressEndpoints = ClusterUtils.ingressEndpoints(hostArray);
 
             System.out.println("Awaiting DNS Resolution");
