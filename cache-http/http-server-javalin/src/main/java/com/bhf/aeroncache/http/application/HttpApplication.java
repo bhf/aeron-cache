@@ -155,7 +155,7 @@ public class HttpApplication {
             System.out.println("CLUSTER_ADDRESSES=" + allHosts);
 
             var egressIP = DNSUtils.getThisHostName();
-            hostArray = allHosts!=null ? List.of(allHosts.split(",")) : List.of();
+            hostArray = allHosts!=null ? List.of(allHosts.split(",")) : List.of("localhost");
             var ingressEndpoints = ClusterUtils.ingressEndpoints(hostArray);
 
             System.out.println("Awaiting DNS Resolution");
