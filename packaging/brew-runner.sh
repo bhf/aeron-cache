@@ -11,8 +11,9 @@ while [ -h "$SOURCE" ]; do
 done
 SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
-BACKEND_DIR="$SCRIPT_DIR/cache-monolith"
-FRONTEND_DIR="$SCRIPT_DIR/cache-ui/nextjs"
+# Homebrew installs the actual files into 'libexec' and places this script in 'bin'
+BACKEND_DIR="$SCRIPT_DIR/../libexec/cache-monolith"
+FRONTEND_DIR="$SCRIPT_DIR/../libexec/cache-ui/nextjs"
 
 CONFIG_DIR="$HOME/.aeron-cache"
 mkdir -p "$CONFIG_DIR"
