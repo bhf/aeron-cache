@@ -2,8 +2,15 @@
 set -e
 
 # This wrapper is used by the Homebrew distribution.
-# Setup paths based on the package layout.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve symlink to find actual install path (in Homebrew Cellar)
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
 BACKEND_DIR="$SCRIPT_DIR/cache-monolith"
 FRONTEND_DIR="$SCRIPT_DIR/cache-ui/nextjs"
 
