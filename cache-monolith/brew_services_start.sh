@@ -27,8 +27,12 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-echo "📦 Building Next.js frontend..."
-npm run build
+if [ ! -d ".next" ]; then
+    echo "📦 Building Next.js frontend..."
+    npm run build
+else
+    echo "⏭️ Next.js frontend already built, skipping..."
+fi
 
 # Find a free port starting from 3000
 PORT=3000
