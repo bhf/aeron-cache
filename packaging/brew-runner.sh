@@ -54,25 +54,19 @@ cd "$FRONTEND_DIR"
 PORT=$PORT node server.js &
 FRONTEND_PID=$!
 
-echo "🚀 Starting MCP Server..."
-# Execute the MCP server launcher, which also waits for aeron-cache-ui.env
-"$BACKEND_DIR/launch_mcp.sh" &
-MCP_PID=$!
-
 echo
 echo "✅ Aeron Cache is running!"
 echo "   UI      : http://localhost:$PORT"
 echo "   Backend : PID $BACKEND_PID"
-echo "   MCP     : PID $MCP_PID"
 echo "   Config  : $CONFIG_DIR"
 echo 
 echo "Press Ctrl+C to stop."
 
 # Wait indefinitely, handling graceful shutdown
 cleanup() {
-    echo "🛑 Shutting down backend, frontend, and MCP..."
-    kill $BACKEND_PID $FRONTEND_PID $MCP_PID 2>/dev/null || true
-    wait $BACKEND_PID $FRONTEND_PID $MCP_PID 2>/dev/null || true
+    echo "🛑 Shutting down backend and frontend..."
+    kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+    wait $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
     rm -f "$BACKEND_DIR/aeron-cache-ui.env"
 }
 trap cleanup SIGINT SIGTERM EXIT
