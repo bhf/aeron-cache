@@ -60,7 +60,8 @@ jobs:
 
           # Copy Frontend Built Assets (Next.js Standalone mode)
           cp -R cache-ui/nextjs/.next/standalone/* package/cache-ui/nextjs/
-          mkdir -p package/cache-ui/nextjs/.next
+          # Next.js standalone needs the .next directory inside it, but cp -R * doesn't grab hidden dirs like .next by default in bash!
+          cp -R cache-ui/nextjs/.next/standalone/.next package/cache-ui/nextjs/
           cp -R cache-ui/nextjs/.next/static package/cache-ui/nextjs/.next/
           cp -R cache-ui/nextjs/public package/cache-ui/nextjs/ 2>/dev/null || true
 
