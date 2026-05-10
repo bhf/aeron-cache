@@ -332,7 +332,7 @@ components:
         cacheId:
           type: string
           example: "CreatedCache"
-        status:
+        operationStatus:
           type: string
         items:
           type: array
@@ -350,7 +350,7 @@ components:
       properties:
         cacheId:
           type: string
-        status:
+        operationStatus:
           type: string
     CacheDetails:
       type: object
@@ -363,13 +363,13 @@ components:
     CacheStatsResponse:
       type: object
       properties:
-        totalOps:
+        totalOpsCount:
           type: integer
           format: int32
-        totalCaches:
+        totalCachesCount:
           type: integer
           format: int32
-        totalItems:
+        totalItemsCount:
           type: integer
           format: int32
         errorCount:

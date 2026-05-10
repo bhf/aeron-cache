@@ -472,15 +472,15 @@
     "CacheStatsResponse": {
       "type": "object",
       "properties": {
-        "totalOps": {
+        "totalOpsCount": {
           "type": "integer",
           "format": "int32"
         },
-        "totalCaches": {
+        "totalCachesCount": {
           "type": "integer",
           "format": "int32"
         },
-        "totalItems": {
+        "totalItemsCount": {
           "type": "integer",
           "format": "int32"
         },
