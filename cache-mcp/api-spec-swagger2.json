@@ -62,6 +62,37 @@
       }
     },
     "/api/v1/cache/{cacheId}": {
+      "get": {
+        "summary": "Get all items from a cache",
+        "description": "Get all items from the specified cache",
+        "operationId": "getCache",
+        "tags": [
+          "GetCache"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/GetCacheResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cacheId",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the cache",
+            "type": "string"
+          }
+        ]
+      },
       "post": {
         "summary": "Put an item into a cache",
         "description": "Put an item on the specified key into the specified cache",
@@ -113,6 +144,37 @@
             "description": "OK",
             "schema": {
               "$ref": "#/definitions/DeleteCacheResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cacheId",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the cache",
+            "type": "string"
+          }
+        ]
+      },
+      "patch": {
+        "summary": "Clear a cache",
+        "description": "Clear the cache specified by it's Id",
+        "operationId": "clearCache",
+        "tags": [
+          "ClearCache"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ClearCacheResponse"
             }
           },
           "400": {
@@ -210,6 +272,117 @@
           }
         ]
       }
+    },
+    "/api/v1/caches": {
+      "get": {
+        "summary": "Get all caches",
+        "description": "Get the details of all available caches",
+        "operationId": "getCaches",
+        "tags": [
+          "GetCaches"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/CacheDetails"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats": {
+      "get": {
+        "summary": "Get cache status",
+        "description": "Get global stats from the Aeron cache",
+        "operationId": "getStats",
+        "tags": [
+          "Stats"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/CacheStatsResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shutdown": {
+      "post": {
+        "summary": "Shutdown Cluster",
+        "description": "Shutdown the cluster",
+        "operationId": "shutdownCluster",
+        "tags": [
+          "ClusterTools"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ClusterToolsResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/snapshot": {
+      "post": {
+        "summary": "Take Snapshot",
+        "description": "Take a cluster snapshot",
+        "operationId": "takeSnapshot",
+        "tags": [
+          "ClusterTools"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ClusterToolsResponse"
+            }
+          }
+        }
+      }
+    },
+    "/liveness/": {
+      "get": {
+        "summary": "Liveness check",
+        "description": "Check if the application is live",
+        "operationId": "getLiveness",
+        "tags": [
+          "Health"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "/readiness/": {
+      "get": {
+        "summary": "Readiness check",
+        "description": "Check if the application is ready",
+        "operationId": "getReadiness",
+        "tags": [
+          "Health"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -241,6 +414,94 @@
         "cacheId": {
           "type": "string",
           "example": "SomeCacheId"
+        }
+      }
+    },
+    "GetCacheResponse": {
+      "type": "object",
+      "properties": {
+        "cacheId": {
+          "type": "string",
+          "example": "CreatedCache"
+        },
+        "status": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CacheItem"
+          }
+        }
+      }
+    },
+    "CacheItem": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "ClearCacheResponse": {
+      "type": "object",
+      "properties": {
+        "cacheId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "CacheDetails": {
+      "type": "object",
+      "properties": {
+        "cacheId": {
+          "type": "string"
+        },
+        "itemCount": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "CacheStatsResponse": {
+      "type": "object",
+      "properties": {
+        "totalOps": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalCaches": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalItems": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "errorCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "ClusterToolsResponse": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "clusterToolsFolder": {
+          "type": "string"
+        },
+        "exitCode": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },

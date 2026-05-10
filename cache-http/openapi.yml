@@ -42,6 +42,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   /api/v1/cache/{cacheId}:
+    get:
+      tags:
+        - GetCache
+      summary: Get all items from a cache
+      description: Get all items from the specified cache
+      operationId: getCache
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the cache
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/GetCacheResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
         - PutItem
@@ -94,6 +120,32 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/DeleteCacheResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+        - ClearCache
+      summary: Clear a cache
+      description: Clear the cache specified by it's Id
+      operationId: clearCache
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the cache
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ClearCacheResponse'
         '400':
           description: Bad Request
           content:
@@ -165,6 +217,92 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/caches:
+    get:
+      tags:
+        - GetCaches
+      summary: Get all caches
+      description: Get the details of all available caches
+      operationId: getCaches
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CacheDetails'
+  /api/v1/stats:
+    get:
+      tags:
+        - Stats
+      summary: Get cache status
+      description: Get global stats from the Aeron cache
+      operationId: getStats
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CacheStatsResponse'
+  /api/v1/shutdown:
+    post:
+      tags:
+        - ClusterTools
+      summary: Shutdown Cluster
+      description: Shutdown the cluster
+      operationId: shutdownCluster
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ClusterToolsResponse'
+  /api/v1/snapshot:
+    post:
+      tags:
+        - ClusterTools
+      summary: Take Snapshot
+      description: Take a cluster snapshot
+      operationId: takeSnapshot
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ClusterToolsResponse'
+  /liveness/:
+    get:
+      tags:
+        - Health
+      summary: Liveness check
+      description: Check if the application is live
+      operationId: getLiveness
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+  /readiness/:
+    get:
+      tags:
+        - Health
+      summary: Readiness check
+      description: Check if the application is ready
+      operationId: getReadiness
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
 components:
   schemas:
     ErrorResponse:
@@ -186,9 +324,67 @@ components:
       type: object
       properties:
         cacheId:
+          type: string
+          example: "CreatedCache"
+    GetCacheResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "CreatedCache"
+        status:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CacheItem'
+    CacheItem:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+    ClearCacheResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+        status:
+          type: string
+    CacheDetails:
+      type: object
+      properties:
+        cacheId:
+          type: string
+        itemCount:
           type: integer
           format: int64
-          example: 1
+    CacheStatsResponse:
+      type: object
+      properties:
+        totalOps:
+          type: integer
+          format: int32
+        totalCaches:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int32
+        errorCount:
+          type: integer
+          format: int32
+    ClusterToolsResponse:
+      type: object
+      properties:
+        command:
+          type: string
+        clusterToolsFolder:
+          type: string
+        exitCode:
+          type: integer
+          format: int32
     PutItemRequest:
       type: object
       properties:
