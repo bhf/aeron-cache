@@ -58,6 +58,7 @@ public class CacheNodeApplication {
     private static final int LOG_CONTROL_PORT_OFFSET = 6;
     private static final int TERM_LENGTH = 64 * 1024;
     private static final boolean USE_BUSY_SPIN_IDLE_FOR_CLUSTER_SERVICE = false;
+    private static final long RESTART_ATTEMPT_INTERVAL = 10000;
 
     static int calculatePort(final int nodeId, final int offset) {
         return PORT_BASE + (nodeId * PORTS_PER_NODE) + offset;
@@ -141,6 +142,10 @@ public class CacheNodeApplication {
             } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println("Will try to restart clustered cache");
+                try {
+                    Thread.sleep(RESTART_ATTEMPT_INTERVAL);
+                } catch (InterruptedException ex) {
+                }
                 startAeronCacheApplication(args, baseDirectory);
             }
         }
