@@ -142,7 +142,7 @@ export async function addItemToCacheRequest(formState: { message: string; error:
         const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + cacheId, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({cacheId, key, value}),
+                body: JSON.stringify({key, value}),
                 cache: "no-cache"
             },
         );
