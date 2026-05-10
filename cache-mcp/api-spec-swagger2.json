@@ -414,6 +414,9 @@
         "cacheId": {
           "type": "string",
           "example": "SomeCacheId"
+        },
+        "operationStatus": {
+          "type": "string"
         }
       }
     },
@@ -528,6 +531,9 @@
         "key": {
           "type": "string",
           "example": "SomeRandomKey"
+        },
+        "operationStatus": {
+          "type": "string"
         }
       }
     },
@@ -537,6 +543,9 @@
         "cacheId": {
           "type": "string",
           "example": "SomeCacheId"
+        },
+        "operationStatus": {
+          "type": "string"
         }
       }
     },
@@ -554,6 +563,9 @@
         "value": {
           "type": "string",
           "example": "SomeRandomValue"
+        },
+        "operationStatus": {
+          "type": "string"
         }
       }
     },
@@ -567,6 +579,9 @@
         "key": {
           "type": "string",
           "example": "SomeRandomKey"
+        },
+        "operationStatus": {
+          "type": "string"
         }
       }
     }
