@@ -326,6 +326,8 @@ components:
         cacheId:
           type: string
           example: "CreatedCache"
+        operationStatus:
+          type: string
     GetCacheResponse:
       type: object
       properties:
@@ -403,12 +405,16 @@ components:
         key:
           type: string
           example: 'SomeRandomKey'
+        operationStatus:
+          type: string
     DeleteCacheResponse:
       type: object
       properties:
         cacheId:
           type: string
           example: "SomeCacheID"
+        operationStatus:
+          type: string
     GetItemResponse:
       type: object
       properties:
@@ -421,6 +427,8 @@ components:
         value:
           type: string
           example: 'SomeRandomValue'
+        operationStatus:
+          type: string
     DeleteItemResponse:
       type: object
       properties:
@@ -430,3 +438,5 @@ components:
         key:
           type: string
           example: 'SomeRandomKey'
+        operationStatus:
+          type: string
