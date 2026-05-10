@@ -773,14 +773,15 @@ public class HttpApplication {
      */
     private static void handlePutItemRequest(Context ctx) {
         try {
+            var cacheId = ctx.pathParam("cacheId");
             var request = ctx.bodyAsClass(PutItemRequest.class);
             log.info("Got put item request on cacheId {}, key {}, value {}",
-                    request.cacheId(), request.key(), request.value());
+                    cacheId, request.key(), request.value());
 
             var requestId = getRequestId(ctx);
             CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
             Consumer<AddCacheEntryResult> consumer = getAddCacheEntryResultConsumer(request, future);
-            CompletableFuture.runAsync(() -> observingPublisher.addCacheEntry(requestId, request.cacheId(),
+            CompletableFuture.runAsync(() -> observingPublisher.addCacheEntry(requestId, cacheId,
                     request.key(), request.value(), consumer));
 
             var response = future.get();

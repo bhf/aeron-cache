@@ -64,7 +64,7 @@ abstract class PutItemTests {
     @HappyPath
     void shouldAddAnItemToCache(BackendTestResource backend) {
         // Arrange
-        JSONObject requestBody = new JSONObject().put("cacheId", KNOWN_CACHE_ID)
+        JSONObject requestBody = new JSONObject()
                 .put("key", KNOWN_KEY)
                 .put("value", KNOWN_VALUE);
 
@@ -86,7 +86,7 @@ abstract class PutItemTests {
     void shouldGet404OnUnknownCache(BackendTestResource backend) {
         // Arrange
         CacheTestUtils.deleteCache(UNKNOWN_CACHE_ID, backend);
-        JSONObject requestBody = new JSONObject().put("cacheId", UNKNOWN_CACHE_ID)
+        JSONObject requestBody = new JSONObject()
                 .put("key", KNOWN_KEY)
                 .put("value", KNOWN_VALUE);
 

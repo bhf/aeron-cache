@@ -247,10 +247,6 @@
     "PutItemRequest": {
       "type": "object",
       "properties": {
-        "cacheId": {
-          "type": "string",
-          "example": "SomeCacheId"
-        },
         "key": {
           "type": "string",
           "example": "SomeRandomKey"

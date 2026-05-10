@@ -192,9 +192,6 @@ components:
     PutItemRequest:
       type: object
       properties:
-        cacheId:
-          type: string
-          example: "SomeCacheID"
         key:
           type: string
           example: 'SomeRandomKey'

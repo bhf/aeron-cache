@@ -40,7 +40,6 @@ public class CacheTestUtils {
      */
     public static void addItem(String cacheId, String key, String value, BackendTestResource backend) {
         JSONObject jsonObj = new JSONObject()
-                .put("cacheId", cacheId)
                 .put("key", key)
                 .put("value", value);
 
