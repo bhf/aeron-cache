@@ -213,6 +213,7 @@ public class CacheNodeApplication {
 
         final ConsensusModule.Context consensusModuleContext = new ConsensusModule.Context()
                 .errorHandler(errorHandler("Consensus Module"))
+                .aeronDirectoryName(aeronDirName)
                 .clusterMemberId(nodeId)
                 .clusterMembers(clusterMembers(Arrays.asList(hostnames)))
                 .clusterDir(new File(baseDir, "cluster"))
@@ -241,11 +242,13 @@ public class CacheNodeApplication {
         for (int i = 0; i < hostAddresses.size(); i++) {
             DNSUtils.awaitDnsResolution(hostAddresses, i);
         }
+        
+        boolean useExternalMediaDriver = Boolean.parseBoolean(System.getenv().getOrDefault("LAUNCH_EMBEDDED", "false"));
 
         System.out.println("Launching cluster node now...");
 
         try (final ShutdownSignalBarrier barrier = new ShutdownSignalBarrier()) {
-            final MediaDriver.Context mediaDriverContext = new MediaDriver.Context()
+            final var mediaDriverContext = new MediaDriver.Context()
                     .aeronDirectoryName(aeronDirName)
                     .threadingMode(ThreadingMode.SHARED)
                     .termBufferSparseFile(true)
@@ -253,14 +256,15 @@ public class CacheNodeApplication {
                     .terminationHook(barrier::signal)
                     .errorHandler(CacheNodeApplication.errorHandler("Media Driver"));
 
-            ClusteredMediaDriver clusteredMediaDriver = ClusteredMediaDriver.launch(
-                    mediaDriverContext, archiveContext, consensusModuleContext);
-            ClusteredServiceContainer container = ClusteredServiceContainer.launch(
-                    clusteredServiceContext);
+            try (var mediaDriver = useExternalMediaDriver ? null : MediaDriver.launch(mediaDriverContext);
+                 var archive = Archive.launch(archiveContext);
+                 var concensusModule = ConsensusModule.launch(consensusModuleContext);
+                 var serviceContainer = ClusteredServiceContainer.launch(clusteredServiceContext)) {
 
-            System.out.println("[" + nodeId + "] Started Cluster Node on " + hostname + "...");
-            barrier.await();
-            System.out.println("[" + nodeId + "] Exiting");
+                System.out.println("Started Cluster Node: "+nodeId+" on " + hostname);
+                barrier.await();
+                System.out.println("Exiting cluster node: "+nodeId);
+            }
         }
         catch (Exception e){
             throw e;

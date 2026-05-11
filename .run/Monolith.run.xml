@@ -3,7 +3,7 @@
     <option name="ALTERNATIVE_JRE_PATH" value="azul-25" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="envFilePaths">
-      <option value="$PROJECT_DIR$/cache-monolith/src/main/resources/dev-cluster-singlenode.env" />
+      <option value="$PROJECT_DIR$/config/dev-monolith.env" />
     </option>
     <option name="MAIN_CLASS_NAME" value="com.bhf.aeroncache.monolith.application.Main" />
     <module name="aeron-cache.cache-monolith.main" />
