@@ -18,14 +18,51 @@ FRONTEND_DIR="$SCRIPT_DIR/../libexec/cache-ui/nextjs"
 CONFIG_DIR="$HOME/.aeron-cache"
 mkdir -p "$CONFIG_DIR"
 
+PID_FILE="$CONFIG_DIR/runner.pid"
+PORT_FILE="$CONFIG_DIR/ui_port"
+UI_ENV_FILE="$CONFIG_DIR/aeron-cache-ui.env"
+
+if [ -f "$PID_FILE" ] && kill -0 $(cat "$PID_FILE") 2>/dev/null; then
+    echo "⚡ Aeron Cache is already running (PID $(cat "$PID_FILE"))."
+    if [ -f "$PORT_FILE" ]; then
+        echo "   UI Link            : http://localhost:$(cat "$PORT_FILE")"
+    fi
+    if [ -f "$UI_ENV_FILE" ]; then
+        echo "   Backend Endpoints  :"
+        grep -v '^#' "$UI_ENV_FILE" | grep -v '^[[:space:]]*$' | sed 's/^/      /'
+    fi
+    echo ""
+    exit 0
+fi
+
+echo $$ > "$PID_FILE"
+
 # Generate a default configuration file if the user hasn't provided one
 USER_ENV_FILE="$CONFIG_DIR/backend.env"
 if [ ! -f "$USER_ENV_FILE" ]; then
     echo "Creating default backend config at $USER_ENV_FILE..."
-    touch "$USER_ENV_FILE"
+    cat << 'EOF' > "$USER_ENV_FILE"
+CLUSTER_NODE=0
+CLUSTER_ADDRESSES=localhost
+EGRESS_IP=localhost
+POD_ADDRESS=aeron-cache-http
+
+// Config for single node monolith cache
+HTTP_RESPONSE_PUB_HOST=localhost
+WS_RESPONSE_PUB_HOST=localhost
+SSE_RESPONSE_PUB_HOST=localhost
+
+// Config for single node clients like http and ws interfaces
+REQUEST_PUB_HOST=localhost
+
+// Cache mode
+CACHE_MODE=RAFT
+
+LAUNCH_EMBEDDED=false
+AERON_DIR=aeron
+EOF
 fi
 
-UI_ENV_FILE="$CONFIG_DIR/aeron-cache-ui.env"
 # Remove old generator UI env
 rm -f "$UI_ENV_FILE"
 
@@ -57,6 +94,8 @@ while (echo >/dev/tcp/localhost/$PORT) >/dev/null 2>&1; do
     PORT=$((PORT + 1))
 done
 
+echo $PORT > "$PORT_FILE"
+
 echo "Starting Next.js standalone server on port $PORT..."
 cd "$FRONTEND_DIR"
 PORT=$PORT node server.js &
@@ -76,6 +115,7 @@ cleanup() {
     kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
     wait $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
     rm -f "$BACKEND_DIR/aeron-cache-ui.env"
+    rm -f "$PID_FILE" "$PORT_FILE"
 }
 trap cleanup SIGINT SIGTERM EXIT
 
