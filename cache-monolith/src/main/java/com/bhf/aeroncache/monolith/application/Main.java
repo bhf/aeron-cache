@@ -29,6 +29,7 @@ public class Main {
             HttpApplication.setDEFAULT_HTTP_PORT(0);
             HttpApplication.main(null);
             int httpPort = HttpApplication.BOUND_PORT;
+            HttpApplication.setCLUSTER_TOOLS_PORT(clusterToolsPort);
 
             System.out.println("Launching WS interface");
             WebsocketApplication.setDEFAULT_WS_PORT(0);

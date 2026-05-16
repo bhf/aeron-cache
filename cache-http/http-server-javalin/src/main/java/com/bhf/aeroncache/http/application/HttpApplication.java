@@ -57,6 +57,7 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -73,6 +74,8 @@ import java.util.regex.Pattern;
 public class HttpApplication {
 
     public static final String PROMO_MICROMETER_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
+    @Setter
+    private static int CLUSTER_TOOLS_PORT = 7080;
     @Setter
     private static int DEFAULT_HTTP_PORT = 7070;
     private static final String DEFAULT_CLUSTER_TOOLS_ENDPOINT = "http://localhost:7080/api/v1/clustertools/";
@@ -397,27 +400,33 @@ public class HttpApplication {
             var jsonBody = OBJECT_MAPPER.writeValueAsString(requestBody);
 
             for (String host : hostArray) {
-                String hostUri = "http://" + host + ":7080/api/v1/clustertools/";
-                log.info("Sending {} request to host: {}", command, hostUri);
+                try {
+                    String hostUri = "http://" + host + ":"+CLUSTER_TOOLS_PORT+"/api/v1/clustertools/";
+                    log.info("Sending {} request to host: {}", command, hostUri);
 
-                var httpRequest = HttpRequest.newBuilder()
-                        .uri(URI.create(hostUri))
-                        .header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                        .build();
+                    var httpRequest = HttpRequest.newBuilder()
+                            .uri(URI.create(hostUri))
+                            .header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                            .build();
 
-                HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+                    HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
 
-                if (httpResponse.statusCode() == HTTPStatusUtils.OK) {
-                    var response = OBJECT_MAPPER.readValue(httpResponse.body(), ClusterToolsResponse.class);
+                    if (httpResponse.statusCode() == HTTPStatusUtils.OK) {
+                        var response = OBJECT_MAPPER.readValue(httpResponse.body(), ClusterToolsResponse.class);
 
-                    if(response.exitCode()==0) {
-                        context.status(HTTPStatusUtils.OK);
-                        context.json(response);
-                        break;
+                        if(response.exitCode()==0) {
+                            context.status(HTTPStatusUtils.OK);
+                            context.json(response);
+                            break;
+                        }
+                    } else {
+                        log.error("Cluster tools request failed for host {} with status code: {}", host, httpResponse.statusCode());
                     }
-                } else {
-                    log.error("Cluster tools request failed for host {} with status code: {}", host, httpResponse.statusCode());
+                } catch (IOException e) {
+                    log.error("Cluster tools request failed for host {}", host);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
                 }
             }
 

@@ -60,6 +60,7 @@ CACHE_MODE=RAFT
 
 LAUNCH_EMBEDDED=false
 AERON_DIR=aeron
+CLUSTER_FOLDER=node0/cluster/
 EOF
 fi
 
