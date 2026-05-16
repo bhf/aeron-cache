@@ -36,7 +36,7 @@ jobs:
       - name: Find Integration Modules
         id: set-matrix
         run: |
-          MODULES=$(./gradlew -q projects | grep -oE "':cache-integration:(clustered|singlenode):[^']+'" | tr -d "'" | sort -u | jq -R -s -c 'split("\n")[:-1]')
+          MODULES=$(./gradlew -q projects | grep -oE "':cache-integration:(clustered|ephemeral):[^']+'" | tr -d "'" | sort -u | jq -R -s -c 'split("\n")[:-1]')
           echo "matrix=$MODULES" >> $GITHUB_OUTPUT
 
   integration-tests:

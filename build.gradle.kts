@@ -51,7 +51,7 @@ subprojects {
         }
 
         if (project.path.startsWith(":cache-integration:clustered:") ||
-            project.path.startsWith(":cache-integration:singlenode:")) {
+            project.path.startsWith(":cache-integration:ephemeral:")) {
             maxParallelForks = 1
             usesService(testLock)
         }

@@ -20,7 +20,6 @@ include("cache-monolith")
 include("cache-integration:integration-common")
 include("cache-integration:integration-common-http")
 include("cache-integration:integration-common-streaming")
-include("cache-integration:integration-common-streaming")
 
 include("cache-integration:clustered:http-integration-tests")
 include("cache-integration:clustered:http-near-integration-tests")
@@ -30,4 +29,4 @@ include("cache-integration:clustered:multistream-integration-tests")
 include("cache-integration:clustered:multistream-restart-tests")
 include("cache-integration:clustered:shutdown-integration-tests")
 
-include("cache-integration:singlenode:core-integration-tests")
+include("cache-integration:ephemeral:core-integration-tests")
