@@ -71,7 +71,7 @@ echo "🚀 Starting Aeron Cache Monolith backend..."
 cd "$BACKEND_DIR"
 # Pass the user env config, then intercept the UI config output
 # Main.java generates aeron-cache-ui.env in the CWD, which is now $BACKEND_DIR
-"$BACKEND_DIR/run_with_env.sh" "$USER_ENV_FILE" &
+"$BACKEND_DIR/run_with_env.sh" "$USER_ENV_FILE" "$@" &
 BACKEND_PID=$!
 
 echo "⏳ Waiting for UI environment file to be generated at $BACKEND_DIR/aeron-cache-ui.env..."

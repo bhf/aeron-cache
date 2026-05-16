@@ -13,31 +13,47 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class Main {
-    static void main() {
+    static void main(String[] args) {
         String aeronDirectory = System.getProperty("aeron.dir", System.getenv().getOrDefault("AERON_DIR", "aeron"));
+
+        int toolsPort = 0;
+        int httpInterfacePort = 0;
+        int wsInterfacePort = 0;
+        int sseInterfacePort = 0;
+
+        if (args.length == 4) {
+            toolsPort = Integer.valueOf(args[0]);
+            httpInterfacePort = Integer.valueOf(args[1]);
+            wsInterfacePort = Integer.valueOf(args[2]);
+            sseInterfacePort = Integer.valueOf(args[3]);
+        }
+
+        System.out.println("Launching with CluserToolsPort: " + toolsPort + ", HttpPort: " + httpInterfacePort
+                + ", WSPort: " + wsInterfacePort + ", SSEPort:" + sseInterfacePort);
+
         try (var mediaDriver = ClusterUtils.launchEmbeddedMediaDriver(aeronDirectory);
              final ShutdownSignalBarrier barrier = new ShutdownSignalBarrier()) {
             System.out.println("Launching single node Aeron Cache cluster");
             ClusterLauncher.main(new String[]{});
 
             System.out.println("Launching HTTP ClusterTools");
-            ClusterToolsHTTPApplication.setPORT(0);
+            ClusterToolsHTTPApplication.setPORT(toolsPort);
             ClusterToolsHTTPApplication.main(null);
             int clusterToolsPort = ClusterToolsHTTPApplication.BOUND_PORT;
 
             System.out.println("Launching HTTP interface");
-            HttpApplication.setDEFAULT_HTTP_PORT(0);
+            HttpApplication.setDEFAULT_HTTP_PORT(httpInterfacePort);
             HttpApplication.main(null);
             int httpPort = HttpApplication.BOUND_PORT;
             HttpApplication.setCLUSTER_TOOLS_PORT(clusterToolsPort);
 
             System.out.println("Launching WS interface");
-            WebsocketApplication.setDEFAULT_WS_PORT(0);
+            WebsocketApplication.setDEFAULT_WS_PORT(wsInterfacePort);
             WebsocketApplication.main(null);
             int wsPort = WebsocketApplication.BOUND_PORT;
 
             System.out.println("Launching SSE interface");
-            SSEApplication.setDEFAULT_SSE_PORT(0);
+            SSEApplication.setDEFAULT_SSE_PORT(sseInterfacePort);
             SSEApplication.main(null);
             int ssePort = SSEApplication.BOUND_PORT;
 
