@@ -45,14 +45,14 @@ EOF
         exit 0
     fi
 
-    # Determine location of openapi.yml
-    if [ -f "$SCRIPT_DIR/../cache-http/openapi.yml" ]; then
-        OPENAPI_SPEC="$SCRIPT_DIR/../cache-http/openapi.yml"
+    # Determine location of swagger spec
+    if [ -f "$SCRIPT_DIR/../cache-mcp/api-spec-swagger2.json" ]; then
+        SWAGGER_SPEC="$(cd "$SCRIPT_DIR/../cache-mcp" && pwd)/api-spec-swagger2.json"
     else
-        OPENAPI_SPEC="$CONFIG_DIR/openapi.yml"
-        if [ ! -f "$OPENAPI_SPEC" ]; then
-            echo "Downloading OpenAPI spec..." >&2
-            curl -sSL "https://raw.githubusercontent.com/bhf/aeron-cache/main/cache-http/openapi.yml" -o "$OPENAPI_SPEC"
+        SWAGGER_SPEC="$CONFIG_DIR/api-spec-swagger2.json"
+        if [ ! -f "$SWAGGER_SPEC" ]; then
+            echo "Downloading Swagger spec..." >&2
+            curl -sSL "https://raw.githubusercontent.com/bhf/aeron-cache/main/cache-mcp/api-spec-swagger2.json" -o "$SWAGGER_SPEC"
         fi
     fi
     
@@ -70,8 +70,8 @@ EOF
 
     echo "Connecting MCP Server to $AERON_CACHE_API" >&2
     
-    # Launch the OpenAPI MCP Server
-    exec npx -y mcp-openapi --spec "$OPENAPI_SPEC" --base-url "$AERON_CACHE_API"
+    # Launch the AutoMCP Server
+    exec npx -y mcp-openapi --spec "$SWAGGER_SPEC" --base-url "$AERON_CACHE_API"
 fi
 
 if [ -f "$PID_FILE" ] && kill -0 $(cat "$PID_FILE") 2>/dev/null; then
