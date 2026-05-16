@@ -84,9 +84,6 @@ export default function CacheAdminActions({baseUri}: CacheAdminActionsProps) {
             <Button variant="link" onClick={handleSnapshot}>
                 <CameraIcon/>Snapshot
             </Button>
-            /* <Button variant="link" onClick={handleShutdown}>
-                <ZapOffIcon/>Shutdown
-            </Button> */
         </>
     );
 }
