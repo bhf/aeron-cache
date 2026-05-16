@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.application.unclustered;
+package com.bhf.aeroncache.application.ephemeral;
 
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
@@ -26,7 +26,7 @@ import java.util.function.Consumer;
 /**
  * Run a cache without any clustering.
  */
-public class SingleNodeApplication {
+public class EphemeralCacheApplication {
 
     public static void main(String[] args) {
 
@@ -76,10 +76,10 @@ public class SingleNodeApplication {
         final var sseResponses = "aeron:udp?endpoint="+sseResponseHost+":6007|alias=AC-unclustered-sse-responses";
         final int responsesStream = 2;
 
-        final UnclusteredServiceAgent serverAgent = new UnclusteredServiceAgent(aeron, service, httpRequests,
+        final EphemeralCacheServiceAgent serverAgent = new EphemeralCacheServiceAgent(aeron, service, httpRequests,
                 wsRequests, sseRequests, requestStream,
                 httpResponses, wsResponses, sseResponses, responsesStream);
-        final IdleStrategy idleStrategy = SingleNodeIdleStrategies.unclusteredAgentIdleStrategy.get();
+        final IdleStrategy idleStrategy = EphemeralCacheIdleStrategies.unclusteredAgentIdleStrategy.get();
         final AgentRunner serverAgentRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace,
                 null, serverAgent);
         AgentRunner.startOnThread(serverAgentRunner);

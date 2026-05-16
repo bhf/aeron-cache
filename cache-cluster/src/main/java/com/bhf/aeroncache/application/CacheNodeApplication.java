@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.application;
 
-import com.bhf.aeroncache.application.unclustered.SingleNodeApplication;
+import com.bhf.aeroncache.application.ephemeral.EphemeralCacheApplication;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
@@ -13,7 +13,6 @@ import io.aeron.CommonContext;
 import io.aeron.archive.Archive;
 import io.aeron.archive.ArchiveThreadingMode;
 import io.aeron.archive.client.AeronArchive;
-import io.aeron.cluster.ClusteredMediaDriver;
 import io.aeron.cluster.ConsensusModule;
 import io.aeron.cluster.service.ClusteredServiceContainer;
 import io.aeron.driver.MediaDriver;
@@ -127,7 +126,7 @@ public class CacheNodeApplication {
 
         if (!CLUSTERED_MODE) {
             System.out.println("Starting Aeron Cache server in non-clustered mode");
-            SingleNodeApplication.main(new String[]{});
+            EphemeralCacheApplication.main(new String[]{});
         } else {
             System.out.println("Starting Aeron Cache server node in clustered mode");
             var clusterNode = System.getenv("CLUSTER_NODE");

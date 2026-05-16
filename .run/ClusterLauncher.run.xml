@@ -7,7 +7,7 @@
     <option name="VM_PARAMETERS" value="--add-opens java.base/jdk.internal.misc=ALL-UNNAMED" />
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="com.bhf.aeroncache.application.unclustered.*" />
+        <option name="PATTERN" value="com.bhf.aeroncache.application.ephemeral.*" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>

@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="All Ephemeral" type="CompoundRunConfigurationType">
+    <toRun name="EphemeralCacheLauncher" type="Application" />
+    <toRun name="HttpApplication-Ephemeral" type="Application" />
+    <toRun name="WebsocketApplication-Ephemeral" type="Application" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.application.unclustered;
+package com.bhf.aeroncache.application.ephemeral;
 
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import io.aeron.*;
@@ -12,7 +12,7 @@ import org.agrona.concurrent.Agent;
 
 @RequiredArgsConstructor
 @Log4j2
-public class UnclusteredServiceAgent implements Agent {
+public class EphemeralCacheServiceAgent implements Agent {
 
     private final Aeron aeron;
     private final SBEDecodingCacheClusterService service;
