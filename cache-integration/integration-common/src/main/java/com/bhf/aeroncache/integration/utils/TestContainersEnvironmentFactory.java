@@ -190,7 +190,7 @@ public class TestContainersEnvironmentFactory {
      * @param network
      * @return
      */
-    public static GenericContainer<?> getSingleNodeCacheContainer(Network network) {
+    public static GenericContainer<?> getEphemeralCacheContainer(Network network) {
         String name = "node0";
         String hostPath = "/tmp/aeron-cache/" + name + "-" + UUID.randomUUID();
         new File(hostPath).mkdirs();
@@ -218,7 +218,7 @@ public class TestContainersEnvironmentFactory {
      * @param network
      * @return
      */
-    public static GenericContainer<?> getSingleNodeHTTPContainer(Network network) {
+    public static GenericContainer<?> getEphemeralCacheHTTPContainer(Network network) {
         return new GenericContainer<>(getImageName("aeroncache-http"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-http-client")
@@ -243,7 +243,7 @@ public class TestContainersEnvironmentFactory {
      * @param network
      * @return
      */
-    public static GenericContainer<?> getSingleNodeHTTPNearContainer(Network network) {
+    public static GenericContainer<?> getEphemeralCacheHTTPNearContainer(Network network) {
         return new GenericContainer<>(getImageName("aeroncache-http-near"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-http-client")
@@ -268,7 +268,7 @@ public class TestContainersEnvironmentFactory {
      * @param network
      * @return
      */
-    public static GenericContainer<?> getSingleNodeWSContainer(Network network) {
+    public static GenericContainer<?> getEphemeralCacheWSContainer(Network network) {
         return new GenericContainer<>(getImageName("aeroncache-ws"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-ws-client")
@@ -293,7 +293,7 @@ public class TestContainersEnvironmentFactory {
      * @param network
      * @return
      */
-    public static GenericContainer<?> getSingleNodeSSEContainer(Network network) {
+    public static GenericContainer<?> getEphemeralCacheSSEContainer(Network network) {
         return new GenericContainer<>(getImageName("aeroncache-sse"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-sse-client")
