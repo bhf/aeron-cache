@@ -35,7 +35,7 @@ if [ -z "$JAR_PATH" ]; then
   exit 1
 fi
 
-JAVA_OPTS="--add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED"
+JAVA_OPTS="-Dlog4j2.configurationFile=$SCRIPT_DIR/../config/log4j2.xml --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED"
 
 # Execute the application Jar, forwarding any remaining arguments
 exec java $JAVA_OPTS -jar "$JAR_PATH" "$@"
