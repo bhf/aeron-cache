@@ -70,12 +70,21 @@ EOF
 
     echo "Connecting MCP Server to $AERON_CACHE_API" >&2
     
-    # Launch the AutoMCP Server via Docker
-    exec docker run --rm -i \
+    # Update swagger.json dynamically using node (which is definitely installed since we run nextjs)
+    node -e "
+      const fs = require('fs');
+      const url = new URL('$AERON_CACHE_API');
+      const spec = JSON.parse(fs.readFileSync('$SWAGGER_SPEC', 'utf8'));
+      spec.host = url.host;
+      spec.basePath = url.pathname || '/';
+      fs.writeFileSync('$SWAGGER_SPEC', JSON.stringify(spec, null, 2));
+    "
+    
+    # Launch the AutoMCP Server via Docker (using host networking to reach the API)
+    exec docker run --rm -i --network=host \
         -v "$SWAGGER_SPEC":/server/swagger.json \
         ghcr.io/brizzai/auto-mcp:latest \
-        --swagger-file=/server/swagger.json \
-        --base-url="$AERON_CACHE_API"
+        --swagger-file=/server/swagger.json
 fi
 
 if [ -f "$PID_FILE" ] && kill -0 $(cat "$PID_FILE") 2>/dev/null; then
