@@ -22,6 +22,50 @@ PID_FILE="$CONFIG_DIR/runner.pid"
 PORT_FILE="$CONFIG_DIR/ui_port"
 UI_ENV_FILE="$CONFIG_DIR/aeron-cache-ui.env"
 
+# Handle --mcp flag to launch or configure the MCP server
+if [ "$1" = "--mcp" ]; then
+    if [ "$2" = "config" ]; then
+        cat >&2 <<EOF
+To use this MCP server in VS Code
+add the following to your MCP settings file
+
+{
+  "servers": {
+    "aeron-cache-monolith": {
+      "type": "stdio",
+      "command": "$SOURCE",
+      "args": [
+        "--mcp"
+      ]
+    }
+  },
+  "inputs": []
+}
+EOF
+        exit 0
+    fi
+
+    # Determine location of openapi.yml
+    OPENAPI_SPEC="$SCRIPT_DIR/../cache-http/openapi.yml"
+    
+    if [ ! -f "$UI_ENV_FILE" ]; then
+        echo "Error: Backend is not running or env file not found at $UI_ENV_FILE. Start the backend first without --mcp." >&2
+        exit 1
+    fi
+
+    # Read the env configuration to find the dynamic API port
+    source "$UI_ENV_FILE"
+    if [ -z "$AERON_CACHE_API" ]; then
+        echo "Error: AERON_CACHE_API not found in $UI_ENV_FILE" >&2
+        exit 1
+    fi
+
+    echo "Connecting MCP Server to $AERON_CACHE_API" >&2
+    
+    # Launch the OpenAPI MCP Server
+    exec npx -y mcp-openapi --spec "$OPENAPI_SPEC" --base-url "$AERON_CACHE_API"
+fi
+
 if [ -f "$PID_FILE" ] && kill -0 $(cat "$PID_FILE") 2>/dev/null; then
     echo "⚡ Aeron Cache is already running (PID $(cat "$PID_FILE"))."
     if [ -f "$PORT_FILE" ]; then
