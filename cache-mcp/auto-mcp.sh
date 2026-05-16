@@ -1,1 +1,0 @@
-docker run --rm -i -v api-spec-swagger2.json:/server/swagger.json ghcr.io/brizzai/auto-mcp:latest --swagger-file=/server/swagger.json

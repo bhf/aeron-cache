@@ -16,7 +16,6 @@ Features:
 * Near cache implementation (read ahead)
 * Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded) in Java, Rust, Typescript and Python
 * Rust based [CLI](https://github.com/bhf/aeron-cache-cli)
-* An MCP server to power your Agentic AI and LLM workflows
 
 
 https://github.com/user-attachments/assets/c602f365-2b6a-497c-a671-29508cc04155
@@ -103,8 +102,6 @@ __cache-cluster__ - The core cache cluster service.
 __cache-common__ - Common entities and classes used in cache implementations.
 
 __cache-http__ - REST interfaces around the cache-client.
-
-__cache-mcp__ - MCP interface using the Swagger spec with AutoMCP. 
 
 __cache-ws__ - Websocket interfaces around the cache-client.
 
