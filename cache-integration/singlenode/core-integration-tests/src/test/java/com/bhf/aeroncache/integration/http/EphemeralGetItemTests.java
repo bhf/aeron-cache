@@ -3,9 +3,9 @@ package com.bhf.aeroncache.integration.http;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = false, useTestContainersEnvironment = true)
-class SingleNodeGetItemTests extends GetItemTests {
+class EphemeralGetItemTests extends GetItemTests {
 
-    SingleNodeGetItemTests() {
+    EphemeralGetItemTests() {
         super("/api/v1/cache/");
     }
 }

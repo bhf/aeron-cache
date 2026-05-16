@@ -6,9 +6,9 @@ import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = false, useTestContainersEnvironment = true)
-class SingleNodeMultiStreamPutItemTests extends AbstractMultiStreamPutItemTests {
+class EphemeralMultiStreamPutItemTests extends AbstractMultiStreamPutItemTests {
 
-    public SingleNodeMultiStreamPutItemTests() {
+    public EphemeralMultiStreamPutItemTests() {
         super(new SSEStreamingHelper(), new WSStreamingHelper());
     }
 }

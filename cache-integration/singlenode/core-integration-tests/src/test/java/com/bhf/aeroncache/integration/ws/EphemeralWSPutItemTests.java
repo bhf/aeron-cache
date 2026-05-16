@@ -1,13 +1,14 @@
-package com.bhf.aeroncache.integration.sse;
+package com.bhf.aeroncache.integration.ws;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.streaming.AbstractPutItemTests;
-import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
+import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = false, useTestContainersEnvironment = true)
-class SingleNodeSSEPutItemTests extends AbstractPutItemTests {
+class EphemeralWSPutItemTests extends AbstractPutItemTests {
 
-    public SingleNodeSSEPutItemTests() {
-        super(new SSEStreamingHelper());
+    public EphemeralWSPutItemTests() {
+        super(new WSStreamingHelper());
     }
+
 }
