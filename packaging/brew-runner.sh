@@ -46,7 +46,15 @@ EOF
     fi
 
     # Determine location of openapi.yml
-    OPENAPI_SPEC="$SCRIPT_DIR/../cache-http/openapi.yml"
+    if [ -f "$SCRIPT_DIR/../cache-http/openapi.yml" ]; then
+        OPENAPI_SPEC="$SCRIPT_DIR/../cache-http/openapi.yml"
+    else
+        OPENAPI_SPEC="$CONFIG_DIR/openapi.yml"
+        if [ ! -f "$OPENAPI_SPEC" ]; then
+            echo "Downloading OpenAPI spec..." >&2
+            curl -sSL "https://raw.githubusercontent.com/bhf/aeron-cache/main/cache-http/openapi.yml" -o "$OPENAPI_SPEC"
+        fi
+    fi
     
     if [ ! -f "$UI_ENV_FILE" ]; then
         echo "Error: Backend is not running or env file not found at $UI_ENV_FILE. Start the backend first without --mcp." >&2
