@@ -71,7 +71,7 @@ EOF
     echo "Connecting MCP Server to $AERON_CACHE_API" >&2
     
     # Launch the AutoMCP Server
-    exec npx -y mcp-openapi --spec "$SWAGGER_SPEC" --base-url "$AERON_CACHE_API"
+    exec npx -y auto-mcp --spec "$SWAGGER_SPEC" --base-url "$AERON_CACHE_API"
 fi
 
 if [ -f "$PID_FILE" ] && kill -0 $(cat "$PID_FILE") 2>/dev/null; then
