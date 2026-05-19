@@ -354,6 +354,7 @@ public class NearCacheApplication {
      */
     private static Consumer<JavalinConfig> getHTTPConfig(MicrometerPlugin micrometerPlugin) {
         return config -> {
+            config.showJavalinBanner = false;
             config.bundledPlugins.enableCors(cors -> {
                 cors.addRule(it -> {
                     it.allowHost("http://localhost:3000", "http://localhost");

@@ -360,6 +360,7 @@ public class HttpApplication {
                 new MicrometerPlugin(micrometerPluginConfig -> micrometerPluginConfig.registry = registry);
         var config = getHTTPConfig(micrometerPlugin);
 
+
         return Javalin.create(config)
                 .beforeMatched(HttpApplication::checkClusterConnectivity)
                 .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
@@ -546,6 +547,7 @@ public class HttpApplication {
      */
     private static Consumer<JavalinConfig> getHTTPConfig(MicrometerPlugin micrometerPlugin) {
         return config -> {
+            config.showJavalinBanner = false;
             config.bundledPlugins.enableCors(cors -> {
                 cors.addRule(it -> {
                     it.allowHost("http://localhost:3000",
