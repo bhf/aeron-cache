@@ -57,7 +57,7 @@ echo $$ > "$PID_FILE"
 USER_ENV_FILE="$CONFIG_DIR/backend.env"
 if [ ! -f "$USER_ENV_FILE" ]; then
     echo "Creating default backend config at $USER_ENV_FILE..."
-    cat << 'EOF' > "$USER_ENV_FILE"
+    cat << EOF > "$USER_ENV_FILE"
 CLUSTER_NODE=0
 CLUSTER_ADDRESSES=localhost
 EGRESS_IP=localhost
@@ -75,8 +75,9 @@ REQUEST_PUB_HOST=localhost
 CACHE_MODE=RAFT
 
 LAUNCH_EMBEDDED=false
+CACHE_DATA_DIR=$CONFIG_DIR
 AERON_DIR=aeron
-CLUSTER_FOLDER=node0/cluster/
+CLUSTER_FOLDER=$CONFIG_DIR/node0/cluster/
 EOF
 fi
 

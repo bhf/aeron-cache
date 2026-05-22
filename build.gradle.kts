@@ -47,6 +47,7 @@ subprojects {
                 dependsOn(":cache-sse:sse-server-jooby:jibDockerBuild")
                 dependsOn(":cache-ws:ws-server-javalin:jibDockerBuild")
                 dependsOn(":cache-cluster:jibDockerBuild")
+                dependsOn(":cache-monolith:jibDockerBuild")
             }
         }
 

@@ -102,7 +102,7 @@ public class ClusterToolsHTTPApplication {
 
             String requestFolder = request.clusterFolder();
 
-            String cacheDataDir = System.getenv("CACHE_DATA_DIR");
+            String cacheDataDir = System.getenv("CLUSTER_FOLDER");
             if (cacheDataDir != null && !cacheDataDir.isBlank()) {
                 log.info("Using cache data dir: {}", cacheDataDir);
                 requestFolder = cacheDataDir;

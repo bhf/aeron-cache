@@ -1,17 +1,11 @@
 plugins {
     application
     alias(libs.plugins.shadow)
+    alias(libs.plugins.jib)
 }
-
-group = "com.bhf.aeroncache"
-version = "1.0-SNAPSHOT"
 
 application {
     mainClass.set("com.bhf.aeroncache.monolith.application.Main")
-}
-
-repositories {
-    mavenCentral()
 }
 
 dependencies {
@@ -35,4 +29,25 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+apply(plugin = "com.google.cloud.tools.jib")
+
+configure<com.google.cloud.tools.jib.gradle.JibExtension> {
+    from {
+        image = "docker://eclipse-temurin:25"
+    }
+    to {
+        val reg = project.findProperty("dockerRegistry")?.toString() ?: ""
+        image = if (reg.isEmpty()) "aeroncache-monolith" else "$reg/aeroncache-monolith"
+        tags = setOf(project.version.toString(), "latest")
+    }
+    container {
+        mainClass = "com.bhf.aeroncache.monolith.application.Main"
+        jvmFlags = listOf(
+            "--enable-preview",
+            "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
+        )
+        ports = listOf("8080")
+    }
 }
