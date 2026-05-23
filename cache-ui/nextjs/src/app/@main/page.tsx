@@ -4,8 +4,12 @@ import CreateCacheRequest from "@/components/CreateCache";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card"
 import {getCacheAPIURI} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
+import {JSX, Suspense} from "react";
+import {Skeleton} from "@/components/ui/skeleton";
 
 const logger = getLogger("MainPanel")
+
+export const dynamic = 'force-dynamic'
 
 const headers = {
     'Accept': 'application/json',
@@ -18,9 +22,17 @@ const headers = {
  */
 async function CacheTable() {
 
+    const apiUri = await getCacheAPIURI();
+
     let rawResponse
     try {
-        rawResponse = await fetch(await getCacheAPIURI() + '/caches/', {
+        await fetch(apiUri + '/stats/', {
+            method: 'GET',
+            headers,
+            cache: "no-cache"
+        });
+
+        rawResponse = await fetch(apiUri + '/caches/', {
                 method: 'GET',
                 headers,
                 cache: "no-cache"
@@ -49,6 +61,15 @@ function CreateCache() {
     );
 }
 
+const LoadingSkeleton: () => JSX.Element = () => (
+    <div className="space-y-2">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+    </div>
+)
+
 export default async function Page() {
 
     return (
@@ -71,7 +92,9 @@ export default async function Page() {
                             <CardTitle>All Caches</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <CacheTable/>
+                            <Suspense fallback={<LoadingSkeleton/>}>
+                                <CacheTable/>
+                            </Suspense>
                         </CardContent>
                     </Card>
                 </div>

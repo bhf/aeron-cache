@@ -6,6 +6,8 @@ import {Skeleton} from "@/components/ui/skeleton";
 
 const logger = getLogger("MainDash")
 
+export const dynamic = 'force-dynamic'
+
 const headers = {
     'Accept': 'application/json',
     'Content-Type': 'application/json'

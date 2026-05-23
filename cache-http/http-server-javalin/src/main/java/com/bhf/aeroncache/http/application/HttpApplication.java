@@ -500,18 +500,22 @@ public class HttpApplication {
         Consumer<CacheStatsResult> consumer = c -> {
             {
                 log.info("Got cache stats, requestId {}", c.getRequestId());
-                allCaches.clear();
                 int totalOps = statsTracker.getTotalOpsCount().get();
                 int totalCaches = 0;
                 int totalItems = 0;
 
                 List<com.bhf.aeroncache.models.results.CacheStats> stats = c.getStats();
+                Set<String> latestCaches = new HashSet<>();
                 for (var x : stats) {
                     totalCaches++;
                     totalItems += x.size;
-                    allCaches.add(x.getCacheId().value().toString());
-                    cacheToSize.put(x.getCacheId().value().toString(), x.size);
+                    var cacheId = x.getCacheId().value().toString();
+                    latestCaches.add(cacheId);
+                    cacheToSize.put(cacheId, x.size);
                 }
+                
+                allCaches.retainAll(latestCaches);
+                allCaches.addAll(latestCaches);
 
                 var statsTrackerStats = statsTracker.getCacheStats();
                 var response = new CacheStats(totalOps, totalCaches, totalItems, statsTrackerStats.errorCount());
