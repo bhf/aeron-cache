@@ -7,11 +7,11 @@ uninstall-frontend: uninstall-ui
 install-all: install-cluster install-http install-ws install-sse install-http-near install-ui
 uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near uninstall-ui
 
-install-all-singlenode: install-singlenode install-http-singlenode install-ws-singlenode install-sse-singlenode install-ui
-uninstall-all-singlenode: uninstall-singlenode uninstall-http uninstall-ws uninstall-sse uninstall-ui
+install-all-ephemeral: install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral install-ui
+uninstall-all-ephemeral: uninstall-ephemeral uninstall-http uninstall-ws uninstall-sse uninstall-ui
 
-install-backend-singlenode: install-singlenode install-http-singlenode install-ws-singlenode install-sse-singlenode
-uninstall-backend-singlenode: uninstall-singlenode uninstall-http uninstall-ws uninstall-sse
+install-backend-ephemeral: install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral
+uninstall-backend-ephemeral: uninstall-ephemeral uninstall-http uninstall-ws uninstall-sse
 
 install-cluster:
 	$(MAKE) -C aeroncache-cluster install
@@ -19,17 +19,17 @@ install-cluster:
 uninstall-cluster:
 	$(MAKE) -C aeroncache-cluster uninstall
 
-install-singlenode:
-	$(MAKE) -C aeroncache-singlenode install
+install-ephemeral:
+	$(MAKE) -C aeroncache-ephemeral install
 
-uninstall-singlenode:
-	$(MAKE) -C aeroncache-singlenode uninstall
+uninstall-ephemeral:
+	$(MAKE) -C aeroncache-ephemeral uninstall
 
 install-http:
 	$(MAKE) -C aeroncache-http install
 
-install-http-singlenode:
-	$(MAKE) -C aeroncache-http install-singlenode
+install-http-ephemeral:
+	$(MAKE) -C aeroncache-http install-ephemeral
 
 uninstall-http:
 	$(MAKE) -C aeroncache-http uninstall
@@ -37,8 +37,8 @@ uninstall-http:
 install-ws:
 	$(MAKE) -C aeroncache-ws install
 
-install-ws-singlenode:
-	$(MAKE) -C aeroncache-ws install-singlenode
+install-ws-ephemeral:
+	$(MAKE) -C aeroncache-ws install-ephemeral
 
 uninstall-ws:
 	$(MAKE) -C aeroncache-ws uninstall
@@ -46,8 +46,8 @@ uninstall-ws:
 install-sse:
 	$(MAKE) -C aeroncache-sse install
 
-install-sse-singlenode:
-	$(MAKE) -C aeroncache-sse install-singlenode
+install-sse-ephemeral:
+	$(MAKE) -C aeroncache-sse install-ephemeral
 
 uninstall-sse:
 	$(MAKE) -C aeroncache-sse uninstall

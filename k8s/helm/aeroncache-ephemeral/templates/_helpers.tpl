@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "aeroncache-singlenode.name" -}}
+{{- define "aeroncache-ephemeral.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "aeroncache-singlenode.fullname" -}}
+{{- define "aeroncache-ephemeral.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "aeroncache-singlenode.chart" -}}
+{{- define "aeroncache-ephemeral.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "aeroncache-singlenode.labels" -}}
-helm.sh/chart: {{ include "aeroncache-singlenode.chart" . }}
-{{ include "aeroncache-singlenode.selectorLabels" . }}
+{{- define "aeroncache-ephemeral.labels" -}}
+helm.sh/chart: {{ include "aeroncache-ephemeral.chart" . }}
+{{ include "aeroncache-ephemeral.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "aeroncache-singlenode.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "aeroncache-singlenode.name" . }}
+{{- define "aeroncache-ephemeral.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "aeroncache-ephemeral.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "aeroncache-singlenode.serviceAccountName" -}}
+{{- define "aeroncache-ephemeral.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "aeroncache-singlenode.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "aeroncache-ephemeral.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

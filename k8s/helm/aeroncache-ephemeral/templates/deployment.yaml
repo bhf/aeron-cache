@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "aeroncache-singlenode.fullname" . }}
+  name: {{ include "aeroncache-ephemeral.fullname" . }}
   labels:
-    {{- include "aeroncache-singlenode.labels" . | nindent 4 }}
+    {{- include "aeroncache-ephemeral.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   podManagementPolicy: Parallel
-  serviceName: {{ include "aeroncache-singlenode.fullname" . }}
+  serviceName: {{ include "aeroncache-ephemeral.fullname" . }}
   selector:
     matchLabels:
-      {{- include "aeroncache-singlenode.selectorLabels" . | nindent 6 }}
+      {{- include "aeroncache-ephemeral.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -20,7 +20,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "aeroncache-singlenode.labels" . | nindent 8 }}
+        {{- include "aeroncache-ephemeral.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -29,7 +29,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "aeroncache-singlenode.serviceAccountName" . }}
+      serviceAccountName: {{ include "aeroncache-ephemeral.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}

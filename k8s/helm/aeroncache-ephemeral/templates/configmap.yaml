@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aeroncache-singlenode-config
+  name: aeroncache-ephemeral-config
   namespace: {{ .Release.Namespace }}
 data:
   HTTP_RESPONSE_PUB_HOST: aeroncache-http
@@ -9,5 +9,5 @@ data:
   SSE_RESPONSE_PUB_HOST: aeroncache-sse
   DNS_DELAY: "true"
   CACHE_MODE: {{ .Values.cacheMode | quote }}
-  CLUSTER_ADDRESSES: "aeroncache-singlenode-0.aeroncache-singlenode.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-singlenode-1.aeroncache-singlenode.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-singlenode-2.aeroncache-singlenode.{{ .Release.Namespace }}.svc.cluster.local"
+  CLUSTER_ADDRESSES: "aeroncache-ephemeral-0.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-ephemeral-1.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-ephemeral-2.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local"
   {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | indent 2 }}
