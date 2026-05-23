@@ -71,10 +71,7 @@ export async function createCacheRequest(currentState: { message: string, error:
             return {message: "Problem creating cache: " + content.errorMsg, error: true};
         }
 
-        // revalidate the endpoint from which we get all available caches
-        revalidateTag("AllCaches")
-        revalidatePath(await getCacheAPIURI() + "/stats")
-        revalidatePath(await getCacheAPIURI() + "/caches")
+        revalidatePath("/")
 
         return {message: "Successfully created cache", error: false};
     } catch (err) {
