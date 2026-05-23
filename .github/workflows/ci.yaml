@@ -57,7 +57,7 @@ jobs:
 
       - name: Build Local Target Docker Images
         run: |
-          docker pull eclipse-temurin:25
+          docker pull eclipse-temurin:25-jre
           ./gradlew jibDockerBuild -PjibDockerOnBuild=true
           
       - name: Run Module Integration Test

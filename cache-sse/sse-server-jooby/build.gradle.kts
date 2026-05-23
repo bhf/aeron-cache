@@ -66,7 +66,7 @@ apply(plugin = "com.google.cloud.tools.jib")
 
 configure<com.google.cloud.tools.jib.gradle.JibExtension> {
     from {
-        image = "docker://eclipse-temurin:25"
+        image = "docker://eclipse-temurin:25-jre"
     }
     to {
         val reg = project.findProperty("dockerRegistry")?.toString() ?: ""
