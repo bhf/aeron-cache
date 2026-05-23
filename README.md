@@ -1,7 +1,8 @@
 # Aeron Cache
 ![img.png](docs/images/header.png)
 
-[![CI Build and Test](https://github.com/bhf/aeron-cache/actions/workflows/ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/ci.yaml)
+[![Backend CI](https://github.com/bhf/aeron-cache/actions/workflows/ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/ci.yaml)
+[![Frontend CI](https://github.com/bhf/aeron-cache/actions/workflows/ui-ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/ui-ci.yaml)
 
 *__Written and designed without LLMs or AI Agents.__*
 
