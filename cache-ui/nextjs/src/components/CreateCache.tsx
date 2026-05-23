@@ -96,10 +96,11 @@ export default function CreateCacheRequest() {
                         type="string"
                         placeholder="Cache ID"
                         name="cacheId"
+                        data-testid="create-cache-input"
                         required
                     />
                 </div>
-                <Button type="submit" disabled={formSubmitted}>
+                <Button type="submit" disabled={formSubmitted} data-testid="create-cache-button">
                     Create Cache
                 </Button>
                 <div className="grid gap-2">{formState.message}</div>

@@ -21,12 +21,12 @@ export default async function MenuLinks() {
         <div className="hidden lg:flex lg:flex-1 lg:justify-end pr-4">
             <AboutAeronCache/>
             {isJaegerAccessible && (
-                <Link href={jaegerURL} target="_blank">
+                <Link href={jaegerURL} target="_blank" data-testid="menu-link-jaeger">
                     <Button variant="link"><LayersIcon/>Jaeger</Button>
                 </Link>
             )}
             {isPrometheusAccessible && (
-                <Link href={prometheuesURL} target="_blank">
+                <Link href={prometheuesURL} target="_blank" data-testid="menu-link-prometheus">
                     <Button variant="link"><TrelloIcon/>Prometheus</Button>
                 </Link>
             )}

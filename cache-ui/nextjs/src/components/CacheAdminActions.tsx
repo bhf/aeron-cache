@@ -81,7 +81,7 @@ export default function CacheAdminActions({baseUri}: CacheAdminActionsProps) {
 
     return (
         <>
-            <Button variant="link" onClick={handleSnapshot}>
+            <Button variant="link" onClick={handleSnapshot} data-testid="admin-snapshot-button">
                 <CameraIcon/>Snapshot
             </Button>
         </>

@@ -62,7 +62,7 @@ export function AllCachesDataTable<TData, TValue>({
 
     return (
         <div>
-            <div className="rounded-md border">
+            <div className="rounded-md border" data-testid="all-caches-table">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -88,6 +88,7 @@ export function AllCachesDataTable<TData, TValue>({
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() && "selected"}
+                                    data-testid={`cache-row-${row.id}`}
                                 >
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell key={cell.id}>
@@ -97,7 +98,7 @@ export function AllCachesDataTable<TData, TValue>({
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow>
+                            <TableRow data-testid="all-caches-empty-row">
                                 <TableCell colSpan={columns.length} className="h-24 text-center">
                                     No results.
                                 </TableCell>
@@ -112,6 +113,7 @@ export function AllCachesDataTable<TData, TValue>({
                     size="sm"
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
+                    data-testid="all-caches-prev-page"
                 >
                     Previous
                 </Button>
@@ -120,6 +122,7 @@ export function AllCachesDataTable<TData, TValue>({
                     size="sm"
                     onClick={() => table.nextPage()}
                     disabled={!table.getCanNextPage()}
+                    data-testid="all-caches-next-page"
                 >
                     Next
                 </Button>
