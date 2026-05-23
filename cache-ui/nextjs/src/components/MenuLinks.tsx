@@ -1,7 +1,7 @@
 import AboutAeronCache from "@/components/About";
 import Link from "next/link";
 import {Button} from "@/components/ui/button";
-import {LayersIcon, TrelloIcon} from "lucide-react";
+import {LayersIcon, KanbanIcon} from "lucide-react";
 import {getJaegerURL, getPrometheusURL, isUrlAccessible} from "@/lib/actions";
 import CacheAdminActions from "@/components/CacheAdminActions";
 
@@ -27,7 +27,7 @@ export default async function MenuLinks() {
             )}
             {isPrometheusAccessible && (
                 <Link href={prometheuesURL} target="_blank" data-testid="menu-link-prometheus">
-                    <Button variant="link"><TrelloIcon/>Prometheus</Button>
+                    <Button variant="link"><KanbanIcon/>Prometheus</Button>
                 </Link>
             )}
             <CacheAdminActions baseUri = {adminBaseURI}/>

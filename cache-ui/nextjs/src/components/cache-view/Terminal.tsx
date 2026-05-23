@@ -13,7 +13,7 @@ export default function Terminal({messages, isConnected, errorMsg}: TerminalProp
         responses = messages.map((message, index) => {
                 if (messages.length < 14 || index >= messages.length - 14)
                     return (
-                        <div>
+                        <div key={index}>
                             <span className="text-[#9cdcfe]">$ </span>
                             <span>{message}</span>
                         </div>

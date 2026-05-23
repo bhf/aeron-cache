@@ -1,7 +1,7 @@
 "use server"
 
 import {getLogger} from "@/lib/loggingUtil";
-import {revalidatePath, revalidateTag} from "next/cache";
+import {revalidatePath, updateTag} from "next/cache";
 
 /**
  * React server actions.
@@ -95,6 +95,7 @@ export async function deleteCacheRequest(cacheId: string) {
         );
         const content = await rawResponse.json();
         logger.info("Got response from sending request to delete cache ", content)
+        updateTag("Cache-" + cacheId)
         revalidatePath(await getCacheAPIURI() + "/stats")
         revalidatePath(await getCacheAPIURI() + "/caches")
         return content
@@ -118,6 +119,7 @@ export async function clearCacheRequest(cacheId: string) {
         );
         const content = await rawResponse.json();
         logger.info("Got response from sending request to clear cache ", content)
+        updateTag("Cache-" + cacheId)
         revalidatePath(await getCacheAPIURI() + "/stats")
         return content
     } catch (err) {
@@ -151,7 +153,7 @@ export async function addItemToCacheRequest(formState: { message: string; error:
         }
 
         // revalidate the endpoint from which we get this cache's data
-        revalidateTag("Cache-" + cacheId)
+        updateTag("Cache-" + cacheId)
         revalidatePath(await getCacheAPIURI() + "/stats")
 
         return {message: "Successfully added item", error: false};
@@ -177,6 +179,7 @@ export async function removeItemFromCacheRequest(props: { cacheId: number, key: 
         );
         const content = await rawResponse.json();
         logger.info("Got response from sending request to remove item on key " + props.key + ", response:" + content)
+        updateTag("Cache-" + props.cacheId)
         revalidatePath(await getCacheAPIURI() + "/stats")
         return content
     } catch (err) {
