@@ -28,7 +28,11 @@ shift # Remove the env file from the arguments list
 # Dynamically locate the jar relative to the script location
 # Handles Gradle distributions (bin/ and lib/) and local dev (cache-monolith/build/libs/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-JAR_PATH=$(find "$SCRIPT_DIR/build/libs" "$SCRIPT_DIR/../lib" "$SCRIPT_DIR/../libexec" "$SCRIPT_DIR/../build/libs" -maxdepth 1 \( -name "*cache-monolith*-all.jar" -o -name "*cache-monolith*.jar" \) 2>/dev/null | grep -v -e "javadoc" -e "sources" -e "plain" | head -n 1)
+JAR_PATH=$(find "$SCRIPT_DIR/build/libs" "$SCRIPT_DIR/../lib" "$SCRIPT_DIR/../libexec" "$SCRIPT_DIR/../build/libs" -maxdepth 1 -name "*cache-monolith*-all.jar" 2>/dev/null | grep -v -e "javadoc" -e "sources" -e "plain" | head -n 1)
+
+if [ -z "$JAR_PATH" ]; then
+    JAR_PATH=$(find "$SCRIPT_DIR/build/libs" "$SCRIPT_DIR/../lib" "$SCRIPT_DIR/../libexec" "$SCRIPT_DIR/../build/libs" -maxdepth 1 -name "*cache-monolith*.jar" 2>/dev/null | grep -v -e "javadoc" -e "sources" -e "plain" | head -n 1)
+fi
 
 if [ -z "$JAR_PATH" ]; then
   echo "Error: Could not find the application jar file."

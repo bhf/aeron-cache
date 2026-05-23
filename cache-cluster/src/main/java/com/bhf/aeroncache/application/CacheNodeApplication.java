@@ -132,7 +132,16 @@ public class CacheNodeApplication {
             var clusterNode = System.getenv("CLUSTER_NODE");
 
             if (clusterNode == null || clusterNode.trim().isEmpty()) {
-                clusterNode = args[0];
+                clusterNode = System.getenv("POD_NAME");
+                if (clusterNode != null && clusterNode.contains("-")) {
+                    clusterNode = clusterNode.substring(clusterNode.lastIndexOf("-") + 1);
+                }
+            }
+
+            if (clusterNode == null || clusterNode.trim().isEmpty()) {
+                if (args != null && args.length > 0) {
+                    clusterNode = args[0];
+                }
             }
 
             int nodeId = Integer.parseInt(clusterNode);

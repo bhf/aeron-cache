@@ -31,6 +31,19 @@ tasks.test {
     useJUnitPlatform()
 }
 
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "com.bhf.aeroncache.monolith.application.Main"
+    }
+}
+
+tasks.shadowJar {
+    archiveClassifier.set("all")
+    manifest {
+        attributes["Main-Class"] = "com.bhf.aeroncache.monolith.application.Main"
+    }
+}
+
 apply(plugin = "com.google.cloud.tools.jib")
 
 configure<com.google.cloud.tools.jib.gradle.JibExtension> {

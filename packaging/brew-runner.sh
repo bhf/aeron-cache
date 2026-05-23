@@ -15,6 +15,13 @@ SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 BACKEND_DIR="$SCRIPT_DIR/../libexec/cache-monolith"
 FRONTEND_DIR="$SCRIPT_DIR/../libexec/cache-ui/nextjs"
 
+# Detect if we are running in a local workspace or a Homebrew installation
+if [ -d "$SCRIPT_DIR/../cache-monolith" ]; then
+    # Local workspace
+    BACKEND_DIR="$SCRIPT_DIR/../cache-monolith"
+    FRONTEND_DIR="$SCRIPT_DIR/../cache-ui/nextjs"
+fi
+
 CONFIG_DIR="$HOME/.aeron-cache"
 mkdir -p "$CONFIG_DIR"
 
@@ -117,7 +124,19 @@ echo $PORT > "$PORT_FILE"
 
 echo "Starting Aeron Cache UI on port $PORT..." >> "$LOG_FILE"
 cd "$FRONTEND_DIR"
-PORT=$PORT node server.js >> "$LOG_FILE" 2>&1 &
+
+# Handle Next.js standalone build path structure
+SERVER_JS="server.js"
+if [ -d ".next/standalone" ]; then
+    # Standalone mode usually nests the server.js deep in the build folder
+    # but also provides a direct one in the root if built correctly. 
+    # If not found in root, find it in the nested path.
+    if [ ! -f "$SERVER_JS" ]; then
+        SERVER_JS=$(find .next/standalone -name "server.js" | grep -v "node_modules" | head -n 1)
+    fi
+fi
+
+PORT=$PORT node "$SERVER_JS" >> "$LOG_FILE" 2>&1 &
 FRONTEND_PID=$!
 
 echo
