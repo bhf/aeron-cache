@@ -51,7 +51,10 @@ export function ConfirmingDialog(props: ConfirmingDialogProps) {
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <AlertDialogTrigger className={"outline px-2 py-1 rounded-sm text-lg bg-white shadow-md hover:bg-aeroncache"}>
+                        <AlertDialogTrigger 
+                            className={"outline px-2 py-1 rounded-sm text-lg bg-white shadow-md hover:bg-aeroncache"}
+                            data-testid={isDelete ? "delete-cache-trigger" : isClear ? "clear-cache-trigger" : isRemove ? `remove-item-trigger-${props.message.match(/key\s+([^\s?]+)/i)?.[1] || 'unknown'}` : `dialog-trigger-${props.buttonText.toLowerCase()}`}
+                        >
                             {isCacheAction ? actionTriggerElement : props.buttonText}
                         </AlertDialogTrigger>
                     </TooltipTrigger>
@@ -71,8 +74,8 @@ export function ConfirmingDialog(props: ConfirmingDialogProps) {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>{props.cancelText}</AlertDialogCancel>
-                    <AlertDialogAction onClick={props.action}>{props.actionText}</AlertDialogAction>
+                    <AlertDialogCancel data-testid="dialog-cancel"> {props.cancelText}</AlertDialogCancel>
+                    <AlertDialogAction onClick={props.action} data-testid="dialog-confirm">{props.actionText}</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

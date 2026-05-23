@@ -89,6 +89,7 @@ export function CacheItemsDataTable<TData, TValue>({
                             table.getRowModel().rows.map((row) => (
                                 <TableRow
                                     key={row.id}
+                                    data-testid={`cache-item-row-${row.getValue("key")}`}
                                 >
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell key={cell.id}>

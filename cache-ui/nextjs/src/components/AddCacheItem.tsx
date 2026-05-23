@@ -104,6 +104,7 @@ export default function AddItemRequest(props: AddItemProps) {
             placeholder="Item Key"
             name="key"
             required
+            data-testid="add-item-key-input"
           />
           <Input
             id="value"
@@ -111,6 +112,7 @@ export default function AddItemRequest(props: AddItemProps) {
             placeholder="Item Value"
             name="value"
             required
+            data-testid="add-item-value-input"
           />
           <Input
             id="cacheId"
@@ -119,7 +121,7 @@ export default function AddItemRequest(props: AddItemProps) {
             value={props.cacheId}
           />
         </div>
-        <Button type="submit" disabled={formSubmitted}>
+        <Button type="submit" disabled={formSubmitted} data-testid="add-item-button">
           Add
         </Button>
       </div>

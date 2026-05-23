@@ -31,7 +31,7 @@ export const allCachesColumns: ColumnDef<CacheInfo>[] = [
 
       return (
         <div className={"flex space-x-2"}>
-          <Link href={editCache}>
+          <Link href={editCache} data-testid={`view-cache-${cacheId}`}>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
