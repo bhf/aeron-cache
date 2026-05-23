@@ -1,6 +1,5 @@
 plugins {
     java
-    alias(libs.plugins.jmh)
     alias(libs.plugins.shadow)
 }
 
@@ -26,10 +25,4 @@ tasks.test {
     useJUnitPlatform()
     jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED")
     jvmArgs("--add-opens", "java.base/java.util.zip=ALL-UNNAMED")
-}
-
-jmh {
-    warmupIterations = 1
-    iterations = 5
-    fork = 1
 }
