@@ -55,7 +55,6 @@ jobs:
           # Copy Runtime Scripts
           cp cache-monolith/brew_services_start.sh package/cache-monolith/
           cp cache-monolith/run_with_env.sh package/cache-monolith/
-          cp cache-monolith/launch_mcp.sh package/cache-monolith/
           chmod +x package/cache-monolith/*.sh
 
           # Copy Frontend Built Assets (Next.js Standalone mode)
