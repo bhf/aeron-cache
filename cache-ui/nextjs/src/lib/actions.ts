@@ -186,3 +186,26 @@ export async function removeItemFromCacheRequest(props: { cacheId: number, key: 
         logger.error("Error whilst sending request to remove item ", err);
     }
 }
+
+/**
+ * Request a snapshot.
+ */
+export async function snapshotCacheRequest() {
+    logger.info("Snapshot request")
+    try {
+        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/snapshot', {
+            method: 'POST',
+            headers,
+            cache: "no-cache"
+        });
+
+        if (rawResponse.status != 200) {
+            return {message: "Problem requesting snapshot", error: true};
+        }
+
+        return {message: "Successfully requested snapshot", error: false};
+    } catch (err) {
+        logger.error("Error whilst requesting snapshot ", err);
+        return {message: "Error requesting snapshot", error: true};
+    }
+}

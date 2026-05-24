@@ -8,14 +8,11 @@ import CacheAdminActions from "@/components/CacheAdminActions";
 export default async function MenuLinks() {
     const jaegerURL = await getJaegerURL()
     const prometheuesURL = await getPrometheusURL()
-    const adminBaseURI = process.env.AERON_CACHE_API
 
     const [isJaegerAccessible, isPrometheusAccessible] = await Promise.all([
         isUrlAccessible(jaegerURL),
         isUrlAccessible(prometheuesURL)
     ]);
-
-    console.log("Jaeger url:"+jaegerURL+", Prometheus URL:"+prometheuesURL+", Admin Base URI:"+adminBaseURI);
 
     return (
         <div className="hidden lg:flex lg:flex-1 lg:justify-end pr-4">
@@ -30,7 +27,7 @@ export default async function MenuLinks() {
                     <Button variant="link"><KanbanIcon/>Prometheus</Button>
                 </Link>
             )}
-            <CacheAdminActions baseUri = {adminBaseURI}/>
+            <CacheAdminActions/>
         </div>
     )
 }
