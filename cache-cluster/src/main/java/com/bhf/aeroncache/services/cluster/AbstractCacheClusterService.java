@@ -254,16 +254,22 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private void scheduleItemRemoval(I cacheId, K key, Cache<I, K, V> cache, long deadline) {
         timerCorrelationId++;
         cluster.scheduleTimer(timerCorrelationId, deadline);
-        log.info("Scheduled timer for {} to remove key {} from cache {}", deadline, key, cacheId);
+        log.info("Scheduled timer for {} to remove key {} from cache {} correlationId {}", deadline, key, cacheId, timerCorrelationId);
+
+        final var keyToRemove = cacheManagerFactory.getKeySupplier().get();
+        keyToRemove.copyFrom(key);
+
+        final var cacheToRemoveOn = cacheManagerFactory.getIndexSupplier().get();
+        cacheToRemoveOn.copyFrom(cacheId);
 
         timerCallbacks.put(timerCorrelationId, o -> {
             try {
-                var removeItemResult = cache.remove(key);
-                removeItemResult.getCacheId().copyFrom(cacheId);
-                log.trace("Removed {} from cache {} on timer, result: {}", key, cacheId, removeItemResult);
-                handlePostRemoveTimerCacheEntry(cacheId, key, removeItemResult);
+                var removeItemResult = cache.remove(keyToRemove);
+                removeItemResult.getCacheId().copyFrom(cacheToRemoveOn);
+                log.info("Removed {} from cache {} on timer, result: {}", keyToRemove, cacheToRemoveOn, removeItemResult);
+                handlePostRemoveTimerCacheEntry(cacheToRemoveOn, keyToRemove, removeItemResult);
             } catch (Exception e) {
-                log.error("Error processing timer to remove {} from cache {}", key, cacheId, e);
+                log.error("Error processing timer to remove {} from cache {}", keyToRemove, cacheToRemoveOn, e);
             }
         });
     }
@@ -660,6 +666,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var timerConsumer = timerCallbacks.remove(correlationId);
 
         if (timerConsumer != null) {
+            log.info("Firing timer on correlation Id {}", correlationId);
             timerConsumer.accept(timestamp);
         }
     }
