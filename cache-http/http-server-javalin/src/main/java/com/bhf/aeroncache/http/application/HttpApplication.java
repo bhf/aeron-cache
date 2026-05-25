@@ -796,8 +796,9 @@ public class HttpApplication {
             var requestId = getRequestId(ctx);
             CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
             Consumer<AddCacheEntryResult> consumer = getAddCacheEntryResultConsumer(request, future);
+            long ttl = 0;
             CompletableFuture.runAsync(() -> observingPublisher.addCacheEntry(requestId, cacheId,
-                    request.key(), request.value(), consumer));
+                    request.key(), request.value(), ttl, consumer));
 
             var response = future.get();
 

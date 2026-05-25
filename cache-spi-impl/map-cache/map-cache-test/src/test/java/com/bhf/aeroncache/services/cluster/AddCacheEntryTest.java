@@ -65,13 +65,14 @@ class AddCacheEntryTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var key = "someKey";
         var value = "someValue";
+        var ttl = 0;
 
         // create the cache
         TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         // add an entry to the cache
         var requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, requestBuffer);
+        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
@@ -110,10 +111,11 @@ class AddCacheEntryTest {
         var cacheId = "123L";
         var key = "someKey";
         var value = "someValue";
+        var ttl = 0;
 
         // Act
         requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, requestBuffer);
+        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         cacheResponseDecoder.decodeAddCacheEntryResult(responseBuffer, 0, result);
 

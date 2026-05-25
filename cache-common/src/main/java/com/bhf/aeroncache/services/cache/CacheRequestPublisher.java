@@ -20,7 +20,7 @@ public interface CacheRequestPublisher {
      * @param key       The key to use.
      * @param value     The value to use.
      */
-    void addCacheEntry(String requestId, String cacheId, String key, String value);
+    void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl);
 
     /**
      * Send a message to get a cache entry.

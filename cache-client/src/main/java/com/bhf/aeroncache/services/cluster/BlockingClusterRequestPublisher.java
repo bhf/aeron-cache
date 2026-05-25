@@ -24,7 +24,7 @@ public interface BlockingClusterRequestPublisher {
      * @param key       The key to use.
      * @param value     The value to use.
      */
-    void addCacheEntryBlocking(String requestId, String cacheId, String key, String value);
+    void addCacheEntryBlocking(String requestId, String cacheId, String key, String value, long ttl);
 
     /**
      * Send a message to get a cache entry synchronously.

@@ -124,7 +124,7 @@ public class AsyncConsumerPerfTest {
                     System.out.println(v + "," + per);
                 }
             };
-            observingPublisher.addCacheEntry(UUID.randomUUID().toString(), "123L", UUID.randomUUID().toString(), UUID.randomUUID().toString(), addEntryConsumer);
+            observingPublisher.addCacheEntry(UUID.randomUUID().toString(), "123L", UUID.randomUUID().toString(), UUID.randomUUID().toString(), 0, addEntryConsumer);
         }
     }
 }

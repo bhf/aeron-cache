@@ -25,8 +25,8 @@ public class ObservingClusterRequestPublisher extends ObservingCacheRequestPubli
     }
 
     @Override
-    public void addCacheEntryBlocking(String requestId, String cacheId, String key, String value) {
-        blockingPublisher.addCacheEntryBlocking(requestId, cacheId, key, value);
+    public void addCacheEntryBlocking(String requestId, String cacheId, String key, String value, long ttl) {
+        blockingPublisher.addCacheEntryBlocking(requestId, cacheId, key, value, ttl);
     }
 
     @Override

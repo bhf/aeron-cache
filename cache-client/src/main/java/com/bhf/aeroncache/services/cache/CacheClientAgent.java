@@ -50,8 +50,10 @@ public class CacheClientAgent extends AbstractClientAgent {
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
                     cumulativeReadPosition += key.length() + 4;
                     var value = buffer.getStringUtf8(cumulativeReadPosition);
-                    log.debug("ADD CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", key=" + key + ", value=" + value);
-                    getPublisher().addCacheEntry(requestId, cacheId, key, value);
+                    cumulativeReadPosition += value.length() + 4;
+                    var ttl = buffer.getLong(cumulativeReadPosition);
+                    log.debug("ADD CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", key=" + key + ", value=" + value+", ttl="+ttl);
+                    getPublisher().addCacheEntry(requestId, cacheId, key, value, ttl);
                 }
                 case GET_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);

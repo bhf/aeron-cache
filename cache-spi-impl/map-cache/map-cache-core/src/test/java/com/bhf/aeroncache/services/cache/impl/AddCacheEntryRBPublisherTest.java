@@ -44,7 +44,7 @@ class AddCacheEntryRBPublisherTest {
 
         // Act + Assert
         Assertions.assertThrows(NullPointerException.class,
-                () -> sut.addCacheEntry(requestId, cacheId, key, value));
+                () -> sut.addCacheEntry(requestId, cacheId, key, value, 0));
 
         verifyNoInteractions(rb);
     }
@@ -60,7 +60,7 @@ class AddCacheEntryRBPublisherTest {
         when(rb.buffer()).thenThrow(RuntimeException.class);
 
         // Act
-        sut.addCacheEntry(requestId, cacheId, key, value);
+        sut.addCacheEntry(requestId, cacheId, key, value, 0);
 
         // Assert
         verify(rb, atMostOnce()).abort(intThat(isGreaterThanZero()));
@@ -79,7 +79,7 @@ class AddCacheEntryRBPublisherTest {
         when(rb.buffer()).thenReturn(mockBuffer);
 
         // Act
-        sut.addCacheEntry(requestId, cacheId, key, value);
+        sut.addCacheEntry(requestId, cacheId, key, value, 0);
 
         // Assert
         verify(rb, atMostOnce()).commit(intThat(isGreaterThanZero()));

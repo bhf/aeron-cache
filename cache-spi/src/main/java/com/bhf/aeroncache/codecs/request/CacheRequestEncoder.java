@@ -5,7 +5,7 @@ import org.agrona.MutableDirectBuffer;
 public interface CacheRequestEncoder<I, K, V> {
     int encodeCreateCacheRequest(String requestId, I cacheId, MutableDirectBuffer msgBuffer);
 
-    int encodeAddCacheEntry(String requestId, I cacheId, K key, V value, MutableDirectBuffer msgBuffer);
+    int encodeAddCacheEntry(String requestId, I cacheId, K key, V value, long ttl, MutableDirectBuffer msgBuffer);
 
     int encodeGetCacheEntry(String requestId, I cacheId, K key, MutableDirectBuffer msgBuffer);
 

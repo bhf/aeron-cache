@@ -80,6 +80,7 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
             addCacheEntryDecoder.key(appendable);
             appendable.setReusable(addCacheEntryRequestDetails.getValue());
             addCacheEntryDecoder.entryValue(appendable);
+            addCacheEntryRequestDetails.setTtl(0);
         }
         else{
             addCacheEntryRequestDetails.clear();
@@ -92,6 +93,7 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
             addCacheEntryRequestDetails.getKey().copyFrom(key);
             addCacheEntryRequestDetails.getValue().copyFrom(value);
             addCacheEntryRequestDetails.setRequestId(requestID);
+            addCacheEntryRequestDetails.setTtl(0);
         }
     }
 

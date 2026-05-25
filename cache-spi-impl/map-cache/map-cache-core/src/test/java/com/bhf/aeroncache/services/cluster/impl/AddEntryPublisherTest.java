@@ -45,13 +45,14 @@ class AddEntryPublisherTest {
         var requestId = UUID.randomUUID().toString();
         var key = "someKey";
         var value = "someValue";
+        var ttl = 0L;
 
             // Act
-            sut.addCacheEntry(requestId, cacheId, key, value);
+            sut.addCacheEntry(requestId, cacheId, key, value, ttl);
 
             // Assert
             verify(cacheRequestEncoder, times(1)).encodeAddCacheEntry(
-                    eq(requestId), eq(cacheId), eq(key), eq(value), any(MutableDirectBuffer.class)
+                    eq(requestId), eq(cacheId), eq(key), eq(value), eq(ttl), any(MutableDirectBuffer.class)
             );
 
             verify(cluster, atMostOnce()).offer(
@@ -72,7 +73,7 @@ class AddEntryPublisherTest {
         when(cluster.pollEgress()).thenReturn(1);
 
         // Act
-        sut.addCacheEntryBlocking(requestId, cacheId, key, value);
+        sut.addCacheEntryBlocking(requestId, cacheId, key, value, 0);
 
         // Assert
         verify(cluster, times(1)).pollEgress();

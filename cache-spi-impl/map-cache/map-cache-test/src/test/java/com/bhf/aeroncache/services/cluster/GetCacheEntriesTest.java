@@ -66,6 +66,7 @@ class GetCacheEntriesTest {
         TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
+        var ttl = 0;
 
         // Add some items into the cache
         int itemsToAdd = 10;
@@ -73,7 +74,7 @@ class GetCacheEntriesTest {
             var key = "key-"+i;
             var value = "value-"+i;
 
-            var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, requestBuffer);
+            var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
             sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
         }
 

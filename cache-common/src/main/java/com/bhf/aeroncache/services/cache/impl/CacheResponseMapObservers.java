@@ -50,7 +50,7 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     }
 
     @Override
-    public void addCacheEntry(String requestId, String cacheId, String key, String value, Consumer<AddCacheEntryResult<I, K>> c) {
+    public void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl, Consumer<AddCacheEntryResult<I, K>> c) {
         addCacheEntryObservers.put(requestId, c);
     }
 

@@ -28,7 +28,7 @@ public interface CacheRequestConsumingPublisher<I extends Reusable, K extends Re
      * @param value     The value to use.
      * @param c         The consumer that will handle the result.
      */
-    void addCacheEntry(String requestId, String cacheId, String key, String value, Consumer<AddCacheEntryResult<I, K>> c);
+    void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl, Consumer<AddCacheEntryResult<I, K>> c);
 
     /**
      * Send a message to get a cache entry.
