@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.integration.multistream;
 
+import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamPutItemTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
@@ -10,5 +11,10 @@ class EphemeralMultiStreamPutItemTests extends AbstractMultiStreamPutItemTests {
 
     public EphemeralMultiStreamPutItemTests() {
         super(new SSEStreamingHelper(), new WSStreamingHelper());
+    }
+
+    @Override
+    protected void shouldGetOrderedUpdatesOnTimedRemoved(BackendTestResource backend) {
+        // not supported for ephemeral caches
     }
 }
