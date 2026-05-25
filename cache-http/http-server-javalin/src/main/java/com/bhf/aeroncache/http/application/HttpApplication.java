@@ -5,6 +5,7 @@ import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
+import com.bhf.aeroncache.http.requests.PutTimedItemRequest;
 import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.http.responses.CacheStats;
 import com.bhf.aeroncache.models.ErrorMessages;
@@ -368,6 +369,7 @@ public class HttpApplication {
                 .get(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleGetItemRequest)
                 .get(API_PREFIX + "<cacheId>", HttpApplication::handleGetCacheRequest)
                 .post(API_PREFIX + "<cacheId>", HttpApplication::handlePutItemRequest)
+                .post(API_PREFIX + "timed/<cacheId>", HttpApplication::handlePutTimedItemRequest)
                 .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
                 .delete(API_PREFIX + "<cacheId>", HttpApplication::handleDeleteCacheRequest)
                 .patch(API_PREFIX + "<cacheId>", HttpApplication::handleClearCacheRequest)
@@ -795,7 +797,7 @@ public class HttpApplication {
 
             var requestId = getRequestId(ctx);
             CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
-            Consumer<AddCacheEntryResult> consumer = getAddCacheEntryResultConsumer(request, future);
+            Consumer<AddCacheEntryResult> consumer = getAddCacheEntryResultConsumer(request.key(), future);
             long ttl = 0;
             CompletableFuture.runAsync(() -> observingPublisher.addCacheEntry(requestId, cacheId,
                     request.key(), request.value(), ttl, consumer));
@@ -818,13 +820,50 @@ public class HttpApplication {
         }
     }
 
+    /**
+     * Handle a request to add a timed item to a cache.
+     *
+     * @param ctx The context.
+     */
+    private static void handlePutTimedItemRequest(Context ctx) {
+        try {
+            var cacheId = ctx.pathParam("cacheId");
+            var request = ctx.bodyAsClass(PutTimedItemRequest.class);
+            log.info("Got put item request on cacheId {}, key {}, value {}, ttl {}",
+                    cacheId, request.key(), request.value(), request.ttl());
+
+            var requestId = getRequestId(ctx);
+            CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
+            Consumer<AddCacheEntryResult> consumer = getAddCacheEntryResultConsumer(request.key(), future);
+            long ttl = request.ttl();
+            CompletableFuture.runAsync(() -> observingPublisher.addCacheEntry(requestId, cacheId,
+                    request.key(), request.value(), ttl, consumer));
+
+            var response = future.get();
+
+            if (response.operationStatus() == CacheOperationStatus.SUCCESS) {
+                statsTracker.getTotalItems().incrementAndGet();
+            }
+
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to put timed item from request: " + ctx.body();
+            log.warn(errorMsg);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
     @NotNull
-    private static Consumer<AddCacheEntryResult> getAddCacheEntryResultConsumer(PutItemRequest request, CompletableFuture<PutItemResponse> future) {
+    private static Consumer<AddCacheEntryResult> getAddCacheEntryResultConsumer(String key, CompletableFuture<PutItemResponse> future) {
         Consumer<AddCacheEntryResult> consumer = c -> {
 
             var cacheId = c.getCacheId();
             log.info("Got put item response from cluster on cacheId {}", cacheId);
-            var response = new PutItemResponse(cacheId.value().toString(), request.key(), c.getStatus());
+            var response = new PutItemResponse(cacheId.value().toString(), key, c.getStatus());
             future.complete(response);
         };
         return consumer;
