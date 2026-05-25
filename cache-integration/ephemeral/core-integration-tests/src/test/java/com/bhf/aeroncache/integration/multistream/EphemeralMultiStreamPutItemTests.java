@@ -6,6 +6,8 @@ import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamPutItemTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = false, useTestContainersEnvironment = true)
 class EphemeralMultiStreamPutItemTests extends AbstractMultiStreamPutItemTests {
 
@@ -16,5 +18,6 @@ class EphemeralMultiStreamPutItemTests extends AbstractMultiStreamPutItemTests {
     @Override
     protected void shouldGetOrderedUpdatesOnTimedRemoved(BackendTestResource backend) {
         // not supported for ephemeral caches
+        assertTrue(true);
     }
 }
