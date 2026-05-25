@@ -97,13 +97,13 @@ class CacheClientAgentTest {
     void shouldPublishAddCacheEntryRequest(String requestId, String cacheId, String key, String value) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
-        requestPublisher.addCacheEntry(requestId, cacheId, key, value);
+        requestPublisher.addCacheEntry(requestId, cacheId, key, value, 123);
 
         // Act
         sut.runSingleCycle();
 
         // Assert
-        verify(publisher, times(1)).addCacheEntry(requestId, cacheId, key, value);
+        verify(publisher, times(1)).addCacheEntry(requestId, cacheId, key, value, 123);
     }
 
     public static Stream<Arguments> provideAddCacheEntryParams() {

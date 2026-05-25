@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class AddCacheEntryEncoder
 {
-    public static final int BLOCK_LENGTH = 0;
+    public static final int BLOCK_LENGTH = 8;
     public static final int TEMPLATE_ID = 4;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -98,9 +98,61 @@ public final class AddCacheEntryEncoder
         this.limit = limit;
     }
 
-    public static int cacheIdId()
+    public static int ttlId()
     {
         return 1;
+    }
+
+    public static int ttlSinceVersion()
+    {
+        return 0;
+    }
+
+    public static int ttlEncodingOffset()
+    {
+        return 0;
+    }
+
+    public static int ttlEncodingLength()
+    {
+        return 8;
+    }
+
+    public static String ttlMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public static long ttlNullValue()
+    {
+        return -9223372036854775808L;
+    }
+
+    public static long ttlMinValue()
+    {
+        return -9223372036854775807L;
+    }
+
+    public static long ttlMaxValue()
+    {
+        return 9223372036854775807L;
+    }
+
+    public AddCacheEntryEncoder ttl(final long value)
+    {
+        buffer.putLong(offset + 0, value, BYTE_ORDER);
+        return this;
+    }
+
+
+    public static int cacheIdId()
+    {
+        return 2;
     }
 
     public static String cacheIdCharacterEncoding()
@@ -176,7 +228,7 @@ public final class AddCacheEntryEncoder
 
     public static int requestIdId()
     {
-        return 2;
+        return 3;
     }
 
     public static String requestIdCharacterEncoding()
@@ -252,7 +304,7 @@ public final class AddCacheEntryEncoder
 
     public static int keyId()
     {
-        return 3;
+        return 4;
     }
 
     public static String keyCharacterEncoding()
@@ -328,7 +380,7 @@ public final class AddCacheEntryEncoder
 
     public static int entryValueId()
     {
-        return 4;
+        return 5;
     }
 
     public static String entryValueCharacterEncoding()

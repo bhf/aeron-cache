@@ -55,7 +55,7 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     }
 
     @Override
-    public void addCacheEntry(String requestId, String cacheId, String key, String value, Consumer<AddCacheEntryResult<I, K>> c) {
+    public void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl, Consumer<AddCacheEntryResult<I, K>> c) {
         addCacheEntryObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {

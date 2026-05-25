@@ -52,6 +52,29 @@ public class CacheTestUtils {
     }
 
     /**
+     * Add an item to a cache as part of setting up a test case.
+     *
+     * @param cacheId The ID of the cache to add an item too.
+     * @param key     The key to add the item against.
+     * @param value   The value to add.
+     * @param ttl     The TTL.
+     * @param backend Environment to use.
+     */
+    public static void addItem(String cacheId, String key, String value, long ttl, BackendTestResource backend) {
+        JSONObject jsonObj = new JSONObject()
+                .put("key", key)
+                .put("value", value)
+                .put("ttl", ttl);
+
+        var endpoint = PUT_ITEM_ENDPOINT +"timed/"+cacheId;
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .body(jsonObj.toString())
+                .request(Method.POST, endpoint);
+    }
+
+    /**
      * Remove an item from a cache as part of setting up a test scenario.
      *
      * @param cacheId The cache from which to remove the item.

@@ -121,6 +121,16 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
     }
 
     @Override
+    public void handleTimerEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult,
+                                        MutableDirectBuffer egressBuffer, int length) {
+        log.info("Sending entry removed on timer to subscribers on cacheId {}", removeCacheEntryResult.getCacheId());
+        for (var session : getSessionsForCache(removeCacheEntryResult.getCacheId())) {
+            log.debug("Sending entry removed on timer update to session: {}", session.id());
+            sendMessage(session, egressBuffer, length);
+        }
+    }
+
+    @Override
     public void handleEntryAdded(AddCacheEntryResult<I, K> addCacheEntryResult,
                                  MutableDirectBuffer egressBuffer, K key,
                                  V value, int length) {

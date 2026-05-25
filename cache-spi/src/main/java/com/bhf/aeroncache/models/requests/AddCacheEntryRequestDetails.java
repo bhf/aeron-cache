@@ -23,6 +23,7 @@ public class AddCacheEntryRequestDetails<I extends Reusable, K extends Reusable,
     final I cacheId;
     final K key;
     final V value;
+    long ttl;
     final RequestId requestId = new RequestId();
 
     public String getRequestId(){
@@ -42,6 +43,7 @@ public class AddCacheEntryRequestDetails<I extends Reusable, K extends Reusable,
         key.clear();
         value.clear();
         this.requestId.clear();
+        ttl = 0;
     }
 
     /**
@@ -53,6 +55,7 @@ public class AddCacheEntryRequestDetails<I extends Reusable, K extends Reusable,
         this.key.copyFrom(source.getKey());
         this.value.copyFrom(source.value);
         this.requestId.copyFrom(source.requestId);
+        this.ttl = source.getTtl();
     }
 
     @Override

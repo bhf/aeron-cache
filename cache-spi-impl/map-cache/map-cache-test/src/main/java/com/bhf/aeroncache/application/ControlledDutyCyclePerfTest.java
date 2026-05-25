@@ -79,7 +79,7 @@ public class ControlledDutyCyclePerfTest {
         var ts = System.nanoTime();
         var requestId = String.valueOf(c++);
         lastSent = ts;
-        publisher.addCacheEntryBlocking(requestId, cacheId, "key1", payloadValue);
+        publisher.addCacheEntryBlocking(requestId, cacheId, "key1", payloadValue, 0);
     }
 
     public static void main(String[] args) {

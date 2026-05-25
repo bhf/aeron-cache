@@ -29,8 +29,9 @@ public class RegularStringCacheRequestEncoder implements CacheRequestEncoder<Str
     }
 
     @Override
-    public int encodeAddCacheEntry(String requestId, String cacheId, String key, String value, MutableDirectBuffer msgBuffer) {
+    public int encodeAddCacheEntry(String requestId, String cacheId, String key, String value, long ttl, MutableDirectBuffer msgBuffer) {
         addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .ttl(ttl)
                 .cacheId(cacheId)
                 .requestId(requestId)
                 .key(key)

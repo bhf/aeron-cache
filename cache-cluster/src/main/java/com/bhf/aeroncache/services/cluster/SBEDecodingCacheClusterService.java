@@ -126,6 +126,12 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
     }
 
     @Override
+    protected void handlePostRemoveTimerCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult) {
+        var length = encoder.encodeRemoveCacheEntryResult(cacheId, key, removeCacheEntryResult, egressBuffer);
+        subscriptionService.handleTimerEntryRemoved(removeCacheEntryResult, egressBuffer, length);
+    }
+
+    @Override
     protected void handlePostClearCache(I cacheId, ClearCacheResult<I> clearCacheResult, ClientSession session) {
         var length = encoder.encodeCacheCleared(cacheId, clearCacheResult, egressBuffer);
         sendMessage(session, egressBuffer, length);

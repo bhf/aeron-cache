@@ -67,14 +67,14 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
 
 
     @Override
-    public void addCacheEntry(String requestId, String cacheId, String key, String value) {
-        rbPublisher.addCacheEntry(requestId, cacheId, key, value);
+    public void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl) {
+        rbPublisher.addCacheEntry(requestId, cacheId, key, value, ttl);
     }
 
     @Override
-    public void addCacheEntry(String requestId, String cacheId, String key, String value, Consumer<AddCacheEntryResult<I, K>> c) {
-        cacheResponseObservers.addCacheEntry(requestId, cacheId, key, value, c);
-        rbPublisher.addCacheEntry(requestId, cacheId, key, value);
+    public void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl, Consumer<AddCacheEntryResult<I, K>> c) {
+        cacheResponseObservers.addCacheEntry(requestId, cacheId, key, value, ttl, c);
+        rbPublisher.addCacheEntry(requestId, cacheId, key, value, ttl);
     }
 
     @Override

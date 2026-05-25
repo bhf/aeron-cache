@@ -5,6 +5,7 @@ import com.bhf.aeroncache.handlers.PublicationFailureHandler;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.services.cache.Cache;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheSchemaDetailsProvider;
@@ -21,8 +22,10 @@ import io.aeron.logbuffer.Header;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.IdleStrategy;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -59,7 +62,10 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final CacheUnsubscribeResult<I> unsubscribeResult;
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
 
-    protected AbstractCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I,K,V> cacheManagerFactory) {
+    private long timerCorrelationId = 0;
+    private final Long2ObjectHashMap<Consumer> timerCallbacks = new Long2ObjectHashMap();
+
+    protected AbstractCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.clearCacheRequestDetails = new ClearCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
@@ -211,8 +217,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         V value = requestDetails.getValue();
+        long ttl = requestDetails.getTtl();
         var requestId = requestDetails.getRequestId();
-        log.info("Got add cache entry request for cache id {}, key {}, value {}, request Id: {}", cacheId, key, value, requestId);
+        log.info("Got add cache entry request for cache id {}, key {}, value {}, ttl {}, request Id: {}", cacheId, key, value, ttl, requestId);
         var cache = cacheManager.getCache(cacheId);
 
         if (cache == null) {
@@ -223,9 +230,48 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var addCacheEntryResult = cache.add(key, value);
         addCacheEntryResult.setRequestId(requestId);
         addCacheEntryResult.getCacheId().copyFrom(cacheId);
+
+
+        if (ttl > 0 && addCacheEntryResult.getStatus() == CacheOperationStatus.SUCCESS) {
+            long now = cluster.time();
+            long deadline = now + ttl;
+            scheduleItemRemoval(cacheId, key, cache, deadline);
+        }
+
         log.info("Result for add entry, key: {}, status: {}, ", addCacheEntryResult.getEntryKey(), addCacheEntryResult.getStatus());
         handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session);
         tracingService.endAddCacheEntry(requestDetails);
+    }
+
+    /**
+     * Schedule the removal of an item from a cache.
+     *
+     * @param cacheId  The ID of the cache to remove from.
+     * @param key      The key to remove.
+     * @param cache    The cache to remove from.
+     * @param deadline The epoch time at which to remove the item.
+     */
+    private void scheduleItemRemoval(I cacheId, K key, Cache<I, K, V> cache, long deadline) {
+        timerCorrelationId++;
+        cluster.scheduleTimer(timerCorrelationId, deadline);
+        log.info("Scheduled timer for {} to remove key {} from cache {} correlationId {}", deadline, key, cacheId, timerCorrelationId);
+
+        final var keyToRemove = cacheManagerFactory.getKeySupplier().get();
+        keyToRemove.copyFrom(key);
+
+        final var cacheToRemoveOn = cacheManagerFactory.getIndexSupplier().get();
+        cacheToRemoveOn.copyFrom(cacheId);
+
+        timerCallbacks.put(timerCorrelationId, o -> {
+            try {
+                var removeItemResult = cache.remove(keyToRemove);
+                removeItemResult.getCacheId().copyFrom(cacheToRemoveOn);
+                log.info("Removed {} from cache {} on timer, result: {}", keyToRemove, cacheToRemoveOn, removeItemResult);
+                handlePostRemoveTimerCacheEntry(cacheToRemoveOn, keyToRemove, removeItemResult);
+            } catch (Exception e) {
+                log.error("Error processing timer to remove {} from cache {}", keyToRemove, cacheToRemoveOn, e);
+            }
+        });
     }
 
     /**
@@ -494,6 +540,15 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     protected abstract void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, ClientSession session);
 
     /**
+     * After an entry is removed from the cache on a timer event.
+     *
+     * @param cacheId                The ID of the cache in which the entry was removed.
+     * @param key
+     * @param removeCacheEntryResult The result from the request to remove an entry.
+     */
+    protected abstract void handlePostRemoveTimerCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult);
+
+    /**
      * After a cache is cleared, send out a CacheCleared message.
      *
      * @param cacheId          The ID of the cache in which the entry was removed.
@@ -608,6 +663,12 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param timestamp     at which the timer expired.
      */
     public void onTimerEvent(final long correlationId, final long timestamp) {
+        var timerConsumer = timerCallbacks.remove(correlationId);
+
+        if (timerConsumer != null) {
+            log.info("Firing timer on correlation Id {}", correlationId);
+            timerConsumer.accept(timestamp);
+        }
     }
 
 

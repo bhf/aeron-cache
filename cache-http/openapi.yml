@@ -152,6 +152,39 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/cache/timed/{cacheId}:
+    post:
+      tags:
+        - PutItem
+      summary: Put a timed item into a cache
+      description: Put an item with a TTL on the specified key into the specified cache
+      operationId: putTimedItem
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the cache
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutTimedItemRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PutItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/cache/{cacheId}/{key}:
     get:
       tags:
@@ -396,6 +429,19 @@ components:
         value:
           type: string
           example: 'SomeRandomValue'
+    PutTimedItemRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          example: 'SomeRandomKey'
+        value:
+          type: string
+          example: 'SomeRandomValue'
+        ttl:
+          type: integer
+          format: int64
+          example: 60000
     PutItemResponse:
       type: object
       properties:

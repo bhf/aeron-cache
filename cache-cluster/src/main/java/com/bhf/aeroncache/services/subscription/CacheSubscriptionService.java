@@ -36,6 +36,8 @@ public interface CacheSubscriptionService<I extends Reusable, K extends Reusable
 
     void handleEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult, MutableDirectBuffer egressBuffer, int length, long excludeSessionId);
 
+    void handleTimerEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult, MutableDirectBuffer egressBuffer, int length);
+
     void handleEntryAdded(AddCacheEntryResult<I, K> addCacheEntryResult, MutableDirectBuffer egressBuffer, K key, V value, int length);
 
     void onSessionClose(ClientSession session);

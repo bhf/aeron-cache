@@ -107,7 +107,7 @@ class CacheResponseMapObserversTest {
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
         var resultConsumer = Mockito.mock(Consumer.class);
-        sut.addCacheEntry(requestId, cacheId, "someKey", "someValue", resultConsumer);
+        sut.addCacheEntry(requestId, cacheId, "someKey", "someValue", 0, resultConsumer);
         sut.addCacheEntryConsumer = resultConsumer;
 
         var result = Mockito.mock(AddCacheEntryResult.class);

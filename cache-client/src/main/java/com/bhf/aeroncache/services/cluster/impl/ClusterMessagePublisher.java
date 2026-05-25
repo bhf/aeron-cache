@@ -41,14 +41,14 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
     }
 
     @Override
-    public void addCacheEntryBlocking(String requestId, String cacheId, String key, String value) {
-        addCacheEntry(requestId, cacheId, key, value);
+    public void addCacheEntryBlocking(String requestId, String cacheId, String key, String value, long ttl) {
+        addCacheEntry(requestId, cacheId, key, value, ttl);
         waitForResult(cluster);
     }
 
     @Override
-    public void addCacheEntry(String requestId, String cacheId, String key, String value) {
-        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, msgBuffer);
+    public void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl) {
+        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, ttl, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent add cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }

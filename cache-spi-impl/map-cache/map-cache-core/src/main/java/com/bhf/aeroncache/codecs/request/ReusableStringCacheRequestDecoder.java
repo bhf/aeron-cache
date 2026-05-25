@@ -72,6 +72,7 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
         if(useAppendable) {
             addCacheEntryRequestDetails.clear();
             addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+            var ttl = addCacheEntryDecoder.ttl();
             appendable.setReusable(addCacheEntryRequestDetails.getCacheId());
             addCacheEntryDecoder.cacheId(appendable);
             var requestID = addCacheEntryDecoder.requestId();
@@ -80,10 +81,12 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
             addCacheEntryDecoder.key(appendable);
             appendable.setReusable(addCacheEntryRequestDetails.getValue());
             addCacheEntryDecoder.entryValue(appendable);
+            addCacheEntryRequestDetails.setTtl(ttl);
         }
         else{
             addCacheEntryRequestDetails.clear();
             addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+            var ttl = addCacheEntryDecoder.ttl();
             var cacheId = addCacheEntryDecoder.cacheId();
             var requestID = addCacheEntryDecoder.requestId();
             var key = addCacheEntryDecoder.key();
@@ -92,6 +95,7 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
             addCacheEntryRequestDetails.getKey().copyFrom(key);
             addCacheEntryRequestDetails.getValue().copyFrom(value);
             addCacheEntryRequestDetails.setRequestId(requestID);
+            addCacheEntryRequestDetails.setTtl(ttl);
         }
     }
 
