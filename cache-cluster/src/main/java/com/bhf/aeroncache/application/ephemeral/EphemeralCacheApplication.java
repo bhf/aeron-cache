@@ -42,8 +42,18 @@ public class EphemeralCacheApplication {
 
         final var cacheManagerFactory = getCacheManagerFactory();
 
+        boolean dynamicCacheCreation = false;
+        var useDynamicCacheCreation = System.getenv("DYNAMIC_CACHE_CREATION");
+        if (useDynamicCacheCreation != null) {
+            try {
+                dynamicCacheCreation = Boolean.parseBoolean(useDynamicCacheCreation);
+            } catch (Exception e) {
+                System.out.println("Couldn't parse value of DYNAMIC_CACHE_CREATION as boolean");
+            }
+        }
+
         final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0",
-                new NoOpTracingService(), cacheManagerFactory);
+                new NoOpTracingService(), cacheManagerFactory, dynamicCacheCreation);
         Cluster cluster = getCluster(aeron);
         service.onStart(cluster, null);
 

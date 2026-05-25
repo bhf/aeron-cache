@@ -19,6 +19,8 @@ import io.aeron.cluster.service.ClientSession;
 import io.aeron.cluster.service.Cluster;
 import io.aeron.cluster.service.ClusteredService;
 import io.aeron.logbuffer.Header;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
@@ -64,6 +66,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
     private long timerCorrelationId = 0;
     private final Long2ObjectHashMap<Consumer> timerCallbacks = new Long2ObjectHashMap();
+    @Setter
+    @Getter
+    private boolean dynamicCacheCreationEnabled = false;
 
     protected AbstractCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
@@ -223,8 +228,14 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var cache = cacheManager.getCache(cacheId);
 
         if (cache == null) {
-            handleMissingCacheOnAddEntry(session, buffer, offset, cacheId, key, value, requestDetails.getRequestId());
-            return;
+            if (dynamicCacheCreationEnabled) {
+                var createCacheResult = cacheManager.createCache(cacheId);
+                log.info("Created cache {} dynamically, result {}", cacheId, createCacheResult);
+                cache = cacheManager.getCache(cacheId);
+            } else {
+                handleMissingCacheOnAddEntry(session, buffer, offset, cacheId, key, value, requestDetails.getRequestId());
+                return;
+            }
         }
 
         var addCacheEntryResult = cache.add(key, value);

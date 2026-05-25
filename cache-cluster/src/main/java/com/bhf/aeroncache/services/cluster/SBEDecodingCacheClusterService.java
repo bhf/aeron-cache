@@ -31,6 +31,13 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
         this.encoder = cacheManagerFactory.getCacheResponseEncoder();
     }
 
+    public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory, boolean dynamicCacheCreation) {
+        super(nodeId, tracingService, cacheManagerFactory);
+        this.decoder = cacheManagerFactory.getCacheRequestDecoder();
+        this.encoder = cacheManagerFactory.getCacheResponseEncoder();
+        setDynamicCacheCreationEnabled(dynamicCacheCreation);
+    }
+
     @Override
     protected CreateCacheRequestDetails<I> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset) {
         decoder.decodeGetCreateCacheRequestDetails(buffer, offset, createCacheRequestDetails);

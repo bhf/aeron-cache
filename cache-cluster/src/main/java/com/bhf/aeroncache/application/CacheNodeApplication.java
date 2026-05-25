@@ -199,6 +199,18 @@ public class CacheNodeApplication {
         System.out.println("user.dir=" + baseDir.getAbsolutePath());
         System.out.println("AeronDirName=" + aeronDirName);
 
+        boolean dynamicCacheCreation = false;
+        var useDynamicCacheCreation = System.getenv("DYNAMIC_CACHE_CREATION");
+        if (useDynamicCacheCreation != null) {
+            try {
+                dynamicCacheCreation = Boolean.parseBoolean(useDynamicCacheCreation);
+            } catch (Exception e) {
+                log.error("Couldn't parse value of DYNAMIC_CACHE_CREATION as boolean");
+            }
+        }
+
+        log.info("Dynamic cache creation enabled: {}", dynamicCacheCreation);
+
         final AeronArchive.Context replicationArchiveContext = new AeronArchive.Context()
                 .controlResponseChannel("aeron:udp?endpoint=" + hostname + ":0|alias=AeronCache-Archive" +
                         "-ControlResponse-" + nodeId);
@@ -230,7 +242,7 @@ public class CacheNodeApplication {
                 .archiveContext(aeronArchiveContext.clone());
 
         final var cacheManagerFactory = getCacheManagerFactory();
-        final var cacheService = getSbeDecodingCacheClusterService(nodeId, cacheManagerFactory);
+        final var cacheService = getSbeDecodingCacheClusterService(nodeId, cacheManagerFactory, dynamicCacheCreation);
 
         final ClusteredServiceContainer.Context clusteredServiceContext =
                 new ClusteredServiceContainer.Context()
@@ -280,8 +292,8 @@ public class CacheNodeApplication {
     }
 
     private static SBEDecodingCacheClusterService<Reusable<?>, Reusable<?>, Reusable<?>> getSbeDecodingCacheClusterService(
-            int nodeId, CacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> cacheManagerFactory) {
-        return new SBEDecodingCacheClusterService<>(String.valueOf(nodeId), getTracingService(nodeId), cacheManagerFactory);
+            int nodeId, CacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> cacheManagerFactory, boolean dynamicCacheCreation) {
+        return new SBEDecodingCacheClusterService<>(String.valueOf(nodeId), getTracingService(nodeId), cacheManagerFactory, dynamicCacheCreation);
     }
 
     private static CacheManagerFactory getCacheManagerFactory() {
