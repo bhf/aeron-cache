@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.codecs.request;
 
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import org.agrona.MutableDirectBuffer;
 
 public interface CacheRequestEncoder<I, K, V> {
@@ -22,4 +23,6 @@ public interface CacheRequestEncoder<I, K, V> {
     int encodeCacheUnsubscribe(String requestId, I cacheId, MutableDirectBuffer msgBuffer);
 
     int encodeGetAllCacheStats(String requestId, MutableDirectBuffer msgBuffer);
+
+    int encodeBulkOperations(String requestId, BulkCacheOpsRequest request, MutableDirectBuffer msgBuffer);
 }

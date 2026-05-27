@@ -51,17 +51,6 @@ jmh {
     fork = 1
 }
 
-val copyAgent = tasks.register<Copy>("copyAgent") {
-    from(agent.singleFile)
-    into(layout.buildDirectory.dir("agent"))
-    rename("opentelemetry-javaagent-.*\\.jar", "opentelemetry-javaagent.jar")
-}
-
-val copyExtension = tasks.register<Copy>("copyExtension") {
-    from(extension.singleFile)
-    into(layout.buildDirectory.dir("agent"))
-    rename(".*\\.jar", "opentelemetry-javaagent-extension.jar")
-}
 
 apply(plugin = "com.google.cloud.tools.jib")
 
@@ -90,6 +79,19 @@ configure<com.google.cloud.tools.jib.gradle.JibExtension> {
             }
         }
     }
+}
+
+
+val copyAgent = tasks.register<Copy>("copyAgent") {
+    from(agent.singleFile)
+    into(layout.buildDirectory.dir("agent"))
+    rename("opentelemetry-javaagent-.*\\.jar", "opentelemetry-javaagent.jar")
+}
+
+val copyExtension = tasks.register<Copy>("copyExtension") {
+    from(extension.singleFile)
+    into(layout.buildDirectory.dir("agent"))
+    rename(".*\\.jar", "opentelemetry-javaagent-extension.jar")
 }
 
 tasks.named("jib") {

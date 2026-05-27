@@ -87,4 +87,11 @@ public class GroupedResponseHandler<I extends Reusable, K extends Reusable, V ex
             handler.handleCacheEntryUpdated(cacheEntryUpdateResult);
         }
     }
+
+    @Override
+    public void handleBulkOperationsResult(BulkCacheOpsResult<I, K, V> bulkCacheOpsResult) {
+        for(CacheResponseHandler handler : handlers){
+            handler.handleBulkOperationsResult(bulkCacheOpsResult);
+        }
+    }
 }

@@ -212,4 +212,14 @@ public class OtelTracingService implements CacheTracingService {
     public void endCacheUnsubscribeRequest(CacheUnsubscribeRequestDetails requestDetails) {
         Span.current().end();
     }
+
+    @Override
+    public void startBulkOpsRequest(BulkCacheOpsRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void endBulkOpsRequest(BulkCacheOpsRequestDetails requestDetails) {
+
+    }
 }

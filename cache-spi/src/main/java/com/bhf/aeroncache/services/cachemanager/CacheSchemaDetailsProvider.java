@@ -22,4 +22,6 @@ public interface CacheSchemaDetailsProvider {
 
     int getCacheUnsubscribeRequestId();
 
+    int getBulkCacheOpsRequestId();
+
 }

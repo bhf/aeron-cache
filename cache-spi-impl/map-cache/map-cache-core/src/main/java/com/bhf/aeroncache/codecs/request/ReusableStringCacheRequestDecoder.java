@@ -19,6 +19,7 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
     private final DeleteCacheDecoder deleteCacheDecoder = new DeleteCacheDecoder();
     private final GetCacheStatsDecoder getCacheStatsDecoder = new GetCacheStatsDecoder();
     private final CacheUnsubscribeRequestDecoder cacheUnsubscribeRequestDecoder = new CacheUnsubscribeRequestDecoder();
+    private final BulkOperationRequestDecoder bulkOperationRequestDecoder = new BulkOperationRequestDecoder();
     private final AppendableFlyweight appendable = new AppendableFlyweight();
     private boolean useAppendable = false;
 
@@ -148,6 +149,28 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
         cacheUnsubscribeRequestDetails.getCacheId().clear();
         cacheUnsubscribeRequestDetails.getCacheId().copyFrom(cacheId);
         cacheUnsubscribeRequestDetails.setRequestId(requestId);
+    }
+
+    @Override
+    public void decodeBulkCacheOperationsRequest(DirectBuffer buffer, int offset, BulkCacheOpsRequestDetails<ReusableString, ReusableString, ReusableString> bulkCacheOpsRequestDetails) {
+        bulkCacheOpsRequestDetails.clear();
+        bulkOperationRequestDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var itemsDecoder = bulkOperationRequestDecoder.items();
+
+        for(var op: itemsDecoder) {
+            var opType = op.operationType();
+            var ttl = op.ttl();
+            var requestId = op.requestId();
+            var cacheId = op.cacheId();
+            var key = op.key();
+            var value = op.value();
+            bulkCacheOpsRequestDetails.addOperation(
+                    com.bhf.aeroncache.models.bulk.requests.BulkOperationType.valueOf(opType.toString()),
+                    ttl, requestId, cacheId, key, value);
+        }
+
+        var requestId = bulkOperationRequestDecoder.requestId();
+        bulkCacheOpsRequestDetails.setRequestId(requestId);
     }
 
 }

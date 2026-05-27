@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.results.*;
 
 import java.util.function.Consumer;
@@ -101,4 +102,13 @@ public interface CacheRequestConsumingPublisher<I extends Reusable, K extends Re
      * @param c         The consumer that will handle the result.
      */
     void sendCacheUnsubscribe(String requestId, String cacheId, Consumer<CacheUnsubscribeResult<I>> c);
+
+    /**
+     * Handle requests for bulk operations on the cache.
+     *
+     * @param requestId The request ID.
+     * @param request   The details of the bulk request
+     * @param consumer  The consumer that will handle the result.
+     */
+    void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request, Consumer<BulkCacheOpsResult<I,K,V>> consumer);
 }

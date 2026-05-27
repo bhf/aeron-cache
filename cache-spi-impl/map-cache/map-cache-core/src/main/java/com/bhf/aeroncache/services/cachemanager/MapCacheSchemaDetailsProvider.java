@@ -53,4 +53,9 @@ public class MapCacheSchemaDetailsProvider implements CacheSchemaDetailsProvider
     public int getCacheUnsubscribeRequestId() {
         return CacheUnsubscribeRequestEncoder.TEMPLATE_ID;
     }
+
+    @Override
+    public int getBulkCacheOpsRequestId() {
+        return BulkOperationRequestEncoder.TEMPLATE_ID;
+    }
 }

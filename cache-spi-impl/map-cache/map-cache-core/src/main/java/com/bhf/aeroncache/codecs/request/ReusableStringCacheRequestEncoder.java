@@ -2,12 +2,13 @@ package com.bhf.aeroncache.codecs.request;
 
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.types.ReusableString;
 import org.agrona.MutableDirectBuffer;
 
 /**
  * Encode requests going to Aeron Cache.
  */
-public class RegularStringCacheRequestEncoder implements CacheRequestEncoder<String, String, String> {
+public class ReusableStringCacheRequestEncoder implements CacheRequestEncoder<ReusableString, ReusableString, ReusableString> {
 
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final CreateCacheEncoder createCacheEncoder = new CreateCacheEncoder();
@@ -23,70 +24,70 @@ public class RegularStringCacheRequestEncoder implements CacheRequestEncoder<Str
     private final BulkOperationRequestEncoder bulkOpsEncoder = new BulkOperationRequestEncoder();
 
     @Override
-    public int encodeCreateCacheRequest(String requestId, String cacheId, MutableDirectBuffer msgBuffer) {
+    public int encodeCreateCacheRequest(String requestId, ReusableString cacheId, MutableDirectBuffer msgBuffer) {
         createCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId)
+                .cacheId(cacheId.value())
                 .requestId(requestId);
         return createCacheEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
     @Override
-    public int encodeAddCacheEntry(String requestId, String cacheId, String key, String value, long ttl, MutableDirectBuffer msgBuffer) {
+    public int encodeAddCacheEntry(String requestId, ReusableString cacheId, ReusableString key, ReusableString value, long ttl, MutableDirectBuffer msgBuffer) {
         addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .ttl(ttl)
-                .cacheId(cacheId)
+                .cacheId(cacheId.value())
                 .requestId(requestId)
-                .key(key)
-                .entryValue(value);
+                .key(key.value())
+                .entryValue(value.value());
         return addCacheEntryEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
     @Override
-    public int encodeGetCacheEntry(String requestId, String cacheId, String key, MutableDirectBuffer msgBuffer) {
+    public int encodeGetCacheEntry(String requestId, ReusableString cacheId, ReusableString key, MutableDirectBuffer msgBuffer) {
         getCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key).requestId(requestId);
+                .cacheId(cacheId.value()).key(key.value()).requestId(requestId);
         return getCacheEntryEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
     @Override
-    public int encodeClearCache(String requestId, String cacheId, MutableDirectBuffer msgBuffer) {
+    public int encodeClearCache(String requestId, ReusableString cacheId, MutableDirectBuffer msgBuffer) {
         clearCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).requestId(requestId);
+                .cacheId(cacheId.value()).requestId(requestId);
         return clearCacheEncoder.encodedLength()+headerEncoder.encodedLength();
     }
 
     @Override
-    public int encodeDeleteCache(String requestId, String cacheId, MutableDirectBuffer msgBuffer) {
+    public int encodeDeleteCache(String requestId, ReusableString cacheId, MutableDirectBuffer msgBuffer) {
         deleteCacheEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).requestId(requestId);
+                .cacheId(cacheId.value()).requestId(requestId);
         return deleteCacheEncoder.encodedLength()+headerEncoder.encodedLength();
     }
 
     @Override
-    public int encodeRemoveCacheEntry(String requestId, String cacheId, String key, MutableDirectBuffer msgBuffer) {
+    public int encodeRemoveCacheEntry(String requestId, ReusableString cacheId, ReusableString key, MutableDirectBuffer msgBuffer) {
         removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).key(key).requestId(requestId);
+                .cacheId(cacheId.value()).key(key.value()).requestId(requestId);
         return removeCacheEntryEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
     @Override
-    public int encodeGetCacheEntries(String requestId, String cacheId, MutableDirectBuffer msgBuffer) {
+    public int encodeGetCacheEntries(String requestId, ReusableString cacheId, MutableDirectBuffer msgBuffer) {
         getAllCacheEntriesEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).requestId(requestId);
+                .cacheId(cacheId.value()).requestId(requestId);
         return getAllCacheEntriesEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
     @Override
-    public int encodeCacheSubscribe(String requestId, String cacheId, MutableDirectBuffer msgBuffer) {
+    public int encodeCacheSubscribe(String requestId, ReusableString cacheId, MutableDirectBuffer msgBuffer) {
         cacheSubscriptionRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).requestId(requestId);
+                .cacheId(cacheId.value()).requestId(requestId);
         return cacheSubscriptionRequestEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
     @Override
-    public int encodeCacheUnsubscribe(String requestId, String cacheId, MutableDirectBuffer msgBuffer) {
+    public int encodeCacheUnsubscribe(String requestId, ReusableString cacheId, MutableDirectBuffer msgBuffer) {
         cacheUnsubscribeRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .cacheId(cacheId).requestId(requestId);
+                .cacheId(cacheId.value()).requestId(requestId);
         return cacheUnsubscribeRequestEncoder.encodedLength()+headerEncoder.encodedLength();
     }
 

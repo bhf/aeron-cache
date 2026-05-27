@@ -88,9 +88,11 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
     public void handleDeleteCache(DeleteCacheResult<I> requestDetails, MutableDirectBuffer egressBuffer,
                                   int length,
                                   long excludeSessionId) {
+        log.info("CHECKING SESSIONS FOR SENDING DELETE ON CACHE {}", requestDetails.getCacheId());
         for (var session : getSessionsForCache(requestDetails.getCacheId())) {
+            log.info("CHECKING SESSION {}", session.id());
             if (session.id() != excludeSessionId) {
-                log.debug("Sending delete cache update to session: {}", session.id());
+                log.info("Sending delete cache update to session: {}", session.id());
                 sendMessage(session, egressBuffer, length);
             }
         }

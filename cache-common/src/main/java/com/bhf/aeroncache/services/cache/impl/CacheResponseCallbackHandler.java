@@ -66,4 +66,9 @@ public class CacheResponseCallbackHandler<I extends Reusable, K extends Reusable
     public void handleCacheEntryUpdated(CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult) {
         observerGroup.handleCacheEntryUpdated(cacheEntryUpdateResult);
     }
+
+    @Override
+    public void handleBulkOperationsResult(BulkCacheOpsResult<I, K, V> bulkCacheOpsResult) {
+        observerGroup.handleBulkOperationsResult(bulkCacheOpsResult);
+    }
 }

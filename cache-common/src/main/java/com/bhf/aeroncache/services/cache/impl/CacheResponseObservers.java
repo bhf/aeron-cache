@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services.cache.impl;
 
 import com.bhf.aeroncache.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.CacheRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cache.CacheResponseHandler;
@@ -28,6 +29,7 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     final List<IdentifiableConsumer<String, CacheStatsResult<I>>> allCacheStatsObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, CacheSubscriptionResult<I>>> cacheSubscribeObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, CacheUnsubscribeResult<I>>> cacheUnsubscribeObservers = new CopyOnWriteArrayList<>();
+    final List<IdentifiableConsumer<String, BulkCacheOpsResult<I,K,V>>> bulkOpsObservers = new CopyOnWriteArrayList<>();
     Consumer<CreateCacheResult<I>> createCacheConsumer;
     Consumer<AddCacheEntryResult<I, K>> addCacheEntryConsumer;
     Consumer<ClearCacheResult<I>> clearCacheConsumer;
@@ -191,6 +193,21 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     }
 
     @Override
+    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request, Consumer<BulkCacheOpsResult<I,K,V>> c) {
+        bulkOpsObservers.add(new IdentifiableConsumer<>() {
+            @Override
+            public String getId() {
+                return requestId;
+            }
+
+            @Override
+            public void accept(BulkCacheOpsResult<I,K,V> bulkCacheOpsResult) {
+                c.accept(bulkCacheOpsResult);
+            }
+        });
+    }
+
+    @Override
     public void handleCacheEntryResult(GetCacheEntryResult<I, K, V> getCacheEntryResult) {
         var targetId = getCacheEntryResult.getRequestId();
         getCacheEntryObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntryResult));
@@ -286,5 +303,13 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     @Override
     public void handleCacheEntryUpdated(CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult) {
 
+    }
+
+    @Override
+    public void handleBulkOperationsResult(BulkCacheOpsResult<I, K, V> bulkCacheOpsResult) {
+        var targetId = bulkCacheOpsResult.getRequestId();
+        log.info("Got bulk ops response on requestId {}", targetId);
+        bulkOpsObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(bulkCacheOpsResult));
+        bulkOpsObservers.removeIf(p -> p.getId().equals(targetId));
     }
 }

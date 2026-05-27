@@ -1,5 +1,8 @@
 package com.bhf.aeroncache.services.cache;
 
+
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+
 /**
  * Requests that an Aeron Cache will handle.
  */
@@ -87,4 +90,11 @@ public interface CacheRequestPublisher {
      */
     void sendCacheUnsubscribe(String requestId, String cacheId);
 
+    /**
+     * Send a bulk operation request.
+     *
+     * @param requestId The Id of this request.
+     * @param request   The bulk request.
+     */
+    void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request);
 }

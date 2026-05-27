@@ -1,12 +1,18 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
+import com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest;
 import com.bhf.aeroncache.services.AbstractClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.bhf.aeroncache.models.CacheRequestMessageTypes.*;
 
@@ -111,6 +117,40 @@ public class CacheClientAgent extends AbstractClientAgent {
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("REMOVE CACHE ENTRY Request has ID " + requestId + ", cache ID " + cacheId + ", remove key=" + key);
                     getPublisher().removeCacheEntry(requestId, cacheId, key);
+                }
+                case BULK_OPS_MSG_ID -> {
+                    var requestId = buffer.getStringUtf8(index);
+                    var cumulativeReadPosition = index + (requestId.length() + 4);
+                    var opCount = buffer.getInt(cumulativeReadPosition);
+                    cumulativeReadPosition += Integer.BYTES;
+                    List<CacheOperationRequest> operations = new ArrayList<>();
+
+                    for (int i = 0; i < opCount; i++) {
+                        var opRequestId = buffer.getStringUtf8(cumulativeReadPosition);
+                        cumulativeReadPosition+= index + (opRequestId.length() + 4);
+
+                        var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
+                        cumulativeReadPosition+= index + (cacheId.length() + 4);
+
+                        var key = buffer.getStringUtf8(cumulativeReadPosition);
+                        cumulativeReadPosition+= index + (key.length() + 4);
+
+                        var value = buffer.getStringUtf8(cumulativeReadPosition);
+                        cumulativeReadPosition+= index + (value.length() + 4);
+
+                        var ttl = buffer.getLong(cumulativeReadPosition);
+                        cumulativeReadPosition+=8;
+
+                        var ordinal = buffer.getInt(cumulativeReadPosition);
+                        var opType = BulkOperationType.values()[ordinal];
+                        cumulativeReadPosition+=4;
+
+                        CacheOperationRequest r = new CacheOperationRequest(opType, ttl, opRequestId, cacheId, key, value);
+                        operations.add(r);
+                    }
+                    
+                    BulkCacheOpsRequest request = new BulkCacheOpsRequest(requestId, operations);
+                    getPublisher().sendBulkOperationsRequest(requestId, request);
                 }
                 default -> log.warn("Got unknown msgType: {} processing inbound client cache requests", msgTypeId);
             }

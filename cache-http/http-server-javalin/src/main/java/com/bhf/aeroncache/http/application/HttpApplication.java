@@ -1,6 +1,8 @@
 package com.bhf.aeroncache.http.application;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.responses.CacheOperationResponse;
 import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
@@ -8,6 +10,7 @@ import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.requests.PutTimedItemRequest;
 import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.http.responses.CacheStats;
+import com.bhf.aeroncache.models.bulk.responses.BulkCacheOpsResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
@@ -366,6 +369,7 @@ public class HttpApplication {
                 .beforeMatched(HttpApplication::checkClusterConnectivity)
                 .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
                 .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
+                .post(API_PREFIX+"bulkops/", HttpApplication::handleBulkOpsRequest)
                 .get(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleGetItemRequest)
                 .get(API_PREFIX + "<cacheId>", HttpApplication::handleGetCacheRequest)
                 .post(API_PREFIX + "timed/<cacheId>", HttpApplication::handlePutTimedItemRequest)
@@ -864,6 +868,44 @@ public class HttpApplication {
             var cacheId = c.getCacheId();
             log.info("Got put item response from cluster on cacheId {}", cacheId);
             var response = new PutItemResponse(cacheId.value().toString(), key, c.getStatus());
+            future.complete(response);
+        };
+        return consumer;
+    }
+
+    private static void handleBulkOpsRequest(@NotNull Context ctx) {
+        try {
+            var request = ctx.bodyAsClass(BulkCacheOpsRequest.class);
+            log.info("Got bulk cache ops request: {}", request);
+
+            var requestId = getRequestId(ctx);
+            CompletableFuture<BulkCacheOpsResponse> future = new CompletableFuture<>();
+            Consumer<BulkCacheOpsResult> consumer = getBulkCacheOpsResultConsumer(future);
+
+            CompletableFuture.runAsync(() -> observingPublisher.sendBulkOperationsRequest(requestId, request, consumer));
+
+            var response = future.get();
+
+            ctx.status(HTTPStatusUtils.OK);
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = "Badly formed bulk operation request: " + ctx.body();
+            log.warn(errorMsg);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
+    @NotNull
+    private static Consumer<BulkCacheOpsResult> getBulkCacheOpsResultConsumer(CompletableFuture<BulkCacheOpsResponse> future) {
+        Consumer<BulkCacheOpsResult> consumer = c -> {
+            List<CacheOperationResponse> operationResponses = new ArrayList<>();
+
+
+
+            BulkCacheOpsResponse response = new BulkCacheOpsResponse(c.getRequestId(), operationResponses);
             future.complete(response);
         };
         return consumer;
