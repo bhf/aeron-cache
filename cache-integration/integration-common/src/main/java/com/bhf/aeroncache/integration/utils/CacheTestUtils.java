@@ -1,8 +1,10 @@
 package com.bhf.aeroncache.integration.utils;
 
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import io.restassured.http.ContentType;
 import io.restassured.http.Method;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import static io.restassured.RestAssured.given;
@@ -16,6 +18,7 @@ public class CacheTestUtils {
     private static final String PUT_ITEM_ENDPOINT = "/api/v1/cache/";
     private static final String DELETE_ENDPOINT = "/api/v1/cache/";
     private static final String CLEAR_ENDPOINT = "/api/v1/cache/";
+    private static final String BULK_ITEM_ENDPOINT = "/api/v1/cache/bulkops/";
 
     /**
      * Create a cache as part of setting up a test case.
@@ -112,5 +115,34 @@ public class CacheTestUtils {
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .request(Method.PATCH, CLEAR_ENDPOINT + cacheId);
+    }
+
+    public static void sendBulkRequest(BulkCacheOpsRequest request, BackendTestResource backend){
+        var allOps = new JSONArray();
+        for(var op : request.operations()){
+            allOps.put(getCacheOperation(op.requestId(), op.operationType().toString(), op.cacheId(), op.key(), op.value(), op.ttl()));
+        }
+
+        JSONObject requestBody = new JSONObject()
+                .put("requestId", "bulk-request-1")
+                .put("operations", allOps);
+
+        var endpoint = BULK_ITEM_ENDPOINT;
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .body(requestBody.toString())
+                .request(Method.POST, endpoint);
+    }
+
+
+    public static JSONObject getCacheOperation(String requestId, String opType, String cacheId, String key, String value, long ttl) {
+        return new JSONObject()
+                .put("requestId", requestId)
+                .put("operationType", opType)
+                .put("cacheId", cacheId)
+                .put("key", key)
+                .put("value", value)
+                .put("ttl", ttl);
     }
 }
