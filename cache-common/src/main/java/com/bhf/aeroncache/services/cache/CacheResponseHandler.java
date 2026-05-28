@@ -91,4 +91,11 @@ public interface CacheResponseHandler<I extends Reusable, K extends Reusable, V 
      * @param cacheEntryUpdateResult The entry update details.
      */
     void handleCacheEntryUpdated(CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult);
+
+    /**
+     * Handle a response on a bulk operation request.
+     *
+     * @param bulkCacheOpsResult The bulk operation result details.
+     */
+    void handleBulkOperationsResult(BulkCacheOpsResult<I,K,V> bulkCacheOpsResult);
 }

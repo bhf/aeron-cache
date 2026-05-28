@@ -24,4 +24,6 @@ public interface CacheClientSchemDetailsProvider {
 
     int getCacheEntryUpdateId();
 
+    int bulkOperationsResponseId();
+
 }

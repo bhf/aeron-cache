@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.codecs.request;
 
 import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import org.agrona.MutableDirectBuffer;
 
 /**
@@ -19,6 +20,7 @@ public class RegularStringCacheRequestEncoder implements CacheRequestEncoder<Str
     private final CacheSubscriptionRequestEncoder cacheSubscriptionRequestEncoder = new CacheSubscriptionRequestEncoder();
     private final CacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder = new CacheUnsubscribeRequestEncoder();
     private final GetCacheStatsEncoder getCacheStatsEncoder = new GetCacheStatsEncoder();
+    private final BulkOperationRequestEncoder bulkOpsEncoder = new BulkOperationRequestEncoder();
 
     @Override
     public int encodeCreateCacheRequest(String requestId, String cacheId, MutableDirectBuffer msgBuffer) {
@@ -93,5 +95,26 @@ public class RegularStringCacheRequestEncoder implements CacheRequestEncoder<Str
         getCacheStatsEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .requestId(requestId);
         return getCacheStatsEncoder.encodedLength()+ headerEncoder.encodedLength();
+    }
+
+    @Override
+    public int encodeBulkOperations(String requestId, BulkCacheOpsRequest request, MutableDirectBuffer msgBuffer) {
+        bulkOpsEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder);
+        var itemsEncoder = bulkOpsEncoder.itemsCount(request.operations().size());
+
+        for (int i = 0; i < request.operations().size(); i++) {
+            itemsEncoder.next();
+            var op = request.operations().get(i);
+            BulkOperationType opType = BulkOperationType.valueOf(op.operationType().toString());
+            itemsEncoder.operationType(opType)
+                    .ttl(op.ttl())
+                    .requestId(op.requestId())
+                    .cacheId(op.cacheId())
+                    .key(op.key())
+                    .value(op.value());
+        }
+
+        bulkOpsEncoder.requestId(requestId);
+        return bulkOpsEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 }

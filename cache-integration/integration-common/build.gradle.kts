@@ -23,6 +23,7 @@ dependencies {
     implementation(project(":cache-ws:ws-server-javalin"))
     implementation(project(":cache-sse:sse-server-jooby"))
     implementation(project(":cache-common"))
+    implementation(project(":cache-spi"))
 
     testRuntimeOnly(libs.junit.platform.launcher)
 }

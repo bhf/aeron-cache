@@ -1,8 +1,14 @@
 package com.bhf.aeroncache.services.cache.impl;
 
+
+import com.bhf.aeroncache.models.CacheRequestMessageTypes;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.ringbuffer.RingBuffer;
 
 /**
@@ -14,6 +20,7 @@ import org.agrona.concurrent.ringbuffer.RingBuffer;
 public class RBCacheRequestPublisher implements CacheRequestPublisher {
 
     final RingBuffer rb;
+    private final MutableDirectBuffer bulkOpsBuffer = new ExpandableArrayBuffer(4096);
 
     @Override
     public void sendCreateCache(String requestId, String cacheId) {
@@ -238,6 +245,43 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
         } catch (Exception e) {
             rb.abort(claimIndex);
             log.error("Error whilst trying to write cache unsubscribe request to RingBuffer", e);
+        }
+    }
+
+    @Override
+    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request) {
+
+        var buffer = bulkOpsBuffer;
+        int writeCursor = 0;
+        writeCursor += buffer.putStringUtf8(writeCursor, requestId);
+
+        buffer.putInt(writeCursor, request.operations().size());
+        writeCursor += 4;
+
+        for (int i = 0; i < request.operations().size(); i++) {
+            var op = request.operations().get(i);
+            var opRequestId = op.requestId();
+            var cacheId = op.cacheId();
+            var key = op.key();
+            var value = op.value();
+            var ttl = op.ttl();
+            var opType = op.operationType();
+
+            writeCursor += buffer.putStringUtf8(writeCursor, opRequestId);
+            writeCursor += buffer.putStringUtf8(writeCursor, cacheId);
+            writeCursor += buffer.putStringUtf8(writeCursor, key);
+            writeCursor += buffer.putStringUtf8(writeCursor, value);
+
+            buffer.putLong(writeCursor, ttl);
+            writeCursor += 8;
+
+            buffer.putInt(writeCursor, opType.ordinal());
+            writeCursor += 4;
+        }
+
+        var length = writeCursor;
+        while(!rb.write(CacheRequestMessageTypes.BULK_OPS_MSG_ID, bulkOpsBuffer, 0, length)){
+            
         }
     }
 }

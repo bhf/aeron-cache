@@ -1,7 +1,6 @@
 package com.bhf.aeroncache.codecs.response;
 
 import com.bhf.aeroncache.messages.*;
-import com.bhf.aeroncache.models.requests.DeleteCacheRequestDetails;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.types.ReusableString;
 import org.agrona.MutableDirectBuffer;
@@ -21,6 +20,7 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     private final AllCacheStatsResultEncoder cacheStatsResultEncoder = new AllCacheStatsResultEncoder();
     private final CacheSubscriptionResponseEncoder cacheSubscriptionResponseEncoder = new CacheSubscriptionResponseEncoder();
     private final CacheUnsubscribeResponseEncoder cacheUnsubscribeResponseEncoder = new CacheUnsubscribeResponseEncoder();
+    private final BulkOperationResponseEncoder bulkOperationResponseEncoder = new BulkOperationResponseEncoder();
 
     @Override
     public int encodeCacheCreationResult(ReusableString cacheId, CreateCacheResult<ReusableString> cacheCreationResult, MutableDirectBuffer egressBuffer) {
@@ -121,12 +121,12 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     }
 
     @Override
-    public int encodeDeleteCache(ReusableString cacheId, DeleteCacheResult<ReusableString> deleteCacheResult, DeleteCacheRequestDetails<ReusableString> requestDetails, MutableDirectBuffer egressBuffer) {
+    public int encodeDeleteCache(ReusableString cacheId, DeleteCacheResult<ReusableString> deleteCacheResult, MutableDirectBuffer egressBuffer) {
         cacheDeletedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheDeletedEncoder
                 .status(getOperationStatus(deleteCacheResult.getStatus()))
                 .cacheId(cacheId.value())
-                .requestId(requestDetails.getRequestId());
+                .requestId(deleteCacheResult.getRequestId());
         return cacheDeletedEncoder.encodedLength() + headerEncoder.encodedLength();
     }
 
@@ -164,7 +164,7 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     }
 
     @Override
-    public int encodeCacheUnsubscribeRequest(CacheUnsubscribeResult<ReusableString> unsubscribeResponse, MutableDirectBuffer egressBuffer) {
+    public int encodeCacheUnsubscribeResponse(CacheUnsubscribeResult<ReusableString> unsubscribeResponse, MutableDirectBuffer egressBuffer) {
         cacheUnsubscribeResponseEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheUnsubscribeResponseEncoder
                 .status(getOperationStatus(unsubscribeResponse.getStatus()))
@@ -172,6 +172,25 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
                 .requestId(unsubscribeResponse.getRequestId());
 
         return cacheUnsubscribeResponseEncoder.encodedLength() + headerEncoder.encodedLength();
+    }
+
+    @Override
+    public int encodeBulkOpsResponse(BulkCacheOpsResult<ReusableString, ReusableString, ReusableString> bulkCacheOpsResult, MutableDirectBuffer egressBuffer) {
+        bulkOperationResponseEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        var itemsEncoder = bulkOperationResponseEncoder.itemsCount(bulkCacheOpsResult.getOperations().size());
+
+        for (int i = 0; i < bulkCacheOpsResult.getOperations().size(); i++) {
+            itemsEncoder.next();
+            var op = bulkCacheOpsResult.getOperations().get(i);
+            itemsEncoder.operationStatus(OperationStatus.valueOf(op.getOperationStatus().toString()))
+                    .requestId(op.getRequestId())
+                    .cacheId(op.getCacheId().value())
+                    .key(op.getKey().value())
+                    .value(op.getValue().value());
+        }
+
+        bulkOperationResponseEncoder.requestId(bulkCacheOpsResult.getRequestId());
+        return bulkOperationResponseEncoder.encodedLength() + headerEncoder.encodedLength();
     }
 
     private OperationStatus getOperationStatus(CacheOperationStatus status) {

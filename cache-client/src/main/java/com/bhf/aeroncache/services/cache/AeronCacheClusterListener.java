@@ -48,6 +48,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     private final CacheSubscriptionResult<I> cacheSubscriptionResult;
     private final CacheUnsubscribeResult<I> cacheUnsubscribeResult;
     private final CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult;
+    private final BulkCacheOpsResult<I,K,V> bulkCacheOpsResult;
     private final ClusterSessionEventHandler sessionEventHandler = new NoOpClusterSessionEventHandler();
     private final CacheStatsResult<I> cacheStatsResult = new CacheStatsResult<>();
 
@@ -67,6 +68,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         cacheSubscriptionResult = new CacheSubscriptionResult<>(indexSupplier.get());
         cacheUnsubscribeResult = new CacheUnsubscribeResult<>(indexSupplier.get());
         cacheEntryUpdateResult = new CacheEntryUpdateResult<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
+        bulkCacheOpsResult = new BulkCacheOpsResult<>(indexSupplier, keySupplier, valueSupplier);
     }
 
     @Override
@@ -104,6 +106,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
             handleCacheUnsubscribeResult(buffer, offset);
         } else if (templateId == schemaDetails.getCacheEntryUpdateId()) {
             handleCacheEntryUpdated(buffer, offset);
+        } else if (templateId == schemaDetails.bulkOperationsResponseId()) {
+            handleBulkOperationResponse(buffer, offset);
         } else {
             log.warn("Got unknown message with TID {}", templateId);
         }
@@ -273,6 +277,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         }
     }
 
+    /**
+     * Handle the result of a cache entry being added.
+     *
+     * @param buffer The buffer to decode from.
+     * @param offset The offset at which to start decoding.
+     */
     private void handleCacheEntryUpdated(DirectBuffer buffer, int offset) {
         cacheResponseDecoder.decodeCacheEntryUpdated(buffer, offset, cacheEntryUpdateResult);
         log.info("Got cache entry updated on cacheId {}, key {} requestId {}",
@@ -280,6 +290,21 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryUpdated(cacheEntryUpdateResult);
+        }
+    }
+
+    /**
+     * Handle the result of a bulk operation done on the cache.
+     *
+     * @param buffer The buffer to decode from.
+     * @param offset The offset at which to start decoding.
+     */
+    private void handleBulkOperationResponse(DirectBuffer buffer, int offset) {
+        cacheResponseDecoder.decodeBulkCacheOpsResult(buffer, offset, bulkCacheOpsResult);
+        log.info("Got bulk ops results from cache on request Id {}", bulkCacheOpsResult.getRequestId());
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleBulkOperationsResult(bulkCacheOpsResult);
         }
     }
 

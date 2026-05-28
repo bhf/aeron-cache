@@ -57,13 +57,13 @@ public class TestContainersEnvironmentFactory {
                             .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                             .withEnv("CLUSTER_NODE", String.valueOf(i))
                             .withEnv("CLUSTER_PORT_BASE", "9000")
-                            .withEnv("OTEL_SERVICE_NAME", "aeron-cache-cluster-node")
-                            .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")
+                            /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-cluster-node")
+                            .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")*/
                             .withEnv("CACHE_MODE", "RAFT")
                             .withEnv("CACHE_DATA_DIR", "/tmp/data")
-                            .withEnv("OTEL_TRACES_EXPORTER", "none")
+                            /*.withEnv("OTEL_TRACES_EXPORTER", "none")
                             .withEnv("OTEL_METRICS_EXPORTER", "none")
-                            .withEnv("OTEL_LOGS_EXPORTER", "none");
+                            .withEnv("OTEL_LOGS_EXPORTER", "none")*/;
 
             containers.add(container);
         }
@@ -89,13 +89,13 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
-                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-http")
+                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-http")
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CACHE_MODE", "RAFT")
-                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
                 .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -117,13 +117,13 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
-                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-http-near")
+                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-http-near")
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CACHE_MODE", "RAFT")
-                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
                 .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -145,13 +145,13 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
-                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws")
+                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws")
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CACHE_MODE", "RAFT")
-                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
                 .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -173,14 +173,14 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
-                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws")
+                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws")
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CACHE_MODE", "RAFT")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
                 .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness/"));
     }
 
@@ -203,8 +203,8 @@ public class TestContainersEnvironmentFactory {
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_NODE", "0")
-                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-cluster-node")
-                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")
+                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-cluster-node")
+                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")*/
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("CACHE_DATA_DIR", "/tmp/data")
                 .withEnv("HTTP_RESPONSE_PUB_HOST", "cache-http-client")
@@ -225,15 +225,15 @@ public class TestContainersEnvironmentFactory {
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7070)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
-                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-http")
+                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-http")
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
                 .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -250,15 +250,15 @@ public class TestContainersEnvironmentFactory {
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7070)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
-                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-http")
+                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-http")
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
                 .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -275,15 +275,15 @@ public class TestContainersEnvironmentFactory {
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7071)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
-                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws")
+                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws")
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
                 .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -300,15 +300,15 @@ public class TestContainersEnvironmentFactory {
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7072)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
-                .withEnv("OTEL_SERVICE_NAME", "aeron-cache-sse")
+                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-sse")
                 .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")
+                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                .withEnv("OTEL_TRACES_EXPORTER", "none")
+                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
                 .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")
+                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness/"));
     }
 

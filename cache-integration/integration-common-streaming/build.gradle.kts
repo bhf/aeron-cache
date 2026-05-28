@@ -20,6 +20,7 @@ dependencies {
     implementation(project(":cache-messages-http"))
     implementation(project(":cache-http:http-server-javalin"))
     implementation(project(":cache-common"))
+    implementation(project(":cache-spi"))
     implementation(project(":cache-integration:integration-common"))
 
     testRuntimeOnly(libs.junit.platform.launcher)

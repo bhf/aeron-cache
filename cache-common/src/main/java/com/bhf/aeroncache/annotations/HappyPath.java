@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Inspired by <a href="https://github.com/bhf/agni-annotations"> Agni Annotations </a>.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target({ElementType.TYPE, ElementType.METHOD})
 public @interface HappyPath {
 }
 

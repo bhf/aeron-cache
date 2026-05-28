@@ -18,4 +18,5 @@ public class CacheRequestMessageTypes {
     public static final int UNSUBSCRIBE_TO_CACHE_MSG_ID = 8;
     public static final int GET_CACHE_STATS_MSG_ID = 9;
     public static final int REMOVE_CACHE_ENTRY_MSG_ID = 10;
+    public static final int BULK_OPS_MSG_ID = 11;
 }

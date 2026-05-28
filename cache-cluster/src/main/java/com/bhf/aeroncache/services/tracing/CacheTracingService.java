@@ -45,4 +45,8 @@ public interface CacheTracingService {
     void startCacheUnsubscribeRequest(CacheUnsubscribeRequestDetails requestDetails);
 
     void endCacheUnsubscribeRequest(CacheUnsubscribeRequestDetails requestDetails);
+
+    void startBulkOpsRequest(BulkCacheOpsRequestDetails requestDetails);
+
+    void endBulkOpsRequest(BulkCacheOpsRequestDetails requestDetails);
 }

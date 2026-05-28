@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cache.impl;
 
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.CacheRequestConsumingPublisher;
@@ -166,6 +167,17 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     }
 
     @Override
+    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request) {
+        rbPublisher.sendBulkOperationsRequest(requestId, request);
+    }
+
+    @Override
+    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request, Consumer<BulkCacheOpsResult<I,K,V>> consumer) {
+        cacheResponseObservers.sendBulkOperationsRequest(requestId, request, consumer);
+        rbPublisher.sendBulkOperationsRequest(requestId, request);
+    }
+
+    @Override
     public void handleCacheEntryResult(GetCacheEntryResult<I, K, V> getCacheEntryResult) {
         cacheResponseHandler.handleCacheEntryResult(getCacheEntryResult);
     }
@@ -218,5 +230,10 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     @Override
     public void handleCacheEntryUpdated(CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult) {
         cacheResponseHandler.handleCacheEntryUpdated(cacheEntryUpdateResult);
+    }
+
+    @Override
+    public void handleBulkOperationsResult(BulkCacheOpsResult<I, K, V> bulkCacheOpsResult) {
+        cacheResponseHandler.handleBulkOperationsResult(bulkCacheOpsResult);
     }
 }

@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.services.cache.impl;
 
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.ConsumingResponseHandler;
 import lombok.Getter;
@@ -32,6 +33,7 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     final Map<String, Consumer<CacheStatsResult<I>>> allCacheStatsObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<CacheSubscriptionResult<I>>> cacheSubscribeObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<CacheUnsubscribeResult<I>>> cacheUnsubscribeObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<BulkCacheOpsResult<I,K,V>>> bulkOpsObservers = new ConcurrentHashMap<>();
 
     Consumer<CreateCacheResult<I>> createCacheConsumer;
     Consumer<AddCacheEntryResult<I, K>> addCacheEntryConsumer;
@@ -92,6 +94,11 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     @Override
     public void sendCacheUnsubscribe(String requestId, String cacheId, Consumer<CacheUnsubscribeResult<I>> c) {
         cacheUnsubscribeObservers.put(requestId, c);
+    }
+
+    @Override
+    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request, Consumer<BulkCacheOpsResult<I,K,V>> c) {
+        bulkOpsObservers.put(requestId, c);
     }
 
     @Override
@@ -217,5 +224,15 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     @Override
     public void handleCacheEntryUpdated(CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult) {
 
+    }
+
+    @Override
+    public void handleBulkOperationsResult(BulkCacheOpsResult<I, K, V> bulkCacheOpsResult) {
+        var targetId = bulkCacheOpsResult.getRequestId();
+        log.info("Got bulk ops response on requestId {}", targetId);
+        var observer = bulkOpsObservers.remove(targetId);
+        if (observer != null) {
+            observer.accept(bulkCacheOpsResult);
+        }
     }
 }

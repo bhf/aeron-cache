@@ -58,4 +58,9 @@ public class MapCacheClientSchemDetailsProvider implements CacheClientSchemDetai
     public int getCacheEntryUpdateId() {
         return CacheEntryUpdateDecoder.TEMPLATE_ID;
     }
+
+    @Override
+    public int bulkOperationsResponseId() {
+        return BulkOperationResponseDecoder.TEMPLATE_ID;
+    }
 }

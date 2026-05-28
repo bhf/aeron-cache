@@ -22,6 +22,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     private final CacheSubscriptionResponseDecoder cacheSubscriptionResponseDecoder = new CacheSubscriptionResponseDecoder();
     private final CacheUnsubscribeResponseDecoder cacheUnsubscribeResponseDecoder = new CacheUnsubscribeResponseDecoder();
     private final CacheEntryUpdateDecoder cacheEntryUpdateDecoder = new CacheEntryUpdateDecoder();
+    private final BulkOperationResponseDecoder bulkOperationResponseDecoder = new BulkOperationResponseDecoder();
 
     @Override
     public void decodeCacheCreated(DirectBuffer buffer, int offset, CreateCacheResult<ReusableString> createCacheResult) {
@@ -243,5 +244,33 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
         cacheEntryUpdateResult.setRequestId(requestId);
         cacheEntryUpdateResult.getKey().copyFrom(key);
         cacheEntryUpdateResult.getValue().copyFrom(value);
+    }
+
+    @Override
+    public void decodeBulkCacheOpsResult(DirectBuffer buffer, int offset, BulkCacheOpsResult<ReusableString, ReusableString, ReusableString> bulkCacheOpsResult) {
+        bulkCacheOpsResult.clear();
+        bulkOperationResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var itemsDecoder = bulkOperationResponseDecoder.items();
+
+        for(var op: itemsDecoder) {
+            var opType = op.operationStatus();
+            var requestId = op.requestId();
+
+            var cacheId = new ReusableString();
+            cacheId.copyFrom(op.cacheId());
+
+            var key = new ReusableString();
+            key.copyFrom(op.key());
+
+            var value = new ReusableString();
+            value.copyFrom(op.value());
+
+            bulkCacheOpsResult.addOperationResult(
+                    CacheOperationStatus.valueOf(opType.toString()),
+                    requestId, cacheId, key, value);
+        }
+
+        var requestId = bulkOperationResponseDecoder.requestId();
+        bulkCacheOpsResult.setRequestId(requestId);
     }
 }
