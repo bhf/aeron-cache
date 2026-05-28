@@ -10,12 +10,17 @@ import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 @Getter
 @Setter
 @RequiredArgsConstructor
 @Flyweight
 public class BulkCacheOpsRequestDetails <I extends Reusable, K extends Reusable, V extends Reusable> implements Reusable<BulkCacheOpsRequestDetails<I,K,V>>{
+
+    final Supplier<I> indexSupplier;
+    final Supplier<K> keySupplier;
+    final Supplier<V> valueSupplier;
 
     final List<CacheOperationRequestDetails<I,K,V>> operations = new ArrayList<>();
 
@@ -51,7 +56,14 @@ public class BulkCacheOpsRequestDetails <I extends Reusable, K extends Reusable,
         return this;
     }
 
-    public void addOperation(BulkOperationType opType, long ttl, String requestId, String cacheId, String key, String value) {
-
+    public void addOperation(BulkOperationType opType, long ttl, String requestId, I cacheId, K key, V value) {
+        var details = new CacheOperationRequestDetails(indexSupplier, keySupplier, valueSupplier);
+        details.operationType = opType;
+        details.ttl = ttl;
+        details.setRequestId(requestId);
+        details.getCacheId().copyFrom(cacheId);
+        details.getKey().copyFrom(key);
+        details.getValue().copyFrom(value);
+        operations.add(details);
     }
 }

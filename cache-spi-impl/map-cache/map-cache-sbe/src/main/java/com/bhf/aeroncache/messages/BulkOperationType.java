@@ -14,7 +14,7 @@ public enum BulkOperationType
 
     GET_ITEM((short)4),
 
-    DELETE_ITEM((short)5),
+    DELETE_CACHE((short)5),
 
     /**
      * To be used to represent not present or null.
@@ -53,7 +53,7 @@ public enum BulkOperationType
             case 2: return REMOVE_ITEM;
             case 3: return CLEAR_CACHE;
             case 4: return GET_ITEM;
-            case 5: return DELETE_ITEM;
+            case 5: return DELETE_CACHE;
             case 255: return NULL_VAL;
         }
 

@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cluster;
 
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 
 /**
@@ -67,6 +68,8 @@ public interface BlockingClusterRequestPublisher {
      * @param cacheId   The ID of the cache we're removing an entry from.
      */
     void getCacheEntriesBlocking(String requestId, String cacheId);
+
+    void sendBulkOperationsBlocking(String requestId, BulkCacheOpsRequest request);
 
     /**
      * Send a message to get all cache stats from the cluster in a blocking manner.

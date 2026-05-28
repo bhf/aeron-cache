@@ -20,7 +20,7 @@ import org.agrona.concurrent.ringbuffer.RingBuffer;
 public class RBCacheRequestPublisher implements CacheRequestPublisher {
 
     final RingBuffer rb;
-    private final MutableDirectBuffer bulkOpsBuffer = new ExpandableArrayBuffer();
+    private final MutableDirectBuffer bulkOpsBuffer = new ExpandableArrayBuffer(4096);
 
     @Override
     public void sendCreateCache(String requestId, String cacheId) {

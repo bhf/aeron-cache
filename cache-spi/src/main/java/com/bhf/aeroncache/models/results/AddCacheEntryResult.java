@@ -4,7 +4,6 @@ import com.bhf.aeroncache.annotations.Flyweight;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 /**
@@ -15,13 +14,12 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@RequiredArgsConstructor
 @Flyweight
 public class AddCacheEntryResult<I extends Reusable, K extends Reusable> implements Reusable<AddCacheEntryResult<I, K>> {
 
-    I cacheId;
+    final I cacheId;
     boolean entryAdded;
-    K entryKey;
+    final K entryKey;
     final RequestId requestId = new RequestId();
     CacheOperationStatus status = CacheOperationStatus.NONE;
 

@@ -164,9 +164,16 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
             var cacheId = op.cacheId();
             var key = op.key();
             var value = op.value();
+            ReusableString reusableCacheId = new ReusableString();
+            ReusableString reusableKey = new ReusableString();
+            ReusableString reusableValue = new ReusableString();
+            reusableCacheId.copyFrom(cacheId);
+            reusableKey.copyFrom(key);
+            reusableValue.copyFrom(value);
+
             bulkCacheOpsRequestDetails.addOperation(
                     com.bhf.aeroncache.models.bulk.requests.BulkOperationType.valueOf(opType.toString()),
-                    ttl, requestId, cacheId, key, value);
+                    ttl, requestId, reusableCacheId, reusableKey, reusableValue);
         }
 
         var requestId = bulkOperationRequestDecoder.requestId();

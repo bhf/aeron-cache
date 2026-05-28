@@ -135,7 +135,7 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
     protected void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, ClientSession session) {
         var length = encoder.encodeRemoveCacheEntryResult(cacheId, key, removeCacheEntryResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
-        subscriptionService.handleEntryRemoved(removeCacheEntryResult, egressBuffer, length, session.id());
+        subscriptionService.handleEntryRemoved(removeCacheEntryResult, egressBuffer, length, session!=null ? session.id() : Long.MAX_VALUE);
     }
 
     @Override
@@ -148,14 +148,14 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
     protected void handlePostClearCache(I cacheId, ClearCacheResult<I> clearCacheResult, ClientSession session) {
         var length = encoder.encodeCacheCleared(cacheId, clearCacheResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
-        subscriptionService.handleClearCache(clearCacheResult, egressBuffer, length, session.id());
+        subscriptionService.handleClearCache(clearCacheResult, egressBuffer, length, session!=null ? session.id() : Long.MAX_VALUE);
     }
 
     @Override
     protected void handlePostDeleteCache(I cacheId, DeleteCacheResult<I> deleteCacheResult, ClientSession session) {
         var length = encoder.encodeDeleteCache(cacheId, deleteCacheResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
-        subscriptionService.handleDeleteCache(deleteCacheResult, egressBuffer, length, session.id());
+        subscriptionService.handleDeleteCache(deleteCacheResult, egressBuffer, length, session!=null ? session.id() : Long.MAX_VALUE);
     }
 
     @Override

@@ -122,33 +122,33 @@ public class CacheClientAgent extends AbstractClientAgent {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (requestId.length() + 4);
                     var opCount = buffer.getInt(cumulativeReadPosition);
-                    cumulativeReadPosition += Integer.BYTES;
+                    cumulativeReadPosition += 4;
                     List<CacheOperationRequest> operations = new ArrayList<>();
 
                     for (int i = 0; i < opCount; i++) {
                         var opRequestId = buffer.getStringUtf8(cumulativeReadPosition);
-                        cumulativeReadPosition+= index + (opRequestId.length() + 4);
+                        cumulativeReadPosition += (opRequestId.length() + 4);
 
                         var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
-                        cumulativeReadPosition+= index + (cacheId.length() + 4);
+                        cumulativeReadPosition += (cacheId.length() + 4);
 
                         var key = buffer.getStringUtf8(cumulativeReadPosition);
-                        cumulativeReadPosition+= index + (key.length() + 4);
+                        cumulativeReadPosition += (key.length() + 4);
 
                         var value = buffer.getStringUtf8(cumulativeReadPosition);
-                        cumulativeReadPosition+= index + (value.length() + 4);
+                        cumulativeReadPosition += (value.length() + 4);
 
                         var ttl = buffer.getLong(cumulativeReadPosition);
-                        cumulativeReadPosition+=8;
+                        cumulativeReadPosition += 8;
 
                         var ordinal = buffer.getInt(cumulativeReadPosition);
                         var opType = BulkOperationType.values()[ordinal];
-                        cumulativeReadPosition+=4;
+                        cumulativeReadPosition += 4;
 
                         CacheOperationRequest r = new CacheOperationRequest(opType, ttl, opRequestId, cacheId, key, value);
                         operations.add(r);
                     }
-                    
+
                     BulkCacheOpsRequest request = new BulkCacheOpsRequest(requestId, operations);
                     getPublisher().sendBulkOperationsRequest(requestId, request);
                 }

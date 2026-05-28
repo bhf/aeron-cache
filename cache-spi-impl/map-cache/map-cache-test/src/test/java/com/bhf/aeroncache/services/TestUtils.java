@@ -4,6 +4,9 @@ import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseEncoder;
+import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
+import com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest;
+import com.bhf.aeroncache.models.results.CacheOperationResultDetails;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
 import com.bhf.aeroncache.services.cachemanager.MapCacheManagerFactory;
@@ -17,7 +20,10 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 
+import java.util.List;
 import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestUtils {
 
@@ -100,5 +106,15 @@ public class TestUtils {
         return new MapCacheManagerFactory<>(SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
                 new ReusableStringCacheIdSnapshotCodec(), new ReusableStringCacheEntrySnapshotCodec(), encoder, decoder);
+    }
+
+    public static void assertRequestIdCacheIdMatch(List<CacheOperationRequest> ops, List<CacheOperationResultDetails<ReusableString, ReusableString, ReusableString>> opResults, int i) {
+        assertEquals(ops.get(i).requestId(), opResults.get(i).getRequestId());
+        assertEquals(ops.get(i).cacheId(), opResults.get(i).getCacheId().value());
+    }
+
+    public static CacheOperationRequest getCacheOperation(BulkOperationType opType, String cacheId, String key, String value, long ttl) {
+        String opRequestId = UUID.randomUUID().toString();
+        return new CacheOperationRequest(opType, ttl, opRequestId, cacheId, key, value);
     }
 }

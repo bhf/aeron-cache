@@ -146,6 +146,12 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
     }
 
     @Override
+    public void sendBulkOperationsBlocking(String requestId, BulkCacheOpsRequest request) {
+        sendBulkOperationsRequest(requestId, request);
+        waitForResult(cluster);
+    }
+
+    @Override
     public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request) {
         var length = cacheRequestEncoder.encodeBulkOperations(requestId, request, msgBuffer);
         publishToCache(msgBuffer, 0, length);

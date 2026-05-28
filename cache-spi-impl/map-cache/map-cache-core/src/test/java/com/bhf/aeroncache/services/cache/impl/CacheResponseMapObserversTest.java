@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.services.cache.impl;
 
 import com.bhf.aeroncache.annotations.HappyPath;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.results.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -263,6 +264,30 @@ class CacheResponseMapObserversTest {
         // Assert
         verify(resultConsumer, times(1))
                 .accept(any(CacheUnsubscribeResult.class));
+
+        assertFalse(sut.cacheUnsubscribeObservers.containsKey(requestId));
+    }
+
+    @Test
+    @DisplayName("Should call existing observer for bulk operations result")
+    @HappyPath
+    void shouldCallExistingObserversForBulkOpsResult() {
+        // Arrange
+        var requestId = UUID.randomUUID().toString();
+        var resultConsumer = Mockito.mock(Consumer.class);
+        var cacheId = "123L";
+        BulkCacheOpsRequest request = Mockito.mock(BulkCacheOpsRequest.class);
+        sut.sendBulkOperationsRequest(requestId, request, resultConsumer);
+
+        var result = Mockito.mock(BulkCacheOpsResult.class);
+        when(result.getRequestId()).thenReturn(requestId);
+
+        // Act
+        sut.handleBulkOperationsResult(result);
+
+        // Assert
+        verify(resultConsumer, times(1))
+                .accept(any(BulkCacheOpsResult.class));
 
         assertFalse(sut.cacheUnsubscribeObservers.containsKey(requestId));
     }

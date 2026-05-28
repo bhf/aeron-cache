@@ -2,6 +2,9 @@ package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.annotations.HappyPath;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
+import com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.utils.RingBufferUtils;
@@ -18,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -295,6 +299,37 @@ class CacheClientAgentTest {
                 Arguments.of("", "testCacheId", "key"),
                 Arguments.of("requestID", "testCacheId", "key"),
                 Arguments.of(UUID.randomUUID().toString(), "123L", "key"));
+    }
+
+    @ParameterizedTest
+    @HappyPath
+    @DisplayName("Should publish bulk cache ops request via Publisher only once")
+    @MethodSource("provideBulkCacheOpsParams")
+    void shouldPublishBulkCacheOpsRequest(String requestId, List<CacheOperationRequest> ops) {
+        // Arrange
+        RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
+        BulkCacheOpsRequest request = new BulkCacheOpsRequest(requestId, ops);
+        requestPublisher.sendBulkOperationsRequest(requestId, request);
+
+        // Act
+        sut.runSingleCycle();
+
+        // Assert
+        verify(publisher, times(1)).sendBulkOperationsRequest(requestId, request);
+    }
+
+    public static Stream<Arguments> provideBulkCacheOpsParams() {
+        return Stream.of(
+                Arguments.of("requestID", List.of(getCacheOperation(2), getCacheOperation(3))),
+                Arguments.of(UUID.randomUUID().toString(), List.of(getCacheOperation(4), getCacheOperation(5))));
+    }
+
+    private static CacheOperationRequest getCacheOperation(int ordinal) {
+        String opRequestId = "id-"+ordinal;
+        String cacheId = "cacheId";
+        String key = "key-"+ordinal;
+        String value = "value";
+        return new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, opRequestId, cacheId, key, value);
     }
 
 }

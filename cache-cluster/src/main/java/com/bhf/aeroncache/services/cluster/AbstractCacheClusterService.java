@@ -44,7 +44,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private final CacheSchemaDetailsProvider schemaDetails;
     private Cluster cluster;
     private final CacheTracingService tracingService;
-    CacheSubscriptionService<I, K, V> subscriptionService;
+    protected CacheSubscriptionService<I, K, V> subscriptionService;
     private IdleStrategy idleStrategy;
     private final CacheManagerFactory<I, K, V> cacheManagerFactory;
     private final CacheManager<I, K, V> cacheManager;
@@ -81,11 +81,11 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.deleteCacheRequestDetails = new DeleteCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.getCacheEntryRequestDetails = new GetCacheEntryRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
         this.getAllCacheEntriesRequestDetails = new GetAllCacheEntriesRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
-        this.addEntryFailureResult = new AddCacheEntryResult<>();
+        this.addEntryFailureResult = new AddCacheEntryResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
         this.getCacheStatsRequestDetails = new GetCacheStatsRequestDetails();
         this.cacheSubscribeRequestDetails = new CacheSubscriptionRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.cacheUnsubscribeRequestDetails = new CacheUnsubscribeRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
-        this.bulkCacheOpsRequestDetails = new BulkCacheOpsRequestDetails<>();
+        this.bulkCacheOpsRequestDetails = new BulkCacheOpsRequestDetails<>(cacheManagerFactory.getIndexSupplier(), cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getValueSupplier());
         this.subscribeResult = new CacheSubscriptionResult<>(cacheManagerFactory.getIndexSupplier().get());
         this.unsubscribeResult = new CacheUnsubscribeResult<>(cacheManagerFactory.getIndexSupplier().get());
         this.cacheManagerFactory = cacheManagerFactory;
@@ -264,8 +264,15 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
                 var createCacheResult = cacheManager.createCache(cacheId);
                 log.info("Created cache {} dynamically, result {}", cacheId, createCacheResult);
                 cache = cacheManager.getCache(cacheId);
-            } else if(session!=null){
-                handleMissingCacheOnAddEntry(session, buffer, offset, cacheId, key, value, requestId);
+            } else {
+                if(session!=null){
+                    handleMissingCacheOnAddEntry(session, buffer, offset, cacheId, key, value, requestId);
+                }
+                addEntryFailureResult.clear();
+                addEntryFailureResult.setRequestId(requestId);
+                addEntryFailureResult.getCacheId().copyFrom(cacheId);
+                addEntryFailureResult.getEntryKey().copyFrom(key);
+                addEntryFailureResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
                 return addEntryFailureResult;
             }
         }
@@ -327,8 +334,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private void handleMissingCacheOnAddEntry(ClientSession session, DirectBuffer buffer, int offset, I cacheId, K key, V value, String requestId) {
         addEntryFailureResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
         addEntryFailureResult.setRequestId(requestId);
-        addEntryFailureResult.setCacheId(cacheId);
+        addEntryFailureResult.getCacheId().copyFrom(cacheId);
         log.info("Cache {} doesn't exist, tried to add on key key: {}", cacheId, addEntryFailureResult.getEntryKey());
+
         handlePostAddCacheEntry(cacheId, key, value, addEntryFailureResult, session);
     }
 
@@ -355,7 +363,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         log.info("Got get cache entry for cache id {} on key {}, requestId {}", cacheId, key, requestId);
         var getCacheEntryResult = cacheManager.getCacheEntry(cacheId, key);
         getCacheEntryResult.setRequestId(requestId);
-        getCacheEntryResult.getCacheId().copyFrom(cacheId);
+        //getCacheEntryResult.getCacheId().copyFrom(cacheId);
         return getCacheEntryResult;
     }
 
@@ -451,6 +459,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var requestId = requestDetails.getRequestId();
         log.info("Got bulk operations request with Id: {}", requestId);
         BulkCacheOpsResult<I,K,V> res = processBulkOperations(requestDetails);
+        res.setRequestId(requestId);
         handlePostBulkOpsRequest(res, session);
         tracingService.endBulkOpsRequest(requestDetails);
     }
@@ -478,18 +487,30 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var requestId = op.getRequestId();
         K key = op.getKey();
         var result = processRemoveCacheEntry(cacheId, key, requestId);
-        log.debug("Bulk request, remove item result: {}", result);
-        bulkOpsResult.addResult(result);
+
+        RemoveCacheEntryResult<I, K> bulkResult = new RemoveCacheEntryResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        bulkResult.copyFrom(result);
+        log.debug("Bulk request, remove item result: {}", bulkResult);
+        bulkOpsResult.addResult(bulkResult);
+
+        if (result.getStatus() == CacheOperationStatus.SUCCESS) {
+            // update the subscription service
+            handlePostRemoveCacheEntry(cacheId, key, result, null);
+        }
     }
 
     private void handleBulkOpDeleteCache(CacheOperationRequestDetails<I,K,V> op, BulkCacheOpsResult<I,K,V> bulkOpsResult) {
         I cacheId = op.getCacheId();
         var result = processDeleteCache(cacheId, op.getRequestId());
-        log.debug("Bulk request, delete cache result: {}", result);
-        bulkOpsResult.addResult(result);
+        DeleteCacheResult<I> bulkResult = new DeleteCacheResult<>(cacheManagerFactory.getIndexSupplier().get());
+        bulkResult.copyFrom(result);
+        log.debug("Bulk request, delete cache result: {}", bulkResult);
+        bulkOpsResult.addResult(bulkResult);
 
         // update the subscription service
-        handlePostDeleteCache(cacheId, result, null);
+        if (result.getStatus() == CacheOperationStatus.SUCCESS) {
+            handlePostDeleteCache(cacheId, result, null);
+        }
     }
 
     private void handleBulkOpGetItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult) {
@@ -497,19 +518,26 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var requestId = op.getRequestId();
         K key = op.getKey();
         var result = processGetCacheEntry(cacheId, key, requestId);
-        log.debug("Bulk request, get item result: {}", result);
-        bulkOpsResult.addResult(result);
+        GetCacheEntryResult<I,K,V> bulkResult = new GetCacheEntryResult<>(cacheManagerFactory.getIndexSupplier().get(),
+                cacheManagerFactory.getKeySupplier().get(), cacheManagerFactory.getValueSupplier().get());
+        bulkResult.copyFrom(result);
+        log.debug("Bulk request, get item result: {}", bulkResult);
+        bulkOpsResult.addResult(bulkResult);
     }
 
     private void handleBulkOpClearCache(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult) {
         I cacheId = op.getCacheId();
         var requestId = op.getRequestId();
         var result = processClearCache(cacheId, requestId);
-        log.debug("Bulk request, clear cache result: {}", result);
-        bulkOpsResult.addResult(result);
+        ClearCacheResult<I> bulkResult = new ClearCacheResult<>(cacheManagerFactory.getIndexSupplier().get());
+        bulkResult.copyFrom(result);
+        log.debug("Bulk request, clear cache result: {}", bulkResult);
+        bulkOpsResult.addResult(bulkResult);
 
         // update the subscription service
-        handlePostClearCache(cacheId, result, null);
+        if (result.getStatus() == CacheOperationStatus.SUCCESS) {
+            handlePostClearCache(cacheId, result, null);
+        }
     }
 
     private void handleBulkOpAddItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult) {
@@ -519,19 +547,25 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var ttl = op.getTtl();
         var requestId = op.getRequestId();
         var result = processAddCacheEntry(cacheId, key, value, ttl, requestId, null, null, 0);
-        log.debug("Bulk request, add item result: {}", result);
-        bulkOpsResult.addResult(result);
+        AddCacheEntryResult<I, K> bulkResult = new AddCacheEntryResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        bulkResult.copyFrom(result);
+        log.debug("Bulk request, add item result: {}", bulkResult);
+        bulkOpsResult.addResult(bulkResult);
 
         // update the subscription service
-        handlePostAddCacheEntry(cacheId, key, value, result, null);
+        if (result.getStatus() == CacheOperationStatus.SUCCESS) {
+            handlePostAddCacheEntry(cacheId, key, value, result, null);
+        }
     }
 
     private void handleBulkOpCreateCache(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult) {
         I cacheId = op.getCacheId();
         var requestId = op.getRequestId();
         var result = processCreateCache(cacheId, requestId);
-        log.debug("Bulk request, create cache result: {}", result);
-        bulkOpsResult.addResult(result);
+        CreateCacheResult<I> bulkResult = new CreateCacheResult<>(cacheManagerFactory.getIndexSupplier().get());
+        bulkResult.copyFrom(result);
+        log.debug("Bulk request, create cache result: {}", bulkResult);
+        bulkOpsResult.addResult(bulkResult);
     }
 
     /**

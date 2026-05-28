@@ -57,7 +57,7 @@
             <validValue name="REMOVE_ITEM">2</validValue>
             <validValue name="CLEAR_CACHE">3</validValue>
             <validValue name="GET_ITEM">4</validValue>
-            <validValue name="DELETE_ITEM">5</validValue>
+            <validValue name="DELETE_CACHE">5</validValue>
         </enum>
     </types>
 

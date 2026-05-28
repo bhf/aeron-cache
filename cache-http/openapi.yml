@@ -41,6 +41,32 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/cache/bulkops:
+    post:
+      tags:
+        - BulkOps
+      summary: Perform bulk cache operations
+      description: Execute multiple cache operations in a single request.
+      operationId: bulkOps
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkCacheOpsRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkCacheOpsResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/cache/{cacheId}:
     get:
       tags:
@@ -486,3 +512,61 @@ components:
           example: 'SomeRandomKey'
         operationStatus:
           type: string
+    BulkCacheOpsRequest:
+      type: object
+      properties:
+        requestId:
+          type: string
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CacheOperationRequest'
+    CacheOperationRequest:
+      type: object
+      properties:
+        operationType:
+          $ref: '#/components/schemas/BulkOperationType'
+        ttl:
+          type: integer
+          format: int64
+        requestId:
+          type: string
+        cacheId:
+          type: string
+        key:
+          type: string
+        value:
+          type: string
+    BulkOperationType:
+      type: string
+      enum:
+        - NONE
+        - CREATE_CACHE
+        - ADD_ITEM
+        - REMOVE_ITEM
+        - CLEAR_CACHE
+        - GET_ITEM
+        - DELETE_CACHE
+    BulkCacheOpsResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+        operationResponses:
+          type: array
+          items:
+            $ref: '#/components/schemas/CacheOperationResponse'
+    CacheOperationResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+        status:
+          type: string
+        cacheId:
+          type: string
+        key:
+          type: string
+        value:
+          type: string
+

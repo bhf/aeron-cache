@@ -880,7 +880,7 @@ public class HttpApplication {
 
             var requestId = getRequestId(ctx);
             CompletableFuture<BulkCacheOpsResponse> future = new CompletableFuture<>();
-            Consumer<BulkCacheOpsResult> consumer = getBulkCacheOpsResultConsumer(future);
+            Consumer<BulkCacheOpsResult> consumer = getBulkCacheOpsResultConsumer(future, request.requestId());
 
             CompletableFuture.runAsync(() -> observingPublisher.sendBulkOperationsRequest(requestId, request, consumer));
 
@@ -899,16 +899,23 @@ public class HttpApplication {
     }
 
     @NotNull
-    private static Consumer<BulkCacheOpsResult> getBulkCacheOpsResultConsumer(CompletableFuture<BulkCacheOpsResponse> future) {
-        Consumer<BulkCacheOpsResult> consumer = c -> {
+    private static Consumer<BulkCacheOpsResult> getBulkCacheOpsResultConsumer(CompletableFuture<BulkCacheOpsResponse> future, String requestId) {
+        return c -> {
             List<CacheOperationResponse> operationResponses = new ArrayList<>();
 
+            List<CacheOperationResultDetails<ReusableString, ReusableString, ReusableString>> ops = c.getOperations();
+            for(var o : ops){
+                var opRequestId = o.getRequestId();
+                var cacheId = o.getCacheId();
+                var value = o.getValue();
+                var key = o.getKey();
+                var status = o.getOperationStatus();
+                operationResponses.add(new CacheOperationResponse(opRequestId, status, cacheId.value(), key.value(), value.value()));
+            }
 
-
-            BulkCacheOpsResponse response = new BulkCacheOpsResponse(c.getRequestId(), operationResponses);
+            BulkCacheOpsResponse response = new BulkCacheOpsResponse(requestId, operationResponses);
             future.complete(response);
         };
-        return consumer;
     }
 
     /**
