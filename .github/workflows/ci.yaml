@@ -19,7 +19,7 @@ jobs:
       - name: Run Unit Tests
         # skipIntegrationTests=true is set in gradle.properties by default,
         # so this will purely run unit tests without integration overhead
-        run: ./gradlew test
+        run: ./gradlew test -PskipIntegrationTests=true
 
   discover-test-modules:
     runs-on: ubuntu-latest
