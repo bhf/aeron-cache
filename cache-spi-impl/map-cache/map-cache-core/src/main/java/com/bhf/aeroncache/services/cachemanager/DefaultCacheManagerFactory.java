@@ -1,5 +1,7 @@
 package com.bhf.aeroncache.services.cachemanager;
 
+import com.bhf.aeroncache.codecs.CacheTimersCodec;
+import com.bhf.aeroncache.codecs.ReusableStringTimersCodec;
 import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
 import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
@@ -23,6 +25,7 @@ public class DefaultCacheManagerFactory extends MapCacheManagerFactory<Reusable<
                 (CacheIdSnapshotCodec) new ReusableStringCacheIdSnapshotCodec(),
                 (CacheEntrySnapshotCodec) new ReusableStringCacheEntrySnapshotCodec(),
                 (CacheResponseEncoder) new ReusableStringCacheResponseEncoder(),
-                (CacheRequestDecoder) new ReusableStringCacheRequestDecoder());
+                (CacheRequestDecoder) new ReusableStringCacheRequestDecoder(),
+                (CacheTimersCodec) new ReusableStringTimersCodec());
     }
 }

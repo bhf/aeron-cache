@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cachemanager;
 
+import com.bhf.aeroncache.codecs.CacheTimersCodec;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
@@ -28,6 +29,7 @@ public class MapCacheManagerFactory<I extends Reusable, K extends Reusable, V ex
     private final CacheEntrySnapshotCodec<K, V> cacheEntrySnapshotCodec;
     private final CacheResponseEncoder<I,K,V> encoder;
     private final CacheRequestDecoder<I,K,V> decoder;
+    private final CacheTimersCodec<I, K> timersCodec;
 
     @Override
     public CacheManager<I, K, V> getCacheManager() {
@@ -58,6 +60,11 @@ public class MapCacheManagerFactory<I extends Reusable, K extends Reusable, V ex
     @Override
     public CacheRequestDecoder<I, K, V> getCacheRequestDecoder() {
         return decoder;
+    }
+
+    @Override
+    public CacheTimersCodec<I, K> getCacheTimersCodec() {
+        return timersCodec;
     }
 
     @Override

@@ -400,7 +400,7 @@ public class HttpApplication {
     }
 
     private static void makeClusterToolsRequest(Context context, String command) {
-        var clusterToolsFolder = System.getenv().getOrDefault("CLUSTER_FOLDER", "/tmp/aeron-cluster");
+        var clusterToolsFolder = System.getenv().getOrDefault("CLUSTER_FOLDER", "node0/cluster");
         var requestBody = new ClusterToolsRequest(command, clusterToolsFolder);
 
         try {
