@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services;
 
+import com.bhf.aeroncache.codecs.ReusableStringTimersCodec;
 import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
@@ -103,9 +104,14 @@ public class TestUtils {
     public static MapCacheManagerFactory<ReusableString, ReusableString, ReusableString> getCacheManagerFactory(){
         var encoder = new ReusableStringCacheResponseEncoder();
         var decoder = new ReusableStringCacheRequestDecoder();
+        var timersCodec = new ReusableStringTimersCodec();
         return new MapCacheManagerFactory<>(SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
-                new ReusableStringCacheIdSnapshotCodec(), new ReusableStringCacheEntrySnapshotCodec(), encoder, decoder);
+                new ReusableStringCacheIdSnapshotCodec(),
+                new ReusableStringCacheEntrySnapshotCodec(),
+                encoder,
+                decoder,
+                timersCodec);
     }
 
     public static void assertRequestIdCacheIdMatch(List<CacheOperationRequest> ops, List<CacheOperationResultDetails<ReusableString, ReusableString, ReusableString>> opResults, int i) {
