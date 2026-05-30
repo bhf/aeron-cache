@@ -33,10 +33,12 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      * @param cacheId     The cache to subscribe too.
      * @param wsSessionId The websocket session ID.
      * @param requestId   The request ID.
+     * @param sendSnapshot Whether to request initial state hydration.
      * @param consumer    The consumer of {@link CacheUpdateEvent}.
      */
     @Override
-    public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, String cacheId, String wsSessionId, String requestId, Consumer<CacheUpdateEvent> consumer) {
+    public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, String cacheId,
+                                 String wsSessionId, String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
         List<IdentifiableConsumer<String, CacheUpdateEvent>> currentSubscribers;
         if (cacheSubscriptions.containsKey(cacheId)) {
             currentSubscribers = cacheSubscriptions.get(cacheId);
@@ -44,7 +46,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             currentSubscribers = new CopyOnWriteArrayList<>();
             cacheSubscriptions.put(cacheId, currentSubscribers);
             log.info("Sending request to cluster to subscribe to cache {}", cacheId);
-            sendCacheSubscriptionRequest(cluster, requestId, cacheId, subscriptionFailureHandler);
+            sendCacheSubscriptionRequest(cluster, requestId, cacheId, sendSnapshot, subscriptionFailureHandler, consumer);
         }
 
         log.info("Adding subscription for cache {}, client session {}", cacheId, wsSessionId);
@@ -68,8 +70,9 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      * @param requestId The request ID.
      * @param cacheId   The ID of the cache we want to subscribe too on the cluster side.
      */
-    private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, String cacheId, Consumer<Void> subscriptionFailureHandler) {
-        sendCacheSubscribe(requestId, cacheId, subscriptionResult -> {
+    private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, String cacheId, boolean sendSnapshot,
+                                              Consumer<Void> subscriptionFailureHandler, Consumer<CacheUpdateEvent> streamingEventConsumer) {
+        sendCacheSubscribe(requestId, cacheId, sendSnapshot, subscriptionResult -> {
             if (subscriptionResult.getStatus() != CacheOperationStatus.SUCCESS) {
                 var errorMsg = "Couldn't subscribe to cache " + cacheId + ", status=" + subscriptionResult.getStatus();
                 log.warn(errorMsg);
@@ -81,6 +84,15 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                 else{
                     log.warn("Not calling subscription failure handler");
                 }
+            }
+
+            if(subscriptionResult.getEntries()!=null && !subscriptionResult.getEntries().isEmpty()){
+                subscriptionResult.getEntries().forEach((k, v) -> {
+                    CacheUpdateEvent.EventType eventType = CacheUpdateEvent.EventType.ADD_ITEM;
+                    var ik = String.valueOf(k.value());
+                    var iv = String.valueOf(v.value());
+                    streamingEventConsumer.accept(new CacheUpdateEvent(cacheId, eventType, ik, iv, requestId));
+                });
             }
         });
     }

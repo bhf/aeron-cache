@@ -7,14 +7,18 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Getter
 @Setter
 @RequiredArgsConstructor
 @Flyweight
-public class CacheSubscriptionResult<I extends Reusable> implements Reusable<CacheSubscriptionResult<I>> {
+public class CacheSubscriptionResult<I extends Reusable, K extends Reusable, V extends Reusable> implements Reusable<CacheSubscriptionResult<I,K,V>> {
 
     final RequestId requestId = new RequestId();
     final I cacheId;
+    public Map<K, V> entries = new HashMap<>();
     CacheOperationStatus status = CacheOperationStatus.NONE;
 
     public String getRequestId() {
@@ -33,19 +37,19 @@ public class CacheSubscriptionResult<I extends Reusable> implements Reusable<Cac
     }
 
     @Override
-    public void copyFrom(CacheSubscriptionResult<I> source) {
+    public void copyFrom(CacheSubscriptionResult<I,K,V> source) {
         this.requestId.copyFrom(source.requestId);
         this.cacheId.copyFrom(source.cacheId);
         this.status = source.status;
     }
 
     @Override
-    public void copyFrom(Reusable<CacheSubscriptionResult<I>> source) {
+    public void copyFrom(Reusable<CacheSubscriptionResult<I,K,V>> source) {
         this.copyFrom(source.value());
     }
 
     @Override
-    public CacheSubscriptionResult<I> value() {
+    public CacheSubscriptionResult<I,K,V> value() {
         return this;
     }
 }

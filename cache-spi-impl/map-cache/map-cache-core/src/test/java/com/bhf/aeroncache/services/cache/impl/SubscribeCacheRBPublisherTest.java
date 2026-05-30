@@ -42,7 +42,7 @@ class SubscribeCacheRBPublisherTest {
 
         // Act + Assert
         Assertions.assertThrows(NullPointerException.class,
-                () -> sut.sendCacheSubscribe(requestId, cacheId));
+                () -> sut.sendCacheSubscribe(requestId, cacheId, false));
 
         verifyNoInteractions(rb);
     }
@@ -56,7 +56,7 @@ class SubscribeCacheRBPublisherTest {
         when(rb.buffer()).thenThrow(RuntimeException.class);
 
         // Act
-        sut.sendCacheSubscribe(requestId, cacheId);
+        sut.sendCacheSubscribe(requestId, cacheId, false);
 
         // Assert
         verify(rb, atMostOnce()).abort(intThat(isGreaterThanZero()));
@@ -73,7 +73,7 @@ class SubscribeCacheRBPublisherTest {
         when(rb.buffer()).thenReturn(mockBuffer);
 
         // Act
-        sut.sendCacheSubscribe(requestId, cacheId);
+        sut.sendCacheSubscribe(requestId, cacheId, false);
 
         // Assert
         verify(rb, atMostOnce()).commit(intThat(isGreaterThanZero()));

@@ -53,7 +53,7 @@ class UnsubscribeCacheTest {
         tracingService = Mockito.mock(CacheTracingService.class);
         sut = new SBEDecodingCacheClusterService("node0", tracingService, TestUtils.getCacheManagerFactory());
         IdleStrategy idleStrategy = Mockito.mock(IdleStrategy.class);
-        CacheSubscriptionResult<ReusableString> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
+        CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
         CacheUnsubscribeResult<ReusableString> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableString());
         Supplier<ReusableString> indexSupplier = ReusableString::new;
         sut.subscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult, indexSupplier);
@@ -72,7 +72,7 @@ class UnsubscribeCacheTest {
         TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        int length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, requestBuffer);
+        int length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, false, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
         // Act

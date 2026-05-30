@@ -27,7 +27,7 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     final List<IdentifiableConsumer<String, ClearCacheResult<I>>> clearCacheObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, GetAllCacheEntriesResult<I, K, V>>> getCacheEntriesObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, CacheStatsResult<I>>> allCacheStatsObservers = new CopyOnWriteArrayList<>();
-    final List<IdentifiableConsumer<String, CacheSubscriptionResult<I>>> cacheSubscribeObservers = new CopyOnWriteArrayList<>();
+    final List<IdentifiableConsumer<String, CacheSubscriptionResult<I,K,V>>> cacheSubscribeObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, CacheUnsubscribeResult<I>>> cacheUnsubscribeObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, BulkCacheOpsResult<I,K,V>>> bulkOpsObservers = new CopyOnWriteArrayList<>();
     Consumer<CreateCacheResult<I>> createCacheConsumer;
@@ -163,7 +163,7 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId, Consumer<CacheSubscriptionResult<I>> c) {
+    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
         cacheSubscribeObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {
@@ -171,7 +171,7 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
             }
 
             @Override
-            public void accept(CacheSubscriptionResult<I> subscriptionResult) {
+            public void accept(CacheSubscriptionResult<I,K,V> subscriptionResult) {
                 c.accept(subscriptionResult);
             }
         });
@@ -285,7 +285,7 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     }
 
     @Override
-    public void handleCacheSubscribeResponse(CacheSubscriptionResult<I> cacheSubscriptionResult) {
+    public void handleCacheSubscribeResponse(CacheSubscriptionResult<I,K,V> cacheSubscriptionResult) {
         var targetId = cacheSubscriptionResult.getRequestId();
         log.info("Got cache subscribe response on requestId {}", targetId);
         cacheSubscribeObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(cacheSubscriptionResult));

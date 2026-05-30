@@ -406,7 +406,7 @@ public class WebsocketApplication {
             final Consumer<Void> subscriptionFailureHandler = _ ->
                     wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
             subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, wsConnectContext.sessionId(),
-                    requestId, wsConnectContext::send);
+                    requestId, false, wsConnectContext::send);
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();
             log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
@@ -433,7 +433,7 @@ public class WebsocketApplication {
                         wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
 
                 subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, wsConnectContext.sessionId(),
-                        requestId, wsConnectContext::send);
+                        requestId, false, wsConnectContext::send);
             }
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();

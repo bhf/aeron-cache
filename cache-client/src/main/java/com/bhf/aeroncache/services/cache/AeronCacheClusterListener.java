@@ -45,7 +45,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     private final RemoveCacheEntryResult<I, K> removeCacheEntryResult;
     private final GetCacheEntryResult<I, K, V> getCacheEntryResult;
     private final GetAllCacheEntriesResult<I, K, V> getCacheEntriesResult;
-    private final CacheSubscriptionResult<I> cacheSubscriptionResult;
+    private final CacheSubscriptionResult<I,K,V> cacheSubscriptionResult;
     private final CacheUnsubscribeResult<I> cacheUnsubscribeResult;
     private final CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult;
     private final BulkCacheOpsResult<I,K,V> bulkCacheOpsResult;

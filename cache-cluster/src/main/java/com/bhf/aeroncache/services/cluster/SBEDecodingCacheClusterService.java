@@ -165,7 +165,7 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
     }
 
     @Override
-    protected void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I> subscriptionRequestResult, ClientSession session) {
+    protected void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I,K,V> subscriptionRequestResult, ClientSession session) {
         var length = encoder.encodeCacheSubscriptionResult(subscriptionRequestResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
     }

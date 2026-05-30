@@ -19,7 +19,7 @@ public interface CacheSubscriptionService<I extends Reusable, K extends Reusable
      * @param session
      * @return A response to the request for subscription.
      */
-    CacheSubscriptionResult<I> subscribe(CacheSubscriptionRequestDetails<I> requestDetails, ClientSession session);
+    CacheSubscriptionResult<I,K,V> subscribe(CacheSubscriptionRequestDetails<I> requestDetails, ClientSession session);
 
     /**
      * Unsubscribe to a cache.

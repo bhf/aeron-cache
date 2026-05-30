@@ -66,8 +66,8 @@ public class ObservingClusterRequestPublisher extends ObservingCacheRequestPubli
     }
 
     @Override
-    public void sendCacheSubscribeBlocking(String requestId, String cacheId) {
-        blockingPublisher.sendCacheSubscribeBlocking(requestId, cacheId);
+    public void sendCacheSubscribeBlocking(String requestId, String cacheId, boolean sendSnapshot) {
+        blockingPublisher.sendCacheSubscribeBlocking(requestId, cacheId, sendSnapshot);
     }
 
     @Override

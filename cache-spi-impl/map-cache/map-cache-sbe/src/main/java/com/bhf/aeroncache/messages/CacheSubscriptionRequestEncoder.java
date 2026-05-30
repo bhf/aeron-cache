@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class CacheSubscriptionRequestEncoder
 {
-    public static final int BLOCK_LENGTH = 0;
+    public static final int BLOCK_LENGTH = 1;
     public static final int TEMPLATE_ID = 17;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -98,9 +98,45 @@ public final class CacheSubscriptionRequestEncoder
         this.limit = limit;
     }
 
-    public static int cacheIdId()
+    public static int sendSnapshotId()
     {
         return 1;
+    }
+
+    public static int sendSnapshotSinceVersion()
+    {
+        return 0;
+    }
+
+    public static int sendSnapshotEncodingOffset()
+    {
+        return 0;
+    }
+
+    public static int sendSnapshotEncodingLength()
+    {
+        return 1;
+    }
+
+    public static String sendSnapshotMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public CacheSubscriptionRequestEncoder sendSnapshot(final BooleanType value)
+    {
+        buffer.putByte(offset + 0, (byte)value.value());
+        return this;
+    }
+
+    public static int cacheIdId()
+    {
+        return 2;
     }
 
     public static String cacheIdCharacterEncoding()
@@ -176,7 +212,7 @@ public final class CacheSubscriptionRequestEncoder
 
     public static int requestIdId()
     {
-        return 2;
+        return 3;
     }
 
     public static String requestIdCharacterEncoding()

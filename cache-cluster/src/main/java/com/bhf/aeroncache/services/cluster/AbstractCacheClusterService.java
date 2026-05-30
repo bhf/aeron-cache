@@ -65,7 +65,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final BulkCacheOpsRequestDetails<I,K,V> bulkCacheOpsRequestDetails;
     final BulkCacheOpsResult<I, K, V> bulkOpsResult;
 
-    final CacheSubscriptionResult<I> subscribeResult;
+    final CacheSubscriptionResult<I,K,V> subscribeResult;
     final CacheUnsubscribeResult<I> unsubscribeResult;
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
 
@@ -434,8 +434,22 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var cacheId = requestDetails.getCacheId();
         log.info("Got request to subscribe for cache updates on cache: {}, request Id: {}", cacheId, requestId);
         var result = subscriptionService.subscribe(requestDetails, session);
+
+        if(requestDetails.isSendSnapshot()){
+            System.out.println("IS SEND SNAPSHOT");
+            populateSnapshot(result, cacheId);
+        }
+
         handlePostCacheSubscriptionRequest(result, session);
         tracingService.endCacheSubscriptionRequest(requestDetails);
+    }
+
+    private void populateSnapshot(CacheSubscriptionResult<I,K,V> result, I cacheId) {
+        var cache = cacheManager.getCache(cacheId);
+
+        if (cache != null) {
+            result.entries = cache.getAllEntries();
+        }
     }
 
     void handleCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset) {
@@ -761,7 +775,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param subscriptionRequestResult The result of subscribing.
      * @param session                   The client session.
      */
-    protected abstract void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I> subscriptionRequestResult, ClientSession session);
+    protected abstract void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I,K,V> subscriptionRequestResult, ClientSession session);
 
     /**
      * Send out the result of unsubscribing to a cache.

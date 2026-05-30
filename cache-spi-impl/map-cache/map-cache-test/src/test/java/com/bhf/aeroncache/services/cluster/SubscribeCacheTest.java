@@ -42,7 +42,7 @@ class SubscribeCacheTest {
     private final Header header = new Header(0, 0);
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
-    private CacheSubscriptionResult<ReusableString> result;
+    private CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> result;
     private SBEDecodingCacheClusterService sut;
     private CacheTracingService tracingService;
     private final CacheResponseDecoder cacheResponseDecoder = new ReusableStringCacheResponseDecoder();
@@ -53,7 +53,7 @@ class SubscribeCacheTest {
         tracingService = Mockito.mock(CacheTracingService.class);
         sut = new SBEDecodingCacheClusterService("node0", tracingService, TestUtils.getCacheManagerFactory());
         IdleStrategy idleStrategy = Mockito.mock(IdleStrategy.class);
-        CacheSubscriptionResult<ReusableString> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
+        CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
         CacheUnsubscribeResult<ReusableString> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableString());
         Supplier<ReusableString> indexSupplier = ReusableString::new;
         sut.subscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult, indexSupplier);
@@ -72,7 +72,7 @@ class SubscribeCacheTest {
         TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        int length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, requestBuffer);
+        int length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, false, requestBuffer);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
@@ -95,7 +95,7 @@ class SubscribeCacheTest {
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         var cacheId = "123L";
-        var length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, requestBuffer);
+        var length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, false, requestBuffer);
 
         // Act
         long ts = System.currentTimeMillis();

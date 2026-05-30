@@ -153,11 +153,26 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     }
 
     @Override
-    public int encodeCacheSubscriptionResult(CacheSubscriptionResult<ReusableString> subscriptionRequestResult, MutableDirectBuffer egressBuffer) {
+    public int encodeCacheSubscriptionResult(CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> subscriptionRequestResult, MutableDirectBuffer egressBuffer) {
         cacheSubscriptionResponseEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheSubscriptionResponseEncoder
-                .status(getOperationStatus(subscriptionRequestResult.getStatus()))
-                .cacheId(subscriptionRequestResult.getCacheId().value())
+                .status(getOperationStatus(subscriptionRequestResult.getStatus()));
+
+        var values = subscriptionRequestResult.entries;
+
+
+        if(values!=null) {
+            int size = values!=null ? values.size() : 0;
+            var itemsEncoder = cacheSubscriptionResponseEncoder.itemsCount(size);
+
+            String cacheId = subscriptionRequestResult.getCacheId().value();
+            values.forEach((key, value) -> {
+                itemsEncoder.next();
+                itemsEncoder.key(key.value()).value(value.value()).cacheId(cacheId);
+            });
+        }
+
+        cacheSubscriptionResponseEncoder.cacheId(subscriptionRequestResult.getCacheId().value())
                 .requestId(subscriptionRequestResult.getRequestId());
 
         return cacheSubscriptionResponseEncoder.encodedLength() + headerEncoder.encodedLength();

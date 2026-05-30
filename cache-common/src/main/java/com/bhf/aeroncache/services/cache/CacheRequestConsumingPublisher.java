@@ -91,8 +91,9 @@ public interface CacheRequestConsumingPublisher<I extends Reusable, K extends Re
      * @param requestId The request ID.
      * @param cacheId   The ID of the cache to subscribe too.
      * @param c         The consumer that will handle the result.
+     * @param sendSnapshot Whether to send a snapshot for initial state hydration.
      */
-    void sendCacheSubscribe(String requestId, String cacheId, Consumer<CacheSubscriptionResult<I>> c);
+    void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c);
 
     /**
      * Send a message to unsubscribe to cache updates.

@@ -77,8 +77,9 @@ public class RegularStringCacheRequestEncoder implements CacheRequestEncoder<Str
     }
 
     @Override
-    public int encodeCacheSubscribe(String requestId, String cacheId, MutableDirectBuffer msgBuffer) {
+    public int encodeCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot, MutableDirectBuffer msgBuffer) {
         cacheSubscriptionRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .sendSnapshot(sendSnapshot ? BooleanType.T : BooleanType.F)
                 .cacheId(cacheId).requestId(requestId);
         return cacheSubscriptionRequestEncoder.encodedLength()+ headerEncoder.encodedLength();
     }

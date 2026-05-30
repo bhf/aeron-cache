@@ -139,7 +139,7 @@ public class SSEApplication extends Jooby {
             };
 
             subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, serverSentEmitter.getId(),
-                    requestId, consumer);
+                    requestId, false, consumer);
         } catch (TypeMismatchException e) {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
         }
@@ -162,7 +162,7 @@ public class SSEApplication extends Jooby {
             };
 
             subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, serverSentEmitter.getId(),
-                    requestId, consumer);
+                    requestId, false, consumer);
         }
     }
 

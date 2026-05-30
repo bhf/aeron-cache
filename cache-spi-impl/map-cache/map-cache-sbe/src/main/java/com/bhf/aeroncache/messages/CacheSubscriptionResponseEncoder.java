@@ -134,6 +134,326 @@ public final class CacheSubscriptionResponseEncoder
         return this;
     }
 
+    private final ItemsEncoder items = new ItemsEncoder(this);
+
+    public static long itemsId()
+    {
+        return 30;
+    }
+
+    public ItemsEncoder itemsCount(final int count)
+    {
+        items.wrap(buffer, count);
+        return items;
+    }
+
+    public static final class ItemsEncoder
+    {
+        public static final int HEADER_SIZE = 4;
+        private final CacheSubscriptionResponseEncoder parentMessage;
+        private MutableDirectBuffer buffer;
+        private int count;
+        private int index;
+        private int offset;
+        private int initialLimit;
+
+        ItemsEncoder(final CacheSubscriptionResponseEncoder parentMessage)
+        {
+            this.parentMessage = parentMessage;
+        }
+
+        public void wrap(final MutableDirectBuffer buffer, final int count)
+        {
+            if (count < 0 || count > 65534)
+            {
+                throw new IllegalArgumentException("count outside allowed range: count=" + count);
+            }
+
+            if (buffer != this.buffer)
+            {
+                this.buffer = buffer;
+            }
+
+            index = 0;
+            this.count = count;
+            final int limit = parentMessage.limit();
+            initialLimit = limit;
+            parentMessage.limit(limit + HEADER_SIZE);
+            buffer.putShort(limit + 0, (short)0, BYTE_ORDER);
+            buffer.putShort(limit + 2, (short)count, BYTE_ORDER);
+        }
+
+        public ItemsEncoder next()
+        {
+            if (index >= count)
+            {
+                throw new java.util.NoSuchElementException();
+            }
+
+            offset = parentMessage.limit();
+            parentMessage.limit(offset + sbeBlockLength());
+            ++index;
+
+            return this;
+        }
+
+        public int resetCountToIndex()
+        {
+            count = index;
+            buffer.putShort(initialLimit + 2, (short)count, BYTE_ORDER);
+
+            return count;
+        }
+
+        public static int countMinValue()
+        {
+            return 0;
+        }
+
+        public static int countMaxValue()
+        {
+            return 65534;
+        }
+
+        public static int sbeHeaderSize()
+        {
+            return HEADER_SIZE;
+        }
+
+        public static int sbeBlockLength()
+        {
+            return 0;
+        }
+
+        public static int keyId()
+        {
+            return 31;
+        }
+
+        public static String keyCharacterEncoding()
+        {
+            return java.nio.charset.StandardCharsets.UTF_8.name();
+        }
+
+        public static String keyMetaAttribute(final MetaAttribute metaAttribute)
+        {
+            if (MetaAttribute.PRESENCE == metaAttribute)
+            {
+                return "required";
+            }
+
+            return "";
+        }
+
+        public static int keyHeaderLength()
+        {
+            return 4;
+        }
+
+        public ItemsEncoder putKey(final DirectBuffer src, final int srcOffset, final int length)
+        {
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+            return this;
+        }
+
+        public ItemsEncoder putKey(final byte[] src, final int srcOffset, final int length)
+        {
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+            return this;
+        }
+
+        public ItemsEncoder key(final String value)
+        {
+            final byte[] bytes = (null == value || value.isEmpty()) ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+            final int length = bytes.length;
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, bytes, 0, length);
+
+            return this;
+        }
+
+        public static int valueId()
+        {
+            return 32;
+        }
+
+        public static String valueCharacterEncoding()
+        {
+            return java.nio.charset.StandardCharsets.UTF_8.name();
+        }
+
+        public static String valueMetaAttribute(final MetaAttribute metaAttribute)
+        {
+            if (MetaAttribute.PRESENCE == metaAttribute)
+            {
+                return "required";
+            }
+
+            return "";
+        }
+
+        public static int valueHeaderLength()
+        {
+            return 4;
+        }
+
+        public ItemsEncoder putValue(final DirectBuffer src, final int srcOffset, final int length)
+        {
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+            return this;
+        }
+
+        public ItemsEncoder putValue(final byte[] src, final int srcOffset, final int length)
+        {
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+            return this;
+        }
+
+        public ItemsEncoder value(final String value)
+        {
+            final byte[] bytes = (null == value || value.isEmpty()) ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+            final int length = bytes.length;
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, bytes, 0, length);
+
+            return this;
+        }
+
+        public static int cacheIdId()
+        {
+            return 33;
+        }
+
+        public static String cacheIdCharacterEncoding()
+        {
+            return java.nio.charset.StandardCharsets.UTF_8.name();
+        }
+
+        public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
+        {
+            if (MetaAttribute.PRESENCE == metaAttribute)
+            {
+                return "required";
+            }
+
+            return "";
+        }
+
+        public static int cacheIdHeaderLength()
+        {
+            return 4;
+        }
+
+        public ItemsEncoder putCacheId(final DirectBuffer src, final int srcOffset, final int length)
+        {
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+            return this;
+        }
+
+        public ItemsEncoder putCacheId(final byte[] src, final int srcOffset, final int length)
+        {
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+            return this;
+        }
+
+        public ItemsEncoder cacheId(final String value)
+        {
+            final byte[] bytes = (null == value || value.isEmpty()) ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+            final int length = bytes.length;
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, bytes, 0, length);
+
+            return this;
+        }
+    }
+
     public static int cacheIdId()
     {
         return 2;

@@ -24,7 +24,7 @@ public interface CacheResponseEncoder<I extends Reusable, K extends Reusable, V 
 
     int encodeCacheStatsResult(CacheStatsResult<I> cacheStatsResult, MutableDirectBuffer egressBuffer);
 
-    int encodeCacheSubscriptionResult(CacheSubscriptionResult<I> subscriptionRequestResult, MutableDirectBuffer egressBuffer);
+    int encodeCacheSubscriptionResult(CacheSubscriptionResult<I,K,V> subscriptionRequestResult, MutableDirectBuffer egressBuffer);
 
     int encodeCacheUnsubscribeResponse(CacheUnsubscribeResult<I> unsubscribeResponse, MutableDirectBuffer egressBuffer);
 

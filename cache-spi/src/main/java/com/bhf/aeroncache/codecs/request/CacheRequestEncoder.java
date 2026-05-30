@@ -18,7 +18,7 @@ public interface CacheRequestEncoder<I, K, V> {
 
     int encodeGetCacheEntries(String requestId, I cacheId, MutableDirectBuffer msgBuffer);
 
-    int encodeCacheSubscribe(String requestId, I cacheId, MutableDirectBuffer msgBuffer);
+    int encodeCacheSubscribe(String requestId, I cacheId, boolean sendSnapshot, MutableDirectBuffer msgBuffer);
 
     int encodeCacheUnsubscribe(String requestId, I cacheId, MutableDirectBuffer msgBuffer);
 

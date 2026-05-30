@@ -216,13 +216,13 @@ class CacheClientAgentTest {
     void shouldPublishCacheSubscribeRequest(String requestId, String cacheId) {
         // Arrange
         RBCacheRequestPublisher requestPublisher = new RBCacheRequestPublisher(rb);
-        requestPublisher.sendCacheSubscribe(requestId, cacheId);
+        requestPublisher.sendCacheSubscribe(requestId, cacheId, false);
 
         // Act
         sut.runSingleCycle();
 
         // Assert
-        verify(publisher, times(1)).sendCacheSubscribe(requestId, cacheId);
+        verify(publisher, times(1)).sendCacheSubscribe(requestId, cacheId, false);
     }
 
     public static Stream<Arguments> provideCacheSubscribeParams() {

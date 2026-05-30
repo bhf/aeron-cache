@@ -205,8 +205,8 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId) {
-        var desiredLength = (requestId.length() + 4) + (cacheId.length() + 4);
+    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot) {
+        var desiredLength = (requestId.length() + 4) + (cacheId.length() + 4) + 1;
         log.trace("DESIRED LENGTH=" + desiredLength);
 
         var claimIndex = -1;
@@ -218,6 +218,8 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
             int writeCursor = claimIndex;
             writeCursor += buffer.putStringUtf8(writeCursor, requestId);
             writeCursor += buffer.putStringUtf8(writeCursor, cacheId);
+            buffer.putByte(writeCursor, sendSnapshot ? (byte)1 : (byte)0);
+            writeCursor+=1;
             log.trace("TOTAL WRITTEN=" + (writeCursor - claimIndex));
             rb.commit(claimIndex);
         } catch (Exception e) {

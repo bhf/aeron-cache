@@ -77,10 +77,11 @@ public interface CacheRequestPublisher {
     /**
      * Send a request to subscribe to cache updates.
      *
-     * @param requestId The Id of this request.
-     * @param cacheId   The cache to subscribe too.
+     * @param requestId    The Id of this request.
+     * @param cacheId      The cache to subscribe too.
+     * @param sendSnapshot Whether to return a snapshot of the cache for initial hydration.
      */
-    void sendCacheSubscribe(String requestId, String cacheId);
+    void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot);
 
     /**
      * Send a request to unsubscribe to cache updates.

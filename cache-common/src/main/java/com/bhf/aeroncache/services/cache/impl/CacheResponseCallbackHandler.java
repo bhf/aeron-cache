@@ -53,7 +53,7 @@ public class CacheResponseCallbackHandler<I extends Reusable, K extends Reusable
     }
 
     @Override
-    public void handleCacheSubscribeResponse(CacheSubscriptionResult<I> cacheSubscriptionResult) {
+    public void handleCacheSubscribeResponse(CacheSubscriptionResult<I,K,V> cacheSubscriptionResult) {
         observerGroup.handleCacheSubscribeResponse(cacheSubscriptionResult);
     }
 
