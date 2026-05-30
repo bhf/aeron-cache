@@ -373,6 +373,8 @@ components:
         helpMsg:
           type: string
           example: 'A user friendly help message'
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
     CreateRequest:
       type: object
       properties:
@@ -386,7 +388,7 @@ components:
           type: string
           example: "CreatedCache"
         operationStatus:
-          type: string
+          $ref: '#/components/schemas/CacheOperationStatus'
     GetCacheResponse:
       type: object
       properties:
@@ -394,7 +396,7 @@ components:
           type: string
           example: "CreatedCache"
         operationStatus:
-          type: string
+          $ref: '#/components/schemas/CacheOperationStatus'
         items:
           type: array
           items:
@@ -412,7 +414,7 @@ components:
         cacheId:
           type: string
         operationStatus:
-          type: string
+          $ref: '#/components/schemas/CacheOperationStatus'
     CacheDetails:
       type: object
       properties:
@@ -478,7 +480,7 @@ components:
           type: string
           example: 'SomeRandomKey'
         operationStatus:
-          type: string
+          $ref: '#/components/schemas/CacheOperationStatus'
     DeleteCacheResponse:
       type: object
       properties:
@@ -486,7 +488,7 @@ components:
           type: string
           example: "SomeCacheID"
         operationStatus:
-          type: string
+          $ref: '#/components/schemas/CacheOperationStatus'
     GetItemResponse:
       type: object
       properties:
@@ -500,7 +502,7 @@ components:
           type: string
           example: 'SomeRandomValue'
         operationStatus:
-          type: string
+          $ref: '#/components/schemas/CacheOperationStatus'
     DeleteItemResponse:
       type: object
       properties:
@@ -511,7 +513,7 @@ components:
           type: string
           example: 'SomeRandomKey'
         operationStatus:
-          type: string
+          $ref: '#/components/schemas/CacheOperationStatus'
     BulkCacheOpsRequest:
       type: object
       properties:
@@ -569,4 +571,16 @@ components:
           type: string
         value:
           type: string
+    CacheOperationStatus:
+      type: string
+      enum:
+        - NONE
+        - SUCCESS
+        - ERROR
+        - UNKNOWN_CACHE
+        - UNKNOWN_KEY
+        - CACHE_EXISTS
+        - DUPLICATE_SUBSCRIPTION
+        - UNKNOWN_SUBSCRIPTION
+
 
