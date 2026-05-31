@@ -170,6 +170,8 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
                 itemsEncoder.next();
                 itemsEncoder.key(key.value()).value(value.value()).cacheId(cacheId);
             });
+        } else {
+            cacheSubscriptionResponseEncoder.itemsCount(0);
         }
 
         cacheSubscriptionResponseEncoder.cacheId(subscriptionRequestResult.getCacheId().value())
