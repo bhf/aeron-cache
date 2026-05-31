@@ -41,6 +41,10 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         List<IdentifiableConsumer<String, CacheUpdateEvent>> currentSubscribers;
         if (cacheSubscriptions.containsKey(cacheId)) {
             currentSubscribers = cacheSubscriptions.get(cacheId);
+
+            if (sendSnapshot) {
+                sendCacheSubscriptionRequest(cluster, requestId, cacheId, sendSnapshot, subscriptionFailureHandler, consumer);
+            }
         } else {
             currentSubscribers = new CopyOnWriteArrayList<>();
             cacheSubscriptions.put(cacheId, currentSubscribers);
@@ -48,7 +52,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             sendCacheSubscriptionRequest(cluster, requestId, cacheId, sendSnapshot, subscriptionFailureHandler, consumer);
         }
 
-        log.info("Adding subscription for cache {}, client session {}", cacheId, sseSessionId);
+        log.info("Adding subscription for cache {}, send snapshot {} client session {}", cacheId, sendSnapshot, sseSessionId);
         currentSubscribers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {

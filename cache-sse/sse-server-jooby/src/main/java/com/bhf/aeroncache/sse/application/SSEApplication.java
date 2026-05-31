@@ -89,6 +89,8 @@ public class SSEApplication extends Jooby {
                 "http://localhost:3003",
                 "http://localhost:3004",
                 "http://localhost:3005")));
+        sse(API_PREFIX + "hydrate/{cacheId}", SSEApplication::handleSingleCacheSSEWithHydration);
+        sse(MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", SSEApplication::handleMultiCacheSSEWithHydration);
         sse(API_PREFIX + "{cacheId}", SSEApplication::handleSingleCacheSSE);
         sse(MULTI_SUB_API_PREFIX + "{cacheIds}", SSEApplication::handleMultiCacheSSE);
         get(LIVENESS, SSEApplication::handleGetLiveness);
@@ -145,6 +147,40 @@ public class SSEApplication extends Jooby {
         }
     }
 
+    private static void handleSingleCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
+        try {
+            var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
+            var requestId = getRequestId(serverSentEmitter.getContext());
+            log.info("Subscription request for cacheId: {} on SSE sessionId: {}", cacheId, serverSentEmitter.getId());
+
+            serverSentEmitter.onClose(() -> {
+                log.warn("Closed on " + serverSentEmitter.getId());
+                if (CLUSTERED_MODE) {
+                    subscriptionService.handleSSEClosed(cache, requestId, serverSentEmitter.getId());
+                }
+            });
+
+            serverSentEmitter.keepAlive(60, TimeUnit.DAYS);
+
+            final Consumer<Void> subscriptionFailureHandler = _ ->
+                    serverSentEmitter.close();
+
+            final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
+                try {
+                    final var res = writer.writeValueAsString(cacheUpdateEvent);
+                    serverSentEmitter.send("message", res);
+                } catch (JsonProcessingException e) {
+                    log.error("Error trying to convert cache update event to JSON", e);
+                }
+            };
+
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, serverSentEmitter.getId(),
+                    requestId, true, consumer);
+        } catch (TypeMismatchException e) {
+            log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
+        }
+    }
+
 
     private static void handleMultiCacheSSE(ServerSentEmitter serverSentEmitter) {
         var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
@@ -163,6 +199,26 @@ public class SSEApplication extends Jooby {
 
             subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, serverSentEmitter.getId(),
                     requestId, false, consumer);
+        }
+    }
+
+    private static void handleMultiCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
+        var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
+        log.info("Got cache Ids: "+cacheIds);
+        String[] caches = cacheIds.split(",");
+        for (var c : caches) {
+            var requestId = UUID.randomUUID().toString();
+            log.info("Subscription request for cacheId: {} on SSE sessionId: {}", c,
+                    serverSentEmitter.getId());
+            final Consumer<Void> subscriptionFailureHandler = _ ->
+                    serverSentEmitter.close();
+
+            final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
+                serverSentEmitter.send("message", cacheUpdateEvent);
+            };
+
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, serverSentEmitter.getId(),
+                    requestId, true, consumer);
         }
     }
 
