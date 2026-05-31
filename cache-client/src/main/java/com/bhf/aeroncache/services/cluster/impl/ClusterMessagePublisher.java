@@ -120,14 +120,14 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
     }
 
     @Override
-    public void sendCacheSubscribeBlocking(String requestId, String cacheId) {
-        sendCacheSubscribe(requestId, cacheId);
+    public void sendCacheSubscribeBlocking(String requestId, String cacheId, boolean sendSnapshot) {
+        sendCacheSubscribe(requestId, cacheId, sendSnapshot);
         waitForResult(cluster);
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId) {
-        var length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, msgBuffer);
+    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot) {
+        var length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, sendSnapshot, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent cache subscription request on cache {} with request Id {}", cacheId, requestId);
     }

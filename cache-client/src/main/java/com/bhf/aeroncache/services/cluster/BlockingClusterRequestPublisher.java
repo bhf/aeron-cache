@@ -83,8 +83,9 @@ public interface BlockingClusterRequestPublisher {
      *
      * @param requestId The Id of this request.
      * @param cacheId   The cache to subscribe too.
+     * @param sendSnapshot Whether to send a snapshot for initial state hydration.
      */
-    void sendCacheSubscribeBlocking(String requestId, String cacheId);
+    void sendCacheSubscribeBlocking(String requestId, String cacheId, boolean sendSnapshot);
 
     /**
      * Send a request to unsubscribe to cache updates in a blocking manner.

@@ -18,14 +18,14 @@ import java.util.function.Supplier;
 public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable, V extends Reusable> implements CacheSubscriptionService<I,K,V> {
 
     private final IdleStrategy idleStrategy;
-    private final CacheSubscriptionResult<I> subscriptionResult;
+    private final CacheSubscriptionResult<I,K,V> subscriptionResult;
     private final CacheUnsubscribeResult<I> unsubscribeResult;
     private final Supplier<I> indexSupplier;
 
     private final Map<I, Set<ClientSession>> cacheIdToClientSessions = new HashMap<>();
 
     @Override
-    public CacheSubscriptionResult<I> subscribe(CacheSubscriptionRequestDetails<I> requestDetails,
+    public CacheSubscriptionResult<I,K,V> subscribe(CacheSubscriptionRequestDetails<I> requestDetails,
                                                 ClientSession session) {
         Set<ClientSession> existingSubscribers;
         if (cacheIdToClientSessions.containsKey(requestDetails.getCacheId())) {

@@ -7,5 +7,5 @@ import java.util.function.Consumer;
 
 public interface CacheSubscriptions {
     void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, String cacheId,
-                          String sseSessionId, String requestId, Consumer<CacheUpdateEvent> consumer);
+                          String sseSessionId, String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer);
 }

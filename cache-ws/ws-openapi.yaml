@@ -54,6 +54,54 @@ paths:
           description: Bad Request - Invalid cache IDs.
         500:
           description: Internal Server Error - Unable to subscribe to the caches.
+
+  /api/ws/v1/cache/hydrate/{cacheId}:
+    get:
+      summary: Subscribe to a single cache with hydration
+      description: |
+        Establish a WebSocket connection to subscribe to updates for a single cache, with initial state hydration.
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          description: The ID of the cache to subscribe to.
+          schema:
+            type: string
+      responses:
+        101:
+          description: Switching Protocols - WebSocket connection established.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheUpdateEvent'
+        400:
+          description: Bad Request - Invalid cache ID.
+        500:
+          description: Internal Server Error - Unable to subscribe to the cache.
+
+  /api/ws/v1/caches/hydrate/{cacheIds}:
+    get:
+      summary: Subscribe to multiple caches with hydration
+      description: |
+        Establish a WebSocket connection to subscribe to updates for multiple caches, with initial state hydration.
+      parameters:
+        - name: cacheIds
+          in: path
+          required: true
+          description: Comma-separated list of cache IDs to subscribe to.
+          schema:
+            type: string
+      responses:
+        101:
+          description: Switching Protocols - WebSocket connection established.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheUpdateEvent'
+        400:
+          description: Bad Request - Invalid cache IDs.
+        500:
+          description: Internal Server Error - Unable to subscribe to the caches.
 components:
   schemas:
     CacheUpdateEvent:

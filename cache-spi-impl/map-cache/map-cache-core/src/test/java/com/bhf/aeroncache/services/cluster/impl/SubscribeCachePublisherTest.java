@@ -45,11 +45,11 @@ class SubscribeCachePublisherTest {
         var requestId = UUID.randomUUID().toString();
 
         // Act
-        sut.sendCacheSubscribe(requestId, cacheId);
+        sut.sendCacheSubscribe(requestId, cacheId, false);
 
         // Assert
         verify(cacheRequestEncoder, times(1)).encodeCacheSubscribe(
-                eq(requestId), eq(cacheId), any(MutableDirectBuffer.class)
+                eq(requestId), eq(cacheId), eq(false), any(MutableDirectBuffer.class)
         );
 
         verify(cluster, atMostOnce()).offer(
@@ -69,7 +69,7 @@ class SubscribeCachePublisherTest {
         when(cluster.pollEgress()).thenReturn(1);
 
         // Act
-        sut.sendCacheSubscribeBlocking(requestId, cacheId);
+        sut.sendCacheSubscribeBlocking(requestId, cacheId, false);
 
         // Assert
         verify(cluster, times(1)).pollEgress();

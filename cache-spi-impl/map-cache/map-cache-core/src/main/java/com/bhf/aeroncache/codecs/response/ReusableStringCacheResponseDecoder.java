@@ -203,10 +203,22 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     }
 
     @Override
-    public void decodeCacheSubscribeResult(DirectBuffer buffer, int offset, CacheSubscriptionResult<ReusableString> cacheSubscriptionResult) {
+    public void decodeCacheSubscribeResult(DirectBuffer buffer, int offset, CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> cacheSubscriptionResult) {
         cacheSubscriptionResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
         var status = getOperationStatus(cacheSubscriptionResponseDecoder.status());
+
+        // process group of key-value from the decoder directly into the flyweight
+
+        for (var item : cacheSubscriptionResponseDecoder.items()) {
+            var key = new ReusableString();
+            var value = new ReusableString();
+            key.copyFrom(item.key());
+            value.copyFrom(item.value());
+            item.cacheId();
+            cacheSubscriptionResult.getEntries().put(key, value);
+        }
+
         var cacheId = cacheSubscriptionResponseDecoder.cacheId();
         var requestId = cacheSubscriptionResponseDecoder.requestId();
 

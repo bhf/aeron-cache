@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class CacheSubscriptionRequestDecoder
 {
-    public static final int BLOCK_LENGTH = 0;
+    public static final int BLOCK_LENGTH = 1;
     public static final int TEMPLATE_ID = 17;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -133,9 +133,50 @@ public final class CacheSubscriptionRequestDecoder
         this.limit = limit;
     }
 
-    public static int cacheIdId()
+    public static int sendSnapshotId()
     {
         return 1;
+    }
+
+    public static int sendSnapshotSinceVersion()
+    {
+        return 0;
+    }
+
+    public static int sendSnapshotEncodingOffset()
+    {
+        return 0;
+    }
+
+    public static int sendSnapshotEncodingLength()
+    {
+        return 1;
+    }
+
+    public static String sendSnapshotMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public short sendSnapshotRaw()
+    {
+        return ((short)(buffer.getByte(offset + 0) & 0xFF));
+    }
+
+    public BooleanType sendSnapshot()
+    {
+        return BooleanType.get(((short)(buffer.getByte(offset + 0) & 0xFF)));
+    }
+
+
+    public static int cacheIdId()
+    {
+        return 2;
     }
 
     public static int cacheIdSinceVersion()
@@ -233,7 +274,7 @@ public final class CacheSubscriptionRequestDecoder
 
     public static int requestIdId()
     {
-        return 2;
+        return 3;
     }
 
     public static int requestIdSinceVersion()
@@ -370,6 +411,9 @@ public final class CacheSubscriptionRequestDecoder
         }
         builder.append(BLOCK_LENGTH);
         builder.append("):");
+        builder.append("sendSnapshot=");
+        builder.append(this.sendSnapshot());
+        builder.append('|');
         builder.append("cacheId=");
         builder.append('\'').append(cacheId()).append('\'');
         builder.append('|');

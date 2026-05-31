@@ -15,6 +15,7 @@ public class CacheSubscriptionRequestDetails<I extends Reusable> implements Reus
 
     final RequestId requestId = new RequestId();
     final I cacheId;
+    boolean sendSnapshot;
 
     public String getRequestId(){
         return requestId.getRequestId();

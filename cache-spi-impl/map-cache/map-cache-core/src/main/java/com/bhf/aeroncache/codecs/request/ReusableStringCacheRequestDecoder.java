@@ -38,8 +38,11 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
     public void decodeCacheSubscriptionRequest(DirectBuffer buffer, int offset, CacheSubscriptionRequestDetails<ReusableString> cacheSubscribeRequestDetails) {
         cacheSubscribeRequestDetails.clear();
         cacheSubscriptionRequestDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var sendSnapshot = cacheSubscriptionRequestDecoder.sendSnapshot();
+        boolean shouldSendInitialState = sendSnapshot==BooleanType.T;
         var cacheId = cacheSubscriptionRequestDecoder.cacheId();
         var requestId = cacheSubscriptionRequestDecoder.requestId();
+        cacheSubscribeRequestDetails.setSendSnapshot(shouldSendInitialState);
         cacheSubscribeRequestDetails.getCacheId().clear();
         cacheSubscribeRequestDetails.getCacheId().copyFrom(cacheId);
         cacheSubscribeRequestDetails.setRequestId(requestId);

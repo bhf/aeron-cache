@@ -39,7 +39,7 @@ class CacheSubscriptionServiceImplTest {
 
     @BeforeEach
     void setup() {
-        CacheSubscriptionResult<ReusableString> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
+        CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
         CacheUnsubscribeResult<ReusableString> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableString());
         sut = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult,
                 SupplierUtils.stringSupplier);
@@ -155,7 +155,7 @@ class CacheSubscriptionServiceImplTest {
         Mockito.verify(session).offer(ArgumentMatchers.any(MutableDirectBuffer.class), ArgumentMatchers.eq(0), ArgumentMatchers.anyInt());
     }
 
-    private CacheSubscriptionResult<ReusableString> subscribeToCache() {
+    private CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> subscribeToCache() {
         var subscribeRequest = new CacheSubscriptionRequestDetails<>(new ReusableString());
         subscribeRequest.setRequestId(UUID.randomUUID().toString());
         subscribeRequest.getCacheId().copyFrom(KNOWN_CACHE);

@@ -31,7 +31,7 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     final Map<String, Consumer<ClearCacheResult<I>>> clearCacheObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<GetAllCacheEntriesResult<I, K, V>>> getCacheEntriesObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<CacheStatsResult<I>>> allCacheStatsObservers = new ConcurrentHashMap<>();
-    final Map<String, Consumer<CacheSubscriptionResult<I>>> cacheSubscribeObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<CacheSubscriptionResult<I,K,V>>> cacheSubscribeObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<CacheUnsubscribeResult<I>>> cacheUnsubscribeObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<BulkCacheOpsResult<I,K,V>>> bulkOpsObservers = new ConcurrentHashMap<>();
 
@@ -87,7 +87,7 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId, Consumer<CacheSubscriptionResult<I>> c) {
+    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
         cacheSubscribeObservers.put(requestId, c);
     }
 
@@ -202,7 +202,7 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     }
 
     @Override
-    public void handleCacheSubscribeResponse(CacheSubscriptionResult<I> cacheSubscriptionResult) {
+    public void handleCacheSubscribeResponse(CacheSubscriptionResult<I,K,V> cacheSubscriptionResult) {
         var targetId = cacheSubscriptionResult.getRequestId();
         log.info("Got cache subscribe response on requestId {}", targetId);
         var observer = cacheSubscribeObservers.remove(targetId);

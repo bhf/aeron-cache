@@ -145,14 +145,14 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId) {
-        rbPublisher.sendCacheSubscribe(requestId, cacheId);
+    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot) {
+        rbPublisher.sendCacheSubscribe(requestId, cacheId, sendSnapshot);
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId, Consumer<CacheSubscriptionResult<I>> c) {
-        cacheResponseObservers.sendCacheSubscribe(requestId, cacheId, c);
-        rbPublisher.sendCacheSubscribe(requestId, cacheId);
+    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
+        cacheResponseObservers.sendCacheSubscribe(requestId, cacheId, sendSnapshot, c);
+        rbPublisher.sendCacheSubscribe(requestId, cacheId, sendSnapshot);
     }
 
     @Override
@@ -218,7 +218,7 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     }
 
     @Override
-    public void handleCacheSubscribeResponse(CacheSubscriptionResult<I> cacheSubscriptionResult) {
+    public void handleCacheSubscribeResponse(CacheSubscriptionResult<I,K,V> cacheSubscriptionResult) {
         cacheResponseHandler.handleCacheSubscribeResponse(cacheSubscriptionResult);
     }
 

@@ -327,8 +327,10 @@ public class WebsocketApplication {
         return Javalin.create(config)
                 .beforeMatched(WebsocketApplication::checkClusterConnectivity)
                 .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
-                .ws(API_PREFIX + "/{cacheId}", WebsocketApplication::handleSingleCacheWs)
-                .ws(MULTI_SUB_API_PREFIX + "/{cacheIds}", WebsocketApplication::handleMultiCacheWs)
+                .ws(API_PREFIX + "hydrate/{cacheId}", WebsocketApplication::handleSingleCacheWsWithHydration)
+                .ws(MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", WebsocketApplication::handleMultiCacheWsWithHydration)
+                .ws(API_PREFIX + "{cacheId}", WebsocketApplication::handleSingleCacheWs)
+                .ws(MULTI_SUB_API_PREFIX + "{cacheIds}", WebsocketApplication::handleMultiCacheWs)
                 .get(LIVENESS, WebsocketApplication::handleGetLiveness)
                 .get(READINESS, WebsocketApplication::handleGetReadiness)
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
@@ -359,12 +361,31 @@ public class WebsocketApplication {
     }
 
     /**
+     * Setup websocket for subscriptions to a single cache with hydration.
+     *
+     * @param wsConfig
+     */
+    private static void handleSingleCacheWsWithHydration(WsConfig wsConfig) {
+        wsConfig.onConnect(WebsocketApplication::onSingleCacheConnectWithHydration);
+        wsConfig.onClose(WebsocketApplication::onWsClose);
+        wsConfig.onError(WebsocketApplication::onWsError);
+        wsConfig.onMessage(WebsocketApplication::onWsMessage);
+    }
+
+    /**
      * Setup websocket for subscriptions to multiple caches.
      *
      * @param wsConfig
      */
     private static void handleMultiCacheWs(WsConfig wsConfig) {
         wsConfig.onConnect(WebsocketApplication::onMultiCacheConnect);
+        wsConfig.onClose(WebsocketApplication::onWsClose);
+        wsConfig.onError(WebsocketApplication::onWsError);
+        wsConfig.onMessage(WebsocketApplication::onWsMessage);
+    }
+
+    private static void handleMultiCacheWsWithHydration(WsConfig wsConfig) {
+        wsConfig.onConnect(WebsocketApplication::onMultiCacheConnectWithHydration);
         wsConfig.onClose(WebsocketApplication::onWsClose);
         wsConfig.onError(WebsocketApplication::onWsError);
         wsConfig.onMessage(WebsocketApplication::onWsMessage);
@@ -406,7 +427,25 @@ public class WebsocketApplication {
             final Consumer<Void> subscriptionFailureHandler = _ ->
                     wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
             subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, wsConnectContext.sessionId(),
-                    requestId, wsConnectContext::send);
+                    requestId, false, wsConnectContext::send);
+        } catch (NumberFormatException e) {
+            statsTracker.getTotalErrors().incrementAndGet();
+            log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
+            wsConnectContext.closeSession(WsCloseStatus.PROTOCOL_ERROR, "Couldn't parse cacheId");
+        }
+    }
+
+    private static void onSingleCacheConnectWithHydration(WsConnectContext wsConnectContext) {
+        try {
+            wsConnectContext.enableAutomaticPings();
+            var cacheId = wsConnectContext.pathParam("cacheId");
+            var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
+            log.info("Subscription request with hydration for cacheId: {} on ws sessionId: {}", cacheId, wsConnectContext.sessionId());
+
+            final Consumer<Void> subscriptionFailureHandler = _ ->
+                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, wsConnectContext.sessionId(),
+                    requestId, true, wsConnectContext::send);
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();
             log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
@@ -433,7 +472,29 @@ public class WebsocketApplication {
                         wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
 
                 subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, wsConnectContext.sessionId(),
-                        requestId, wsConnectContext::send);
+                        requestId, false, wsConnectContext::send);
+            }
+        } catch (NumberFormatException e) {
+            statsTracker.getTotalErrors().incrementAndGet();
+            log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
+            wsConnectContext.closeSession(WsCloseStatus.PROTOCOL_ERROR, "Couldn't parse cacheId");
+        }
+    }
+
+    private static void onMultiCacheConnectWithHydration(WsConnectContext wsConnectContext) {
+        try {
+            wsConnectContext.enableAutomaticPings();
+            var cacheIds = wsConnectContext.pathParam("cacheIds");
+            String[] caches = cacheIds.split(",");
+            for (var c : caches) {
+                var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
+                log.info("Subscription request with hydration for cacheId: {} on ws sessionId: {}", c,
+                        wsConnectContext.sessionId());
+                final Consumer<Void> subscriptionFailureHandler = _ ->
+                        wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
+
+                subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, wsConnectContext.sessionId(),
+                        requestId, true, wsConnectContext::send);
             }
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();

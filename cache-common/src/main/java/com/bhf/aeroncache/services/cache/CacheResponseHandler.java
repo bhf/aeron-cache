@@ -76,7 +76,7 @@ public interface CacheResponseHandler<I extends Reusable, K extends Reusable, V 
      *
      * @param cacheSubscriptionResult The result of subscribing to a cache.
      */
-    void handleCacheSubscribeResponse(CacheSubscriptionResult<I> cacheSubscriptionResult);
+    void handleCacheSubscribeResponse(CacheSubscriptionResult<I,K,V> cacheSubscriptionResult);
 
     /**
      * Handle a message about an unsubscribe request to a cache.
