@@ -27,9 +27,16 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
     public void decodeGetCreateCacheRequestDetails(DirectBuffer buffer, int offset, CreateCacheRequestDetails<ReusableString> createCacheRequestDetails) {
         createCacheRequestDetails.clear();
         createCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        appendable.setReusable(createCacheRequestDetails.getCacheId());
-        createCacheDecoder.cacheId(appendable);
-        //var cacheId = createCacheDecoder.cacheId();
+
+        if(useAppendable) {
+            appendable.setReusable(createCacheRequestDetails.getCacheId());
+            createCacheDecoder.cacheId(appendable);
+        }
+        else{
+            var cacheId = createCacheDecoder.cacheId();
+            createCacheRequestDetails.getCacheId().copyFrom(cacheId);
+        }
+
         var requestId = createCacheDecoder.requestId();
         createCacheRequestDetails.setRequestId(requestId);
     }

@@ -11,17 +11,14 @@ public class ReusableStringCacheIdSnapshotCodec implements CacheIdSnapshotCodec<
     @Override
     public int serializeCacheId(ReusableString cacheId, MutableDirectBuffer buffer, int offset) {
         var value = cacheId.value();
-        var length = value.length();
-        buffer.putInt(offset, length);
-        buffer.putStringWithoutLengthAscii(offset+4, value);
-        return offset + 4 + length;
+        return offset + buffer.putStringUtf8(offset, value);
     }
 
     @Override
     public int deserializeCacheId(DirectBuffer buffer, int offset, ReusableString cacheId) {
+        var value = buffer.getStringUtf8(offset);
         var length = buffer.getInt(offset);
-        var value = buffer.getStringWithoutLengthAscii(offset+4, length);
-        log.trace("Cache ID legnth="+length+", value="+value);
+        log.trace("Cache ID value="+value);
         cacheId.copyFrom(value);
         return offset + 4 + length;
     }

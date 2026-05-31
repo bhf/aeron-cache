@@ -44,64 +44,64 @@ public class CacheClientAgent extends AbstractClientAgent {
             switch (msgTypeId) {
                 case CREATE_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cacheId = buffer.getStringUtf8(index + requestId.length() + 4);
+                    var cacheId = buffer.getStringUtf8(index + buffer.getInt(index) + 4);
                     log.debug("CREATE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
                     getPublisher().sendCreateCache(requestId, cacheId);
                 }
                 case ADD_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cumulativeReadPosition = index + (requestId.length() + 4);
+                    var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
                     var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
-                    cumulativeReadPosition += cacheId.length() + 4;
+                    cumulativeReadPosition += buffer.getInt(cumulativeReadPosition) + 4;
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
-                    cumulativeReadPosition += key.length() + 4;
+                    cumulativeReadPosition += buffer.getInt(cumulativeReadPosition) + 4;
                     var value = buffer.getStringUtf8(cumulativeReadPosition);
-                    cumulativeReadPosition += value.length() + 4;
+                    cumulativeReadPosition += buffer.getInt(cumulativeReadPosition) + 4;
                     var ttl = buffer.getLong(cumulativeReadPosition);
                     log.debug("ADD CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", key=" + key + ", value=" + value+", ttl="+ttl);
                     getPublisher().addCacheEntry(requestId, cacheId, key, value, ttl);
                 }
                 case GET_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cumulativeReadPosition = index + (requestId.length() + 4);
+                    var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
                     var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
-                    cumulativeReadPosition += cacheId.length() + 4;
+                    cumulativeReadPosition += buffer.getInt(cumulativeReadPosition) + 4;
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("GET CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", to get key=" + key);
                     getPublisher().getCacheEntry(requestId, cacheId, key);
                 }
                 case CLEAR_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cacheId = buffer.getStringUtf8(index + requestId.length() + 4);
+                    var cacheId = buffer.getStringUtf8(index + buffer.getInt(index) + 4);
                     log.debug("CLEAR CACHE Request has ID " + requestId + ", to clear on cache ID " + cacheId);
                     getPublisher().clearCache(requestId, cacheId);
                 }
                 case DELETE_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cumulativeReadPosition = index + (requestId.length() + 4);
+                    var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
                     var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("DELETE CACHE Request has ID " + requestId + ", to delete cache ID " + cacheId);
                     getPublisher().deleteCache(requestId, cacheId);
                 }
                 case GET_CACHE_ENTRIES_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cumulativeReadPosition = index + (requestId.length() + 4);
+                    var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
                     var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("GET CACHE ENTRIES Request has ID " + requestId + ", on cache ID " + cacheId);
                     getPublisher().getCacheEntries(requestId, cacheId);
                 }
                 case SUBSCRIBE_TO_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cumulativeReadPosition = index + (requestId.length() + 4);
+                    var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
                     var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
-                    cumulativeReadPosition += (cacheId.length() + 4);
+                    cumulativeReadPosition += (buffer.getInt(cumulativeReadPosition) + 4);
                     boolean sendSnapshot = buffer.getByte(cumulativeReadPosition) == (byte) 1;
                     log.debug("SUBSCRIBE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
                     getPublisher().sendCacheSubscribe(requestId, cacheId, sendSnapshot);
                 }
                 case UNSUBSCRIBE_TO_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cumulativeReadPosition = index + (requestId.length() + 4);
+                    var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
                     var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("UNSUBSCRIBE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
                     getPublisher().sendCacheUnsubscribe(requestId, cacheId);
@@ -113,32 +113,32 @@ public class CacheClientAgent extends AbstractClientAgent {
                 }
                 case REMOVE_CACHE_ENTRY_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cumulativeReadPosition = index + (requestId.length() + 4);
+                    var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
                     var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
-                    cumulativeReadPosition += cacheId.length() + 4;
+                    cumulativeReadPosition += buffer.getInt(cumulativeReadPosition) + 4;
                     var key = buffer.getStringUtf8(cumulativeReadPosition);
                     log.debug("REMOVE CACHE ENTRY Request has ID " + requestId + ", cache ID " + cacheId + ", remove key=" + key);
                     getPublisher().removeCacheEntry(requestId, cacheId, key);
                 }
                 case BULK_OPS_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
-                    var cumulativeReadPosition = index + (requestId.length() + 4);
+                    var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
                     var opCount = buffer.getInt(cumulativeReadPosition);
                     cumulativeReadPosition += 4;
                     List<CacheOperationRequest> operations = new ArrayList<>();
 
                     for (int i = 0; i < opCount; i++) {
                         var opRequestId = buffer.getStringUtf8(cumulativeReadPosition);
-                        cumulativeReadPosition += (opRequestId.length() + 4);
+                        cumulativeReadPosition += (buffer.getInt(cumulativeReadPosition) + 4);
 
                         var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
-                        cumulativeReadPosition += (cacheId.length() + 4);
+                        cumulativeReadPosition += (buffer.getInt(cumulativeReadPosition) + 4);
 
                         var key = buffer.getStringUtf8(cumulativeReadPosition);
-                        cumulativeReadPosition += (key.length() + 4);
+                        cumulativeReadPosition += (buffer.getInt(cumulativeReadPosition) + 4);
 
                         var value = buffer.getStringUtf8(cumulativeReadPosition);
-                        cumulativeReadPosition += (value.length() + 4);
+                        cumulativeReadPosition += (buffer.getInt(cumulativeReadPosition) + 4);
 
                         var ttl = buffer.getLong(cumulativeReadPosition);
                         cumulativeReadPosition += 8;

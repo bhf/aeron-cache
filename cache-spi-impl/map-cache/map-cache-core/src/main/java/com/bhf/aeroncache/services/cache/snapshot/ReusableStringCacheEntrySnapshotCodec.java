@@ -13,20 +13,8 @@ public class ReusableStringCacheEntrySnapshotCodec implements CacheEntrySnapshot
     @Override
     public int serializeCacheEntry(ReusableString key, ReusableString value, MutableDirectBuffer buffer, int offset) {
         int written = 0;
-        var keyLength = key.value().length();
-        buffer.putInt(offset+written, keyLength);
-        written += 4;
-        buffer.putStringWithoutLengthAscii(offset + written, key.value());
-        written += keyLength;
-        log.trace("Writing key length="+keyLength+", key="+key.value());
-
-        var valueLength = value.value().length();
-        buffer.putInt(offset+written, valueLength);
-        written += 4;
-        buffer.putStringWithoutLengthAscii(offset + written, value.value());
-        written += valueLength;
-        log.trace("Writing value length="+valueLength+", value="+value.value());
-
+        written += buffer.putStringUtf8(offset + written, key.value());
+        written += buffer.putStringUtf8(offset + written, value.value());
         log.debug("Encoding key="+key.value()+", value="+value.value());
         return written + offset;
     }
@@ -34,15 +22,12 @@ public class ReusableStringCacheEntrySnapshotCodec implements CacheEntrySnapshot
     @Override
     public int deserializeCacheEntry(DirectBuffer buffer, int offset, Map<ReusableString, ReusableString> cache) {
         int read = 0;
-        var keyLength = buffer.getInt(offset + read);
-        read += 4;
-        var key = buffer.getStringWithoutLengthAscii(offset + read, keyLength);
-        read += keyLength;
+        var key = buffer.getStringUtf8(offset + read);
+        read += buffer.getInt(offset + read) + 4;
 
-        var valueLength = buffer.getInt(offset+read);
-        read+=4;
-        var value = buffer.getStringWithoutLengthAscii(offset+read, valueLength);
-        read += valueLength;
+        var value = buffer.getStringUtf8(offset + read);
+        read += buffer.getInt(offset + read) + 4;
+
         var k = new ReusableString();
         k.copyFrom(key);
         var v = new ReusableString();

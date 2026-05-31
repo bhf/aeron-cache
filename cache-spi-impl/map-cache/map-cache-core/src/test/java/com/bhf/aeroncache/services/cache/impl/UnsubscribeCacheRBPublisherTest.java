@@ -8,8 +8,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullSource;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -33,16 +31,15 @@ class UnsubscribeCacheRBPublisherTest {
         sut = new RBCacheRequestPublisher(rb);
     }
 
-    @ParameterizedTest
-    @NullSource
+    @Test
     @DisplayName("Should throw NPE on null requestId without interacting with RingBuffer when unsubscribing too cache")
-    void shouldThrowExceptionOnNullRequestId(String requestId) {
+    void shouldThrowExceptionOnNullRequestId() {
         // Arrange
         var cacheId = "123L";
 
         // Act + Assert
         Assertions.assertThrows(NullPointerException.class,
-                () -> sut.sendCacheUnsubscribe(requestId, cacheId));
+                () -> sut.sendCacheUnsubscribe(null, cacheId));
 
         verifyNoInteractions(rb);
     }
