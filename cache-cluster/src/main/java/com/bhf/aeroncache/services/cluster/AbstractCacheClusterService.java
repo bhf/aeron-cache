@@ -432,7 +432,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         tracingService.startCacheSubscriptionRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
         var cacheId = requestDetails.getCacheId();
-        log.info("Got request to subscribe for cache updates on cache: {}, request Id: {}", cacheId, requestId);
+        log.info("Got request to subscribe for cache updates on cache: {}, request Id: {}, send snapshot: {}", cacheId, requestId, requestDetails.isSendSnapshot());
         var result = subscriptionService.subscribe(requestDetails, session);
 
         if(requestDetails.isSendSnapshot()){
