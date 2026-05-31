@@ -18,9 +18,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 class ClusterRestartTests {
 
     private static final String GET_ENDPOINT = "/api/v1/cache/";
-    static final String KNOWN_CACHE_ID = "1";
-    static final String KNOWN_KEY = "SomeKey";
-    static final String KNOWN_VALUE = "SomeValue";
+    static final String KNOWN_CACHE_ID = "1★";
+    static final String KNOWN_KEY = "SomeKey★★★";
+    static final String KNOWN_VALUE = "SomeValue★★★";
 
     @Test
     @DisplayName("Should get a known value we added post restart")
