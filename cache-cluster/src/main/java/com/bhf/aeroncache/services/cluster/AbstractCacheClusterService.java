@@ -439,6 +439,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
             System.out.println("IS SEND SNAPSHOT");
             populateSnapshot(result, cacheId);
         }
+        else{
+            result.entries = null;
+        }
 
         handlePostCacheSubscriptionRequest(result, session);
         tracingService.endCacheSubscriptionRequest(requestDetails);
