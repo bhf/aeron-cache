@@ -63,8 +63,8 @@ class AddCacheEntryTest {
     void shouldAddToKnownCache(String cacheId) {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
-        var key = "someKey";
-        var value = "someValue";
+        var key = "someKey★★★";
+        var value = "someValue★★★";
         var ttl = 0;
 
         // create the cache

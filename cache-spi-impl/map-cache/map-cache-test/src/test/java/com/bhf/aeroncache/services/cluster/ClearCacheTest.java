@@ -58,7 +58,7 @@ class ClearCacheTest {
 
     @ParameterizedTest
     @DisplayName("Should return correct details of cleared cache")
-    @ValueSource(strings = {"testCacheId"})
+    @ValueSource(strings = {"testCacheId", "★★★★★"})
     @HappyPath
     void shouldClearKnownCache(String cacheId) {
         // Arrange

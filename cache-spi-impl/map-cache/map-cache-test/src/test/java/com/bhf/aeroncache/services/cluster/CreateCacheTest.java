@@ -58,7 +58,7 @@ class CreateCacheTest {
      */
     @ParameterizedTest
     @DisplayName("Should return correct details of created cache")
-    @ValueSource(strings = {"testCacheId"})
+    @ValueSource(strings = {"testCacheId", "★★★★★"})
     void testCreateCacheMessage(String cacheId) {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
