@@ -23,7 +23,7 @@ class ClusterRestartTests {
     static final String KNOWN_VALUE = "SomeValue★★★";
     static final String TTL_KEY = "TtlKey★★★";
     static final String TTL_VALUE = "TtlValue★★★";
-    static final long TTL_MS = 2000L;
+    static final long TTL_MS = 200L;
 
     @Test
     @DisplayName("Should get known non-expired value we added post restart")
