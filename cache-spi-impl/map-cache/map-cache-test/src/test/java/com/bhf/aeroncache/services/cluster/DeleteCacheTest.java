@@ -57,7 +57,7 @@ class DeleteCacheTest {
 
     @ParameterizedTest
     @DisplayName("Should return correct details of deleted cache")
-    @ValueSource(strings = {"testCacheId"})
+    @ValueSource(strings = {"testCacheId", "★★★★★"})
     @HappyPath
     void shouldDeleteKnownCache(String cacheId) {
         // Arrange
