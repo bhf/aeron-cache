@@ -21,14 +21,18 @@ class ClusterRestartTests {
     static final String KNOWN_CACHE_ID = "1★";
     static final String KNOWN_KEY = "SomeKey★★★";
     static final String KNOWN_VALUE = "SomeValue★★★";
+    static final String TTL_KEY = "TtlKey★★★";
+    static final String TTL_VALUE = "TtlValue★★★";
+    static final long TTL_MS = 2000L;
 
     @Test
-    @DisplayName("Should get a known value we added post restart")
+    @DisplayName("Should get known non-expired value we added post restart")
     @HappyPath
     void shouldGetKnownItemPostRestart(BackendTestResource backend) {
         // Arrange
         CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, TTL_KEY, TTL_VALUE, TTL_MS, backend);
 
         // Act
         ContainerRestartUtils.stopHTTPInterface(backend);
@@ -49,6 +53,14 @@ class ClusterRestartTests {
                 .then().assertThat()
                 .statusCode(200)
                 .body("value", Matchers.comparesEqualTo(KNOWN_VALUE));
+
+        RestAssured.given().port(mappedPort)
+                .baseUri(mappedHost)
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .when().get(GET_ENDPOINT + KNOWN_CACHE_ID + "/" + TTL_KEY)
+                .then().assertThat()
+                .statusCode(404);
 
     }
 
