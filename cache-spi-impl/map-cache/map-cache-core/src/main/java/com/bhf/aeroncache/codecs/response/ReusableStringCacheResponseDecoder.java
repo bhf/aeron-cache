@@ -204,6 +204,13 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
 
     @Override
     public void decodeCacheSubscribeResult(DirectBuffer buffer, int offset, CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> cacheSubscriptionResult) {
+
+        cacheSubscriptionResult.clear();
+
+        if(cacheSubscriptionResult.getEntries()!=null) {
+            cacheSubscriptionResult.getEntries().clear();
+        }
+
         cacheSubscriptionResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
         var status = getOperationStatus(cacheSubscriptionResponseDecoder.status());
@@ -222,7 +229,6 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
         var cacheId = cacheSubscriptionResponseDecoder.cacheId();
         var requestId = cacheSubscriptionResponseDecoder.requestId();
 
-        cacheSubscriptionResult.clear();
         cacheSubscriptionResult.getCacheId().copyFrom(cacheId);
         cacheSubscriptionResult.setStatus(status);
         cacheSubscriptionResult.setRequestId(requestId);
