@@ -23,7 +23,7 @@ class ClusterRestartTests {
     static final String KNOWN_VALUE = "SomeValue★★★";
     static final String TTL_KEY = "TtlKey★★★";
     static final String TTL_VALUE = "TtlValue★★★";
-    static final long TTL_MS = 200L;
+    static final long TTL_MS = 2000L;
 
     @Test
     @DisplayName("Should get known non-expired value we added post restart")
@@ -43,6 +43,13 @@ class ClusterRestartTests {
         var postRestartMappedHostDetails = ContainerRestartUtils.awaitHTTPInterfaceRestart(backend);
         var mappedPort = postRestartMappedHostDetails.mappedPort();
         var mappedHost = postRestartMappedHostDetails.mappedHost();
+
+        // Sleep for the same time as the TTL of the item just to be sure
+        try {
+            Thread.sleep(TTL_MS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
         // Assert
         RestAssured.given().port(mappedPort)
