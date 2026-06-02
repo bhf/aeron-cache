@@ -80,13 +80,13 @@ public abstract class AbstractMultiStreamBulkOpsTests {
     @HappyPath
     void shouldGetStreamingUpdatesOnMixedBulkOps(BackendTestResource backend) {
         // Arrange
-        String testKey = "mixed-bulkops-key";
-        String firstValue = "value-1";
-        String secondValue = "value-2";
+        var testKey = "mixed-bulkops-key";
+        var firstValue = "value-1";
+        var secondValue = "value-2";
         int numItems = 4;
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, numItems);
 
-        List<CacheOperationRequest> operations = List.of(
+        var operations = List.of(
                 new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, firstValue),
                 new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, secondValue),
                 new CacheOperationRequest(BulkOperationType.REMOVE_ITEM, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, null),
@@ -130,6 +130,49 @@ public abstract class AbstractMultiStreamBulkOpsTests {
             var clearEvent = streamingSourceEvents.get(3);
             MatcherAssert.assertThat(clearEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.CLEAR_CACHE));
             MatcherAssert.assertThat(clearEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+        }
+    }
+
+    @Test
+    @DisplayName("Should get remove event when item with ttl expires")
+    @HappyPath
+    void shouldGetRemoveEventWhenItemWithTtlExpires(BackendTestResource backend) {
+        // Arrange
+        var ttlKey = "ttl-key";
+        var ttlValue = "ttl-value";
+        long ttlMs = 1000;
+        int numExpectedEvents = 2;
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, numExpectedEvents);
+
+        var operations = List.of(
+                new CacheOperationRequest(BulkOperationType.ADD_ITEM, ttlMs, UUID.randomUUID().toString(), KNOWN_CACHE_ID, ttlKey, ttlValue)
+        );
+        var bulkRequest = new BulkCacheOpsRequest("bulk-request-ttl", operations);
+
+        // Act
+        CacheTestUtils.sendBulkRequest(bulkRequest, backend);
+
+        // Assert
+        for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
+            Awaitility.await()
+                    .atMost(60, TimeUnit.SECONDS)
+                    .until(streamingSourceEventsFuture::isDone);
+
+            var streamingSourceEvents = streamingSourceEventsFuture.join();
+            MatcherAssert.assertThat(streamingSourceEvents, Matchers.hasSize(numExpectedEvents));
+
+            // Assert for add item
+            var addEvent = streamingSourceEvents.get(0);
+            MatcherAssert.assertThat(addEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(addEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+            MatcherAssert.assertThat(addEvent.itemKey(), Matchers.is(ttlKey));
+            MatcherAssert.assertThat(addEvent.itemValue(), Matchers.is(ttlValue));
+
+            // Assert for remove item (on expiration)
+            var removeEvent = streamingSourceEvents.get(1);
+            MatcherAssert.assertThat(removeEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.REMOVE_ITEM));
+            MatcherAssert.assertThat(removeEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+            MatcherAssert.assertThat(removeEvent.itemKey(), Matchers.is(ttlKey));
         }
     }
 
