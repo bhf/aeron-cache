@@ -14,10 +14,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @ExtendWith(BackendTestLauncher.class)
 public abstract class AbstractMultiStreamPutItemTests {
 
+    public static final String HYDRATION_CACHE_ID = "hydration-cache";
     private static final String KNOWN_CACHE_ID = "1";
     private static final String KNOWN_KEY = "SomeKey";
     private static final String KNOWN_VALUE = "SomeValue";
@@ -34,6 +36,7 @@ public abstract class AbstractMultiStreamPutItemTests {
     @BeforeAll
     static void setup(BackendTestResource backend) {
         CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
+        CacheTestUtils.createCache(HYDRATION_CACHE_ID, backend);
     }
 
     @Test
@@ -136,6 +139,45 @@ public abstract class AbstractMultiStreamPutItemTests {
             MatcherAssert.assertThat(secondRemove.eventType(), Matchers.is(CacheUpdateEvent.EventType.REMOVE_ITEM));
             MatcherAssert.assertThat(secondRemove.cacheId(), Matchers.is(KNOWN_CACHE_ID));
             MatcherAssert.assertThat(secondRemove.itemKey(), Matchers.is(ANOTHER_KNOWN_KEY));
+        }
+    }
+
+    @Test
+    @DisplayName("Should get hydrated streaming updates when subscribing to a cache with existing items")
+    @HappyPath
+    void shouldGetHydratedStreamingUpdateWithExistingState(BackendTestResource backend) {
+        // Arrange
+        var hydrationKey1 = "HydrationKey1";
+        var hydrationValue1 = "HydrationValue1";
+        var hydrationKey2 = "HydrationKey2";
+        var hydrationValue2 = "HydrationValue2";
+
+        CacheTestUtils.addItem(HYDRATION_CACHE_ID, hydrationKey1, hydrationValue1, backend);
+        CacheTestUtils.addItem(HYDRATION_CACHE_ID, hydrationKey2, hydrationValue2, backend);
+
+        // Act
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsWithHydration(streamingHelpers, backend, HYDRATION_CACHE_ID, 2);
+
+        // Assert
+        for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
+            Awaitility.await()
+                    .atMost(60, TimeUnit.SECONDS)
+                    .until(streamingSourceEventsFuture::isDone);
+
+            var streamingSoureEvents = streamingSourceEventsFuture.join();
+
+            MatcherAssert.assertThat(streamingSoureEvents, Matchers.hasSize(2));
+
+            for (var event : streamingSoureEvents) {
+                MatcherAssert.assertThat(event.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+                MatcherAssert.assertThat(event.cacheId(), Matchers.is(HYDRATION_CACHE_ID));
+            }
+
+            var eventMap = streamingSoureEvents.stream().collect(
+                    Collectors.toMap(CacheUpdateEvent::itemKey, CacheUpdateEvent::itemValue));
+
+            MatcherAssert.assertThat(eventMap.get(hydrationKey1), Matchers.is(hydrationValue1));
+            MatcherAssert.assertThat(eventMap.get(hydrationKey2), Matchers.is(hydrationValue2));
         }
     }
 

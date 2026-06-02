@@ -8,4 +8,5 @@ import java.util.concurrent.CompletableFuture;
 
 public interface StreamingHelper {
     CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready);
+    CompletableFuture<List<CacheUpdateEvent>> getEventsWithHydration(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready);
 }
