@@ -194,7 +194,12 @@ public class SSEApplication extends Jooby {
                     serverSentEmitter.close();
 
             final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
-                serverSentEmitter.send("message", cacheUpdateEvent);
+                try {
+                    final var res = writer.writeValueAsString(cacheUpdateEvent);
+                    serverSentEmitter.send("message", res);
+                } catch (JsonProcessingException e) {
+                    log.error("Error trying to convert cache update event to JSON", e);
+                }
             };
 
             subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, serverSentEmitter.getId(),
@@ -214,7 +219,12 @@ public class SSEApplication extends Jooby {
                     serverSentEmitter.close();
 
             final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
-                serverSentEmitter.send("message", cacheUpdateEvent);
+                try {
+                    final var res = writer.writeValueAsString(cacheUpdateEvent);
+                    serverSentEmitter.send("message", res);
+                } catch (JsonProcessingException e) {
+                    log.error("Error trying to convert cache update event to JSON", e);
+                }
             };
 
             subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, serverSentEmitter.getId(),

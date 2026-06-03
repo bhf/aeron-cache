@@ -21,7 +21,9 @@ import java.util.concurrent.CountDownLatch;
 public class SSEStreamingHelper implements StreamingHelper{
 
     private static final String STREAMING_API_PREFIX = "/api/sse/v1/cache/";
+    private static final String STREAMING_MULTI_CACHE_API_PREFIX = "/api/sse/v1/caches/";
     private static final String STREAMING_HYDRATION_API_PREFIX = "/api/sse/v1/cache/hydrate/";
+    private static final String STREAMING_MULTI_CACHE_HYDRATION_API_PREFIX = "/api/sse/v1/caches/hydrate/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
@@ -39,6 +41,20 @@ public class SSEStreamingHelper implements StreamingHelper{
     }
 
     @Override
+    public CompletableFuture<List<CacheUpdateEvent>> getEventsMultipleCaches(BackendTestResource backend, List<String> cacheIds, int count, CompletableFuture<Void> connectionReady) {
+        CountDownLatch latch = new CountDownLatch(count);
+        List<CacheUpdateEvent> events = new ArrayList<>();
+        CompletableFuture<List<CacheUpdateEvent>> eventData = new CompletableFuture<>();
+
+        var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
+                + backend.getSsePort() + STREAMING_MULTI_CACHE_API_PREFIX + String.join(",", cacheIds);
+
+        connect(cacheSubscriptionURI, latch, eventData, events, connectionReady);
+
+        return eventData;
+    }
+
+    @Override
     public CompletableFuture<List<CacheUpdateEvent>> getEventsWithHydration(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> connectionReady) {
         CountDownLatch latch = new CountDownLatch(count);
         List<CacheUpdateEvent> events = new ArrayList<>();
@@ -46,6 +62,20 @@ public class SSEStreamingHelper implements StreamingHelper{
 
         var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
                 + backend.getSsePort() + STREAMING_HYDRATION_API_PREFIX + cacheId;
+
+        connect(cacheSubscriptionURI, latch, eventData, events, connectionReady);
+
+        return eventData;
+    }
+
+    @Override
+    public CompletableFuture<List<CacheUpdateEvent>> getEventsMultipleCachesWithHydration(BackendTestResource backend, List<String> cacheIds, int count, CompletableFuture<Void> connectionReady) {
+        CountDownLatch latch = new CountDownLatch(count);
+        List<CacheUpdateEvent> events = new ArrayList<>();
+        CompletableFuture<List<CacheUpdateEvent>> eventData = new CompletableFuture<>();
+
+        var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
+                + backend.getSsePort() + STREAMING_MULTI_CACHE_HYDRATION_API_PREFIX + String.join(",", cacheIds);
 
         connect(cacheSubscriptionURI, latch, eventData, events, connectionReady);
 
