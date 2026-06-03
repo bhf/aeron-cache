@@ -1,0 +1,7 @@
+package com.bhf.aeroncache.integration.http;
+
+import com.bhf.aeroncache.integration.config.BackendTestConfig;
+
+@BackendTestConfig(dynamicCacheCreationEnabled = true, httpEnabled = true, wsEnabled = false, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
+class ClusteredDynamicCacheCreation extends DynamicCreateCacheTests{
+}

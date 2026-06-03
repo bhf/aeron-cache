@@ -73,7 +73,10 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
      */
     private static @NotNull BackendTestResource setupClusteredEnvironment(BackendTestConfig config, Network network) {
         System.out.println("Starting AeronCache Cluster...");
-        List<GenericContainer<?>> cacheNodes = TestContainersEnvironmentFactory.getClusteredCacheContainers(NODES, network);
+        List<GenericContainer<?>> cacheNodes = !config.dynamicCacheCreationEnabled() ?
+                TestContainersEnvironmentFactory.getClusteredCacheContainers(NODES, network) :
+                TestContainersEnvironmentFactory.getClusteredDynamicallyCreatingCacheContainers(NODES, network);
+
         cacheNodes.forEach(GenericContainer::start);
 
         var baseHttpUri = "http://localhost";
@@ -122,7 +125,10 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
 
     private static @NotNull BackendTestResource setupEphemeralCacheEnvironment(BackendTestConfig config, Network network) {
         System.out.println("Starting AeronCache SingleNode...");
-        GenericContainer<?> cacheNode = TestContainersEnvironmentFactory.getEphemeralCacheContainer(network);
+        GenericContainer<?> cacheNode = !config.dynamicCacheCreationEnabled() ?
+                TestContainersEnvironmentFactory.getEphemeralCacheContainer(network):
+                TestContainersEnvironmentFactory.getEphemeralDynamicallyCreatingCacheContainer(network);
+
         List<GenericContainer<?>> cacheNodeList = new ArrayList<>();
         cacheNodeList.add(cacheNode);
         cacheNode.start();
@@ -235,6 +241,9 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
         }
         if (config.sseEnabled()) {
             functionalityKeyBuilder.append("_sse");
+        }
+        if(config.dynamicCacheCreationEnabled()){
+            functionalityKeyBuilder.append("_dyn");
         }
 
         return functionalityKeyBuilder.toString();

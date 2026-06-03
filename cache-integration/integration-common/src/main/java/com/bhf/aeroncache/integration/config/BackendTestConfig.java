@@ -44,4 +44,10 @@ public @interface BackendTestConfig {
      * @return
      */
     boolean httpNearCacheEnabled() default false;
+
+    /**
+     * Whether dynamic cache creation is enabled for tests - false by default.
+     * @return
+     */
+    boolean dynamicCacheCreationEnabled() default false;
 }

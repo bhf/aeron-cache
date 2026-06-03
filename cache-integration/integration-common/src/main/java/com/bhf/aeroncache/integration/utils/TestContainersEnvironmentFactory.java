@@ -57,13 +57,48 @@ public class TestContainersEnvironmentFactory {
                             .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                             .withEnv("CLUSTER_NODE", String.valueOf(i))
                             .withEnv("CLUSTER_PORT_BASE", "9000")
-                            /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-cluster-node")
-                            .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")*/
                             .withEnv("CACHE_MODE", "RAFT")
-                            .withEnv("CACHE_DATA_DIR", "/tmp/data")
-                            /*.withEnv("OTEL_TRACES_EXPORTER", "none")
-                            .withEnv("OTEL_METRICS_EXPORTER", "none")
-                            .withEnv("OTEL_LOGS_EXPORTER", "none")*/;
+                            .withEnv("CACHE_DATA_DIR", "/tmp/data");
+
+            containers.add(container);
+        }
+
+        return containers;
+    }
+
+    /**
+     * Get containers for an AeronCache Cluster with dynamic cache creation enabled.
+     *
+     * @param nodes
+     * @param network
+     * @return
+     */
+    public static List<GenericContainer<?>> getClusteredDynamicallyCreatingCacheContainers(int nodes, Network network) {
+
+        List<GenericContainer<?>> containers = new ArrayList<>();
+
+        String clusterAddresses = getClusterAddresses(nodes);
+
+        for (int i = 0; i < nodes; i++) {
+
+            String name = "node" + i;
+            String hostPath = "/tmp/aeron-cache/" + name + "-" + UUID.randomUUID();
+            new File(hostPath).mkdirs();
+
+            GenericContainer<?> container =
+                    new GenericContainer<>(getImageName("aeroncache-cluster"))
+                            .withNetwork(network)
+                            .withNetworkAliases(name)
+                            .withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
+                            .withFileSystemBind(hostPath, "/tmp/data", BindMode.READ_WRITE)
+                            .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
+                            .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                            .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
+                            .withEnv("CLUSTER_NODE", String.valueOf(i))
+                            .withEnv("CLUSTER_PORT_BASE", "9000")
+                            .withEnv("DYNAMIC_CACHE_CREATION", "true")
+                            .withEnv("CACHE_MODE", "RAFT")
+                            .withEnv("CACHE_DATA_DIR", "/tmp/data");
 
             containers.add(container);
         }
@@ -89,13 +124,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
-                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-http")
-                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CACHE_MODE", "RAFT")
-                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
-                .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -117,13 +146,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
-                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-http-near")
-                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CACHE_MODE", "RAFT")
-                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
-                .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -145,13 +168,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
-                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws")
-                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CACHE_MODE", "RAFT")
-                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
-                .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -173,14 +190,8 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
-                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws")
-                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CACHE_MODE", "RAFT")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
-                .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness/"));
     }
 
@@ -203,8 +214,33 @@ public class TestContainersEnvironmentFactory {
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
                 .withEnv("CLUSTER_NODE", "0")
-                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-cluster-node")
-                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")*/
+                .withEnv("CACHE_MODE", "SINGLE")
+                .withEnv("CACHE_DATA_DIR", "/tmp/data")
+                .withEnv("HTTP_RESPONSE_PUB_HOST", "cache-http-client")
+                .withEnv("WS_RESPONSE_PUB_HOST", "cache-ws-client")
+                .withEnv("SSE_RESPONSE_PUB_HOST", "cache-sse-client");
+    }
+
+    /**
+     * Get a container for a single AeronCache node with dynamic cache creation enabled.
+     *
+     * @param network
+     * @return
+     */
+    public static GenericContainer<?> getEphemeralDynamicallyCreatingCacheContainer(Network network) {
+        String name = "node0";
+        String hostPath = "/tmp/aeron-cache/" + name + "-" + UUID.randomUUID();
+        new File(hostPath).mkdirs();
+
+        return new GenericContainer<>(getImageName("aeroncache-cluster"))
+                .withNetwork(network)
+                .withNetworkAliases(name)
+                .withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
+                .withFileSystemBind(hostPath, "/tmp/data", BindMode.READ_WRITE)
+                .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
+                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("CLUSTER_NODE", "0")
+                .withEnv("DYNAMIC_CACHE_CREATION", "true")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("CACHE_DATA_DIR", "/tmp/data")
                 .withEnv("HTTP_RESPONSE_PUB_HOST", "cache-http-client")
@@ -225,15 +261,9 @@ public class TestContainersEnvironmentFactory {
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7070)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
-                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-http")
-                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
-                .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -250,15 +280,9 @@ public class TestContainersEnvironmentFactory {
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7070)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
-                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-http")
-                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
-                .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -275,15 +299,9 @@ public class TestContainersEnvironmentFactory {
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7071)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
-                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-ws")
-                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
-                .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -300,15 +318,9 @@ public class TestContainersEnvironmentFactory {
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7072)
                 .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
-                /*.withEnv("OTEL_SERVICE_NAME", "aeron-cache-sse")
-                .withEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4318")
-                .withEnv("OTEL_JAVAAGENT_LOGGING", "none")*/
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
-                /*.withEnv("OTEL_TRACES_EXPORTER", "none")
-                .withEnv("OTEL_METRICS_EXPORTER", "none")
-                .withEnv("OTEL_LOGS_EXPORTER", "none")*/
                 .waitingFor(Wait.forHttp("/readiness/"));
     }
 
