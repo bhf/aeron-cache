@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 public abstract class AbstractMultiStreamBulkOpsTests {
 
     private static final String KNOWN_CACHE_ID = "1";
+    private static final String NON_SUBSCRIBED_CACHE_ID = "NotSubscribedCache";
     private static final String KNOWN_KEY = "SomeKey";
     private static final String KNOWN_VALUE = "SomeValue";
 
@@ -37,20 +38,23 @@ public abstract class AbstractMultiStreamBulkOpsTests {
     @BeforeAll
     static void setup(BackendTestResource backend) {
         CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
+        CacheTestUtils.createCache(NON_SUBSCRIBED_CACHE_ID, backend);
     }
 
     @Test
-    @DisplayName("Should get streaming updates when adding multiple items in bulk")
+    @DisplayName("Should get streaming updates when adding multiple items in bulk for subscribed cache")
     @HappyPath
-    void shouldGetStreamingUpdatesWhenAddingMultipleItemsInBulk(BackendTestResource backend) {
+    void shouldGetStreamingUpdatesWhenAddingMultipleItemsForSubscribedCache(BackendTestResource backend) {
         // Arrange
         int numItems = 3;
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, numItems);
 
         List<CacheOperationRequest> operations = new ArrayList<>();
-        for (int i = 0; i < numItems; i++) {
+        int i=0;
+        for (; i < numItems; i++) {
             operations.add(new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, "req-" + i, KNOWN_CACHE_ID, KNOWN_KEY + "-" + i, KNOWN_VALUE + "-" + i));
         }
+        operations.add(new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, "req-" + i, NON_SUBSCRIBED_CACHE_ID, KNOWN_KEY + "-" + i, KNOWN_VALUE + "-" + i));
         var bulkRequest = new BulkCacheOpsRequest("bulk-request-1", operations);
 
         // Act
@@ -65,12 +69,12 @@ public abstract class AbstractMultiStreamBulkOpsTests {
             var streamingSourceEvents = streamingSourceEventsFuture.join();
             MatcherAssert.assertThat(streamingSourceEvents, Matchers.hasSize(numItems));
 
-            for (int i = 0; i < numItems; i++) {
-                var updateEvent = streamingSourceEvents.get(i);
+            for (int j = 0; j < numItems; j++) {
+                var updateEvent = streamingSourceEvents.get(j);
                 MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
                 MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
-                MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY + "-" + i));
-                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE + "-" + i));
+                MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY + "-" + j));
+                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE + "-" + j));
             }
         }
     }
