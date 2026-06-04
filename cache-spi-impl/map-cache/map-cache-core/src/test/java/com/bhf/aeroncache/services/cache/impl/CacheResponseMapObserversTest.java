@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -230,10 +231,11 @@ class CacheResponseMapObserversTest {
         var requestId = UUID.randomUUID().toString();
         var resultConsumer = Mockito.mock(Consumer.class);
         var cacheId = "123L";
-        sut.sendCacheSubscribe(requestId, cacheId, false, resultConsumer);
+        sut.sendCacheSubscribe(requestId, List.of(cacheId), false, resultConsumer);
 
         var result = Mockito.mock(CacheSubscriptionResult.class);
         when(result.getRequestId()).thenReturn(requestId);
+        when(result.isEob()).thenReturn(true);
 
         // Act
         sut.handleCacheSubscribeResponse(result);

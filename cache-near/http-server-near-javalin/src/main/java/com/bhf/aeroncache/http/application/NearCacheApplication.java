@@ -593,7 +593,7 @@ public class NearCacheApplication {
 
             nearCacheManager.handleCacheUpdate(cacheUpdateEvent);
         };
-        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, sessionId, requestId, true, resultsConsumer);
+        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), sessionId, requestId, true, resultsConsumer);
     }
 
 

@@ -5,6 +5,8 @@ import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.types.ReusableString;
 import org.agrona.MutableDirectBuffer;
 
+import java.util.List;
+
 /**
  * Encode requests going to Aeron Cache.
  */
@@ -78,10 +80,18 @@ public class ReusableStringCacheRequestEncoder implements CacheRequestEncoder<Re
     }
 
     @Override
-    public int encodeCacheSubscribe(String requestId, ReusableString cacheId, boolean sendSnapshot, MutableDirectBuffer msgBuffer) {
+    public int encodeCacheSubscribe(String requestId, List<ReusableString> cacheId, boolean sendSnapshot, MutableDirectBuffer msgBuffer) {
         cacheSubscriptionRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .sendSnapshot(sendSnapshot? BooleanType.T : BooleanType.F)
-                .cacheId(cacheId.value()).requestId(requestId);
+                .sendSnapshot(sendSnapshot ? BooleanType.T : BooleanType.F);
+
+        var itemsEncoder = cacheSubscriptionRequestEncoder.cacheIdsCount(cacheId.size());
+
+        for (int i = 0; i < cacheId.size(); i++) {
+            itemsEncoder.next();
+            itemsEncoder.cacheId(cacheId.get(i).value());
+        }
+
+        cacheSubscriptionRequestEncoder.requestId(requestId);
         return cacheSubscriptionRequestEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 

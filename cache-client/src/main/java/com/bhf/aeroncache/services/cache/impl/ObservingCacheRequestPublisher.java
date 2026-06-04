@@ -11,6 +11,7 @@ import com.bhf.aeroncache.types.ReusableString;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -145,12 +146,12 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot) {
+    public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot) {
         rbPublisher.sendCacheSubscribe(requestId, cacheId, sendSnapshot);
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
+    public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
         cacheResponseObservers.sendCacheSubscribe(requestId, cacheId, sendSnapshot, c);
         rbPublisher.sendCacheSubscribe(requestId, cacheId, sendSnapshot);
     }

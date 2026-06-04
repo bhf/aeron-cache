@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -87,7 +88,7 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
+    public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
         cacheSubscribeObservers.put(requestId, c);
     }
 
@@ -205,7 +206,8 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     public void handleCacheSubscribeResponse(CacheSubscriptionResult<I,K,V> cacheSubscriptionResult) {
         var targetId = cacheSubscriptionResult.getRequestId();
         log.info("Got cache subscribe response on requestId {}", targetId);
-        var observer = cacheSubscribeObservers.remove(targetId);
+        var observer = cacheSubscriptionResult.isEob() ? cacheSubscribeObservers.remove(targetId) :
+                cacheSubscribeObservers.get(targetId);
         if (observer != null) {
             observer.accept(cacheSubscriptionResult);
         }

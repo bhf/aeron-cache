@@ -6,6 +6,8 @@ import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.List;
+
 /**
  * Cluster service which extends {@link ObservingCacheRequestPublisher}
  * to support blocking operations.
@@ -66,7 +68,7 @@ public class ObservingClusterRequestPublisher extends ObservingCacheRequestPubli
     }
 
     @Override
-    public void sendCacheSubscribeBlocking(String requestId, String cacheId, boolean sendSnapshot) {
+    public void sendCacheSubscribeBlocking(String requestId, List<String> cacheId, boolean sendSnapshot) {
         blockingPublisher.sendCacheSubscribeBlocking(requestId, cacheId, sendSnapshot);
     }
 

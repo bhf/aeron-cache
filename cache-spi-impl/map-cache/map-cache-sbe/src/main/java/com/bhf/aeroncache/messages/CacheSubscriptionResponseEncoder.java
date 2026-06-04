@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class CacheSubscriptionResponseEncoder
 {
-    public static final int BLOCK_LENGTH = 1;
+    public static final int BLOCK_LENGTH = 2;
     public static final int TEMPLATE_ID = 18;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -131,6 +131,42 @@ public final class CacheSubscriptionResponseEncoder
     public CacheSubscriptionResponseEncoder status(final OperationStatus value)
     {
         buffer.putByte(offset + 0, (byte)value.value());
+        return this;
+    }
+
+    public static int isEobId()
+    {
+        return 2;
+    }
+
+    public static int isEobSinceVersion()
+    {
+        return 0;
+    }
+
+    public static int isEobEncodingOffset()
+    {
+        return 1;
+    }
+
+    public static int isEobEncodingLength()
+    {
+        return 1;
+    }
+
+    public static String isEobMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public CacheSubscriptionResponseEncoder isEob(final BooleanType value)
+    {
+        buffer.putByte(offset + 1, (byte)value.value());
         return this;
     }
 
@@ -456,7 +492,7 @@ public final class CacheSubscriptionResponseEncoder
 
     public static int cacheIdId()
     {
-        return 2;
+        return 4;
     }
 
     public static String cacheIdCharacterEncoding()
@@ -532,7 +568,7 @@ public final class CacheSubscriptionResponseEncoder
 
     public static int requestIdId()
     {
-        return 3;
+        return 5;
     }
 
     public static String requestIdCharacterEncoding()

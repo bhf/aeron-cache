@@ -12,6 +12,7 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.ringbuffer.RingBuffer;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * Publish Aeron Cache requests into a {@link RingBuffer} to be processed by the
@@ -310,37 +311,28 @@ public class RBCacheRequestPublisher implements CacheRequestPublisher {
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot) {
-        byte[] requestIdBytes = requestId.getBytes(StandardCharsets.UTF_8);
-        byte[] cacheIdBytes = cacheId.getBytes(StandardCharsets.UTF_8);
-        var desiredLength = (requestIdBytes.length + 4) + (cacheIdBytes.length + 4) + 1;
-        log.trace("DESIRED LENGTH=" + desiredLength);
+    public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot) {
 
-        var claimIndex = -1;
-        while ((claimIndex = rb.tryClaim(com.bhf.aeroncache.models.CacheRequestMessageTypes.SUBSCRIBE_TO_CACHE_MSG_ID, desiredLength)) < 0) {
+        if (requestId == null) {
+            return;
         }
 
-        try {
-            var buffer = rb.buffer();
-            int writeCursor = claimIndex;
+        var buffer = writeBuffer;
+        int writeCursor = 0;
+        writeCursor += buffer.putStringUtf8(writeCursor, requestId);
 
-            buffer.putInt(writeCursor, requestIdBytes.length);
-            writeCursor += 4;
-            buffer.putBytes(writeCursor, requestIdBytes);
-            writeCursor += requestIdBytes.length;
+        buffer.putInt(writeCursor, cacheId.size());
+        writeCursor += 4;
 
-            buffer.putInt(writeCursor, cacheIdBytes.length);
-            writeCursor += 4;
-            buffer.putBytes(writeCursor, cacheIdBytes);
-            writeCursor += cacheIdBytes.length;
+        for (String id : cacheId) {
+            writeCursor += buffer.putStringUtf8(writeCursor, id);
+        }
 
-            buffer.putByte(writeCursor, sendSnapshot ? (byte)1 : (byte)0);
-            writeCursor+=1;
-            log.trace("TOTAL WRITTEN=" + (writeCursor - claimIndex));
-            rb.commit(claimIndex);
-        } catch (Exception e) {
-            rb.abort(claimIndex);
-            log.error("Error whilst trying to write cache subscribe request to RingBuffer", e);
+        buffer.putByte(writeCursor, sendSnapshot ? (byte) 1 : (byte) 0);
+        writeCursor += 1;
+
+        var length = writeCursor;
+        while (!rb.write(CacheRequestMessageTypes.SUBSCRIBE_TO_CACHE_MSG_ID, writeBuffer, 0, length)) {
         }
     }
 

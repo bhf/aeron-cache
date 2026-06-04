@@ -7,6 +7,9 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
 @Setter
 @RequiredArgsConstructor
@@ -14,7 +17,7 @@ import lombok.Setter;
 public class CacheSubscriptionRequestDetails<I extends Reusable> implements Reusable<CacheSubscriptionRequestDetails<I>> {
 
     final RequestId requestId = new RequestId();
-    final I cacheId;
+    final List<I> cacheId = new ArrayList<>();
     boolean sendSnapshot;
 
     public String getRequestId(){
@@ -34,7 +37,7 @@ public class CacheSubscriptionRequestDetails<I extends Reusable> implements Reus
     @Override
     public void copyFrom(CacheSubscriptionRequestDetails<I> source) {
         this.requestId.copyFrom(source.requestId);
-        this.cacheId.copyFrom(source.cacheId);
+        this.cacheId.addAll(source.cacheId);
     }
 
     @Override

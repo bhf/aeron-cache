@@ -214,8 +214,8 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
         cacheSubscriptionResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
         var status = getOperationStatus(cacheSubscriptionResponseDecoder.status());
-
-        // process group of key-value from the decoder directly into the flyweight
+        var isEob = cacheSubscriptionResponseDecoder.isEob() == BooleanType.T;
+        cacheSubscriptionResult.setEob(isEob);
 
         for (var item : cacheSubscriptionResponseDecoder.items()) {
             var key = new ReusableString();

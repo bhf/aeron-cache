@@ -71,4 +71,20 @@ public class StreamingHelperUtil {
         return perStreamingSourceEvents;
     }
 
+    public static List<CompletableFuture<List<CacheUpdateEvent>>> getPerStreamEventsMultipleCachesWithHydration(StreamingHelper[] streamingHelpers,
+                                                                                                  BackendTestResource backend, List<String> cacheIds, int eventCount) {
+        List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
+        var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
+                .map(helper -> {
+                    CompletableFuture<Void> ready = new CompletableFuture<>();
+                    readyFutures.add(ready);
+                    return helper.getEventsMultipleCachesWithHydration(backend, cacheIds, eventCount, ready);
+                })
+                .collect(Collectors.toList());
+
+        readyFutures.forEach(f -> Awaitility.await().atMost(60, TimeUnit.SECONDS).until(f::isDone));
+
+        return perStreamingSourceEvents;
+    }
+
 }

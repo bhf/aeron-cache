@@ -32,7 +32,7 @@ public class CacheResponseObserversJMH {
             }
         };
 
-        sut.addCacheEntry(requestId, cacheId, key, value, consumer);
+        sut.addCacheEntry(requestId, cacheId, key, value, 0, consumer);
 
         bh.consume(consumer);
     }

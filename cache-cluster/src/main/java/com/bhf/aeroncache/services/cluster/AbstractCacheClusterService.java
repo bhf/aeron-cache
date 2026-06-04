@@ -87,7 +87,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.getAllCacheEntriesRequestDetails = new GetAllCacheEntriesRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.addEntryFailureResult = new AddCacheEntryResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
         this.getCacheStatsRequestDetails = new GetCacheStatsRequestDetails();
-        this.cacheSubscribeRequestDetails = new CacheSubscriptionRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
+        this.cacheSubscribeRequestDetails = new CacheSubscriptionRequestDetails<>();
         this.cacheUnsubscribeRequestDetails = new CacheUnsubscribeRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.bulkCacheOpsRequestDetails = new BulkCacheOpsRequestDetails<>(cacheManagerFactory.getIndexSupplier(), cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getValueSupplier());
         this.subscribeResult = new CacheSubscriptionResult<>(cacheManagerFactory.getIndexSupplier().get());
@@ -431,19 +431,22 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         CacheSubscriptionRequestDetails<I> requestDetails = getCacheSubscriptionRequest(session, buffer, offset);
         tracingService.startCacheSubscriptionRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
-        var cacheId = requestDetails.getCacheId();
-        log.info("Got request to subscribe for cache updates on cache: {}, request Id: {}, send snapshot: {}", cacheId, requestId, requestDetails.isSendSnapshot());
-        var result = subscriptionService.subscribe(requestDetails, session);
+        var cacheIds = requestDetails.getCacheId();
 
-        if(requestDetails.isSendSnapshot()){
-            System.out.println("IS SEND SNAPSHOT");
-            populateSnapshot(result, cacheId);
-        }
-        else{
-            result.entries = null;
-        }
+        log.info("Total caches to subscribe on: {}", cacheIds.size());
+        for(var cacheId : cacheIds) {
+            log.info("Got request to subscribe for cache updates on cache: {}, request Id: {}, send snapshot: {}", cacheId, requestId, requestDetails.isSendSnapshot());
+            var result = subscriptionService.subscribe(session, cacheId, requestId);
 
-        handlePostCacheSubscriptionRequest(result, session);
+            if (requestDetails.isSendSnapshot()) {
+                log.info("Sending back snapshot for cache {}", cacheId);
+                populateSnapshot(result, cacheId);
+            } else {
+                result.entries = null;
+            }
+
+            handlePostCacheSubscriptionRequest(result, session);
+        }
         tracingService.endCacheSubscriptionRequest(requestDetails);
     }
 
@@ -452,6 +455,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
         if (cache != null) {
             result.entries = cache.getAllEntries();
+        }
+        else{
+            result.entries = null;
         }
     }
 

@@ -26,6 +26,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -72,7 +73,7 @@ class UnsubscribeCacheTest {
         TestUtils.createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        int length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, false, requestBuffer);
+        int length = cacheRequestEncoder.encodeCacheSubscribe(requestId, List.of(cacheId), false, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
         // Act

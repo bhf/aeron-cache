@@ -47,11 +47,21 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
         cacheSubscriptionRequestDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var sendSnapshot = cacheSubscriptionRequestDecoder.sendSnapshot();
         boolean shouldSendInitialState = sendSnapshot==BooleanType.T;
-        var cacheId = cacheSubscriptionRequestDecoder.cacheId();
+
+        cacheSubscribeRequestDetails.getCacheId().clear();
+        var cacheIds = cacheSubscribeRequestDetails.getCacheId();
+
+        var itemsDecoder = cacheSubscriptionRequestDecoder.cacheIds();
+
+        for(var op: itemsDecoder) {
+            ReusableString reusableCacheId = new ReusableString();
+            var cacheId = op.cacheId();
+            reusableCacheId.copyFrom(cacheId);
+            cacheIds.add(reusableCacheId);
+        }
+
         var requestId = cacheSubscriptionRequestDecoder.requestId();
         cacheSubscribeRequestDetails.setSendSnapshot(shouldSendInitialState);
-        cacheSubscribeRequestDetails.getCacheId().clear();
-        cacheSubscribeRequestDetails.getCacheId().copyFrom(cacheId);
         cacheSubscribeRequestDetails.setRequestId(requestId);
     }
 

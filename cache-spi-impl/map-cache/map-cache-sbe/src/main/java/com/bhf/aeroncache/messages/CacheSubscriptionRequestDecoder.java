@@ -174,102 +174,237 @@ public final class CacheSubscriptionRequestDecoder
     }
 
 
-    public static int cacheIdId()
+    private final CacheIdsDecoder cacheIds = new CacheIdsDecoder(this);
+
+    public static long cacheIdsDecoderId()
     {
-        return 2;
+        return 20;
     }
 
-    public static int cacheIdSinceVersion()
+    public static int cacheIdsDecoderSinceVersion()
     {
         return 0;
     }
 
-    public static String cacheIdCharacterEncoding()
+    public CacheIdsDecoder cacheIds()
     {
-        return java.nio.charset.StandardCharsets.UTF_8.name();
+        cacheIds.wrap(buffer);
+        return cacheIds;
     }
 
-    public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
+    public static final class CacheIdsDecoder
+        implements Iterable<CacheIdsDecoder>, java.util.Iterator<CacheIdsDecoder>
     {
-        if (MetaAttribute.PRESENCE == metaAttribute)
+        public static final int HEADER_SIZE = 4;
+        private final CacheSubscriptionRequestDecoder parentMessage;
+        private DirectBuffer buffer;
+        private int count;
+        private int index;
+        private int offset;
+        private int blockLength;
+
+        CacheIdsDecoder(final CacheSubscriptionRequestDecoder parentMessage)
         {
-            return "required";
+            this.parentMessage = parentMessage;
         }
 
-        return "";
-    }
-
-    public static int cacheIdHeaderLength()
-    {
-        return 4;
-    }
-
-    public int cacheIdLength()
-    {
-        final int limit = parentMessage.limit();
-        return (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
-    }
-
-    public int skipCacheId()
-    {
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
-        final int dataOffset = limit + headerLength;
-        parentMessage.limit(dataOffset + dataLength);
-
-        return dataLength;
-    }
-
-    public int getCacheId(final MutableDirectBuffer dst, final int dstOffset, final int length)
-    {
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
-        final int bytesCopied = Math.min(length, dataLength);
-        parentMessage.limit(limit + headerLength + dataLength);
-        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
-
-        return bytesCopied;
-    }
-
-    public int getCacheId(final byte[] dst, final int dstOffset, final int length)
-    {
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
-        final int bytesCopied = Math.min(length, dataLength);
-        parentMessage.limit(limit + headerLength + dataLength);
-        buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
-
-        return bytesCopied;
-    }
-
-    public void wrapCacheId(final DirectBuffer wrapBuffer)
-    {
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
-        parentMessage.limit(limit + headerLength + dataLength);
-        wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
-    }
-
-    public String cacheId()
-    {
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
-        parentMessage.limit(limit + headerLength + dataLength);
-
-        if (0 == dataLength)
+        public void wrap(final DirectBuffer buffer)
         {
+            if (buffer != this.buffer)
+            {
+                this.buffer = buffer;
+            }
+
+            index = 0;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + HEADER_SIZE);
+            blockLength = (buffer.getShort(limit + 0, BYTE_ORDER) & 0xFFFF);
+            count = (buffer.getShort(limit + 2, BYTE_ORDER) & 0xFFFF);
+        }
+
+        public CacheIdsDecoder next()
+        {
+            if (index >= count)
+            {
+                throw new java.util.NoSuchElementException();
+            }
+
+            offset = parentMessage.limit();
+            parentMessage.limit(offset + blockLength);
+            ++index;
+
+            return this;
+        }
+
+        public static int countMinValue()
+        {
+            return 0;
+        }
+
+        public static int countMaxValue()
+        {
+            return 65534;
+        }
+
+        public static int sbeHeaderSize()
+        {
+            return HEADER_SIZE;
+        }
+
+        public static int sbeBlockLength()
+        {
+            return 0;
+        }
+
+        public int actingBlockLength()
+        {
+            return blockLength;
+        }
+
+        public int actingVersion()
+        {
+            return parentMessage.actingVersion;
+        }
+
+        public int count()
+        {
+            return count;
+        }
+
+        public java.util.Iterator<CacheIdsDecoder> iterator()
+        {
+            return this;
+        }
+
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        public boolean hasNext()
+        {
+            return index < count;
+        }
+
+        public static int cacheIdId()
+        {
+            return 21;
+        }
+
+        public static int cacheIdSinceVersion()
+        {
+            return 0;
+        }
+
+        public static String cacheIdCharacterEncoding()
+        {
+            return java.nio.charset.StandardCharsets.UTF_8.name();
+        }
+
+        public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
+        {
+            if (MetaAttribute.PRESENCE == metaAttribute)
+            {
+                return "required";
+            }
+
             return "";
         }
 
-        final byte[] tmp = new byte[dataLength];
-        buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
+        public static int cacheIdHeaderLength()
+        {
+            return 4;
+        }
 
-        return new String(tmp, java.nio.charset.StandardCharsets.UTF_8);
+        public int cacheIdLength()
+        {
+            final int limit = parentMessage.limit();
+            return (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
+        }
+
+        public int skipCacheId()
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
+            final int dataOffset = limit + headerLength;
+            parentMessage.limit(dataOffset + dataLength);
+
+            return dataLength;
+        }
+
+        public int getCacheId(final MutableDirectBuffer dst, final int dstOffset, final int length)
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
+            final int bytesCopied = Math.min(length, dataLength);
+            parentMessage.limit(limit + headerLength + dataLength);
+            buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+            return bytesCopied;
+        }
+
+        public int getCacheId(final byte[] dst, final int dstOffset, final int length)
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
+            final int bytesCopied = Math.min(length, dataLength);
+            parentMessage.limit(limit + headerLength + dataLength);
+            buffer.getBytes(limit + headerLength, dst, dstOffset, bytesCopied);
+
+            return bytesCopied;
+        }
+
+        public void wrapCacheId(final DirectBuffer wrapBuffer)
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
+            parentMessage.limit(limit + headerLength + dataLength);
+            wrapBuffer.wrap(buffer, limit + headerLength, dataLength);
+        }
+
+        public String cacheId()
+        {
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            final int dataLength = (int)(buffer.getInt(limit, BYTE_ORDER) & 0xFFFF_FFFFL);
+            parentMessage.limit(limit + headerLength + dataLength);
+
+            if (0 == dataLength)
+            {
+                return "";
+            }
+
+            final byte[] tmp = new byte[dataLength];
+            buffer.getBytes(limit + headerLength, tmp, 0, dataLength);
+
+            return new String(tmp, java.nio.charset.StandardCharsets.UTF_8);
+        }
+
+        public StringBuilder appendTo(final StringBuilder builder)
+        {
+            if (null == buffer)
+            {
+                return builder;
+            }
+
+            builder.append('(');
+            builder.append("cacheId=");
+            builder.append('\'').append(cacheId()).append('\'');
+            builder.append(')');
+
+            return builder;
+        }
+        
+        public CacheIdsDecoder sbeSkip()
+        {
+            skipCacheId();
+
+            return this;
+        }
     }
 
     public static int requestIdId()
@@ -414,8 +549,22 @@ public final class CacheSubscriptionRequestDecoder
         builder.append("sendSnapshot=");
         builder.append(this.sendSnapshot());
         builder.append('|');
-        builder.append("cacheId=");
-        builder.append('\'').append(cacheId()).append('\'');
+        builder.append("cacheIds=[");
+        final int cacheIdsOriginalOffset = cacheIds.offset;
+        final int cacheIdsOriginalIndex = cacheIds.index;
+        final CacheIdsDecoder cacheIds = this.cacheIds();
+        if (cacheIds.count() > 0)
+        {
+            while (cacheIds.hasNext())
+            {
+                cacheIds.next().appendTo(builder);
+                builder.append(',');
+            }
+            builder.setLength(builder.length() - 1);
+        }
+        cacheIds.offset = cacheIdsOriginalOffset;
+        cacheIds.index = cacheIdsOriginalIndex;
+        builder.append(']');
         builder.append('|');
         builder.append("requestId=");
         builder.append('\'').append(requestId()).append('\'');
@@ -428,7 +577,15 @@ public final class CacheSubscriptionRequestDecoder
     public CacheSubscriptionRequestDecoder sbeSkip()
     {
         sbeRewind();
-        skipCacheId();
+        CacheIdsDecoder cacheIds = this.cacheIds();
+        if (cacheIds.count() > 0)
+        {
+            while (cacheIds.hasNext())
+            {
+                cacheIds.next();
+                cacheIds.sbeSkip();
+            }
+        }
         skipRequestId();
 
         return this;

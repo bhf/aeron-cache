@@ -20,6 +20,7 @@ public class CacheSubscriptionResult<I extends Reusable, K extends Reusable, V e
     final I cacheId;
     public Map<K, V> entries = new HashMap<>();
     CacheOperationStatus status = CacheOperationStatus.NONE;
+    boolean isEob;
 
     public String getRequestId() {
         return requestId.getRequestId();
@@ -34,6 +35,7 @@ public class CacheSubscriptionResult<I extends Reusable, K extends Reusable, V e
         requestId.clear();
         cacheId.clear();
         status = CacheOperationStatus.NONE;
+        isEob = false;
     }
 
     @Override
@@ -41,6 +43,7 @@ public class CacheSubscriptionResult<I extends Reusable, K extends Reusable, V e
         this.requestId.copyFrom(source.requestId);
         this.cacheId.copyFrom(source.cacheId);
         this.status = source.status;
+        this.isEob = source.isEob;
     }
 
     @Override

@@ -134,80 +134,172 @@ public final class CacheSubscriptionRequestEncoder
         return this;
     }
 
-    public static int cacheIdId()
+    private final CacheIdsEncoder cacheIds = new CacheIdsEncoder(this);
+
+    public static long cacheIdsId()
     {
-        return 2;
+        return 20;
     }
 
-    public static String cacheIdCharacterEncoding()
+    public CacheIdsEncoder cacheIdsCount(final int count)
     {
-        return java.nio.charset.StandardCharsets.UTF_8.name();
+        cacheIds.wrap(buffer, count);
+        return cacheIds;
     }
 
-    public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
+    public static final class CacheIdsEncoder
     {
-        if (MetaAttribute.PRESENCE == metaAttribute)
+        public static final int HEADER_SIZE = 4;
+        private final CacheSubscriptionRequestEncoder parentMessage;
+        private MutableDirectBuffer buffer;
+        private int count;
+        private int index;
+        private int offset;
+        private int initialLimit;
+
+        CacheIdsEncoder(final CacheSubscriptionRequestEncoder parentMessage)
         {
-            return "required";
+            this.parentMessage = parentMessage;
         }
 
-        return "";
-    }
-
-    public static int cacheIdHeaderLength()
-    {
-        return 4;
-    }
-
-    public CacheSubscriptionRequestEncoder putCacheId(final DirectBuffer src, final int srcOffset, final int length)
-    {
-        if (length > 1073741824)
+        public void wrap(final MutableDirectBuffer buffer, final int count)
         {
-            throw new IllegalStateException("length > maxValue for type: " + length);
+            if (count < 0 || count > 65534)
+            {
+                throw new IllegalArgumentException("count outside allowed range: count=" + count);
+            }
+
+            if (buffer != this.buffer)
+            {
+                this.buffer = buffer;
+            }
+
+            index = 0;
+            this.count = count;
+            final int limit = parentMessage.limit();
+            initialLimit = limit;
+            parentMessage.limit(limit + HEADER_SIZE);
+            buffer.putShort(limit + 0, (short)0, BYTE_ORDER);
+            buffer.putShort(limit + 2, (short)count, BYTE_ORDER);
         }
 
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, BYTE_ORDER);
-        buffer.putBytes(limit + headerLength, src, srcOffset, length);
-
-        return this;
-    }
-
-    public CacheSubscriptionRequestEncoder putCacheId(final byte[] src, final int srcOffset, final int length)
-    {
-        if (length > 1073741824)
+        public CacheIdsEncoder next()
         {
-            throw new IllegalStateException("length > maxValue for type: " + length);
+            if (index >= count)
+            {
+                throw new java.util.NoSuchElementException();
+            }
+
+            offset = parentMessage.limit();
+            parentMessage.limit(offset + sbeBlockLength());
+            ++index;
+
+            return this;
         }
 
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, BYTE_ORDER);
-        buffer.putBytes(limit + headerLength, src, srcOffset, length);
-
-        return this;
-    }
-
-    public CacheSubscriptionRequestEncoder cacheId(final String value)
-    {
-        final byte[] bytes = (null == value || value.isEmpty()) ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-
-        final int length = bytes.length;
-        if (length > 1073741824)
+        public int resetCountToIndex()
         {
-            throw new IllegalStateException("length > maxValue for type: " + length);
+            count = index;
+            buffer.putShort(initialLimit + 2, (short)count, BYTE_ORDER);
+
+            return count;
         }
 
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        parentMessage.limit(limit + headerLength + length);
-        buffer.putInt(limit, length, BYTE_ORDER);
-        buffer.putBytes(limit + headerLength, bytes, 0, length);
+        public static int countMinValue()
+        {
+            return 0;
+        }
 
-        return this;
+        public static int countMaxValue()
+        {
+            return 65534;
+        }
+
+        public static int sbeHeaderSize()
+        {
+            return HEADER_SIZE;
+        }
+
+        public static int sbeBlockLength()
+        {
+            return 0;
+        }
+
+        public static int cacheIdId()
+        {
+            return 21;
+        }
+
+        public static String cacheIdCharacterEncoding()
+        {
+            return java.nio.charset.StandardCharsets.UTF_8.name();
+        }
+
+        public static String cacheIdMetaAttribute(final MetaAttribute metaAttribute)
+        {
+            if (MetaAttribute.PRESENCE == metaAttribute)
+            {
+                return "required";
+            }
+
+            return "";
+        }
+
+        public static int cacheIdHeaderLength()
+        {
+            return 4;
+        }
+
+        public CacheIdsEncoder putCacheId(final DirectBuffer src, final int srcOffset, final int length)
+        {
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+            return this;
+        }
+
+        public CacheIdsEncoder putCacheId(final byte[] src, final int srcOffset, final int length)
+        {
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, src, srcOffset, length);
+
+            return this;
+        }
+
+        public CacheIdsEncoder cacheId(final String value)
+        {
+            final byte[] bytes = (null == value || value.isEmpty()) ? org.agrona.collections.ArrayUtil.EMPTY_BYTE_ARRAY : value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+            final int length = bytes.length;
+            if (length > 1073741824)
+            {
+                throw new IllegalStateException("length > maxValue for type: " + length);
+            }
+
+            final int headerLength = 4;
+            final int limit = parentMessage.limit();
+            parentMessage.limit(limit + headerLength + length);
+            buffer.putInt(limit, length, BYTE_ORDER);
+            buffer.putBytes(limit + headerLength, bytes, 0, length);
+
+            return this;
+        }
     }
 
     public static int requestIdId()
