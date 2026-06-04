@@ -15,11 +15,12 @@ public interface CacheSubscriptionService<I extends Reusable, K extends Reusable
     /**
      * Subscribe to a cache.
      *
-     * @param requestDetails The details of the subscription.
-     * @param session
+     * @param session The client session.
+     * @param cacheId The cache to subscribe on.
+     * @param requestId The requestId.
      * @return A response to the request for subscription.
      */
-    CacheSubscriptionResult<I,K,V> subscribe(CacheSubscriptionRequestDetails<I> requestDetails, ClientSession session);
+    CacheSubscriptionResult<I,K,V> subscribe(ClientSession session, I cacheId, String requestId);
 
     /**
      * Unsubscribe to a cache.

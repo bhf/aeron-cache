@@ -158,12 +158,16 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
         cacheSubscriptionResponseEncoder
                 .status(getOperationStatus(subscriptionRequestResult.getStatus()));
 
-        var values = subscriptionRequestResult.entries;
+        cacheSubscriptionResponseEncoder.isEob(subscriptionRequestResult.isEob() ?
+                BooleanType.T : BooleanType.F);
 
+        var values = subscriptionRequestResult.entries;
 
         if(values!=null) {
             int size = values!=null ? values.size() : 0;
             var itemsEncoder = cacheSubscriptionResponseEncoder.itemsCount(size);
+
+            System.out.println("TOTAL ITEMS TO ENCODE "+size);
 
             String cacheId = subscriptionRequestResult.getCacheId().value();
             values.forEach((key, value) -> {

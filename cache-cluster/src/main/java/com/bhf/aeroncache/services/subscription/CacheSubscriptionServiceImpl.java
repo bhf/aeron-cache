@@ -25,21 +25,20 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
     private final Map<I, Set<ClientSession>> cacheIdToClientSessions = new HashMap<>();
 
     @Override
-    public CacheSubscriptionResult<I,K,V> subscribe(CacheSubscriptionRequestDetails<I> requestDetails,
-                                                ClientSession session) {
+    public CacheSubscriptionResult<I,K,V> subscribe(ClientSession session, I cacheId, String requestId) {
         Set<ClientSession> existingSubscribers;
-        if (cacheIdToClientSessions.containsKey(requestDetails.getCacheId())) {
-            existingSubscribers = cacheIdToClientSessions.get(requestDetails.getCacheId());
+        if (cacheIdToClientSessions.containsKey(cacheId)) {
+            existingSubscribers = cacheIdToClientSessions.get(cacheId);
         } else {
             existingSubscribers = new HashSet<>();
             var key = indexSupplier.get();
-            key.copyFrom(requestDetails.getCacheId());
+            key.copyFrom(cacheId);
             cacheIdToClientSessions.put(key, existingSubscribers);
         }
 
         subscriptionResult.clear();
-        subscriptionResult.setRequestId(requestDetails.getRequestId());
-        subscriptionResult.getCacheId().copyFrom(requestDetails.getCacheId());
+        subscriptionResult.setRequestId(requestId);
+        subscriptionResult.getCacheId().copyFrom(cacheId);
         if (!existingSubscribers.contains(session)) {
             existingSubscribers.add(session);
             subscriptionResult.setStatus(CacheOperationStatus.SUCCESS);

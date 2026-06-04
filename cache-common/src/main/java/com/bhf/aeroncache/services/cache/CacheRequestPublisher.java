@@ -3,6 +3,8 @@ package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 
+import java.util.List;
+
 /**
  * Requests that an Aeron Cache will handle.
  */
@@ -59,7 +61,7 @@ public interface CacheRequestPublisher {
      */
     void removeCacheEntry(String requestId, String cacheId, String key);
 
-    /**
+    /**List<String>
      * Send a message to get all cache entries.
      *
      * @param requestId The Id of this request.
@@ -81,7 +83,7 @@ public interface CacheRequestPublisher {
      * @param cacheId      The cache to subscribe too.
      * @param sendSnapshot Whether to return a snapshot of the cache for initial hydration.
      */
-    void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot);
+    void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot);
 
     /**
      * Send a request to unsubscribe to cache updates.

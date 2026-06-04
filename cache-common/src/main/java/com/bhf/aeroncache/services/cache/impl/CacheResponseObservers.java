@@ -163,7 +163,7 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
+    public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
         cacheSubscribeObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {

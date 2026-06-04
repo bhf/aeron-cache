@@ -156,10 +156,11 @@ class CacheSubscriptionServiceImplTest {
     }
 
     private CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> subscribeToCache() {
-        var subscribeRequest = new CacheSubscriptionRequestDetails<>(new ReusableString());
+        var subscribeRequest = new CacheSubscriptionRequestDetails<>();
         subscribeRequest.setRequestId(UUID.randomUUID().toString());
-        subscribeRequest.getCacheId().copyFrom(KNOWN_CACHE);
-        return sut.subscribe(subscribeRequest, session);
+        var cacheID = new ReusableString();
+        cacheID.copyFrom(KNOWN_CACHE);
+        return sut.subscribe(session, cacheID, subscribeRequest.getRequestId());
     }
 
 }

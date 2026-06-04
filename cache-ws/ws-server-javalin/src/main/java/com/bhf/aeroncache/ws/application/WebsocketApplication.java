@@ -45,10 +45,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
 import java.io.File;
-import java.util.List;
-import java.util.Optional;
-import java.util.ServiceLoader;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -426,7 +423,7 @@ public class WebsocketApplication {
 
             final Consumer<Void> subscriptionFailureHandler = _ ->
                     wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, wsConnectContext.sessionId(),
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), wsConnectContext.sessionId(),
                     requestId, false, wsConnectContext::send);
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();
@@ -444,7 +441,7 @@ public class WebsocketApplication {
 
             final Consumer<Void> subscriptionFailureHandler = _ ->
                     wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, wsConnectContext.sessionId(),
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), wsConnectContext.sessionId(),
                     requestId, true, wsConnectContext::send);
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();
@@ -463,17 +460,15 @@ public class WebsocketApplication {
         try {
             wsConnectContext.enableAutomaticPings();
             var cacheIds = wsConnectContext.pathParam("cacheIds");
-            String[] caches = cacheIds.split(",");
-            for (var c : caches) {
-                var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-                log.info("Subscription request for cacheId: {} on ws sessionId: {}", c,
-                        wsConnectContext.sessionId());
-                final Consumer<Void> subscriptionFailureHandler = _ ->
-                        wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
+            List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
+            var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
+            log.info("Subscription request for cacheId: {} on ws sessionId: {}", caches,
+                    wsConnectContext.sessionId());
+            final Consumer<Void> subscriptionFailureHandler = _ ->
+                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
 
-                subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, wsConnectContext.sessionId(),
-                        requestId, false, wsConnectContext::send);
-            }
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, caches, wsConnectContext.sessionId(),
+                    requestId, false, wsConnectContext::send);
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();
             log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
@@ -485,17 +480,15 @@ public class WebsocketApplication {
         try {
             wsConnectContext.enableAutomaticPings();
             var cacheIds = wsConnectContext.pathParam("cacheIds");
-            String[] caches = cacheIds.split(",");
-            for (var c : caches) {
-                var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-                log.info("Subscription request with hydration for cacheId: {} on ws sessionId: {}", c,
-                        wsConnectContext.sessionId());
-                final Consumer<Void> subscriptionFailureHandler = _ ->
-                        wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
+            List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
+            var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
+            log.info("Subscription request with hydration for cacheId: {} on ws sessionId: {}", caches,
+                    wsConnectContext.sessionId());
+            final Consumer<Void> subscriptionFailureHandler = _ ->
+                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
 
-                subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, wsConnectContext.sessionId(),
-                        requestId, true, wsConnectContext::send);
-            }
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, caches, wsConnectContext.sessionId(),
+                    requestId, true, wsConnectContext::send);
         } catch (NumberFormatException e) {
             statsTracker.getTotalErrors().incrementAndGet();
             log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());

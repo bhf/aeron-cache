@@ -14,6 +14,8 @@ import org.agrona.ExpandableDirectByteBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 
+import java.util.List;
+
 /**
  * Encode cache requests into SBE and send them to the cluster.
  */
@@ -120,13 +122,13 @@ public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingC
     }
 
     @Override
-    public void sendCacheSubscribeBlocking(String requestId, String cacheId, boolean sendSnapshot) {
+    public void sendCacheSubscribeBlocking(String requestId, List<String> cacheId, boolean sendSnapshot) {
         sendCacheSubscribe(requestId, cacheId, sendSnapshot);
         waitForResult(cluster);
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot) {
+    public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot) {
         var length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, sendSnapshot, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent cache subscription request on cache {} with request Id {}", cacheId, requestId);

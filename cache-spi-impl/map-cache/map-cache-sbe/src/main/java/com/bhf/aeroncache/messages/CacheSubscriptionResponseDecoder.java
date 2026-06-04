@@ -11,7 +11,7 @@ import org.agrona.DirectBuffer;
 @SuppressWarnings("all")
 public final class CacheSubscriptionResponseDecoder
 {
-    public static final int BLOCK_LENGTH = 1;
+    public static final int BLOCK_LENGTH = 2;
     public static final int TEMPLATE_ID = 18;
     public static final int SCHEMA_ID = 1;
     public static final int SCHEMA_VERSION = 0;
@@ -171,6 +171,47 @@ public final class CacheSubscriptionResponseDecoder
     public OperationStatus status()
     {
         return OperationStatus.get(((short)(buffer.getByte(offset + 0) & 0xFF)));
+    }
+
+
+    public static int isEobId()
+    {
+        return 2;
+    }
+
+    public static int isEobSinceVersion()
+    {
+        return 0;
+    }
+
+    public static int isEobEncodingOffset()
+    {
+        return 1;
+    }
+
+    public static int isEobEncodingLength()
+    {
+        return 1;
+    }
+
+    public static String isEobMetaAttribute(final MetaAttribute metaAttribute)
+    {
+        if (MetaAttribute.PRESENCE == metaAttribute)
+        {
+            return "required";
+        }
+
+        return "";
+    }
+
+    public short isEobRaw()
+    {
+        return ((short)(buffer.getByte(offset + 1) & 0xFF));
+    }
+
+    public BooleanType isEob()
+    {
+        return BooleanType.get(((short)(buffer.getByte(offset + 1) & 0xFF)));
     }
 
 
@@ -613,7 +654,7 @@ public final class CacheSubscriptionResponseDecoder
 
     public static int cacheIdId()
     {
-        return 2;
+        return 4;
     }
 
     public static int cacheIdSinceVersion()
@@ -711,7 +752,7 @@ public final class CacheSubscriptionResponseDecoder
 
     public static int requestIdId()
     {
-        return 3;
+        return 5;
     }
 
     public static int requestIdSinceVersion()
@@ -850,6 +891,9 @@ public final class CacheSubscriptionResponseDecoder
         builder.append("):");
         builder.append("status=");
         builder.append(this.status());
+        builder.append('|');
+        builder.append("isEob=");
+        builder.append(this.isEob());
         builder.append('|');
         builder.append("items=[");
         final int itemsOriginalOffset = items.offset;

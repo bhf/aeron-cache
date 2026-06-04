@@ -93,11 +93,20 @@ public class CacheClientAgent extends AbstractClientAgent {
                 case SUBSCRIBE_TO_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);
                     var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
-                    var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
-                    cumulativeReadPosition += (buffer.getInt(cumulativeReadPosition) + 4);
+
+                    var cacheIdCount = buffer.getInt(cumulativeReadPosition);
+                    cumulativeReadPosition += 4;
+
+                    List<String> cacheIds = new ArrayList<>();
+                    for (int i = 0; i < cacheIdCount; i++) {
+                        var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
+                        cacheIds.add(cacheId);
+                        cumulativeReadPosition += (buffer.getInt(cumulativeReadPosition) + 4);
+                    }
+
                     boolean sendSnapshot = buffer.getByte(cumulativeReadPosition) == (byte) 1;
-                    log.debug("SUBSCRIBE CACHE Request has ID " + requestId + ", on cache ID " + cacheId);
-                    getPublisher().sendCacheSubscribe(requestId, cacheId, sendSnapshot);
+                    log.debug("SUBSCRIBE CACHE Request has ID " + requestId + ", on cache IDs " + cacheIds);
+                    getPublisher().sendCacheSubscribe(requestId, cacheIds, sendSnapshot);
                 }
                 case UNSUBSCRIBE_TO_CACHE_MSG_ID -> {
                     var requestId = buffer.getStringUtf8(index);

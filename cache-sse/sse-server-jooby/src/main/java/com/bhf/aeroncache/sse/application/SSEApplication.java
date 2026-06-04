@@ -38,10 +38,7 @@ import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.ServiceLoader;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -140,7 +137,7 @@ public class SSEApplication extends Jooby {
                 }
             };
 
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, serverSentEmitter.getId(),
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), serverSentEmitter.getId(),
                     requestId, false, consumer);
         } catch (TypeMismatchException e) {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
@@ -174,7 +171,7 @@ public class SSEApplication extends Jooby {
                 }
             };
 
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, cacheId, serverSentEmitter.getId(),
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), serverSentEmitter.getId(),
                     requestId, true, consumer);
         } catch (TypeMismatchException e) {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
@@ -185,51 +182,49 @@ public class SSEApplication extends Jooby {
     private static void handleMultiCacheSSE(ServerSentEmitter serverSentEmitter) {
         var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
         log.info("Got cache Ids: "+cacheIds);
-        String[] caches = cacheIds.split(",");
-        for (var c : caches) {
-            var requestId = UUID.randomUUID().toString();
-            log.info("Subscription request for cacheId: {} on SSE sessionId: {}", c,
-                    serverSentEmitter.getId());
-            final Consumer<Void> subscriptionFailureHandler = _ ->
-                    serverSentEmitter.close();
+        List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
 
-            final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
-                try {
-                    final var res = writer.writeValueAsString(cacheUpdateEvent);
-                    serverSentEmitter.send("message", res);
-                } catch (JsonProcessingException e) {
-                    log.error("Error trying to convert cache update event to JSON", e);
-                }
-            };
+        var requestId = UUID.randomUUID().toString();
+        log.info("Subscription request for cacheId: {} on SSE sessionId: {}", caches,
+                serverSentEmitter.getId());
+        final Consumer<Void> subscriptionFailureHandler = _ ->
+                serverSentEmitter.close();
 
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, serverSentEmitter.getId(),
-                    requestId, false, consumer);
-        }
+        final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
+            try {
+                final var res = writer.writeValueAsString(cacheUpdateEvent);
+                serverSentEmitter.send("message", res);
+            } catch (JsonProcessingException e) {
+                log.error("Error trying to convert cache update event to JSON", e);
+            }
+        };
+
+        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, caches, serverSentEmitter.getId(),
+                requestId, false, consumer);
     }
 
     private static void handleMultiCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
         var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
         log.info("Got cache Ids: "+cacheIds);
-        String[] caches = cacheIds.split(",");
-        for (var c : caches) {
-            var requestId = UUID.randomUUID().toString();
-            log.info("Subscription request for cacheId: {} on SSE sessionId: {}", c,
-                    serverSentEmitter.getId());
-            final Consumer<Void> subscriptionFailureHandler = _ ->
-                    serverSentEmitter.close();
+        List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
 
-            final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
-                try {
-                    final var res = writer.writeValueAsString(cacheUpdateEvent);
-                    serverSentEmitter.send("message", res);
-                } catch (JsonProcessingException e) {
-                    log.error("Error trying to convert cache update event to JSON", e);
-                }
-            };
+        var requestId = UUID.randomUUID().toString();
+        log.info("Subscription request for cacheId: {} on SSE sessionId: {}", caches,
+                serverSentEmitter.getId());
+        final Consumer<Void> subscriptionFailureHandler = _ ->
+                serverSentEmitter.close();
 
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, c, serverSentEmitter.getId(),
-                    requestId, true, consumer);
-        }
+        final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
+            try {
+                final var res = writer.writeValueAsString(cacheUpdateEvent);
+                serverSentEmitter.send("message", res);
+            } catch (JsonProcessingException e) {
+                log.error("Error trying to convert cache update event to JSON", e);
+            }
+        };
+
+        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, caches, serverSentEmitter.getId(),
+                requestId, true, consumer);
     }
 
     private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {

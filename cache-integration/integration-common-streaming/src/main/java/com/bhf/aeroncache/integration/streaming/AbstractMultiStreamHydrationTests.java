@@ -13,6 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -36,8 +37,6 @@ public abstract class AbstractMultiStreamHydrationTests {
     @HappyPath
     void shouldGetHydratedStreamingUpdateWithExistingState(BackendTestResource backend) {
         // Arrange
-
-        CacheTestUtils.createCache(HYDRATION_CACHE, backend);
 
         var hydrationKey1 = "HydrationKey1";
         var hydrationValue1 = "HydrationValue1";
@@ -70,6 +69,46 @@ public abstract class AbstractMultiStreamHydrationTests {
 
             MatcherAssert.assertThat(eventMap.get(hydrationKey1), Matchers.is(hydrationValue1));
             MatcherAssert.assertThat(eventMap.get(hydrationKey2), Matchers.is(hydrationValue2));
+        }
+    }
+
+    @Test
+    @DisplayName("Should get hydrated streaming updates when subscribing to multiple caches with existing items")
+    @HappyPath
+    void shouldGetHydratedStreamingUpdateWithMultipleCaches(BackendTestResource backend) {
+        // Arrange
+        var cache1 = "multi-hydration-cache-1";
+        var cache2 = "multi-hydration-cache-2";
+        CacheTestUtils.createCache(cache1, backend);
+        CacheTestUtils.createCache(cache2, backend);
+
+        var cache1Key = "cache1Key";
+        var cache1Value = "cache1Value";
+        var cache2Key = "cache2Key";
+        var cache2Value = "cache2Value";
+
+        CacheTestUtils.addItem(cache1, cache1Key, cache1Value, backend);
+        CacheTestUtils.addItem(cache2, cache2Key, cache2Value, backend);
+
+        // Act
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsMultipleCachesWithHydration(
+                streamingHelpers, backend, List.of(cache1, cache2), 2);
+
+        // Assert
+        for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
+            Awaitility.await()
+                    .atMost(60, TimeUnit.SECONDS)
+                    .until(streamingSourceEventsFuture::isDone);
+
+            var streamingSourceEvents = streamingSourceEventsFuture.join();
+
+            MatcherAssert.assertThat(streamingSourceEvents, Matchers.hasSize(2));
+
+            var eventMap = streamingSourceEvents.stream().collect(
+                    Collectors.toMap(e -> e.cacheId() + ":" + e.itemKey(), CacheUpdateEvent::itemValue));
+
+            MatcherAssert.assertThat(eventMap.get(cache1 + ":" + cache1Key), Matchers.is(cache1Value));
+            MatcherAssert.assertThat(eventMap.get(cache2 + ":" + cache2Key), Matchers.is(cache2Value));
         }
     }
 }

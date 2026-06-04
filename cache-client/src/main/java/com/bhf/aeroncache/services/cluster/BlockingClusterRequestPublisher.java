@@ -3,6 +3,8 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 
+import java.util.List;
+
 /**
  * Blocking versions of {@link ClusterMessagePublisher}'s public API.
  */
@@ -85,7 +87,7 @@ public interface BlockingClusterRequestPublisher {
      * @param cacheId   The cache to subscribe too.
      * @param sendSnapshot Whether to send a snapshot for initial state hydration.
      */
-    void sendCacheSubscribeBlocking(String requestId, String cacheId, boolean sendSnapshot);
+    void sendCacheSubscribeBlocking(String requestId, List<String> cacheId, boolean sendSnapshot);
 
     /**
      * Send a request to unsubscribe to cache updates in a blocking manner.

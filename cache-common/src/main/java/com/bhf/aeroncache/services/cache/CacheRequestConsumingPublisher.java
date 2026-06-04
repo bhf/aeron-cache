@@ -4,6 +4,7 @@ import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.results.*;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -93,7 +94,7 @@ public interface CacheRequestConsumingPublisher<I extends Reusable, K extends Re
      * @param c         The consumer that will handle the result.
      * @param sendSnapshot Whether to send a snapshot for initial state hydration.
      */
-    void sendCacheSubscribe(String requestId, String cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c);
+    void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c);
 
     /**
      * Send a message to unsubscribe to cache updates.

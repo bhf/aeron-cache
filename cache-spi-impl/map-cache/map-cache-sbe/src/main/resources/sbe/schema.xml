@@ -187,21 +187,23 @@
     <sbe:message name="CacheSubscriptionRequest" id="17" semanticType="CacheSubscriptionRequest"
                  description="Subscribe to cache updates">
         <field name="sendSnapshot" id="1" type="BooleanType"/>
-        <data name="cacheId" id="2" type="varStringEncoding"/>
+        <group name="cacheIds" id="20" dimensionType="groupSizeEncoding">
+            <data name="cacheId" id="21" type="varStringEncoding"/>
+        </group>
         <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="CacheSubscriptionResponse" id="18" semanticType="CacheSubscriptionResponse"
                  description="Response to subscription request to a cache">
         <field name="status" id="1" type="OperationStatus"/>
+        <field name="isEob" id="2" type="BooleanType"/>
         <group name="items" id="30" dimensionType="groupSizeEncoding">
             <data name="key" id="31" type="varStringEncoding"/>
             <data name="value" id="32" type="varStringEncoding"/>
             <data name="cacheId" id="33" type="varStringEncoding"/>
         </group>
-        <data name="cacheId" id="2" type="varStringEncoding"/>
-        <data name="requestId" id="3" type="varStringEncoding"/>
-
+        <data name="cacheId" id="4" type="varStringEncoding"/>
+        <data name="requestId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="CacheUnsubscribeRequest" id="19" semanticType="CacheUnsubscribeRequest"

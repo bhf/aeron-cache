@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.internal.matchers.GreaterThan;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
@@ -41,7 +42,7 @@ class SubscribeCachePublisherTest {
     @DisplayName("Should correctly encode cache subscription request and offer to cluster")
     void shouldEncodeCacheSubscriptionRequestAndOfferToCluster() {
         // Arrange
-        var cacheId = "123L";
+        var cacheId = List.of("123L");
         var requestId = UUID.randomUUID().toString();
 
         // Act
@@ -64,7 +65,7 @@ class SubscribeCachePublisherTest {
     @DisplayName("Should poll egress pending blocking cache subscription request")
     void shouldPollEgressAndIdlePendingCacheSubscriptionRequest() {
         // Arrange
-        var cacheId = "123L";
+        var cacheId = List.of("123L");
         var requestId = UUID.randomUUID().toString();
         when(cluster.pollEgress()).thenReturn(1);
 
