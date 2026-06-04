@@ -1,0 +1,14 @@
+package com.bhf.aeroncache.integration.ws;
+
+import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamMultiSubscriptionTests;
+import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
+
+@BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
+class ClusteredWSMultiSubscriptionTests extends AbstractMultiStreamMultiSubscriptionTests {
+
+    public ClusteredWSMultiSubscriptionTests() {
+        super(new WSStreamingHelper());
+    }
+
+}
