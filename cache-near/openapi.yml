@@ -12,7 +12,7 @@ info:
     url: https://choosealicense.com/licenses/mit/
   version: '1.0'
 servers:
-  - url: http://localhost:7070
+  - url: http://localhost:7073
     description: Dev server
 paths:
   /api/v1/near/cache:
@@ -32,13 +32,40 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/CreateResponse'
         '400':
           description: Bad Request
           content:
-            '*/*':
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/near/cache/{cacheId}:
+    get:
+      tags:
+        - GetCache
+      summary: Get all items from the near cache
+      description: Get all items from the specified cache
+      operationId: getCache
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the cache
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCacheResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   /api/v1/near/cache/{cacheId}/{key}:
@@ -65,13 +92,13 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/GetItemResponse'
         '400':
           description: Bad Request
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 components:
@@ -85,6 +112,8 @@ components:
         helpMsg:
           type: string
           example: 'A user friendly help message'
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
     CreateRequest:
       type: object
       properties:
@@ -95,9 +124,10 @@ components:
       type: object
       properties:
         cacheId:
-          type: integer
-          format: int64
-          example: 1
+          type: string
+          example: "SomeCacheID"
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
     GetItemResponse:
       type: object
       properties:
@@ -110,3 +140,36 @@ components:
         value:
           type: string
           example: 'SomeRandomValue'
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    GetCacheResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCacheID"
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CacheItem'
+    CacheItem:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+    CacheOperationStatus:
+      type: string
+      enum:
+        - SUCCESS
+        - ERROR
+        - UNKNOWN_CACHE
+        - CACHE_ALREADY_EXISTS
+        - ITEM_NOT_FOUND
+        - NOT_CONNECTED
+        - TIMEOUT
+        - DUPLICATE_SUBSCRIPTION
+        - SUBSCRIPTION_NOT_FOUND

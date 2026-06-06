@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
+import com.bhf.aeroncache.models.ErrorMessages;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.hamcrest.Matchers;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.stream.Stream;
 
@@ -66,6 +68,28 @@ abstract class CreateCacheTests {
                 .body("errorMsg", Matchers.notNullValue())
                 .body("helpMsg", Matchers.notNullValue())
                 .body("operationStatus", Matchers.notNullValue());
+    }
+
+    @ParameterizedTest
+    @DisplayName("Should return status 400 for invalid cache names")
+    @ValueSource(strings = {"bulkops", "timed"})
+    void shouldReturn400ForInvalidCacheNames(String invalidCacheId, BackendTestResource backend) {
+        JSONObject requestBody = new JSONObject().put("cacheId", invalidCacheId);
+
+        RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .body(requestBody.toString())
+
+                // Act
+                .when().post(CREATE_ENDPOINT)
+
+                // Assert
+                .then().assertThat()
+                .statusCode(400)
+                .body("errorMsg", Matchers.comparesEqualTo("Cache ID shouldn't be a reserved name"))
+                .body("helpMsg", Matchers.comparesEqualTo(ErrorMessages.CACHE_ID_NO_RESERVED_NAMES))
+                .body("operationStatus", Matchers.comparesEqualTo("ERROR"));
     }
 
     public static Stream<Arguments> provideBadParamsToCreateCache() {

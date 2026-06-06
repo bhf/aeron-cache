@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 abstract class BulkItemsTests {
 
     static final String BULK_ITEM_ENDPOINT = "/api/v1/cache/bulkops/";
-    static final String KNOWN_CACHE_ID = "bulkops";
+    static final String KNOWN_CACHE_ID = "bulkops-test-cache";
     static final String UNKNOWN_CACHE_ID = "unknown-cache";
     static final String KNOWN_KEY = "SomeKey";
     static final String KNOWN_VALUE = "SomeValue";
