@@ -1,8 +1,10 @@
 package com.bhf.aeroncache.http.application;
 
+import com.bhf.aeroncache.http.responses.CacheItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 @RequiredArgsConstructor
@@ -12,6 +14,12 @@ public class NearCacheInstance {
     private final String cacheName;
 
     private final ConcurrentHashMap<String, String> localCache = new ConcurrentHashMap<>();
+
+    public List<CacheItem> items() {
+        return localCache.entrySet().stream()
+                .map(e -> new CacheItem(e.getKey(), e.getValue()))
+                .toList();
+    }
 
     public boolean containsKey(String key) {
         log.debug("Checking near cache '{}' for key '{}'", cacheName, key);

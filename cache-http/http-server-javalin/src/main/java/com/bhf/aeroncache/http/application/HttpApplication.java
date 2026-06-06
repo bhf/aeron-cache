@@ -1012,8 +1012,8 @@ public class HttpApplication {
             log.info("Get cache content response from cluster on cacheId {}", c.getCacheId());
             var noCache = c.getStatus() == CacheOperationStatus.UNKNOWN_CACHE;
             var response = noCache ?
-                    new GetCacheResponse("0", CacheOperationStatus.UNKNOWN_CACHE, List.of()) :
-                    new GetCacheResponse("0", c.getStatus(), buildItemsList(c));
+                    new GetCacheResponse(c.getCacheId().toString(), CacheOperationStatus.UNKNOWN_CACHE, List.of()) :
+                    new GetCacheResponse(c.getCacheId().toString(), c.getStatus(), buildItemsList(c));
             future.complete(response);
         };
         return consumer;
