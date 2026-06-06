@@ -59,10 +59,7 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.util.List;
-import java.util.Optional;
-import java.util.ServiceLoader;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -93,6 +90,7 @@ public class NearCacheApplication {
     private static MediaDriver mediaDriver;
 
     private static final Pattern specialCharacters = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!]");
+    private static final Set<String> invalidCacheNames = Set.of("bulkops", "timed");
 
     public static void main(String[] args) {
         System.out.println("Starting HTTP interface");
@@ -606,6 +604,15 @@ public class NearCacheApplication {
             if (specialCharacters.matcher(request.cacheId()).find()) {
                 var errorMsg = "Cache ID shouldn't contain special characters";
                 var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_SPECIAL_CHARACTERS,
+                        CacheOperationStatus.ERROR);
+                ctx.status(HTTPStatusUtils.BAD_REQUEST);
+                ctx.json(badRequest);
+                return;
+            }
+
+            if(invalidCacheNames.contains(request.cacheId())){
+                var errorMsg = "Cache ID shouldn't be a reserved name";
+                var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_RESERVED_NAMES,
                         CacheOperationStatus.ERROR);
                 ctx.status(HTTPStatusUtils.BAD_REQUEST);
                 ctx.json(badRequest);

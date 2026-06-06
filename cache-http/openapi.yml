@@ -441,9 +441,9 @@ components:
     ClusterToolsResponse:
       type: object
       properties:
-        command:
+        tool:
           type: string
-        clusterToolsFolder:
+        clusterFolder:
           type: string
         exitCode:
           type: integer
@@ -564,7 +564,7 @@ components:
         requestId:
           type: string
         status:
-          type: string
+          $ref: '#/components/schemas/CacheOperationStatus'
         cacheId:
           type: string
         key:

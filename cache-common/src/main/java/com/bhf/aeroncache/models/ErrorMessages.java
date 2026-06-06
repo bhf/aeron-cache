@@ -12,4 +12,6 @@ public class ErrorMessages {
     public static final String CHECK_ALL_VALUES = "Check your request params are correct.";
 
     public static final String CACHE_ID_NO_SPECIAL_CHARACTERS = "Cache Id shouldn't include special characters.";
+
+    public static final String CACHE_ID_NO_RESERVED_NAMES = "Cache Id shouldn't be a reserved name.";
 }

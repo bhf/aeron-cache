@@ -1,17 +1,17 @@
 openapi: 3.0.3
 info:
-  title: Aeron Cache WebSocket API
-  description: WebSocket API for subscribing to Aeron Cache updates.
+  title: Aeron Cache SSE API
+  description: Server-Sent Events API for subscribing to Aeron Cache updates.
   version: 1.1.0
 servers:
-  - url: ws://localhost:7071
-    description: Local WebSocket server
+  - url: http://localhost:7072
+    description: Local SSE server
 paths:
-  /api/ws/v1/cache/{cacheId}:
+  /api/sse/v1/cache/{cacheId}:
     get:
       summary: Subscribe to a single cache
       description: |
-        Establish a WebSocket connection to subscribe to updates for a single cache.
+        Establish an SSE connection to subscribe to updates for a single cache.
       parameters:
         - name: cacheId
           in: path
@@ -20,26 +20,22 @@ paths:
           schema:
             type: string
       responses:
-        101:
-          description: Switching Protocols - WebSocket connection established.
+        200:
+          description: OK - SSE connection established.
           content:
-            application/json:
+            text/event-stream:
               schema:
                 $ref: '#/components/schemas/CacheUpdateEvent'
         400:
           description: Bad Request - Invalid cache ID.
         503:
           description: Service Unavailable - Cluster not connected.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RequestErrorResponse'
 
-  /api/ws/v1/caches/{cacheIds}:
+  /api/sse/v1/caches/{cacheIds}:
     get:
       summary: Subscribe to multiple caches
       description: |
-        Establish a WebSocket connection to subscribe to updates for multiple caches.
+        Establish an SSE connection to subscribe to updates for multiple caches.
       parameters:
         - name: cacheIds
           in: path
@@ -48,26 +44,22 @@ paths:
           schema:
             type: string
       responses:
-        101:
-          description: Switching Protocols - WebSocket connection established.
+        200:
+          description: OK - SSE connection established.
           content:
-            application/json:
+            text/event-stream:
               schema:
                 $ref: '#/components/schemas/CacheUpdateEvent'
         400:
           description: Bad Request - Invalid cache IDs.
         503:
           description: Service Unavailable - Cluster not connected.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RequestErrorResponse'
 
-  /api/ws/v1/cache/hydrate/{cacheId}:
+  /api/sse/v1/cache/hydrate/{cacheId}:
     get:
       summary: Subscribe to a single cache with hydration
       description: |
-        Establish a WebSocket connection to subscribe to updates for a single cache, with initial state hydration.
+        Establish an SSE connection to subscribe to updates for a single cache, with initial state hydration.
       parameters:
         - name: cacheId
           in: path
@@ -76,26 +68,22 @@ paths:
           schema:
             type: string
       responses:
-        101:
-          description: Switching Protocols - WebSocket connection established.
+        200:
+          description: OK - SSE connection established.
           content:
-            application/json:
+            text/event-stream:
               schema:
                 $ref: '#/components/schemas/CacheUpdateEvent'
         400:
           description: Bad Request - Invalid cache ID.
         503:
           description: Service Unavailable - Cluster not connected.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RequestErrorResponse'
 
-  /api/ws/v1/caches/hydrate/{cacheIds}:
+  /api/sse/v1/caches/hydrate/{cacheIds}:
     get:
       summary: Subscribe to multiple caches with hydration
       description: |
-        Establish a WebSocket connection to subscribe to updates for multiple caches, with initial state hydration.
+        Establish an SSE connection to subscribe to updates for multiple caches, with initial state hydration.
       parameters:
         - name: cacheIds
           in: path
@@ -104,26 +92,22 @@ paths:
           schema:
             type: string
       responses:
-        101:
-          description: Switching Protocols - WebSocket connection established.
+        200:
+          description: OK - SSE connection established.
           content:
-            application/json:
+            text/event-stream:
               schema:
                 $ref: '#/components/schemas/CacheUpdateEvent'
         400:
           description: Bad Request - Invalid cache IDs.
         503:
           description: Service Unavailable - Cluster not connected.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RequestErrorResponse'
 
 components:
   schemas:
     CacheUpdateEvent:
       type: object
-      description: A cache update event published over the WebSocket connection.
+      description: A cache update event published over the SSE connection.
       properties:
         cacheId:
           type: string
@@ -151,24 +135,3 @@ components:
         - cacheId
         - eventType
         - requestId
-    RequestErrorResponse:
-      type: object
-      properties:
-        errorMsg:
-          type: string
-        helpMsg:
-          type: string
-        operationStatus:
-          $ref: '#/components/schemas/CacheOperationStatus'
-    CacheOperationStatus:
-      type: string
-      enum:
-        - NONE
-        - SUCCESS
-        - ERROR
-        - UNKNOWN_CACHE
-        - UNKNOWN_KEY
-        - CACHE_EXISTS
-        - DUPLICATE_SUBSCRIPTION
-        - UNKNOWN_SUBSCRIPTION
-        - NULL_VAL

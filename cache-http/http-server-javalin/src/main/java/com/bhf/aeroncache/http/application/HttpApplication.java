@@ -102,6 +102,7 @@ public class HttpApplication {
     private static MediaDriver mediaDriver;
 
     private static final Pattern specialCharacters = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!]");
+    private static final Set<String> invalidCacheNames = Set.of("bulkops", "timed");
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -931,6 +932,15 @@ public class HttpApplication {
             if (specialCharacters.matcher(request.cacheId()).find()) {
                 var errorMsg = "Cache ID shouldn't contain special characters";
                 var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_SPECIAL_CHARACTERS,
+                        CacheOperationStatus.ERROR);
+                ctx.status(HTTPStatusUtils.BAD_REQUEST);
+                ctx.json(badRequest);
+                return;
+            }
+
+            if(invalidCacheNames.contains(request.cacheId())){
+                var errorMsg = "Cache ID shouldn't be a reserved name";
+                var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_RESERVED_NAMES,
                         CacheOperationStatus.ERROR);
                 ctx.status(HTTPStatusUtils.BAD_REQUEST);
                 ctx.json(badRequest);
