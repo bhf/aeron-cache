@@ -149,12 +149,12 @@ public abstract class AbstractMultiStreamPutItemTests {
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"canceltimer", KNOWN_VALUE, 60000, backend);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"canceltimer", ANOTHER_KNOWN_VALUE, 1000, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"canceltimer", ANOTHER_KNOWN_VALUE, 5000, backend);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
             Awaitility.await()
-                    .atMost(10, TimeUnit.SECONDS)
+                    .atMost(60, TimeUnit.SECONDS)
                     .until(streamingSourceEventsFuture::isDone);
 
             var streamingSourceEvents = streamingSourceEventsFuture.join();

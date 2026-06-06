@@ -4,12 +4,15 @@ import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.config.HttpNearCacheIdleStrategies;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.http.responses.CacheItem;
+import com.bhf.aeroncache.http.responses.GetCacheResponse;
 import com.bhf.aeroncache.http.responses.CreateCacheResponse;
 import com.bhf.aeroncache.http.responses.GetItemResponse;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
 import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -23,6 +26,7 @@ import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
+import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.*;
 import com.bhf.aeroncache.ws.application.CacheSubscriptionRequestPublisher;
 import io.aeron.Aeron;
@@ -330,6 +334,7 @@ public class NearCacheApplication {
                 .beforeMatched(NearCacheApplication::checkClusterConnectivity)
                 .post(API_PREFIX, NearCacheApplication::handleCreateCacheRequest)
                 .get(API_PREFIX + "<cacheId>/<key>", NearCacheApplication::handleGetItemRequest)
+                .get(API_PREFIX + "<cacheId>", NearCacheApplication::handleGetCacheRequest)
                 .get(LIVENESS, NearCacheApplication::handleGetLiveness)
                 .get(READINESS, NearCacheApplication::handleGetReadiness)
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
@@ -427,6 +432,36 @@ public class NearCacheApplication {
     }
 
     /**
+     * Handle a request to get a whole cache snapshot from the local near cache.
+     *
+     * @param ctx The context.
+     */
+    private static void handleGetCacheRequest(Context ctx) {
+        try {
+            var cacheId = ctx.pathParam("cacheId");
+            log.info("Got get cache content request on cacheId {}", cacheId);
+
+            if (nearCacheManager.contains(cacheId)) {
+                var localCache = nearCacheManager.get(cacheId);
+                var items = localCache.items();
+                var response = new GetCacheResponse(cacheId, CacheOperationStatus.SUCCESS, items);
+                ctx.status(HTTPStatusUtils.getHTTPCode(CacheOperationStatus.SUCCESS));
+                ctx.json(response);
+            } else {
+                handleNewFullNearCacheRequest(ctx, cacheId);
+            }
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to get cache content for cache ID " + ctx.pathParam("cacheId");
+            log.warn(errorMsg);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
+                    CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
+    /**
      * Get an item from the source cache and also subscribe to updates for the cache.
      *
      * @param ctx
@@ -437,13 +472,9 @@ public class NearCacheApplication {
      * @throws ExecutionException
      */
     private static void handleNewNearCacheRequest(Context ctx, String cacheId, String key) throws InterruptedException, ExecutionException {
+        subscribeToCache(cacheId);
         CompletableFuture<GetItemResponse> future = getItemFromSourceCache(ctx, cacheId, key);
         var response = future.get();
-
-        if(response.operationStatus() == CacheOperationStatus.SUCCESS){
-            nearCacheManager.put(cacheId, key, response.value());
-            subscribeToCache(cacheId);
-        }
 
         ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
         ctx.json(response);
@@ -469,6 +500,52 @@ public class NearCacheApplication {
         else{
             returnItemFromSourceCache(ctx, key, cacheId);
         }
+    }
+
+    /**
+     * Handle a new request for the full cache by fetching from source and subscribing.
+     *
+     * @param ctx The context.
+     * @param cacheId The cache ID.
+     */
+    private static void handleNewFullNearCacheRequest(Context ctx, String cacheId) throws InterruptedException, ExecutionException {
+        subscribeToCache(cacheId);
+
+        CompletableFuture<GetCacheResponse> future = getCacheFromRemoteSource(ctx, cacheId);
+        var response = future.get();
+
+        ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+        ctx.json(response);
+    }
+
+    private static CompletableFuture<GetCacheResponse> getCacheFromRemoteSource(Context ctx, String cacheId) {
+        var requestId = getRequestId(ctx);
+        CompletableFuture<GetCacheResponse> future = new CompletableFuture<>();
+        Consumer<GetAllCacheEntriesResult> consumer = getGetAllCacheEntriesResultConsumer(future);
+        CompletableFuture.runAsync(() -> observingPublisher.getCacheEntries(requestId, cacheId, consumer));
+        return future;
+    }
+
+    @NotNull
+    private static Consumer<GetAllCacheEntriesResult> getGetAllCacheEntriesResultConsumer(CompletableFuture<GetCacheResponse> future) {
+        Consumer<GetAllCacheEntriesResult> consumer = c -> {
+            log.info("Get cache content response from cluster on cacheId {}", c.getCacheId());
+            var noCache = c.getStatus() == CacheOperationStatus.UNKNOWN_CACHE;
+            var response = noCache ?
+                    new GetCacheResponse(c.getCacheId().toString(), CacheOperationStatus.UNKNOWN_CACHE, List.of()) :
+                    new GetCacheResponse(c.getCacheId().toString(), c.getStatus(), buildItemsList(c));
+            future.complete(response);
+        };
+        return consumer;
+    }
+
+    private static List<CacheItem> buildItemsList(GetAllCacheEntriesResult<ReusableString, ReusableString,
+            ReusableString> c) {
+        List<CacheItem> res = new java.util.ArrayList<>();
+        c.getValues().forEach((key, value) -> {
+            res.add(new CacheItem(key.value(), value.value()));
+        });
+        return res;
     }
 
     /**
