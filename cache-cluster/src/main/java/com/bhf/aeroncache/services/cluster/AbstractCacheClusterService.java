@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
 import com.bhf.aeroncache.handlers.PublicationFailureHandler;
+import com.bhf.aeroncache.models.TimerLookupCompoundKey;
 import com.bhf.aeroncache.models.PendingRemove;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
@@ -29,8 +30,11 @@ import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.MutableBoolean;
+import org.agrona.collections.Object2ObjectHashMap;
 import org.agrona.concurrent.IdleStrategy;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
@@ -71,7 +75,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
     private String nodeId;
     private long timerCorrelationId = 0;
-    private final Long2ObjectHashMap<PendingRemove<I,K>> pendingRemoves = new Long2ObjectHashMap();
+    private final Long2ObjectHashMap<PendingRemove<I, K>> pendingRemoves = new Long2ObjectHashMap();
+    private final Map<TimerLookupCompoundKey<I, K>, Long> cacheKeyToTimerId = new Object2ObjectHashMap<>();
+    private final TimerLookupCompoundKey<I, K> lookupKey;
 
     @Setter
     @Getter
@@ -100,6 +106,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.schemaDetails = cacheManagerFactory.getSchemaDetailsProvider();
         this.bulkOpsResult = new BulkCacheOpsResult<>(cacheManagerFactory.getIndexSupplier(),
                 cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getValueSupplier());
+        this.lookupKey = new TimerLookupCompoundKey<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
     }
 
     /**
@@ -304,6 +311,16 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param deadline The epoch time at which to remove the item.
      */
     private void scheduleItemRemoval(I cacheId, K key, Cache<I, K, V> cache, long deadline) {
+        lookupKey.getCacheId().copyFrom(cacheId);
+        lookupKey.getKey().copyFrom(key);
+
+        var existingTimerId = cacheKeyToTimerId.remove(lookupKey);
+        if (existingTimerId != null) {
+            boolean timerCancelled = cluster.cancelTimer(existingTimerId);
+            var removedItem = pendingRemoves.remove(existingTimerId);
+            log.info("Cancelled existing timer {} for key {} in cache {}, cancelled: {}, removed: {}", existingTimerId, key, cacheId, timerCancelled, removedItem);
+        }
+
         timerCorrelationId++;
         boolean success = cluster.scheduleTimer(timerCorrelationId, deadline);
         log.info("Scheduled timer for {} to remove key {} from cache {} correlationId {}", deadline, key, cacheId, timerCorrelationId);
@@ -316,6 +333,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
         var pendingRemove = new PendingRemove(timerCorrelationId, cacheToRemoveOn, keyToRemove);
         pendingRemoves.put(timerCorrelationId, pendingRemove);
+        cacheKeyToTimerId.put(new TimerLookupCompoundKey<>(cacheToRemoveOn, keyToRemove), timerCorrelationId);
     }
 
     /**
@@ -427,6 +445,13 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         tracingService.endGetAllStatsRequest(requestDetails);
     }
 
+    /**
+     * Handle a request to subscribe to caches.
+     *
+     * @param session Session requesting the get all stats operation.
+     * @param buffer  Buffer containing the message.
+     * @param offset  Offset in the buffer at which the message is encoded.
+     */
     void handleCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset) {
         CacheSubscriptionRequestDetails<I> requestDetails = getCacheSubscriptionRequest(session, buffer, offset);
         tracingService.startCacheSubscriptionRequest(requestDetails);
@@ -434,9 +459,14 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var cacheIds = requestDetails.getCacheId();
 
         log.info("Total caches to subscribe on: {}", cacheIds.size());
-        for(var cacheId : cacheIds) {
-            log.info("Got request to subscribe for cache updates on cache: {}, request Id: {}, send snapshot: {}", cacheId, requestId, requestDetails.isSendSnapshot());
+
+        for (int i = 0; i < cacheIds.size(); i++) {
+            var cacheId = cacheIds.get(i);
             var result = subscriptionService.subscribe(session, cacheId, requestId);
+            result.setEob(i==cacheIds.size()-1);
+
+            log.info("Got request to subscribe for cache updates on cache: {}, request Id: {}, " +
+                    "send snapshot: {}, is EOB: {}", cacheId, requestId, requestDetails.isSendSnapshot(), result.isEob());
 
             if (requestDetails.isSendSnapshot()) {
                 log.info("Sending back snapshot for cache {}", cacheId);
@@ -447,6 +477,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
             handlePostCacheSubscriptionRequest(result, session);
         }
+
         tracingService.endCacheSubscriptionRequest(requestDetails);
     }
 
@@ -455,12 +486,18 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
         if (cache != null) {
             result.entries = cache.getAllEntries();
-        }
-        else{
+        } else {
             result.entries = null;
         }
     }
 
+    /**
+     * Handle a request to unsubscribe to a cache.
+     *
+     * @param session Session requesting the get all stats operation.
+     * @param buffer  Buffer containing the message.
+     * @param offset  Offset in the buffer at which the message is encoded.
+     */
     void handleCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset) {
         CacheUnsubscribeRequestDetails<I> requestDetails = getCacheUnsubscribeRequest(session, buffer, offset);
         tracingService.startCacheUnsubscribeRequest(requestDetails);
@@ -472,6 +509,13 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         tracingService.endCacheUnsubscribeRequest(requestDetails);
     }
 
+    /**
+     * Handle a bulk operation request.
+     *
+     * @param session Session requesting the get all stats operation.
+     * @param buffer  Buffer containing the message.
+     * @param offset  Offset in the buffer at which the message is encoded.
+     */
     void handleBulkOpsRequest(ClientSession session, DirectBuffer buffer, int offset) {
         BulkCacheOpsRequestDetails<I,K,V> requestDetails = getBulkOpsRequest(session, buffer, offset);
         tracingService.startBulkOpsRequest(requestDetails);
@@ -873,6 +917,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
                 for(var x : pendingRemoves.values()){
                     log.info("Timer on cache {} key {}, correlationId {}", x.getCacheToRemoveOn(), x.getKeyToRemove(), x.getTimerCorrelationId());
+                    cacheKeyToTimerId.put(new TimerLookupCompoundKey<>(x.getCacheToRemoveOn(), x.getKeyToRemove()), x.getTimerCorrelationId());
                 }
             }
 
@@ -931,6 +976,11 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         if (pendingRemove != null) {
             I cache = pendingRemove.getCacheToRemoveOn();
             K key = pendingRemove.getKeyToRemove();
+
+            lookupKey.getCacheId().copyFrom(cache);
+            lookupKey.getKey().copyFrom(key);
+            cacheKeyToTimerId.remove(lookupKey);
+
             var removeResult = processRemoveCacheEntry(cache, key, "timer-" + correlationId);
 
             if (removeResult.getStatus() == CacheOperationStatus.SUCCESS) {

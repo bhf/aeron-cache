@@ -20,4 +20,10 @@ class EphemeralMultiStreamPutItemTests extends AbstractMultiStreamPutItemTests {
         // not supported for ephemeral caches
         assertTrue(true);
     }
+
+    @Override
+    protected void shouldCancelOldTimerWhenUpdatingTtl(BackendTestResource backend) {
+        // not supported for ephemeral caches
+        assertTrue(true);
+    }
 }

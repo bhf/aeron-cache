@@ -105,8 +105,8 @@ public abstract class AbstractMultiStreamPutItemTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 4);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, 5000, backend);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, ANOTHER_KNOWN_KEY, ANOTHER_KNOWN_VALUE, 6000, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"orderedtimer", KNOWN_VALUE, 5000, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, ANOTHER_KNOWN_KEY+"orderedtimer", ANOTHER_KNOWN_VALUE, 6000, backend);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -119,24 +119,59 @@ public abstract class AbstractMultiStreamPutItemTests {
             var updateEvent = streamingSoureEvents.get(0);
             MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
-            MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
+            MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY+"orderedtimer"));
             MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
 
             var secondUpdateEvent = streamingSoureEvents.get(1);
             MatcherAssert.assertThat(secondUpdateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(secondUpdateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
-            MatcherAssert.assertThat(secondUpdateEvent.itemKey(), Matchers.is(ANOTHER_KNOWN_KEY));
+            MatcherAssert.assertThat(secondUpdateEvent.itemKey(), Matchers.is(ANOTHER_KNOWN_KEY+"orderedtimer"));
             MatcherAssert.assertThat(secondUpdateEvent.itemValue(), Matchers.is(ANOTHER_KNOWN_VALUE));
 
             var firstRemove = streamingSoureEvents.get(2);
             MatcherAssert.assertThat(firstRemove.eventType(), Matchers.is(CacheUpdateEvent.EventType.REMOVE_ITEM));
             MatcherAssert.assertThat(firstRemove.cacheId(), Matchers.is(KNOWN_CACHE_ID));
-            MatcherAssert.assertThat(firstRemove.itemKey(), Matchers.is(KNOWN_KEY));
+            MatcherAssert.assertThat(firstRemove.itemKey(), Matchers.is(KNOWN_KEY+"orderedtimer"));
 
             var secondRemove = streamingSoureEvents.get(3);
             MatcherAssert.assertThat(secondRemove.eventType(), Matchers.is(CacheUpdateEvent.EventType.REMOVE_ITEM));
             MatcherAssert.assertThat(secondRemove.cacheId(), Matchers.is(KNOWN_CACHE_ID));
-            MatcherAssert.assertThat(secondRemove.itemKey(), Matchers.is(ANOTHER_KNOWN_KEY));
+            MatcherAssert.assertThat(secondRemove.itemKey(), Matchers.is(ANOTHER_KNOWN_KEY+"orderedtimer"));
+        }
+    }
+
+    @Test
+    @DisplayName("Should cancel old timer and use new one when putting same key with new TTL")
+    @HappyPath
+    protected void shouldCancelOldTimerWhenUpdatingTtl(BackendTestResource backend) {
+        // Arrange
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 3);
+
+        // Act
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"canceltimer", KNOWN_VALUE, 60000, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"canceltimer", ANOTHER_KNOWN_VALUE, 1000, backend);
+
+        // Assert
+        for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
+            Awaitility.await()
+                    .atMost(10, TimeUnit.SECONDS)
+                    .until(streamingSourceEventsFuture::isDone);
+
+            var streamingSourceEvents = streamingSourceEventsFuture.join();
+
+            var firstAdd = streamingSourceEvents.get(0);
+            MatcherAssert.assertThat(firstAdd.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(firstAdd.itemKey(), Matchers.is(KNOWN_KEY+"canceltimer"));
+            MatcherAssert.assertThat(firstAdd.itemValue(), Matchers.is(KNOWN_VALUE));
+
+            var secondAdd = streamingSourceEvents.get(1);
+            MatcherAssert.assertThat(secondAdd.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(secondAdd.itemKey(), Matchers.is(KNOWN_KEY+"canceltimer"));
+            MatcherAssert.assertThat(secondAdd.itemValue(), Matchers.is(ANOTHER_KNOWN_VALUE));
+
+            var removeEvent = streamingSourceEvents.get(2);
+            MatcherAssert.assertThat(removeEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.REMOVE_ITEM));
+            MatcherAssert.assertThat(removeEvent.itemKey(), Matchers.is(KNOWN_KEY+"canceltimer"));
         }
     }
 
