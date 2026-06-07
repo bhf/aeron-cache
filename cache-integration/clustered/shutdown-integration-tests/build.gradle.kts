@@ -12,12 +12,15 @@ dependencies {
     testImplementation(libs.hamcrest)
     testImplementation(libs.jackson.core)
     testImplementation(libs.testcontainers)
+    testImplementation(libs.awaitility)
 
     testImplementation(project(":cache-cluster"))
+    testImplementation(project(":cache-messages-http"))
     testImplementation(project(":cache-http:http-server-javalin"))
     testImplementation(project(":cache-common"))
     testImplementation(project(":cache-integration:integration-common"))
     testImplementation(project(":cache-integration:integration-common-http"))
+    testImplementation(project(":cache-integration:integration-common-streaming"))
 
     testRuntimeOnly(libs.junit.platform.launcher)
 }
