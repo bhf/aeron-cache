@@ -5,6 +5,7 @@ import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
 
+import java.util.Comparator;
 import java.util.function.Supplier;
 
 public interface CacheManagerFactory<I extends Reusable, K extends Reusable, V extends Reusable> {
@@ -24,4 +25,6 @@ public interface CacheManagerFactory<I extends Reusable, K extends Reusable, V e
     CacheTimersCodec<I, K> getCacheTimersCodec();
 
     CacheSchemaDetailsProvider getSchemaDetailsProvider();
+
+    Comparator<K> getKeyComparator();
 }

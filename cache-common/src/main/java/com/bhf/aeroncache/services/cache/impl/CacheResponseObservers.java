@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.services.cache.impl;
 
-import com.bhf.aeroncache.consumer.IdentifiableConsumer;
+import com.bhf.aeroncache.models.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.results.*;

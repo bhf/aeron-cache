@@ -1,9 +1,11 @@
 package com.bhf.aeroncache.codecs.response;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.requests.DeleteCacheRequestDetails;
+import com.bhf.aeroncache.models.consumer.HydratingPublicationConsumer;
 import com.bhf.aeroncache.models.results.*;
 import org.agrona.MutableDirectBuffer;
+
+import java.util.Comparator;
 
 public interface CacheResponseEncoder<I extends Reusable, K extends Reusable, V extends Reusable> {
     int encodeCacheCreationResult(I cacheId, CreateCacheResult<I> cacheCreationResult, MutableDirectBuffer egressBuffer);
@@ -24,7 +26,8 @@ public interface CacheResponseEncoder<I extends Reusable, K extends Reusable, V 
 
     int encodeCacheStatsResult(CacheStatsResult<I> cacheStatsResult, MutableDirectBuffer egressBuffer);
 
-    int encodeCacheSubscriptionResult(CacheSubscriptionResult<I,K,V> subscriptionRequestResult, MutableDirectBuffer egressBuffer);
+    void encodeCacheSubscriptionResult(CacheSubscriptionResult<I, K, V> subscriptionRequestResult,
+                                       MutableDirectBuffer egressBuffer, Comparator<K> keyComparator, HydratingPublicationConsumer consumer);
 
     int encodeCacheUnsubscribeResponse(CacheUnsubscribeResult<I> unsubscribeResponse, MutableDirectBuffer egressBuffer);
 
