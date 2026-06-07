@@ -10,6 +10,7 @@ import lombok.extern.log4j.Log4j2;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
+import org.agrona.concurrent.ringbuffer.RingBuffer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,12 +33,12 @@ import static com.bhf.aeroncache.models.CacheRequestMessageTypes.*;
 public class CacheClientAgent extends AbstractClientAgent {
 
 
-    public CacheClientAgent(AeronCache cluster, ManyToOneRingBuffer rb, IdleStrategy idleStrategy, ClusterMessagePublisher publisher, String roleName) {
+    public CacheClientAgent(AeronCache cluster, RingBuffer rb, IdleStrategy idleStrategy, ClusterMessagePublisher publisher, String roleName) {
         super(cluster, rb, idleStrategy, publisher, roleName);
     }
 
     @Override
-    public void processInboundMessages(ManyToOneRingBuffer rb) {
+    public void processInboundMessages(RingBuffer rb) {
         rb.read((msgTypeId, buffer, index, length) -> {
             log.debug("Got msg ID " + msgTypeId + " at index " + index + ", length=" + length);
 
