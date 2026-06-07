@@ -3,6 +3,7 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.consumer.HydratingPublicationConsumer;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
@@ -12,6 +13,8 @@ import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
+
+import java.util.Comparator;
 
 /**
  * Decode SBE messages representing cache actions. This level of
@@ -24,17 +27,20 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
     private final CacheRequestDecoder<I, K, V> decoder;
     private final CacheResponseEncoder<I, K, V> encoder;
+    private final Comparator<K> keyComparator;
 
     public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory) {
         super(nodeId, tracingService, cacheManagerFactory);
         this.decoder = cacheManagerFactory.getCacheRequestDecoder();
         this.encoder = cacheManagerFactory.getCacheResponseEncoder();
+        this.keyComparator = cacheManagerFactory.getKeyComparator();
     }
 
     public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory, boolean dynamicCacheCreation) {
         super(nodeId, tracingService, cacheManagerFactory);
         this.decoder = cacheManagerFactory.getCacheRequestDecoder();
         this.encoder = cacheManagerFactory.getCacheResponseEncoder();
+        this.keyComparator = cacheManagerFactory.getKeyComparator();
         setDynamicCacheCreationEnabled(dynamicCacheCreation);
     }
 
@@ -166,8 +172,13 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
 
     @Override
     protected void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I,K,V> subscriptionRequestResult, ClientSession session) {
-        var length = encoder.encodeCacheSubscriptionResult(subscriptionRequestResult, egressBuffer);
-        sendMessage(session, egressBuffer, length);
+        encoder.encodeCacheSubscriptionResult(subscriptionRequestResult, egressBuffer, keyComparator, new HydratingPublicationConsumer() {
+            @Override
+            public void accept(MutableDirectBuffer mutableDirectBuffer) {
+                var l = this.getLength();
+                sendMessage(session, mutableDirectBuffer, l);
+            }
+        });
     }
 
     @Override

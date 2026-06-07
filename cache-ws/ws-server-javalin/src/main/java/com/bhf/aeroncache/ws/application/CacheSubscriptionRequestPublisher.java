@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.ws.application;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.consumer.IdentifiableConsumer;
+import com.bhf.aeroncache.models.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;

@@ -8,6 +8,7 @@ import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Comparator;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -70,5 +71,10 @@ public class MapCacheManagerFactory<I extends Reusable, K extends Reusable, V ex
     @Override
     public CacheSchemaDetailsProvider getSchemaDetailsProvider() {
         return new MapCacheSchemaDetailsProvider();
+    }
+
+    @Override
+    public Comparator<K> getKeyComparator() {
+        return cacheEntrySnapshotCodec.getKeyComparator();
     }
 }

@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.consumer;
+package com.bhf.aeroncache.models.consumer;
 
 import java.util.function.Consumer;
 

@@ -1,10 +1,13 @@
 package com.bhf.aeroncache.codecs.response;
 
+import com.bhf.aeroncache.models.consumer.HydratingPublicationConsumer;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.types.ReusableString;
 import org.agrona.MutableDirectBuffer;
 import org.apache.logging.log4j.util.Strings;
+
+import java.util.Comparator;
 
 public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<ReusableString, ReusableString, ReusableString> {
 
@@ -153,35 +156,70 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     }
 
     @Override
-    public int encodeCacheSubscriptionResult(CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> subscriptionRequestResult, MutableDirectBuffer egressBuffer) {
-        cacheSubscriptionResponseEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
-        cacheSubscriptionResponseEncoder
-                .status(getOperationStatus(subscriptionRequestResult.getStatus()));
+    public void encodeCacheSubscriptionResult(CacheSubscriptionResult<ReusableString, ReusableString, ReusableString> subscriptionRequestResult,
+                                              MutableDirectBuffer egressBuffer, Comparator<ReusableString> keyComparator, HydratingPublicationConsumer consumer) {
+        var entries = subscriptionRequestResult.entries;
+        var cacheId = subscriptionRequestResult.getCacheId().value();
+        var requestId = subscriptionRequestResult.getRequestId();
+        var status = getOperationStatus(subscriptionRequestResult.getStatus());
+        boolean isResultEob = subscriptionRequestResult.isEob();
 
-        cacheSubscriptionResponseEncoder.isEob(subscriptionRequestResult.isEob() ?
-                BooleanType.T : BooleanType.F);
-
-        var values = subscriptionRequestResult.entries;
-
-        if(values!=null) {
-            int size = values!=null ? values.size() : 0;
-            var itemsEncoder = cacheSubscriptionResponseEncoder.itemsCount(size);
-
-            System.out.println("TOTAL ITEMS TO ENCODE "+size);
-
-            String cacheId = subscriptionRequestResult.getCacheId().value();
-            values.forEach((key, value) -> {
-                itemsEncoder.next();
-                itemsEncoder.key(key.value()).value(value.value()).cacheId(cacheId);
-            });
-        } else {
-            cacheSubscriptionResponseEncoder.itemsCount(0);
+        if (entries == null || entries.isEmpty()) {
+            encodeNonHydratingCacheSubscriptionResult(egressBuffer, consumer, status, isResultEob, cacheId, requestId);
+            return;
         }
 
-        cacheSubscriptionResponseEncoder.cacheId(subscriptionRequestResult.getCacheId().value())
-                .requestId(subscriptionRequestResult.getRequestId());
+        var sortedKeys = entries.keySet().stream().sorted(keyComparator).toList();
+        int totalSize = sortedKeys.size();
+        int batchSize = 100;
+        int lastEncodedLength = 0;
 
-        return cacheSubscriptionResponseEncoder.encodedLength() + headerEncoder.encodedLength();
+        for (int i = 0; i < totalSize; i += batchSize) {
+            int currentBatchSize = Math.min(batchSize, totalSize - i);
+            boolean isLastBatch = (i + currentBatchSize) == totalSize;
+
+            cacheSubscriptionResponseEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+            cacheSubscriptionResponseEncoder.status(status);
+
+            cacheSubscriptionResponseEncoder.isEob((isLastBatch && isResultEob) ? BooleanType.T : BooleanType.F);
+
+            var itemsEncoder = cacheSubscriptionResponseEncoder.itemsCount(currentBatchSize);
+
+            for (int j = 0; j < currentBatchSize; j++) {
+                var itemKey = sortedKeys.get(i + j).value();
+                var itemValue = entries.get(itemKey).value();
+                itemsEncoder.next();
+                itemsEncoder.key(itemKey).value(itemValue).cacheId(cacheId);
+            }
+
+            cacheSubscriptionResponseEncoder.cacheId(cacheId)
+                    .requestId(requestId);
+
+            lastEncodedLength = cacheSubscriptionResponseEncoder.encodedLength() + headerEncoder.encodedLength();
+
+            consumer.setBuffer(egressBuffer);
+            consumer.setLength(lastEncodedLength);
+            consumer.accept(egressBuffer);
+        }
+
+    }
+
+    private int encodeNonHydratingCacheSubscriptionResult(MutableDirectBuffer egressBuffer, HydratingPublicationConsumer consumer, OperationStatus status, boolean isResultEob, String cacheId, String requestId) {
+        cacheSubscriptionResponseEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+
+        cacheSubscriptionResponseEncoder.status(status)
+                .isEob(isResultEob ? BooleanType.T : BooleanType.F)
+                .itemsCount(0);
+
+        cacheSubscriptionResponseEncoder.cacheId(cacheId).requestId(requestId);
+
+        int length = cacheSubscriptionResponseEncoder.encodedLength() + headerEncoder.encodedLength();
+
+        consumer.setBuffer(egressBuffer);
+        consumer.setLength(length);
+        consumer.accept(egressBuffer);
+
+        return length;
     }
 
     @Override
