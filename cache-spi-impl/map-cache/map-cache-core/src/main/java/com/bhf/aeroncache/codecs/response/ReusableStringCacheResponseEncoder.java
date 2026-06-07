@@ -204,7 +204,7 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
 
     }
 
-    private int encodeNonHydratingCacheSubscriptionResult(MutableDirectBuffer egressBuffer, HydratingPublicationConsumer consumer, OperationStatus status, boolean isResultEob, String cacheId, String requestId) {
+    private void encodeNonHydratingCacheSubscriptionResult(MutableDirectBuffer egressBuffer, HydratingPublicationConsumer consumer, OperationStatus status, boolean isResultEob, String cacheId, String requestId) {
         cacheSubscriptionResponseEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
 
         cacheSubscriptionResponseEncoder.status(status)
@@ -218,8 +218,6 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
         consumer.setBuffer(egressBuffer);
         consumer.setLength(length);
         consumer.accept(egressBuffer);
-
-        return length;
     }
 
     @Override

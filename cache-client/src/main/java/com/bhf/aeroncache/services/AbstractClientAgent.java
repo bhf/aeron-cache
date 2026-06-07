@@ -9,6 +9,7 @@ import lombok.extern.log4j.Log4j2;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
+import org.agrona.concurrent.ringbuffer.RingBuffer;
 
 /**
  * An {@link Agent} abstraction of an AeronCache Client that is run
@@ -23,7 +24,7 @@ public abstract class AbstractClientAgent implements Agent {
 
     @Getter
     final AeronCache cluster;
-    final ManyToOneRingBuffer rb;
+    final RingBuffer rb;
     final IdleStrategy idleStrategy;
 
     @Getter
@@ -68,7 +69,7 @@ public abstract class AbstractClientAgent implements Agent {
         idleStrategy.idle();
     }
 
-    public abstract void processInboundMessages(ManyToOneRingBuffer rb);
+    public abstract void processInboundMessages(RingBuffer rb);
 
     private void handleKeepAlive(AeronCache cluster) {
         long now = System.currentTimeMillis();

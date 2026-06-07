@@ -7,7 +7,7 @@ import io.aeron.cluster.client.AeronCluster;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
+import org.agrona.concurrent.ringbuffer.RingBuffer;
 
 /**
  * An {@link Agent} implementation of an AeronCache Client that is run
@@ -23,11 +23,11 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 @Log4j2
 public class ClusterClientAgent extends AbstractClientAgent {
 
-    public ClusterClientAgent(AeronCache cluster, ManyToOneRingBuffer rb, IdleStrategy idleStrategy, ClusterMessagePublisher publisher, String roleName) {
+    public ClusterClientAgent(AeronCache cluster, RingBuffer rb, IdleStrategy idleStrategy, ClusterMessagePublisher publisher, String roleName) {
         super(cluster, rb, idleStrategy, publisher, roleName);
     }
 
-    public void processInboundMessages(ManyToOneRingBuffer rb) {
+    public void processInboundMessages(RingBuffer rb) {
         rb.read((msgTypeId, buffer, index, length) -> getCluster().offer(buffer, index, length));
     }
 
