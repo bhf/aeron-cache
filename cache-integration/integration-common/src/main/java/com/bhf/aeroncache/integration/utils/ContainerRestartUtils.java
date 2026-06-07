@@ -138,6 +138,29 @@ public class ContainerRestartUtils {
         }
     }
 
+    public static void awaitEphemeralAeronCacheClusterRestart(BackendTestResource backend) {
+        backend.getContainers().clusterContainers().forEach(ContainerRestartUtils::startWithRetry);
+        awaitOnFirstRestartAttempt();
+
+        int clusterNodesLaunched = 0;
+        while (clusterNodesLaunched != 1) {
+            int nodesUp = 0;
+
+            for (var container : backend.getContainers().clusterContainers()) {
+                if (container.isRunning()) {
+                    nodesUp++;
+                }
+            }
+            if (nodesUp < 1) {
+                System.out.println("Only "+nodesUp+" cache nodes up");
+                backend.getContainers().clusterContainers().forEach(ContainerRestartUtils::startWithRetry);
+            } else {
+                System.out.println("All cache nodes started and running");
+                clusterNodesLaunched = nodesUp;
+            }
+        }
+    }
+
     private static void awaitOnFirstRestartAttempt() {
         try {
             Thread.sleep(5000);
@@ -217,4 +240,17 @@ public class ContainerRestartUtils {
             }
         }
     }
+
+    public static void stopEphemeralContainers(BackendTestResource backend) {
+        while (backend.getContainers().clusterContainers().get(0).isRunning()) {
+            backend.getContainers().clusterContainers().get(0).stop();
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+
 }
