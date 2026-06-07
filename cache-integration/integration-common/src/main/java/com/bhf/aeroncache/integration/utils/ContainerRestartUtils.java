@@ -2,13 +2,74 @@ package com.bhf.aeroncache.integration.utils;
 
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import io.restassured.RestAssured;
+import org.awaitility.Awaitility;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * Basic utility functions for helping in the restarting of containers.
  */
 public class ContainerRestartUtils {
+
+    public static void awaitWSReadiness(BackendTestResource backend) {
+        String host = backend.getBaseWsUri().replace("ws://", "http://");
+        int port = backend.getWsPort();
+        Awaitility.await()
+                .atMost(60, TimeUnit.SECONDS)
+                .pollInterval(1, TimeUnit.SECONDS)
+                .until(() -> {
+                    try {
+                        return RestAssured.given()
+                                .baseUri(host)
+                                .port(port)
+                                .get("/readiness/")
+                                .statusCode() == 200;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                });
+    }
+
+    public static void awaitHTTPReadiness(BackendTestResource backend) {
+        String host = backend.getBaseHttpUri();
+        int port = backend.getHttpPort();
+        Awaitility.await()
+                .atMost(60, TimeUnit.SECONDS)
+                .pollInterval(1, TimeUnit.SECONDS)
+                .until(() -> {
+                    try {
+                        return RestAssured.given()
+                                .baseUri(host)
+                                .port(port)
+                                .get("/readiness/")
+                                .statusCode() == 200;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                });
+    }
+
+    public static void awaitSSEReadiness(BackendTestResource backend) {
+        String host = backend.getBaseSSEUri();
+        int port = backend.getSsePort();
+        Awaitility.await()
+                .atMost(60, TimeUnit.SECONDS)
+                .pollInterval(1, TimeUnit.SECONDS)
+                .until(() -> {
+                    try {
+                        return RestAssured.given()
+                                .baseUri(host)
+                                .port(port)
+                                .get("/readiness/")
+                                .statusCode() == 200;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                });
+    }
 
     /**
      * Wait for the HTTP interface to be restarted.

@@ -42,6 +42,17 @@ public class ClusterUtils {
         return PORT_BASE + (nodeId * PORTS_PER_NODE) + offset;
     }
 
+    /**
+     * Create the {@link AeronCluster.Context} for connecting to a cluster.
+     */
+    public static AeronCluster.Context createClusterContext(String egressIP, String ingressEndpoints, EgressListener client, String alias, String aeronDirectory) {
+        return new AeronCluster.Context()
+                .egressListener(client)
+                .egressChannel("aeron:udp?endpoint=" + egressIP + ":0|alias=" + alias + "-ClusterEgress")
+                .aeronDirectoryName(aeronDirectory)
+                .ingressChannel("aeron:udp")
+                .ingressEndpoints(ingressEndpoints);
+    }
 
     /**
      * Build the connection to the cluster.
@@ -69,23 +80,22 @@ public class ClusterUtils {
     }
 
     public static AeronCluster buildClusterConnection(String egressIP, String ingressEndpoints, EgressListener client, String alias, MediaDriver mediaDriver) {
-        return AeronCluster.connect(
-                new AeronCluster.Context()
-                        .egressListener(client)
-                        .egressChannel("aeron:udp?endpoint=" + egressIP + ":0|alias="+alias+"-ClusterEgress")
-                        .aeronDirectoryName(mediaDriver.aeronDirectoryName())
-                        .ingressChannel("aeron:udp")
-                        .ingressEndpoints(ingressEndpoints));
+        return buildClusterConnection(egressIP, ingressEndpoints, client, alias, mediaDriver != null ? mediaDriver.aeronDirectoryName() : null);
     }
 
     public static AeronCluster buildClusterConnection(String egressIP, String ingressEndpoints, EgressListener client, String alias, String aeronDirectory) {
-        return AeronCluster.connect(
-                new AeronCluster.Context()
-                        .egressListener(client)
-                        .egressChannel("aeron:udp?endpoint=" + egressIP + ":0|alias="+alias+"-ClusterEgress")
-                        .aeronDirectoryName(aeronDirectory)
-                        .ingressChannel("aeron:udp")
-                        .ingressEndpoints(ingressEndpoints));
+        return AeronCluster.connect(createClusterContext(egressIP, ingressEndpoints, client, alias, aeronDirectory));
+    }
+
+    /**
+     * Closes the cluster connection safely.
+     *
+     * @param cluster the cluster to close.
+     */
+    public static void close(AeronCluster cluster) {
+        if (cluster != null) {
+            cluster.close();
+        }
     }
 
     public static AtomicCounter getAgentErrorCounter(AeronCluster cluster, String alias) {

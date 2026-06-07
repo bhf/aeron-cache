@@ -28,11 +28,11 @@ import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
+import com.bhf.aeroncache.services.ReconnectingAeronCache;
 import com.bhf.aeroncache.utils.RingBufferUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aeron.Aeron;
 import io.aeron.RethrowingErrorHandler;
-import io.aeron.cluster.client.AeronCluster;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.FragmentHandler;
 import io.javalin.Javalin;
@@ -52,7 +52,6 @@ import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.opentelemetry.api.trace.Span;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.agrona.CloseHelper;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
@@ -98,7 +97,6 @@ public class HttpApplication {
 
     private static String tracingServiceName;
     private static AgentRunner agentRunner;
-    private static AeronCluster aeronCluster;
     private static MediaDriver mediaDriver;
 
     private static final Pattern specialCharacters = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!]");
@@ -197,7 +195,7 @@ public class HttpApplication {
                 buildUnclusteredConnection(aeron, requestPubHost);
             }
 
-            System.out.println("Building cluster agent for http service");
+            System.out.println("Building cluster agent for http service, cluster connected: "+clusterConnected.get());
             var clusterClientAgentIdleStrategy = HttpIdleStrategies.clusterClientAgentIdleStrategy.get();
             var clusterMessagePublisherIdleStrategy = HttpIdleStrategies.clusterMessagePublisherIdleStrategy.get();
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
@@ -206,13 +204,10 @@ public class HttpApplication {
                     new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
                             clusterMessagePublisherIdleStrategy, cacheRequestEncoder), "AeronCache-CacheClient-Agent");
 
-            var errorHandler = aeronCluster != null ? ClusterUtils.getAgentRunnerErrorHandler(aeronCluster) :
-                    new RethrowingErrorHandler();
-            var errorCounter = aeronCluster != null ? ClusterUtils.getAgentErrorCounter(aeronCluster, "HTTPClient") :
-                    null;
+            var errorHandler = new RethrowingErrorHandler();
+            var errorCounter = (org.agrona.concurrent.status.AtomicCounter) null;
             final IdleStrategy agentRunnerIdleStrategy = HttpIdleStrategies.agentRunnerIdleStrategy.get();
             agentRunner = new AgentRunner(agentRunnerIdleStrategy, errorHandler, errorCounter, agent);
-            clusterConnected.set(true);
             AgentRunner.startOnThread(agentRunner);
         } catch (Exception e) {
             e.printStackTrace();
@@ -297,50 +292,15 @@ public class HttpApplication {
                 null, serverAgent);
 
         AgentRunner.startOnThread(serverAgentRunner);
+
+        clusterConnected.set(true);
     }
 
     private static void buildClusterConnection(String egressIP, String ingressEndpoints, String aeronDirectory) {
-        try {
-            aeronCluster = ClusterUtils.buildClusterConnection(egressIP, ingressEndpoints, client, "HTTPClient",
-                    aeronDirectory);
-            addClusterErrorHandler(aeronCluster);
-
-            cache = new AeronCache() {
-                @Override
-                public void sendKeepAlive() {
-                    aeronCluster.sendKeepAlive();
-                }
-
-                @Override
-                public int pollEgress() {
-                    return aeronCluster.pollEgress();
-                }
-
-                @Override
-                public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
-                    return aeronCluster.offer(msgBuffer, msgBufferOffset, i);
-                }
-
-                @Override
-                public boolean isConnected() {
-                    return !aeronCluster.isClosed();
-                }
-            };
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Will try to reconnect");
-            buildClusterConnection(egressIP, ingressEndpoints, aeronDirectory);
-        }
-    }
-
-    public static void shutdown() {
-        CloseHelper.close(aeronCluster);
-        CloseHelper.close(mediaDriver);
-        CloseHelper.close(agentRunner);
-    }
-
-    private static void addClusterErrorHandler(AeronCluster aeronCluster) {
-        aeronCluster.context().errorHandler(throwable -> clusterConnected.set(false));
+        ReconnectingAeronCache reconnectingCache = new ReconnectingAeronCache(egressIP, ingressEndpoints, client, "HTTPClient",
+                aeronDirectory, clusterConnected::set);
+        reconnectingCache.connect();
+        cache = reconnectingCache;
     }
 
     /**

@@ -19,7 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * to complete so become the bottleneck.
  */
 @ExtendWith(BackendTestLauncher.class)
-@BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
+@BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = true, useTestContainersEnvironment = true)
 class ClusterRestartTests {
 
     private static final String GET_ENDPOINT = "/api/v1/cache/";
