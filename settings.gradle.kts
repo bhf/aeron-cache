@@ -33,3 +33,4 @@ include("cache-integration:clustered:shutdown-integration-tests")
 
 include("cache-integration:ephemeral:core-integration-tests")
 include("cache-integration:ephemeral:dynamic-integration-tests")
+include("cache-integration:ephemeral:shutdown-integration-tests")
