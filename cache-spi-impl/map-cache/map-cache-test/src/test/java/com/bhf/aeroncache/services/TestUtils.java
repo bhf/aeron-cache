@@ -12,6 +12,7 @@ import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapsh
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
 import com.bhf.aeroncache.services.cachemanager.MapCacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
+import com.bhf.aeroncache.services.integrity.NoOpStreamingHasher;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.DirectBufferVector;
@@ -107,8 +108,8 @@ public class TestUtils {
         var timersCodec = new ReusableStringTimersCodec();
         return new MapCacheManagerFactory<>(SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
-                new ReusableStringCacheIdSnapshotCodec(),
-                new ReusableStringCacheEntrySnapshotCodec(),
+                new ReusableStringCacheIdSnapshotCodec(new NoOpStreamingHasher<>()),
+                new ReusableStringCacheEntrySnapshotCodec(new NoOpStreamingHasher<>()),
                 encoder,
                 decoder,
                 timersCodec);
