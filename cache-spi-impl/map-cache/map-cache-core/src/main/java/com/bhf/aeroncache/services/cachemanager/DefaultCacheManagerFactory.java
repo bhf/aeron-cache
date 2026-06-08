@@ -11,6 +11,7 @@ import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
+import com.bhf.aeroncache.services.integrity.NoOpMultiTypeStreamingHasher;
 import com.bhf.aeroncache.services.integrity.NoOpStreamingHasher;
 import com.bhf.aeroncache.utils.SupplierUtils;
 
@@ -27,6 +28,6 @@ public class DefaultCacheManagerFactory extends MapCacheManagerFactory<Reusable<
                 (CacheEntrySnapshotCodec) new ReusableStringCacheEntrySnapshotCodec(new NoOpStreamingHasher<>()),
                 (CacheResponseEncoder) new ReusableStringCacheResponseEncoder(),
                 (CacheRequestDecoder) new ReusableStringCacheRequestDecoder(),
-                (CacheTimersCodec) new ReusableStringTimersCodec());
+                (CacheTimersCodec) new ReusableStringTimersCodec(new NoOpMultiTypeStreamingHasher<>()));
     }
 }
