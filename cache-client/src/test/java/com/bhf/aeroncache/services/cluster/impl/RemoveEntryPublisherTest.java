@@ -2,7 +2,7 @@ package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,12 +18,12 @@ import java.util.UUID;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class GetEntriesPublisherTest {
+class RemoveEntryPublisherTest {
 
     ClusterMessagePublisher sut;
 
     @Mock
-    RegularStringCacheRequestEncoder cacheRequestEncoder;
+    CacheRequestEncoder cacheRequestEncoder;
 
     @Mock
     private AeronCache cluster;
@@ -38,18 +38,19 @@ class GetEntriesPublisherTest {
 
     @Test
     @HappyPath
-    @DisplayName("Should correctly encode get all entries request and offer to cluster")
-    void shouldEncodeClearCacheRequestAndOfferToCluster() {
+    @DisplayName("Should correctly encode remove entry request and offer to cluster")
+    void shouldEncodeRemvoveEntryRequestAndOfferToCluster() {
         // Arrange
         var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
+        var key = "someKey";
 
         // Act
-        sut.getCacheEntries(requestId, cacheId);
+        sut.removeCacheEntry(requestId, cacheId, key);
 
         // Assert
-        verify(cacheRequestEncoder, times(1)).encodeGetCacheEntries(
-                eq(requestId), eq(cacheId), any(MutableDirectBuffer.class)
+        verify(cacheRequestEncoder, times(1)).encodeRemoveCacheEntry(
+                eq(requestId), eq(cacheId), eq(key), any(MutableDirectBuffer.class)
         );
 
         verify(cluster, atMostOnce()).offer(
@@ -60,15 +61,16 @@ class GetEntriesPublisherTest {
 
     @Test
     @HappyPath
-    @DisplayName("Should poll egress pending get all cache entries request")
-    void shouldPollEgressAndIdlePendingGetCacheEntryRequest() {
+    @DisplayName("Should poll egress pending blocking remove entry request")
+    void shouldPollEgressAndIdlePendingRemoveEntryRequest() {
         // Arrange
         var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
+        var key = "someKey";
         when(cluster.pollEgress()).thenReturn(1);
 
         // Act
-        sut.getCacheEntriesBlocking(requestId, cacheId);
+        sut.removeCacheEntryBlocking(requestId, cacheId, key);
 
         // Assert
         verify(cluster, times(1)).pollEgress();
