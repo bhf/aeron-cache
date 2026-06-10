@@ -2,12 +2,8 @@ package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
-import com.bhf.aeroncache.messages.CacheEntryCreatedEncoder;
-import com.bhf.aeroncache.messages.MessageHeaderEncoder;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
-import com.bhf.aeroncache.services.cacheclient.MapCacheClientSchemDetailsProvider;
-import com.bhf.aeroncache.types.ReusableString;
-import com.bhf.aeroncache.utils.SupplierUtils;
+import com.bhf.aeroncache.services.cacheclient.CacheClientSchemDetailsProvider;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
@@ -19,26 +15,33 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.function.Supplier;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CacheEntryCreatedResultTest {
 
+    public static final int CACHE_ENTRY_CREATED_TID = 1;
+    public static final int TID_INDEX = 2;
     @Mock
     private Header header;
     private MutableDirectBuffer requestBuffer;
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final CacheEntryCreatedEncoder cacheEntryCreatedEncoder = new CacheEntryCreatedEncoder();
-    private AeronCacheClusterListener<ReusableString, ReusableString, ReusableString> sut;
+
+    private AeronCacheClusterListener sut;
     @Mock
-    private CacheResponseHandler<ReusableString,ReusableString,ReusableString> callbackHandler;
+    private CacheResponseHandler callbackHandler;
     @Mock
-    private CacheResponseDecoder<ReusableString,ReusableString,ReusableString> cacheResponseDecoder;
+    private CacheResponseDecoder cacheResponseDecoder;
+    @Mock
+    private CacheClientSchemDetailsProvider schemaDetailsProvider;
 
     @BeforeEach
     void setup() {
-        sut = new AeronCacheClusterListener<>(cacheResponseDecoder, new MapCacheClientSchemDetailsProvider(), SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier);
+        var supplier = mock(Supplier.class);
+        sut = new AeronCacheClusterListener<>(cacheResponseDecoder, schemaDetailsProvider,
+                supplier, supplier, supplier);
         sut.setCacheResultsCallbacks(callbackHandler);
         requestBuffer = new ExpandableArrayBuffer(512);
     }
@@ -51,18 +54,20 @@ class CacheEntryCreatedResultTest {
         var sessionId = 1L;
         var timeStamp = 1L;
         var length = 1024;
-        cacheEntryCreatedEncoder.wrapAndApplyHeader(requestBuffer, 0, headerEncoder);
+        when(schemaDetailsProvider.getCacheEntryCreatedId()).thenReturn(CACHE_ENTRY_CREATED_TID);
+
+        requestBuffer.putShort(TID_INDEX, (short) CACHE_ENTRY_CREATED_TID);
 
         // Act
         sut.onMessage(sessionId, timeStamp, requestBuffer, 0, length, header);
 
         // Assert
         verify(
-                cacheResponseDecoder, times(1)).decodeAddCacheEntryResult(
+                cacheResponseDecoder, times(CACHE_ENTRY_CREATED_TID)).decodeAddCacheEntryResult(
                 any(DirectBuffer.class), anyInt(), any(AddCacheEntryResult.class)
         );
 
-        verify(callbackHandler, times(1))
+        verify(callbackHandler, times(CACHE_ENTRY_CREATED_TID))
                 .handleCacheEntryCreated(any(AddCacheEntryResult.class));
     }
 

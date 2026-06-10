@@ -27,16 +27,13 @@ import java.util.function.Supplier;
 public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V extends Reusable> implements EgressListener {
 
     @Setter
-    private CacheResponseHandler cacheResultsCallbacks;
+    private CacheResponseHandler<I,K,V> cacheResultsCallbacks;
 
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
 
-    private final CacheResponseDecoder cacheResponseDecoder;
+    private final CacheResponseDecoder<I,K,V> cacheResponseDecoder;
     private final CacheClientSchemDetailsProvider schemaDetails;
-    private final Supplier<I> indexSupplier;
-    private final Supplier<K> keySupplier;
-    private final Supplier<V> valueSupplier;
 
     private final CreateCacheResult<I> createCacheResult;
     private final AddCacheEntryResult<I, K> addCacheEntryResult;
@@ -52,12 +49,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     private final ClusterSessionEventHandler sessionEventHandler = new NoOpClusterSessionEventHandler();
     private final CacheStatsResult<I> cacheStatsResult = new CacheStatsResult<>();
 
-    public AeronCacheClusterListener(CacheResponseDecoder cacheResponseDecoder, CacheClientSchemDetailsProvider schemaDetails, Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier) {
+    public AeronCacheClusterListener(CacheResponseDecoder<I,K,V> cacheResponseDecoder, CacheClientSchemDetailsProvider schemaDetails, Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier) {
         this.cacheResponseDecoder = cacheResponseDecoder;
         this.schemaDetails = schemaDetails;
-        this.indexSupplier = indexSupplier;
-        this.keySupplier = keySupplier;
-        this.valueSupplier = valueSupplier;
         createCacheResult = new CreateCacheResult<>(indexSupplier.get());
         addCacheEntryResult = new AddCacheEntryResult<>(indexSupplier.get(), keySupplier.get());
         clearCacheResult = new ClearCacheResult<>(indexSupplier.get());

@@ -23,35 +23,35 @@ import java.util.function.Consumer;
 public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusable, V extends Reusable> implements CacheRequestPublisher, CacheRequestConsumingPublisher<I,K,V>, CacheResponseHandler<I,K,V> {
 
     private final CacheRequestPublisher rbPublisher;
-    private final ConsumingResponseHandler cacheResponseObservers = new CacheResponseMapObservers();
-    private final CacheResponseCallbackHandler cacheResponseHandler = new CacheResponseCallbackHandler(cacheResponseObservers);
+    private final ConsumingResponseHandler<I,K,V> cacheResponseObservers = new CacheResponseMapObservers();
+    private final CacheResponseCallbackHandler<I,K,V> cacheResponseHandler = new CacheResponseCallbackHandler(cacheResponseObservers);
 
-    public ObservingCacheRequestPublisher onCreateCache(Consumer<CreateCacheResult<ReusableString>> c) {
+    public ObservingCacheRequestPublisher<I,K,V> onCreateCache(Consumer<CreateCacheResult<I>> c) {
         cacheResponseObservers.setCreateCacheConsumer(c);
         return this;
     }
 
-    public ObservingCacheRequestPublisher onAddCacheEntry(Consumer<AddCacheEntryResult<ReusableString, ReusableString>> c) {
+    public ObservingCacheRequestPublisher<I,K,V> onAddCacheEntry(Consumer<AddCacheEntryResult<I, K>> c) {
         cacheResponseObservers.setAddCacheEntryConsumer(c);
         return this;
     }
 
-    public ObservingCacheRequestPublisher onClearCache(Consumer<ClearCacheResult<ReusableString>> c) {
+    public ObservingCacheRequestPublisher<I,K,V> onClearCache(Consumer<ClearCacheResult<I>> c) {
         cacheResponseObservers.setClearCacheConsumer(c);
         return this;
     }
 
-    public ObservingCacheRequestPublisher onDeleteCache(Consumer<DeleteCacheResult<ReusableString>> c) {
+    public ObservingCacheRequestPublisher<I,K,V> onDeleteCache(Consumer<DeleteCacheResult<I>> c) {
         cacheResponseObservers.setDeleteCacheConsumer(c);
         return this;
     }
 
-    public ObservingCacheRequestPublisher onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<ReusableString, ReusableString>> c) {
+    public ObservingCacheRequestPublisher<I,K,V> onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<I, K>> c) {
         cacheResponseObservers.setRemoveCacheEntryConsumer(c);
         return this;
     }
 
-    public ObservingCacheRequestPublisher onGetCacheEntry(Consumer<GetCacheEntryResult<ReusableString, ReusableString, ReusableString>> c) {
+    public ObservingCacheRequestPublisher<I,K,V> onGetCacheEntry(Consumer<GetCacheEntryResult<I, K, V>> c) {
         cacheResponseObservers.setGetCacheEntryConsumer(c);
         return this;
     }
