@@ -2,7 +2,7 @@ package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,12 +18,12 @@ import java.util.UUID;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class RemoveEntryPublisherTest {
+class AddEntryPublisherTest {
 
     ClusterMessagePublisher sut;
 
     @Mock
-    RegularStringCacheRequestEncoder cacheRequestEncoder;
+    CacheRequestEncoder cacheRequestEncoder;
 
     @Mock
     private AeronCache cluster;
@@ -38,39 +38,42 @@ class RemoveEntryPublisherTest {
 
     @Test
     @HappyPath
-    @DisplayName("Should correctly encode remove entry request and offer to cluster")
-    void shouldEncodeRemvoveEntryRequestAndOfferToCluster() {
+    @DisplayName("Should correctly encode add entry request and offer to cluster")
+    void shouldEncodeAddEntryRequestAndOfferToCluster() {
         // Arrange
         var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         var key = "someKey";
+        var value = "someValue";
+        var ttl = 0L;
 
-        // Act
-        sut.removeCacheEntry(requestId, cacheId, key);
+            // Act
+            sut.addCacheEntry(requestId, cacheId, key, value, ttl);
 
-        // Assert
-        verify(cacheRequestEncoder, times(1)).encodeRemoveCacheEntry(
-                eq(requestId), eq(cacheId), eq(key), any(MutableDirectBuffer.class)
-        );
+            // Assert
+            verify(cacheRequestEncoder, times(1)).encodeAddCacheEntry(
+                    eq(requestId), eq(cacheId), eq(key), eq(value), eq(ttl), any(MutableDirectBuffer.class)
+            );
 
-        verify(cluster, atMostOnce()).offer(
-                any(MutableDirectBuffer.class),
-                eq(0),
-                intThat(isGreaterThanZero()));
+            verify(cluster, atMostOnce()).offer(
+                    any(MutableDirectBuffer.class),
+                    eq(0),
+                    intThat(isGreaterThanZero()));
     }
 
     @Test
     @HappyPath
-    @DisplayName("Should poll egress pending blocking remove entry request")
-    void shouldPollEgressAndIdlePendingRemoveEntryRequest() {
+    @DisplayName("Should poll egress pending blocking add cache entry request")
+    void shouldPollEgressAndIdlePendingAddCacheEntryRequest() {
         // Arrange
         var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         var key = "someKey";
+        var value = "someValue";
         when(cluster.pollEgress()).thenReturn(1);
 
         // Act
-        sut.removeCacheEntryBlocking(requestId, cacheId, key);
+        sut.addCacheEntryBlocking(requestId, cacheId, key, value, 0);
 
         // Assert
         verify(cluster, times(1)).pollEgress();

@@ -2,7 +2,7 @@ package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,12 +18,12 @@ import java.util.UUID;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class CreateCachePublisherTest {
+class GetEntryPublisherTest {
 
     ClusterMessagePublisher sut;
 
     @Mock
-    RegularStringCacheRequestEncoder cacheRequestEncoder;
+    CacheRequestEncoder cacheRequestEncoder;
 
     @Mock
     private AeronCache cluster;
@@ -38,38 +38,39 @@ class CreateCachePublisherTest {
 
     @Test
     @HappyPath
-    @DisplayName("Should correctly encode create request and offer to cluster")
-    void shouldEncodeCreateRequestAndOfferToCluster() {
+    @DisplayName("Should correctly encode get entry request and offer to cluster")
+    void shouldEncodeGetEntryRequestAndOfferToCluster() {
         // Arrange
         var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
+        var key = "someKey";
 
         // Act
-        sut.sendCreateCache(requestId, cacheId);
+        sut.getCacheEntry(requestId, cacheId, key);
 
         // Assert
-        verify(cacheRequestEncoder, times(1)).encodeCreateCacheRequest(
-                eq(requestId), eq(cacheId), any(MutableDirectBuffer.class)
+        verify(cacheRequestEncoder, times(1)).encodeGetCacheEntry(
+                eq(requestId), eq(cacheId), eq(key), any(MutableDirectBuffer.class)
         );
 
         verify(cluster, atMostOnce()).offer(
                 any(MutableDirectBuffer.class),
                 eq(0),
                 intThat(isGreaterThanZero()));
-
     }
 
     @Test
     @HappyPath
-    @DisplayName("Should poll egress pending blocking create cache request")
-    void shouldPollEgressAndIdlePendingBlockingCreateCacheRequest() {
+    @DisplayName("Should poll egress pending blocking get cache entry request")
+    void shouldPollEgressAndIdlePendingGetCacheEntryRequest() {
         // Arrange
         var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
+        var key = "someKey";
         when(cluster.pollEgress()).thenReturn(1);
 
         // Act
-        sut.sendCreateCacheBlocking(requestId, cacheId);
+        sut.getCacheEntryBlocking(requestId, cacheId, key);
 
         // Assert
         verify(cluster, times(1)).pollEgress();

@@ -2,7 +2,7 @@ package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,18 +13,17 @@ import org.mockito.Mock;
 import org.mockito.internal.matchers.GreaterThan;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class SubscribeCachePublisherTest {
+class GetAllCacheStatsPublisherTest {
 
     ClusterMessagePublisher sut;
 
     @Mock
-    RegularStringCacheRequestEncoder cacheRequestEncoder;
+    CacheRequestEncoder cacheRequestEncoder;
 
     @Mock
     private AeronCache cluster;
@@ -39,38 +38,35 @@ class SubscribeCachePublisherTest {
 
     @Test
     @HappyPath
-    @DisplayName("Should correctly encode cache subscription request and offer to cluster")
-    void shouldEncodeCacheSubscriptionRequestAndOfferToCluster() {
+    @DisplayName("Should correctly encode request to get all cache stats and offer to cluster")
+    void shouldEncodeRequestToGetCacheStatsAndOfferToCluster() {
         // Arrange
-        var cacheId = List.of("123L");
         var requestId = UUID.randomUUID().toString();
 
         // Act
-        sut.sendCacheSubscribe(requestId, cacheId, false);
+        sut.getAllCacheStats(requestId);
 
         // Assert
-        verify(cacheRequestEncoder, times(1)).encodeCacheSubscribe(
-                eq(requestId), eq(cacheId), eq(false), any(MutableDirectBuffer.class)
+        verify(cacheRequestEncoder, times(1)).encodeGetAllCacheStats(
+                eq(requestId), any(MutableDirectBuffer.class)
         );
 
         verify(cluster, atMostOnce()).offer(
                 any(MutableDirectBuffer.class),
                 eq(0),
                 intThat(isGreaterThanZero()));
-
     }
 
     @Test
     @HappyPath
-    @DisplayName("Should poll egress pending blocking cache subscription request")
-    void shouldPollEgressAndIdlePendingCacheSubscriptionRequest() {
+    @DisplayName("Should poll egress pending blocking get all cache stats request")
+    void shouldPollEgressAndIdlePendingBlockingGetStatsRequest() {
         // Arrange
-        var cacheId = List.of("123L");
         var requestId = UUID.randomUUID().toString();
         when(cluster.pollEgress()).thenReturn(1);
 
         // Act
-        sut.sendCacheSubscribeBlocking(requestId, cacheId, false);
+        sut.getAllCacheStatsBlocking(requestId);
 
         // Assert
         verify(cluster, times(1)).pollEgress();

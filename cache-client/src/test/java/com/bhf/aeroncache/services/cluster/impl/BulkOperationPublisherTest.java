@@ -2,7 +2,7 @@ package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
 import com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest;
@@ -27,7 +27,7 @@ class BulkOperationPublisherTest {
     ClusterMessagePublisher sut;
 
     @Mock
-    RegularStringCacheRequestEncoder cacheRequestEncoder;
+    CacheRequestEncoder cacheRequestEncoder;
 
     @Mock
     private AeronCache cluster;

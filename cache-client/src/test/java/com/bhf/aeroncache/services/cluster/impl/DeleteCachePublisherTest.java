@@ -2,7 +2,7 @@ package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,12 +18,12 @@ import java.util.UUID;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class UnsubscribeCachePublisherTest {
+class DeleteCachePublisherTest {
 
     ClusterMessagePublisher sut;
 
     @Mock
-    RegularStringCacheRequestEncoder cacheRequestEncoder;
+    CacheRequestEncoder cacheRequestEncoder;
 
     @Mock
     private AeronCache cluster;
@@ -38,17 +38,17 @@ class UnsubscribeCachePublisherTest {
 
     @Test
     @HappyPath
-    @DisplayName("Should correctly encode cache unsubscribe request and offer to cluster")
-    void shouldEncodeCacheUnsubscribeRequestAndOfferToCluster() {
+    @DisplayName("Should correctly encode delete cache request and offer to cluster")
+    void shouldEncodeDeleteCacheRequestAndOfferToCluster() {
         // Arrange
         var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
 
         // Act
-        sut.sendCacheUnsubscribe(requestId, cacheId);
+        sut.deleteCache(requestId, cacheId);
 
         // Assert
-        verify(cacheRequestEncoder, times(1)).encodeCacheUnsubscribe(
+        verify(cacheRequestEncoder, times(1)).encodeDeleteCache(
                 eq(requestId), eq(cacheId), any(MutableDirectBuffer.class)
         );
 
@@ -56,19 +56,20 @@ class UnsubscribeCachePublisherTest {
                 any(MutableDirectBuffer.class),
                 eq(0),
                 intThat(isGreaterThanZero()));
+
     }
 
     @Test
     @HappyPath
-    @DisplayName("Should poll egress pending blocking cache unsubscribe request")
-    void shouldPollEgressAndIdlePendingCacheUnsubscribeRequest() {
+    @DisplayName("Should poll egress pending blocking delete cache request")
+    void shouldPollEgressAndIdlePendingDeleteCacheRequest() {
         // Arrange
         var cacheId = "123L";
         var requestId = UUID.randomUUID().toString();
         when(cluster.pollEgress()).thenReturn(1);
 
         // Act
-        sut.sendCacheUnsubscribeBlocking(requestId, cacheId);
+        sut.deleteCacheBlocking(requestId, cacheId);
 
         // Assert
         verify(cluster, times(1)).pollEgress();
