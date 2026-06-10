@@ -71,6 +71,12 @@ public interface BlockingClusterRequestPublisher {
      */
     void getCacheEntriesBlocking(String requestId, String cacheId);
 
+    /**
+     * Send bulk operations in a blocking manner.
+     *
+     * @param requestId The Id of this request.
+     * @param request The bulk request.
+     */
     void sendBulkOperationsBlocking(String requestId, BulkCacheOpsRequest request);
 
     /**
