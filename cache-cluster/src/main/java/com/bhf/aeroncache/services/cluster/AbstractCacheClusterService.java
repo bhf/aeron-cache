@@ -311,6 +311,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param deadline The epoch time at which to remove the item.
      */
     private void scheduleItemRemoval(I cacheId, K key, Cache<I, K, V> cache, long deadline) {
+        lookupKey.clear();
         lookupKey.getCacheId().copyFrom(cacheId);
         lookupKey.getKey().copyFrom(key);
 

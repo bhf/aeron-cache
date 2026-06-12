@@ -27,10 +27,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -107,6 +109,40 @@ class SubscribeCacheTest {
         assertEquals(cacheId, result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
         assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should subscribe with hydration")
+    void shouldSubscribeWithHydration() {
+        // Arrange
+        ClientSession session = TestUtils.getMockedSession(responseBuffer);
+        var cacheId = "hydration-test-cache";
+        TestUtils.createCache(cacheId, session, requestBuffer, sut);
+
+        var key = "key";
+        var value = "value";
+        var addLength = cacheRequestEncoder.encodeAddCacheEntry(UUID.randomUUID().toString(), cacheId, key, value, 0, requestBuffer);
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, addLength, header);
+
+        var requestId = UUID.randomUUID().toString();
+        int subscribeLength = cacheRequestEncoder.encodeCacheSubscribe(requestId, List.of(cacheId), true, requestBuffer);
+
+        // Act
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, subscribeLength, header);
+        cacheResponseDecoder.decodeCacheSubscribeResult(responseBuffer, 0, result);
+
+        // Assert
+        assertEquals(cacheId, result.getCacheId().value());
+        assertEquals(requestId, result.getRequestId());
+        assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
+
+        var entries = result.getEntries();
+        assertEquals(1, entries.size());
+
+        var resultKey = new ReusableString();
+        resultKey.copyFrom(key);
+        assertTrue(entries.containsKey(resultKey));
+        assertEquals(value, entries.get(resultKey).value());
     }
 
 }
