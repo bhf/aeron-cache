@@ -48,12 +48,12 @@ jobs:
         run: |
           echo "Waiting for all pods to be in the Ready state..."
           sleep 10
-          kubectl wait --for=condition=ready pod --all --timeout=300s
+          kubectl wait -n aeroncache --for=condition=ready pod --all --timeout=300s
 
       - name: Verify HTTP Service (API Smoke Test)
         run: |
           # Port forward the HTTP service so it's accessible via localhost
-          kubectl port-forward svc/aeroncache-http 7070:7070 &
+          kubectl port-forward -n aeroncache svc/aeroncache-http 7070:7070 &
           sleep 5 # give port-forwarding a moment to establish
           
           echo "Checking liveness endpoint..."
@@ -98,6 +98,6 @@ jobs:
           echo "===== Pods ====="
           kubectl get pods -A
           echo "===== Events ====="
-          kubectl get events --sort-by='.metadata.creationTimestamp'
+          kubectl get events -n aeroncache --sort-by='.metadata.creationTimestamp'
           echo "===== Pod Logs ====="
-          kubectl logs -l app.kubernetes.io/name=aeroncache-cluster --tail=200 || true
+          kubectl logs -n aeroncache -l app.kubernetes.io/name=aeroncache-cluster --tail=200 || true
