@@ -1,0 +1,103 @@
+name: Helm Charts (Cluster Backend) CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-k8s-cluster:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          
+      - name: Build Local Target Docker Images
+        run: |
+          docker pull eclipse-temurin:25-jre
+          ./gradlew jibDockerBuild -PjibDockerOnBuild=true
+          
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: kind
+          
+      - name: Load local images into Kind
+        run: |
+          kind load docker-image aeroncache-cluster:latest --name kind
+          kind load docker-image aeroncache-http-clustertools:latest --name kind
+          kind load docker-image aeroncache-http:latest --name kind
+          kind load docker-image aeroncache-ws:latest --name kind
+          kind load docker-image aeroncache-sse:latest --name kind
+          kind load docker-image aeroncache-http-near:latest --name kind
+
+      - name: Install Backend Helm Charts
+        working-directory: ./k8s/helm
+        run: |
+          # The kind action creates cluster but sometimes local default namespaces need a moment
+          make install-backend
+
+      - name: Verify Cluster Component Readiness (Wait)
+        run: |
+          echo "Waiting for all pods to be in the Ready state..."
+          sleep 10
+          kubectl wait -n aeroncache --for=condition=ready pod --all --timeout=300s
+
+      - name: Verify HTTP Service (API Smoke Test)
+        run: |
+          # Port forward the HTTP service so it's accessible via localhost
+          kubectl port-forward -n aeroncache svc/aeroncache-http 7070:7070 &
+          sleep 5 # give port-forwarding a moment to establish
+          
+          echo "Checking liveness endpoint..."
+          curl --fail http://localhost:7070/liveness/ || exit 1
+          
+          echo -e "\nChecking readiness endpoint..."
+          curl --fail http://localhost:7070/readiness/ || exit 1
+          
+          # Create a new cache called smoke-test-cache
+          echo -e "\nCreating cache..."
+          curl -s --fail -X POST http://localhost:7070/api/v1/cache \
+            -H 'Content-Type: application/json' \
+            -d '{"cacheId": "smoke-test-cache"}' || exit 1
+          
+          # Put an item into the cache
+          echo -e "\nPutting item into cache..."
+          curl -s --fail -X POST http://localhost:7070/api/v1/cache/smoke-test-cache \
+            -H 'Content-Type: application/json' \
+            -d '{"key": "testKey", "value": "testValue"}' || exit 1
+            
+          # Retrieve the item back and verify the value
+          echo -e "\nRetrieving item from cache..."
+          RESPONSE=$(curl -s --fail -X GET http://localhost:7070/api/v1/cache/smoke-test-cache/testKey)
+          echo "Response: $RESPONSE"
+          if [[ "$RESPONSE" != *"testValue"* ]]; then
+            echo "Smoke test failed: Returned item value did not match 'testValue'."
+            exit 1
+          fi
+          
+          # Get global cache stats to confirm the cluster sees the operation
+          echo -e "\nRetrieving global stats..."
+          STATS=$(curl -s --fail -X GET http://localhost:7070/api/v1/stats)
+          echo "Stats: $STATS"
+          
+          echo -e "\nSmoke test passed successfully! Aeron cache is fully operational in Kind."
+
+      - name: Debug cluster state on failure
+        if: failure()
+        run: |
+          echo "===== Nodes ====="
+          kubectl get nodes
+          echo "===== Pods ====="
+          kubectl get pods -A
+          echo "===== Events ====="
+          kubectl get events -n aeroncache --sort-by='.metadata.creationTimestamp'
+          echo "===== Pod Logs ====="
+          kubectl logs -n aeroncache -l app.kubernetes.io/name=aeroncache-cluster --tail=200 || true
