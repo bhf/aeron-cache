@@ -32,6 +32,7 @@ jobs:
       - name: Load local images into Kind
         run: |
           kind load docker-image aeroncache-cluster:latest --name kind
+          kind load docker-image aeroncache-http-clustertools:latest --name kind
           kind load docker-image aeroncache-http:latest --name kind
           kind load docker-image aeroncache-ws:latest --name kind
           kind load docker-image aeroncache-sse:latest --name kind
