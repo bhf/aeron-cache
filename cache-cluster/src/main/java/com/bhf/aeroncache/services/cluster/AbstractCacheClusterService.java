@@ -2,12 +2,10 @@ package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
 import com.bhf.aeroncache.handlers.PublicationFailureHandler;
-import com.bhf.aeroncache.models.TimerLookupCompoundKey;
-import com.bhf.aeroncache.models.PendingRemove;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
-import com.bhf.aeroncache.services.cache.Cache;
+import com.bhf.aeroncache.services.CacheTimerService;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheSchemaDetailsProvider;
@@ -20,7 +18,6 @@ import io.aeron.cluster.codecs.CloseReason;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.cluster.service.Cluster;
 import io.aeron.cluster.service.ClusteredService;
-import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,13 +25,9 @@ import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.collections.Long2ObjectHashMap;
-import org.agrona.collections.MutableBoolean;
-import org.agrona.collections.Object2ObjectHashMap;
 import org.agrona.concurrent.IdleStrategy;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -74,14 +67,12 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
 
     private String nodeId;
-    private long timerCorrelationId = 0;
-    private final Long2ObjectHashMap<PendingRemove<I, K>> pendingRemoves = new Long2ObjectHashMap();
-    private final Map<TimerLookupCompoundKey<I, K>, Long> cacheKeyToTimerId = new Object2ObjectHashMap<>();
-    private final TimerLookupCompoundKey<I, K> lookupKey;
+
 
     @Setter
     @Getter
     private boolean dynamicCacheCreationEnabled = false;
+    private CacheTimerService<I, K, V> cacheTimerService;
 
     protected AbstractCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
@@ -106,7 +97,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.schemaDetails = cacheManagerFactory.getSchemaDetailsProvider();
         this.bulkOpsResult = new BulkCacheOpsResult<>(cacheManagerFactory.getIndexSupplier(),
                 cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getValueSupplier());
-        this.lookupKey = new TimerLookupCompoundKey<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+
     }
 
     /**
@@ -161,6 +152,23 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     public void onStart(final Cluster cluster, final Image snapshotImage) {
         log.info("On start called on cluster service");
         this.cluster = cluster;
+
+        TimerDetailsFlyweight<I, K> fw = new TimerDetailsFlyweight<>();
+
+        Consumer<TimerDetailsFlyweight<I, K>> consumer = timerDetailsFlyweight -> {
+            var cache = timerDetailsFlyweight.getCache();
+            var key = timerDetailsFlyweight.getKey();
+            var correlationId = timerDetailsFlyweight.getCorrelationId();
+            var removeResult = processRemoveCacheEntry(cache, key, "timer-" + correlationId);
+
+            if (removeResult.getStatus() == CacheOperationStatus.SUCCESS) {
+                // update the subscription service
+                handlePostRemoveCacheEntry(cache, key, removeResult, null);
+            }
+        };
+
+        this.cacheTimerService = new CacheClusterTimerService<I,K,V>(cacheManagerFactory, cluster, fw, consumer);
+
         this.idleStrategy = cluster.idleStrategy();
         if (null != snapshotImage) {
             loadSnapshot(cluster, snapshotImage);
@@ -295,46 +303,10 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         if (ttl > 0 && addCacheEntryResult.getStatus() == CacheOperationStatus.SUCCESS) {
             long now = cluster.time();
             long deadline = now + ttl;
-            scheduleItemRemoval(cacheId, key, cache, deadline);
+            cacheTimerService.scheduleItemRemoval(cacheId, key, cache, deadline);
         }
 
         return addCacheEntryResult;
-    }
-
-
-    /**
-     * Schedule the removal of an item from a cache.
-     *
-     * @param cacheId  The ID of the cache to remove from.
-     * @param key      The key to remove.
-     * @param cache    The cache to remove from.
-     * @param deadline The epoch time at which to remove the item.
-     */
-    private void scheduleItemRemoval(I cacheId, K key, Cache<I, K, V> cache, long deadline) {
-        lookupKey.clear();
-        lookupKey.getCacheId().copyFrom(cacheId);
-        lookupKey.getKey().copyFrom(key);
-
-        var existingTimerId = cacheKeyToTimerId.remove(lookupKey);
-        if (existingTimerId != null) {
-            boolean timerCancelled = cluster.cancelTimer(existingTimerId);
-            var removedItem = pendingRemoves.remove(existingTimerId);
-            log.info("Cancelled existing timer {} for key {} in cache {}, cancelled: {}, removed: {}", existingTimerId, key, cacheId, timerCancelled, removedItem);
-        }
-
-        timerCorrelationId++;
-        boolean success = cluster.scheduleTimer(timerCorrelationId, deadline);
-        log.info("Scheduled timer for {} to remove key {} from cache {} correlationId {}", deadline, key, cacheId, timerCorrelationId);
-
-        final var keyToRemove = cacheManagerFactory.getKeySupplier().get();
-        keyToRemove.copyFrom(key);
-
-        final var cacheToRemoveOn = cacheManagerFactory.getIndexSupplier().get();
-        cacheToRemoveOn.copyFrom(cacheId);
-
-        var pendingRemove = new PendingRemove(timerCorrelationId, cacheToRemoveOn, keyToRemove);
-        pendingRemoves.put(timerCorrelationId, pendingRemove);
-        cacheKeyToTimerId.put(new TimerLookupCompoundKey<>(cacheToRemoveOn, keyToRemove), timerCorrelationId);
     }
 
     /**
@@ -868,31 +840,13 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      */
     @Override
     public void onTakeSnapshot(final ExclusivePublication snapshotPublication) {
-        log.info("Got request to take snapshot");
-
-        var timersSize = pendingRemoves.keySet().size();
-
         MutableDirectBuffer timersBuffer = new ExpandableArrayBuffer();
-        timersBuffer.putInt(0, timersSize);
 
-        log.info("Total timers to snapshot: {}", timersSize);
-        int cumulativeLength = 4;
-        if (timersSize > 0) {
-            for (var t : pendingRemoves.keySet().stream().sorted().toList()) {
-                var pendingTimer = pendingRemoves.get(t);
-                var correlationId = pendingTimer.getTimerCorrelationId();
-                var key = pendingTimer.getKeyToRemove();
-                var cacheId = pendingTimer.getCacheToRemoveOn();
-                var codec = cacheManagerFactory.getCacheTimersCodec();
-                int length = codec.encodeCacheTimer(timersBuffer, cumulativeLength, correlationId, key, cacheId);
-                cumulativeLength += length;
-            }
-        }
-
+        log.info("Taking timers service snapshot");
+        int cumulativeLength = cacheTimerService.onTakeSnapshot(snapshotPublication, timersBuffer);
         snapshotPublication.offer(timersBuffer, 0, cumulativeLength);
 
         log.info("Taking cache manager snapshot");
-
         cacheManager.takeSnapshot(snapshotPublication);
     }
 
@@ -902,36 +856,12 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cluster       The cluster from which we are loading the snapshot.
      * @param snapshotImage The snapshot image.
      */
-    private void loadSnapshot(final Cluster cluster, final Image snapshotImage) {
-        log.info("Got request to load snapshot");
-        MutableBoolean timersSnapshotFinished = new MutableBoolean(false);
+    void loadSnapshot(final Cluster cluster, final Image snapshotImage) {
 
-        FragmentHandler handler = (buffer, offset, length, header) -> {
-            int timersSize = buffer.getInt(offset);
-
-            log.info("Total timers to load: {}", timersSize);
-
-            if (timersSize > 0) {
-                var codec = cacheManagerFactory.getCacheTimersCodec();
-                codec.decodeCacheTimers(timersSize, pendingRemoves, buffer, offset+4);
-                log.info("Loaded {} timers", pendingRemoves.size());
-
-                for(var x : pendingRemoves.values()){
-                    log.info("Timer on cache {} key {}, correlationId {}", x.getCacheToRemoveOn(), x.getKeyToRemove(), x.getTimerCorrelationId());
-                    cacheKeyToTimerId.put(new TimerLookupCompoundKey<>(x.getCacheToRemoveOn(), x.getKeyToRemove()), x.getTimerCorrelationId());
-                }
-            }
-
-            timersSnapshotFinished.set(true);
-        };
-
-        while (!timersSnapshotFinished.get()) {
-            snapshotImage.poll(handler, 1);
-            if (timersSnapshotFinished.value) break;
-        }
+        log.info("Loading cache timers from snapshot");
+        cacheTimerService.loadSnapshot(cluster, snapshotImage);
 
         log.info("Loading cache manager snapshot");
-
         cacheManager.loadSnapshot(snapshotImage);
     }
 
@@ -972,23 +902,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param timestamp     at which the timer expired.
      */
     public void onTimerEvent(final long correlationId, final long timestamp) {
-        var pendingRemove = pendingRemoves.remove(correlationId);
-
-        if (pendingRemove != null) {
-            I cache = pendingRemove.getCacheToRemoveOn();
-            K key = pendingRemove.getKeyToRemove();
-
-            lookupKey.getCacheId().copyFrom(cache);
-            lookupKey.getKey().copyFrom(key);
-            cacheKeyToTimerId.remove(lookupKey);
-
-            var removeResult = processRemoveCacheEntry(cache, key, "timer-" + correlationId);
-
-            if (removeResult.getStatus() == CacheOperationStatus.SUCCESS) {
-                // update the subscription service
-                handlePostRemoveCacheEntry(cache, key, removeResult, null);
-            }
-        }
+        cacheTimerService.onTimerEvent(correlationId, timestamp);
     }
 
 

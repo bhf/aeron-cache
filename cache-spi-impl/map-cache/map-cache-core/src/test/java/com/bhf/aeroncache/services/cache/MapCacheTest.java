@@ -6,6 +6,8 @@ import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotC
 import com.bhf.aeroncache.services.integrity.NoOpStreamingHasher;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
+import org.agrona.ExpandableArrayBuffer;
+import org.agrona.MutableDirectBuffer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,8 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 class MapCacheTest {
 
@@ -151,6 +155,39 @@ class MapCacheTest {
 
         // Assert
         assertNotNull(allEntries);
+    }
+
+    @Test
+    @DisplayName("Should take a snapshot of the map cache state")
+    void testTakeSnapshot() {
+        // Arrange
+        seedCache("testKey", "testValue");
+        io.aeron.ExclusivePublication snapshotPublication = mock(io.aeron.ExclusivePublication.class);
+        var cacheId = new ReusableString();
+        cacheId.copyFrom("testCacheId");
+
+        when(snapshotPublication.offer(any(MutableDirectBuffer.class), eq(0), anyInt())).thenReturn(100L);
+
+        // Act
+        cache.takeSnapshot(snapshotPublication, cacheId);
+
+        // Assert
+        verify(snapshotPublication).offer(any(MutableDirectBuffer.class), eq(0), anyInt());
+    }
+
+    @Test
+    @DisplayName("Should load a snapshot of the map cache state")
+    void testLoadSnapshot() {
+        // Arrange
+        MutableDirectBuffer buffer = new ExpandableArrayBuffer();
+        cache.getCacheStats().size = 0;
+        cache.getCacheStats().encode(buffer, 0);
+
+        // Act
+        cache.loadSnapshot(buffer, 0);
+
+        // Assert
+        assertEquals(0, cache.getAllEntries().size());
     }
 
 }
