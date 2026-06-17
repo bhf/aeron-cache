@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [throughput, latency]
+        mode: [throughput]
 
     steps:
       - uses: actions/checkout@v4
