@@ -1,0 +1,38 @@
+name: Microbenchmarks CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  jmh-benchmark:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [throughput, latency]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          
+      - name: Run JMH benchmark
+        run: ./gradlew :cache-integration:microbenchmarks:jmh -PjmhMode=${{ matrix.mode }}
+
+      - name: Rename and Prepare Artifact
+        run: |
+          SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          mv cache-integration/microbenchmarks/build/reports/jmh/results.json "cache-integration/microbenchmarks/build/reports/jmh/${SHA}-${{ matrix.mode }}.json"
+
+      - name: Upload JMH Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmh-results-${{ matrix.mode }}
+          path: cache-integration/microbenchmarks/build/reports/jmh/${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.mode }}.json
