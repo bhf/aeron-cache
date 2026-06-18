@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.cache;
 
+import com.bhf.aeroncache.cache.utils.BenchmarkUtils;
 import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
@@ -26,10 +27,10 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 1, time = 10, timeUnit = TimeUnit.SECONDS)
 @BenchmarkMode({Mode.Throughput})
 @OutputTimeUnit(TimeUnit.SECONDS)
-public class GetCacheBenchmark {
+public class GetCacheItemBenchmark {
 
     @Param({"100"})
-    public int cacheSize;
+    public int cacheItemsSize;
 
     private SBEDecodingCacheClusterService<ReusableString,ReusableString,ReusableString> sut;
     private CacheManagerFactory<ReusableString, ReusableString, ReusableString> cacheManagerFactory;
@@ -37,7 +38,7 @@ public class GetCacheBenchmark {
     private ReusableStringCacheResponseDecoder responseDecoder;
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
-    private GetCacheEntryResult<ReusableString, ReusableString, ReusableString> result;
+    private GetCacheEntryResult<ReusableString, ReusableString, ReusableString> getCacheEntryResult;
     private Header header;
     private ClientSession session;
     private long seq;
@@ -62,7 +63,7 @@ public class GetCacheBenchmark {
         responseBuffer = new ExpandableArrayBuffer();
         header = new Header(0, 0);
 
-        result = new GetCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
+        getCacheEntryResult = new GetCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
         
         reusableCacheId = new ReusableString();
         reusableKey = new ReusableString();
@@ -74,20 +75,20 @@ public class GetCacheBenchmark {
         reusableCacheId.copyFrom("jmh-cache");
         String createRequestId = UUID.randomUUID().toString();
         
-        int length = requestEncoder.encodeCreateCacheRequest(createRequestId, reusableCacheId, requestBuffer);
+        var length = requestEncoder.encodeCreateCacheRequest(createRequestId, reusableCacheId, requestBuffer);
         sut.onSessionMessage(session, ++tsCounter, requestBuffer, 0, length, header);
         
-        CreateCacheResult<ReusableString> createResult = new CreateCacheResult<>(SupplierUtils.stringSupplier.get());
+        var createResult = new CreateCacheResult<>(SupplierUtils.stringSupplier.get());
         responseDecoder.decodeCacheCreated(responseBuffer, 0, createResult);
 
-        for (int i = 0; i < cacheSize; i++) {
+        for (int i = 0; i < cacheItemsSize; i++) {
             reusableKey.clear();
             reusableKey.copyFrom("key-" + i);
             
             reusableValue.clear();
             reusableValue.copyFrom("val-" + i);
             
-            String requestId = UUID.randomUUID().toString();
+            var requestId = UUID.randomUUID().toString();
             int addLength = requestEncoder.encodeAddCacheEntry(
                     requestId, reusableCacheId, reusableKey, reusableValue, 0L, requestBuffer);
             
@@ -98,19 +99,19 @@ public class GetCacheBenchmark {
     @Benchmark
     public void getCacheEntry(Blackhole bh) {
         seq++;
-        long index = seq % cacheSize;
+        long index = seq % cacheItemsSize;
         reusableKey.clear();
         reusableKey.copyFrom("key-" + index);
         
-        String requestId = "req-" + seq;
+        var requestId = "req-" + seq;
 
-        int length = requestEncoder.encodeGetCacheEntry(
+        var length = requestEncoder.encodeGetCacheEntry(
                 requestId, reusableCacheId, reusableKey, requestBuffer);
         
         sut.onSessionMessage(session, ++tsCounter, requestBuffer, 0, length, header);
-        responseDecoder.decodeGetCacheEntryResult(responseBuffer, 0, result);
+        responseDecoder.decodeGetCacheEntryResult(responseBuffer, 0, getCacheEntryResult);
         
-        bh.consume(result);
+        bh.consume(getCacheEntryResult);
     }
 
 }

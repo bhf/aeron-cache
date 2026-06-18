@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.cache;
+package com.bhf.aeroncache.cache.utils;
 
 import com.bhf.aeroncache.codecs.ReusableStringTimersCodec;
 import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
