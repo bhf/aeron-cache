@@ -1,9 +1,10 @@
 package com.bhf.aeroncache.cache;
 
+import com.bhf.aeroncache.cache.utils.BenchmarkUtils;
 import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
-import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
+import com.bhf.aeroncache.models.results.DeleteCacheResult;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
@@ -17,7 +18,6 @@ import org.agrona.MutableDirectBuffer;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -26,22 +26,20 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 1, time = 10, timeUnit = TimeUnit.SECONDS)
 @BenchmarkMode({Mode.Throughput})
 @OutputTimeUnit(TimeUnit.SECONDS)
-public class AddCacheBenchmark {
+public class CreateDeleteCacheBenchmark {
 
-    private SBEDecodingCacheClusterService<ReusableString,ReusableString,ReusableString> sut;
+    SBEDecodingCacheClusterService<ReusableString,ReusableString,ReusableString> sut;
     private CacheManagerFactory<ReusableString, ReusableString, ReusableString> cacheManagerFactory;
     private ReusableStringCacheRequestEncoder requestEncoder;
     private ReusableStringCacheResponseDecoder responseDecoder;
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
-    private AddCacheEntryResult<ReusableString, ReusableString> result;
+    private CreateCacheResult<ReusableString> createCacheResult;
+    private DeleteCacheResult<ReusableString> deleteResult;
     private Header header;
     private ClientSession session;
     private long seq;
-    
     private ReusableString reusableCacheId;
-    private ReusableString reusableKey;
-    private ReusableString reusableValue;
     private long tsCounter;
 
     @Setup(Level.Trial)
@@ -58,44 +56,32 @@ public class AddCacheBenchmark {
         requestBuffer = new ExpandableArrayBuffer();
         responseBuffer = new ExpandableArrayBuffer();
         header = new Header(0, 0);
-
-        result = new AddCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
-        
+        createCacheResult = new CreateCacheResult<>(SupplierUtils.stringSupplier.get());
+        deleteResult = new DeleteCacheResult<>(SupplierUtils.stringSupplier.get());
         reusableCacheId = new ReusableString();
-        reusableKey = new ReusableString();
-        reusableValue = new ReusableString();
         tsCounter = 1;
-
+        
         session = BenchmarkUtils.getMockedSession(responseBuffer);
-
-        reusableCacheId.copyFrom("jmh-benchmark-cache");
-        String createRequestId = UUID.randomUUID().toString();
-        
-        int length = requestEncoder.encodeCreateCacheRequest(createRequestId, reusableCacheId, requestBuffer);
-        sut.onSessionMessage(session, ++tsCounter, requestBuffer, 0, length, header);
-        
-        CreateCacheResult<ReusableString> createResult = new CreateCacheResult<>(SupplierUtils.stringSupplier.get());
-        responseDecoder.decodeCacheCreated(responseBuffer, 0, createResult);
     }
 
     @Benchmark
-    public void addCacheEntry(Blackhole bh) {
+    public void createDeleteCache(Blackhole bh) {
         seq++;
-        reusableKey.clear();
-        reusableKey.copyFrom("key-" + seq);
-        
-        reusableValue.clear();
-        reusableValue.copyFrom("val-" + seq);
-        
-        String requestId = UUID.randomUUID().toString();
+        reusableCacheId.clear();
+        reusableCacheId.copyFrom("cache-" + seq);
+        var requestId = "req-" + seq;
 
-        int length = requestEncoder.encodeAddCacheEntry(
-                requestId, reusableCacheId, reusableKey, reusableValue, 0L, requestBuffer);
+        var length = requestEncoder.encodeCreateCacheRequest(requestId, reusableCacheId, requestBuffer);
         
         sut.onSessionMessage(session, ++tsCounter, requestBuffer, 0, length, header);
-        responseDecoder.decodeAddCacheEntryResult(responseBuffer, 0, result);
+        responseDecoder.decodeCacheCreated(responseBuffer, 0, createCacheResult);
         
-        bh.consume(result);
+        var encodedDeleteCache = requestEncoder.encodeDeleteCache(requestId, reusableCacheId, requestBuffer);
+        sut.onSessionMessage(session, ++tsCounter, requestBuffer, 0, encodedDeleteCache, header);
+        responseDecoder.decodeCacheDeleted(responseBuffer, 0, deleteResult);
+
+        bh.consume(createCacheResult);
+        bh.consume(deleteResult);
     }
 
 }
