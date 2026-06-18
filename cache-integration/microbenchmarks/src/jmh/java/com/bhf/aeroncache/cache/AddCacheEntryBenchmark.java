@@ -45,6 +45,11 @@ public class AddCacheEntryBenchmark {
     private ReusableString reusableValue;
     private long tsCounter;
 
+    @Param({"160"})
+    public int valueLength;
+
+    private String valueData;
+
     @Setup(Level.Trial)
     public void setup() {
         var nodeId = "jmh-test-node";
@@ -67,6 +72,12 @@ public class AddCacheEntryBenchmark {
         reusableValue = new ReusableString();
         tsCounter = 1;
 
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < valueLength; i++) {
+            sb.append('s');
+        }
+        valueData = sb.toString();
+
         session = BenchmarkUtils.getMockedSession(responseBuffer);
 
         reusableCacheId.copyFrom("jmh-benchmark-cache");
@@ -86,7 +97,7 @@ public class AddCacheEntryBenchmark {
         reusableKey.copyFrom("key-" + seq);
         
         reusableValue.clear();
-        reusableValue.copyFrom("val-" + seq);
+        reusableValue.copyFrom(valueData);
         
         var requestId = UUID.randomUUID().toString();
 

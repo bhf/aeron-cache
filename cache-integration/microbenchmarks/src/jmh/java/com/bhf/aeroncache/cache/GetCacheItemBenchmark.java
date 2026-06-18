@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.SECONDS)
 public class GetCacheItemBenchmark {
 
-    @Param({"100"})
+    @Param({"1000", "10000", "100000"})
     public int cacheItemsSize;
 
     private SBEDecodingCacheClusterService<ReusableString,ReusableString,ReusableString> sut;
