@@ -47,6 +47,11 @@ public class AddRemoveCacheEntryBenchmark {
     private ReusableString reusableValue;
     private long tsCounter;
 
+    @Param({"36", "128", "256", "1024", "4096"})
+    public int valueLength;
+
+    private String valueData;
+
     @Setup(Level.Trial)
     public void setup() {
         var nodeId = "jmh-test-node";
@@ -70,6 +75,12 @@ public class AddRemoveCacheEntryBenchmark {
         reusableValue = new ReusableString();
         tsCounter = 1;
 
+        StringBuilder sb = new StringBuilder(valueLength);
+        for (int i = 0; i < valueLength; i++) {
+            sb.append('s');
+        }
+        valueData = sb.toString();
+
         session = BenchmarkUtils.getMockedSession(responseBuffer);
 
         reusableCacheId.copyFrom("jmh-benchmark-cache");
@@ -89,7 +100,7 @@ public class AddRemoveCacheEntryBenchmark {
         reusableKey.copyFrom("key-" + seq);
         
         reusableValue.clear();
-        reusableValue.copyFrom("val-" + seq);
+        reusableValue.copyFrom(valueData);
         
         String requestId = UUID.randomUUID().toString();
 

@@ -45,7 +45,7 @@ public class AddCacheEntryBenchmark {
     private ReusableString reusableValue;
     private long tsCounter;
 
-    @Param({"36", "128", "256", "1024", "4096"})
+    @Param({"160"})
     public int valueLength;
 
     private String valueData;
@@ -74,7 +74,7 @@ public class AddCacheEntryBenchmark {
 
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < valueLength; i++) {
-            sb.append('x');
+            sb.append('s');
         }
         valueData = sb.toString();
 
