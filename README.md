@@ -17,6 +17,7 @@ Features:
 
 * Clustered and single node modes
 * Near cache implementation (read ahead)
+* Bulk atomic operations across caches with item level TTL (timed expiry)
 * Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded) in Java, Rust, Typescript and Python
 * Rust based [CLI](https://github.com/bhf/aeron-cache-cli)
 
