@@ -45,6 +45,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private Cluster cluster;
     private final CacheTracingService tracingService;
     protected CacheSubscriptionService<I, K, V> subscriptionService;
+    private final TimerCorrelationIdProvider timerCorrelationIdProvider = new TimerCorrelationIdProvider();
     private IdleStrategy idleStrategy;
     private final CacheManagerFactory<I, K, V> cacheManagerFactory;
     private final CacheManager<I, K, V> cacheManager;
@@ -67,7 +68,6 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
 
     private String nodeId;
-
 
     @Setter
     @Getter
@@ -168,7 +168,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         };
 
         this.cacheTimerService = new CacheClusterTimerService<I,K,V>(cacheManagerFactory.getIndexSupplier(),
-                cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getCacheTimersCodec(), cluster, fw, consumer);
+                cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getCacheTimersCodec(), timerCorrelationIdProvider, cluster, fw, consumer);
 
         this.idleStrategy = cluster.idleStrategy();
         if (null != snapshotImage) {

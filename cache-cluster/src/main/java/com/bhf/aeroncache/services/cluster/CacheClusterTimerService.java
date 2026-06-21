@@ -27,14 +27,15 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
     private final Supplier<I> indexSupplier;
     private final Supplier<K> keySupplier;
     private final CacheTimersCodec<I, K> timersCodec;
-    private long timerCorrelationId = 0;
+    private final TimerCorrelationIdProvider timerCorrelationIdProvider;
     private final Long2ObjectHashMap<PendingRemove<I, K>> pendingRemoves = new Long2ObjectHashMap();
     private final Map<TimerLookupCompoundKey<I, K>, Long> cacheKeyToTimerId = new Object2ObjectHashMap<>();
     private final TimerLookupCompoundKey<I, K> lookupKey;
     private final Consumer<TimerDetailsFlyweight<I,K>> removeConsumer;
     private final TimerDetailsFlyweight<I, K> timerDetailsFlyweight;
 
-    public CacheClusterTimerService(Supplier<I> indexSupplier, Supplier<K> keySupplier, CacheTimersCodec<I,K> timersCodec, Cluster cluster, TimerDetailsFlyweight<I,K> timerDetailsFlyweight, Consumer<TimerDetailsFlyweight<I,K>> remove) {
+    public CacheClusterTimerService(Supplier<I> indexSupplier, Supplier<K> keySupplier, CacheTimersCodec<I,K> timersCodec, TimerCorrelationIdProvider timerCorrelationIdProvider,
+                                    Cluster cluster, TimerDetailsFlyweight<I,K> timerDetailsFlyweight, Consumer<TimerDetailsFlyweight<I,K>> remove) {
         this.lookupKey = new TimerLookupCompoundKey<>(indexSupplier.get(), keySupplier.get());
         this.indexSupplier = indexSupplier;
         this.keySupplier = keySupplier;
@@ -42,6 +43,7 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
         this.removeConsumer = remove;
         this.timerDetailsFlyweight = timerDetailsFlyweight;
         this.timersCodec = timersCodec;
+        this.timerCorrelationIdProvider = timerCorrelationIdProvider;
     }
 
     /**
@@ -65,7 +67,7 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
             log.info("Cancelled existing timer {} for key {} in cache {}, cancelled: {}, removed: {}", existingTimerId, key, cacheId, timerCancelled, removedItem);
         }
 
-        timerCorrelationId++;
+        var timerCorrelationId = this.timerCorrelationIdProvider.getNextId();
         boolean success = cluster.scheduleTimer(timerCorrelationId, deadline);
         log.info("Scheduled timer for {} to remove key {} from cache {} correlationId {}", deadline, key, cacheId, timerCorrelationId);
 
