@@ -57,7 +57,7 @@ class CacheClusterTimerServiceTest {
         when(cacheManagerFactory.getCacheTimersCodec()).thenReturn(cacheTimersCodec);
 
         sut = new CacheClusterTimerService<>(cacheManagerFactory.getIndexSupplier(), cacheManagerFactory.getKeySupplier(),
-                cacheManagerFactory.getCacheTimersCodec(), cluster, timerDetailsFlyweight, removeConsumer);
+                cacheManagerFactory.getCacheTimersCodec(), new TimerCorrelationIdProvider(), cluster, timerDetailsFlyweight, removeConsumer);
     }
 
     @Test
