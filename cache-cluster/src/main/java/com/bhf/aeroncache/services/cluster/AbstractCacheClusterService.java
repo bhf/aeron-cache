@@ -167,7 +167,8 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
             }
         };
 
-        this.cacheTimerService = new CacheClusterTimerService<I,K,V>(cacheManagerFactory, cluster, fw, consumer);
+        this.cacheTimerService = new CacheClusterTimerService<I,K,V>(cacheManagerFactory.getIndexSupplier(),
+                cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getCacheTimersCodec(), cluster, fw, consumer);
 
         this.idleStrategy = cluster.idleStrategy();
         if (null != snapshotImage) {
