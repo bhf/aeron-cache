@@ -1,4 +1,4 @@
-name: Microbenchmarks CI
+name: JMH CI
 
 on:
   push:
