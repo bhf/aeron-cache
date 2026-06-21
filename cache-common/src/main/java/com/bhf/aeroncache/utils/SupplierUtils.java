@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.utils;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.types.ReusableLong;
+import com.bhf.aeroncache.models.ReusableLong;
 import com.bhf.aeroncache.types.ReusableString;
 import org.agrona.collections.Object2ObjectHashMap;
 

@@ -1,6 +1,5 @@
-package com.bhf.aeroncache.types;
+package com.bhf.aeroncache.models;
 
-import com.bhf.aeroncache.models.Reusable;
 import lombok.Getter;
 
 @Getter
@@ -42,5 +41,15 @@ public class ReusableLong implements Reusable<Long> {
     @Override
     public int hashCode() {
         return value.hashCode();
+    }
+
+    public long increment(long amount) {
+        value+=amount;
+        return amount;
+    }
+
+    public long decrement(long amount) {
+        value-=amount;
+        return amount;
     }
 }

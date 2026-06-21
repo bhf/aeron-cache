@@ -8,6 +8,7 @@ import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseEncoder;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
 import com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest;
 import com.bhf.aeroncache.models.results.CacheOperationResultDetails;
+import com.bhf.aeroncache.services.cache.snapshot.CountersCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
 import com.bhf.aeroncache.services.cachemanager.MapCacheManagerFactory;
@@ -111,6 +112,7 @@ public class TestUtils {
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
                 new ReusableStringCacheIdSnapshotCodec(new NoOpStreamingHasher<>()),
                 new ReusableStringCacheEntrySnapshotCodec(new NoOpStreamingHasher<>()),
+                new CountersCacheEntrySnapshotCodec(new NoOpStreamingHasher<>()),
                 encoder,
                 decoder,
                 timersCodec);

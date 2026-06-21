@@ -15,6 +15,8 @@ public interface StreamingHasher<CT> {
      */
     StreamingHasher<CT> addToHash(CT item);
 
+    StreamingHasher<CT> addToHash(long item);
+
     /**
      * Reset the state of the hasher.
      */

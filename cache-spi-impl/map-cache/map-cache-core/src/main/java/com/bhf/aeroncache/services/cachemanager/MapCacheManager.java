@@ -25,7 +25,7 @@ import java.util.function.Supplier;
  * @param <V> The value type for the caches.
  */
 @Log4j2
-public class MapCacheManager<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCacheManager<I, K, V> {
+public class MapCacheManager<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCacheManager<I, K, V>{
 
     private final Map<I, Cache<I, K, V>> caches = new Object2ObjectHashMap<>();
     private final Supplier<Map<K, V>> mapSupplier;

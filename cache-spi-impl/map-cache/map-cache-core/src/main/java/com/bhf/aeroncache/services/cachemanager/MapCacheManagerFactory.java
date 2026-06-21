@@ -1,14 +1,17 @@
 package com.bhf.aeroncache.services.cachemanager;
 
 import com.bhf.aeroncache.codecs.CacheTimersCodec;
+import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
+import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
-import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
-import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
+import com.bhf.aeroncache.models.ReusableLong;
+import com.bhf.aeroncache.utils.SupplierUtils;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -28,14 +31,21 @@ public class MapCacheManagerFactory<I extends Reusable, K extends Reusable, V ex
     private final Supplier<Map<K, V>> mapSupplier;
     private final CacheIdSnapshotCodec<I> cacheIdSnapshotCodec;
     private final CacheEntrySnapshotCodec<K, V> cacheEntrySnapshotCodec;
-    private final CacheResponseEncoder<I,K,V> encoder;
-    private final CacheRequestDecoder<I,K,V> decoder;
+    private final CacheEntrySnapshotCodec<K, ReusableLong> cacheCountersEntrySnapshotCodec;
+    private final CacheResponseEncoder<I,K,V> cacheResponseEncoder;
+    private final CacheRequestDecoder<I,K,V> cacheRequestDecoder;
     private final CacheTimersCodec<I, K> timersCodec;
 
     @Override
     public CacheManager<I, K, V> getCacheManager() {
-        return new MapCacheManager<I, K, V>(cacheIndexSupplier, cacheKeySupplier,
+        return new MapCacheManager<>(cacheIndexSupplier, cacheKeySupplier,
                 cacheValueSupplier, mapSupplier, cacheIdSnapshotCodec, cacheEntrySnapshotCodec);
+    }
+
+    @Override
+    public CountersCacheManager<I, K, ReusableLong> getCountersCacheManager() {
+        return new MapCountersCacheManager<>(cacheIndexSupplier, cacheKeySupplier,
+                SupplierUtils.longSupplier, HashMap::new, cacheIdSnapshotCodec, cacheCountersEntrySnapshotCodec);
     }
 
     @Override
@@ -55,12 +65,12 @@ public class MapCacheManagerFactory<I extends Reusable, K extends Reusable, V ex
 
     @Override
     public CacheResponseEncoder<I, K, V> getCacheResponseEncoder() {
-        return encoder;
+        return cacheResponseEncoder;
     }
 
     @Override
     public CacheRequestDecoder<I, K, V> getCacheRequestDecoder() {
-        return decoder;
+        return cacheRequestDecoder;
     }
 
     @Override
