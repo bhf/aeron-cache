@@ -16,8 +16,9 @@ Containerized and deployable with ```docker compose``` or on Kubernetes via ```h
 Features:
 
 * Clustered and single node modes
+* Bulk atomic operations across caches
+* Item level TTL (timed expiry)
 * Near cache implementation (read ahead)
-* Bulk atomic operations across caches with item level TTL (timed expiry)
 * Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded) in Java, Rust, Typescript and Python
 * Rust based [CLI](https://github.com/bhf/aeron-cache-cli)
 
@@ -107,6 +108,8 @@ __cache-common__ - Common entities and classes used in cache implementations.
 
 __cache-http__ - REST interfaces around the cache-client.
 
+__cache-integration__ - Integration test suites.
+
 __cache-ws__ - Websocket interfaces around the cache-client.
 
 __cache-sse__ - SSE interfaces around the cache-client.
@@ -116,6 +119,10 @@ __cache-messages-sbe__ - Core SBE messages used by the cache.
 __cache-messages-http__ - Messages used by HTTP interfaces to the cache.
 
 __cache-near__ - Near cache implementation with a HTTP interface.
+
+__cache-spi__ - Core service provider interface.
+
+__cache-spi-impl__ - Cache service provider implementations.
 
 __cache-ui__ - A UI that uses the REST API provided by cache-http-server
 
@@ -154,7 +161,8 @@ Core coverage > 70% (as of 4th July 2025)
 
 
 ### JMH
-There are a handful of JMH tests in ```cache-cluster``` and in ```cache-client```.
+There is an integration suite in ```cache-integration:microbenchmarks``` designed to be run on standard 
+Github runners within the typical time the rest of the CI tasks take.
 
 ### Integration Tests
 
