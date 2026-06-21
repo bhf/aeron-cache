@@ -31,7 +31,7 @@ https://github.com/user-attachments/assets/cdbf0e54-2ff8-47c4-8a98-50a8104de6fd
 
 * [How To Run - Docker](#docker)
 * [How To Run - K8s/Helm](#k8s-and-helm)
-* [Multi-cache Subscriptions](#subscribe-to-multiple-caches)
+* [API](#api)
 * [Project Structure](#structure)
 * [Overview](#overview)
 * [Testing](#testing)
@@ -81,10 +81,12 @@ make install-all
 
 [Top](#aeron-cache)
 
-## Subscribe to Multiple Caches
+## API
 
+You can check out the [REST OpenAPI](cache-http/openapi.yml) or the [Websocket OpenAPI](cache-ws/ws-openapi.yaml).
+
+### Multi Cache Subscriptions
 To subscribe to cache updates on caches with IDs 808 and 333:
-
 
 ```bash
 uwsc http://localhost:7071/api/ws/v1/caches/808,333
