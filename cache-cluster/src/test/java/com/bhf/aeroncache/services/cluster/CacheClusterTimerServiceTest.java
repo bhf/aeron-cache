@@ -54,8 +54,10 @@ class CacheClusterTimerServiceTest {
         Supplier<ReusableString> stringSupplier = ReusableString::new;
         when(cacheManagerFactory.getIndexSupplier()).thenReturn(stringSupplier);
         when(cacheManagerFactory.getKeySupplier()).thenReturn(stringSupplier);
+        when(cacheManagerFactory.getCacheTimersCodec()).thenReturn(cacheTimersCodec);
 
-        sut = new CacheClusterTimerService<>(cacheManagerFactory, cluster, timerDetailsFlyweight, removeConsumer);
+        sut = new CacheClusterTimerService<>(cacheManagerFactory.getIndexSupplier(), cacheManagerFactory.getKeySupplier(),
+                cacheManagerFactory.getCacheTimersCodec(), cluster, timerDetailsFlyweight, removeConsumer);
     }
 
     @Test
@@ -139,8 +141,7 @@ class CacheClusterTimerServiceTest {
         
         when(cluster.scheduleTimer(anyLong(), eq(deadline))).thenReturn(true);
         sut.scheduleItemRemoval(cacheId, key, cache, deadline);
-        
-        when(cacheManagerFactory.getCacheTimersCodec()).thenReturn(cacheTimersCodec);
+
         when(cacheTimersCodec.encodeCacheTimer(any(), anyInt(), anyLong(), any(), any())).thenReturn(10);
         
         ExclusivePublication snapshotPublication = mock(ExclusivePublication.class);
@@ -162,7 +163,6 @@ class CacheClusterTimerServiceTest {
     void shouldLoadSnapshot() {
         // Arrange
         Image snapshotImage = mock(Image.class);
-        when(cacheManagerFactory.getCacheTimersCodec()).thenReturn(cacheTimersCodec);
         
         doAnswer(invocation -> {
             FragmentHandler handler = invocation.getArgument(0);

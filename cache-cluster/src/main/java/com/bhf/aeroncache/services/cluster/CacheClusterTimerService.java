@@ -1,11 +1,11 @@
 package com.bhf.aeroncache.services.cluster;
 
+import com.bhf.aeroncache.codecs.CacheTimersCodec;
 import com.bhf.aeroncache.models.PendingRemove;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.TimerLookupCompoundKey;
 import com.bhf.aeroncache.services.CacheTimerService;
 import com.bhf.aeroncache.services.cache.Cache;
-import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 import io.aeron.cluster.service.Cluster;
@@ -18,12 +18,15 @@ import org.agrona.collections.Object2ObjectHashMap;
 
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 @Log4j2
 public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V extends Reusable> implements CacheTimerService<I,K,V> {
 
-    private final CacheManagerFactory<I, K, V> cacheManagerFactory;
     private final Cluster cluster;
+    private final Supplier<I> indexSupplier;
+    private final Supplier<K> keySupplier;
+    private final CacheTimersCodec<I, K> timersCodec;
     private long timerCorrelationId = 0;
     private final Long2ObjectHashMap<PendingRemove<I, K>> pendingRemoves = new Long2ObjectHashMap();
     private final Map<TimerLookupCompoundKey<I, K>, Long> cacheKeyToTimerId = new Object2ObjectHashMap<>();
@@ -31,12 +34,14 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
     private final Consumer<TimerDetailsFlyweight<I,K>> removeConsumer;
     private final TimerDetailsFlyweight<I, K> timerDetailsFlyweight;
 
-    public CacheClusterTimerService(CacheManagerFactory<I,K,V> cacheManagerFactory, Cluster cluster, TimerDetailsFlyweight<I,K> timerDetailsFlyweight, Consumer<TimerDetailsFlyweight<I,K>> remove) {
-        this.lookupKey = new TimerLookupCompoundKey<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
-        this.cacheManagerFactory = cacheManagerFactory;
+    public CacheClusterTimerService(Supplier<I> indexSupplier, Supplier<K> keySupplier, CacheTimersCodec<I,K> timersCodec, Cluster cluster, TimerDetailsFlyweight<I,K> timerDetailsFlyweight, Consumer<TimerDetailsFlyweight<I,K>> remove) {
+        this.lookupKey = new TimerLookupCompoundKey<>(indexSupplier.get(), keySupplier.get());
+        this.indexSupplier = indexSupplier;
+        this.keySupplier = keySupplier;
         this.cluster = cluster;
         this.removeConsumer = remove;
         this.timerDetailsFlyweight = timerDetailsFlyweight;
+        this.timersCodec = timersCodec;
     }
 
     /**
@@ -64,10 +69,10 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
         boolean success = cluster.scheduleTimer(timerCorrelationId, deadline);
         log.info("Scheduled timer for {} to remove key {} from cache {} correlationId {}", deadline, key, cacheId, timerCorrelationId);
 
-        final var keyToRemove = cacheManagerFactory.getKeySupplier().get();
+        final var keyToRemove = keySupplier.get();
         keyToRemove.copyFrom(key);
 
-        final var cacheToRemoveOn = cacheManagerFactory.getIndexSupplier().get();
+        final var cacheToRemoveOn = indexSupplier.get();
         cacheToRemoveOn.copyFrom(cacheId);
 
         var pendingRemove = new PendingRemove(timerCorrelationId, cacheToRemoveOn, keyToRemove);
@@ -91,7 +96,7 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
                 var correlationId = pendingTimer.getTimerCorrelationId();
                 var key = pendingTimer.getKeyToRemove();
                 var cacheId = pendingTimer.getCacheToRemoveOn();
-                var codec = cacheManagerFactory.getCacheTimersCodec();
+                var codec = timersCodec;
                 int length = codec.encodeCacheTimer(timersBuffer, cumulativeLength, correlationId, key, cacheId);
                 cumulativeLength += length;
             }
@@ -110,7 +115,7 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
             log.info("Total timers to load: {}", timersSize);
 
             if (timersSize > 0) {
-                var codec = cacheManagerFactory.getCacheTimersCodec();
+                var codec = timersCodec;
                 codec.decodeCacheTimers(timersSize, pendingRemoves, buffer, offset + 4);
                 log.info("Loaded {} timers", pendingRemoves.size());
 
@@ -137,13 +142,17 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
             I cache = pendingRemove.getCacheToRemoveOn();
             K key = pendingRemove.getKeyToRemove();
 
+            lookupKey.clear();
             lookupKey.getCacheId().copyFrom(cache);
             lookupKey.getKey().copyFrom(key);
-            cacheKeyToTimerId.remove(lookupKey);
-            timerDetailsFlyweight.setCache(cache);
-            timerDetailsFlyweight.setKey(key);
-            timerDetailsFlyweight.setCorrelationId(correlationId);
-            removeConsumer.accept(timerDetailsFlyweight);
+            var timerId = cacheKeyToTimerId.remove(lookupKey);
+
+            if(timerId!=null) {
+                timerDetailsFlyweight.setCache(cache);
+                timerDetailsFlyweight.setKey(key);
+                timerDetailsFlyweight.setCorrelationId(correlationId);
+                removeConsumer.accept(timerDetailsFlyweight);
+            }
         }
     }
 
