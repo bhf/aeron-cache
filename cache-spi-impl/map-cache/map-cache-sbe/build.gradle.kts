@@ -14,15 +14,26 @@ dependencies {
     testImplementation(libs.mockito)
 }
 
+val generatedSbeSourceDir = layout.buildDirectory.dir("generated/sources/sbe/main/java")
+
+sourceSets {
+    main {
+        java {
+            srcDir(generatedSbeSourceDir)
+        }
+    }
+}
+
 tasks.register<JavaExec>("generateSbeCodecs") {
     mainClass.set("uk.co.real_logic.sbe.SbeTool")
     classpath = sbeToolConfig
-    systemProperty("sbe.output.dir", "src/main/java")
-    args("src/main/resources/sbe/schema.xml")
+    val outputDir = generatedSbeSourceDir
+    systemProperty("sbe.output.dir", outputDir.get().asFile.absolutePath)
+    args("src/main/resources/sbe/schema.xml", "src/main/resources/sbe/counters-schema.xml")
 }
 
 tasks.compileJava {
-    //dependsOn("generateSbeCodecs")
+    dependsOn("generateSbeCodecs")
 }
 
 tasks.test {
