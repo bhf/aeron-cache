@@ -20,22 +20,13 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
     private final GetCacheStatsDecoder getCacheStatsDecoder = new GetCacheStatsDecoder();
     private final CacheUnsubscribeRequestDecoder cacheUnsubscribeRequestDecoder = new CacheUnsubscribeRequestDecoder();
     private final BulkOperationRequestDecoder bulkOperationRequestDecoder = new BulkOperationRequestDecoder();
-    private final AppendableFlyweight appendable = new AppendableFlyweight();
-    private boolean useAppendable = false;
 
     @Override
     public void decodeGetCreateCacheRequestDetails(DirectBuffer buffer, int offset, CreateCacheRequestDetails<ReusableString> createCacheRequestDetails) {
         createCacheRequestDetails.clear();
         createCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-
-        if(useAppendable) {
-            appendable.setReusable(createCacheRequestDetails.getCacheId());
-            createCacheDecoder.cacheId(appendable);
-        }
-        else{
-            var cacheId = createCacheDecoder.cacheId();
-            createCacheRequestDetails.getCacheId().copyFrom(cacheId);
-        }
+        var cacheId = createCacheDecoder.cacheId();
+        createCacheRequestDetails.getCacheId().copyFrom(cacheId);
 
         var requestId = createCacheDecoder.requestId();
         createCacheRequestDetails.setRequestId(requestId);
@@ -89,22 +80,6 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
 
     @Override
     public void decodeAddCacheEntryRequest(DirectBuffer buffer, int offset, AddCacheEntryRequestDetails<ReusableString, ReusableString, ReusableString> addCacheEntryRequestDetails) {
-
-        if(useAppendable) {
-            addCacheEntryRequestDetails.clear();
-            addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-            var ttl = addCacheEntryDecoder.ttl();
-            appendable.setReusable(addCacheEntryRequestDetails.getCacheId());
-            addCacheEntryDecoder.cacheId(appendable);
-            var requestID = addCacheEntryDecoder.requestId();
-            addCacheEntryRequestDetails.setRequestId(requestID);
-            appendable.setReusable(addCacheEntryRequestDetails.getKey());
-            addCacheEntryDecoder.key(appendable);
-            appendable.setReusable(addCacheEntryRequestDetails.getValue());
-            addCacheEntryDecoder.entryValue(appendable);
-            addCacheEntryRequestDetails.setTtl(ttl);
-        }
-        else{
             addCacheEntryRequestDetails.clear();
             addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
             var ttl = addCacheEntryDecoder.ttl();
@@ -117,7 +92,6 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
             addCacheEntryRequestDetails.getValue().copyFrom(value);
             addCacheEntryRequestDetails.setRequestId(requestID);
             addCacheEntryRequestDetails.setTtl(ttl);
-        }
     }
 
     @Override

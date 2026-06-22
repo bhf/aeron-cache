@@ -231,19 +231,6 @@ public final class CreateCacheDecoder
         return new String(tmp, java.nio.charset.StandardCharsets.UTF_8);
     }
 
-    public void cacheId(Appendable sb)
-    {
-        final int headerLength = 4;
-        final int limit = parentMessage.limit();
-        final int dataLength = (int)(buffer.getInt(limit, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF_FFFFL);
-        parentMessage.limit(limit + headerLength + dataLength);
-
-        if (0 == dataLength) {
-            return;
-        }
-        buffer.getStringWithoutLengthAscii(limit + headerLength, dataLength, sb);
-    }
-
     public static int requestIdId()
     {
         return 2;
