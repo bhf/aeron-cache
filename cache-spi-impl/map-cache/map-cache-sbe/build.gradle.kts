@@ -29,7 +29,7 @@ tasks.register<JavaExec>("generateSbeCodecs") {
     classpath = sbeToolConfig
     val outputDir = generatedSbeSourceDir
     systemProperty("sbe.output.dir", outputDir.get().asFile.absolutePath)
-    args("src/main/resources/sbe/schema.xml", "src/main/resources/sbe/counters-schema.xml")
+    args("src/main/resources/sbe/cache-schema.xml", "src/main/resources/sbe/counters-schema.xml")
 }
 
 tasks.compileJava {
