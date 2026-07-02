@@ -12,11 +12,11 @@ public interface CacheResponseEncoder<I extends Reusable, K extends Reusable, V 
 
     int encodeAddCacheEntryResult(I cacheId, K key, AddCacheEntryResult<I, K> addCacheEntryResult, MutableDirectBuffer egressBuffer);
 
-    int encodeEntryUpdated(K key, V value, AddCacheEntryResult<I, K> addCacheEntryResult, MutableDirectBuffer egressBuffer);
+    <VT extends Reusable> int encodeEntryUpdated(K key, VT value, AddCacheEntryResult<I, K> addCacheEntryResult, MutableDirectBuffer egressBuffer);
 
-    int encodeCacheEntryResult(I cacheId, GetCacheEntryResult<I, K, V> getCacheEntryResult, MutableDirectBuffer egressBuffer);
+    <VT extends Reusable> int encodeCacheEntryResult(I cacheId, GetCacheEntryResult<I, K, VT> getCacheEntryResult, MutableDirectBuffer egressBuffer);
 
-    int encodeAllCacheEntriesResult(I cacheId, GetAllCacheEntriesResult<I, K, V> getAllCacheEntriesResult, MutableDirectBuffer egressBuffer);
+    <VT extends Reusable> int encodeAllCacheEntriesResult(I cacheId, GetAllCacheEntriesResult<I, K, VT> getAllCacheEntriesResult, MutableDirectBuffer egressBuffer);
 
     int encodeRemoveCacheEntryResult(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, MutableDirectBuffer egressBuffer);
 
@@ -26,7 +26,7 @@ public interface CacheResponseEncoder<I extends Reusable, K extends Reusable, V 
 
     int encodeCacheStatsResult(CacheStatsResult<I> cacheStatsResult, MutableDirectBuffer egressBuffer);
 
-    void encodeCacheSubscriptionResult(CacheSubscriptionResult<I, K, V> subscriptionRequestResult,
+    <VT extends Reusable> void encodeCacheSubscriptionResult(CacheSubscriptionResult<I, K, VT> subscriptionRequestResult,
                                        MutableDirectBuffer egressBuffer, Comparator<K> keyComparator, HydratingPublicationConsumer consumer);
 
     int encodeCacheUnsubscribeResponse(CacheUnsubscribeResult<I> unsubscribeResponse, MutableDirectBuffer egressBuffer);

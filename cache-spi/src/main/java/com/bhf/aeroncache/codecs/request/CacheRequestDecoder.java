@@ -13,7 +13,7 @@ public interface CacheRequestDecoder<I extends Reusable, K extends Reusable, V e
 
     void decodeRemoveCacheEntryRequest(DirectBuffer buffer, int offset, RemoveCacheEntryRequestDetails<I, K> removeCacheEntryRequestDetails);
 
-    void decodeAddCacheEntryRequest(DirectBuffer buffer, int offset, AddCacheEntryRequestDetails<I, K, V> addCacheEntryRequestDetails);
+    <VT extends Reusable> void decodeAddCacheEntryRequest(DirectBuffer buffer, int offset, AddCacheEntryRequestDetails<I, K, VT> addCacheEntryRequestDetails);
 
     void decodeGetCacheEntryRequest(DirectBuffer buffer, int offset, GetCacheEntryRequestDetails<I, K> getCacheEntryRequestDetails);
 

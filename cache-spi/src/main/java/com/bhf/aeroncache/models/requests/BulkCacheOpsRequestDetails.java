@@ -3,7 +3,9 @@ package com.bhf.aeroncache.models.requests;
 import com.bhf.aeroncache.annotations.Flyweight;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.ReusableLong;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
+import com.bhf.aeroncache.models.bulk.requests.CountersBulkOperationType;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -23,6 +25,7 @@ public class BulkCacheOpsRequestDetails <I extends Reusable, K extends Reusable,
     final Supplier<V> valueSupplier;
 
     final List<CacheOperationRequestDetails<I,K,V>> operations = new ArrayList<>();
+    final List<CountersCacheOperationRequestDetails<I,K>> counterOperations = new ArrayList<>();
 
     final RequestId requestId = new RequestId();
 
@@ -38,12 +41,14 @@ public class BulkCacheOpsRequestDetails <I extends Reusable, K extends Reusable,
     public void clear() {
         requestId.clear();
         operations.clear();
+        counterOperations.clear();
     }
 
     @Override
     public void copyFrom(BulkCacheOpsRequestDetails<I,K,V> source) {
         this.requestId.copyFrom(source.requestId);
         this.operations.addAll(source.getOperations());
+        this.counterOperations.addAll(source.getCounterOperations());
     }
 
     @Override
@@ -65,5 +70,16 @@ public class BulkCacheOpsRequestDetails <I extends Reusable, K extends Reusable,
         details.getKey().copyFrom(key);
         details.getValue().copyFrom(value);
         operations.add(details);
+    }
+
+    public void addCounterOperation(CountersBulkOperationType opType, long ttl, String requestId, I cacheId, K key, ReusableLong value) {
+        var details = new CountersCacheOperationRequestDetails(indexSupplier, keySupplier);
+        details.operationType = opType;
+        details.ttl = ttl;
+        details.setRequestId(requestId);
+        details.getCacheId().copyFrom(cacheId);
+        details.getKey().copyFrom(key);
+        details.getValue().copyFrom(value);
+        counterOperations.add(details);
     }
 }

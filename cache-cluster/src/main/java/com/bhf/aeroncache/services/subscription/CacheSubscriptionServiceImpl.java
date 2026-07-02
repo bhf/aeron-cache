@@ -132,9 +132,9 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
     }
 
     @Override
-    public void handleEntryAdded(AddCacheEntryResult<I, K> addCacheEntryResult,
+    public <VT extends Reusable> void handleEntryAdded(AddCacheEntryResult<I, K> addCacheEntryResult,
                                  MutableDirectBuffer egressBuffer, K key,
-                                 V value, int length) {
+                                 VT value, int length) {
         log.info("Sending entry added to subscribers on cacheId {}", addCacheEntryResult.getCacheId());
         for (var session : getSessionsForCache(addCacheEntryResult.getCacheId())) {
             log.debug("Sending entry added update to session: {}", session.id());

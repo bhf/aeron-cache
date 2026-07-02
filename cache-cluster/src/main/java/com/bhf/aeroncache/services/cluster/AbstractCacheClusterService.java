@@ -1,9 +1,12 @@
 package com.bhf.aeroncache.services.cluster;
 
+import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
+import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
 import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
 import com.bhf.aeroncache.handlers.PublicationFailureHandler;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.ReusableLong;
+import com.bhf.aeroncache.models.consumer.HydratingPublicationConsumer;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.CacheTimerService;
@@ -30,6 +33,7 @@ import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 
+import java.util.Comparator;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -41,18 +45,18 @@ import java.util.function.Supplier;
  * decoding of the actual messages.
  */
 @Log4j2
-public abstract class AbstractCacheClusterService<I extends Reusable, K extends Reusable, V extends Reusable> implements ClusteredService {
+public class AbstractCacheClusterService<I extends Reusable, K extends Reusable, V extends Reusable> implements ClusteredService {
 
+    private String nodeId;
     private final Supplier<I> indexSupplier;
     private final CacheSchemaDetailsProvider schemaDetails;
     private Cluster cluster;
+    private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
     private final CacheTracingService tracingService;
-    protected CacheSubscriptionService<I, K, V> subscriptionService;
+    private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
     private final TimerCorrelationIdProvider timerCorrelationIdProvider = new TimerCorrelationIdProvider();
     private IdleStrategy idleStrategy;
-    private final CacheManagerFactory<I, K, V> cacheManagerFactory;
-    private final CacheManager<I, K, V> cacheManager;
-    private final CountersCacheManager<I, K, ReusableLong> countersCacheManager;
+
     final CreateCacheRequestDetails<I> createCacheRequestDetails;
     final ClearCacheRequestDetails<I> clearCacheRequestDetails;
     final RemoveCacheEntryRequestDetails<I, K> removeCacheEntryRequestDetails;
@@ -66,12 +70,23 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     final CacheUnsubscribeRequestDetails<I> cacheUnsubscribeRequestDetails;
     final BulkCacheOpsRequestDetails<I,K,V> bulkCacheOpsRequestDetails;
     final BulkCacheOpsResult<I, K, V> bulkOpsResult;
-
     final CacheSubscriptionResult<I,K,V> subscribeResult;
     final CacheUnsubscribeResult<I> unsubscribeResult;
-    private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
 
-    private String nodeId;
+    private final CacheManagerFactory<I, K, V> cacheManagerFactory;
+
+    private final CacheManager<I, K, V> cacheManager;
+    protected CacheSubscriptionService<I, K, V> subscriptionService;
+    private final CacheRequestDecoder<I, K, V> decoder;
+    private final CacheResponseEncoder<I, K, V> encoder;
+    private final Comparator<K> keyComparator;
+
+    private final CountersCacheManager<I, K, ReusableLong> countersCacheManager;
+    protected CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService;
+    CacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder;
+    CacheResponseEncoder<I, K, ReusableLong> countersResponseEncoder;
+    AddCacheEntryRequestDetails<I, K, ReusableLong> addCountersCacheEntryRequestDetails;
+    CacheSubscriptionResult<I,K,ReusableLong> countersSubscribeResult;
 
     @Setter
     @Getter
@@ -103,6 +118,9 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         this.bulkOpsResult = new BulkCacheOpsResult<>(cacheManagerFactory.getIndexSupplier(),
                 cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getValueSupplier());
 
+        this.decoder = cacheManagerFactory.getCacheRequestDecoder();
+        this.encoder = cacheManagerFactory.getCacheResponseEncoder();
+        this.keyComparator = cacheManagerFactory.getKeyComparator();
     }
 
     /**
@@ -120,28 +138,36 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         final int templateId = (buffer.getShort(offset + 2, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
 
         if (templateId == schemaDetails.getCreateCacheId()) {
-            handleCreateCache(session, buffer, offset, cacheManager);
+            handleCreateCache(session, buffer, offset, decoder, createCacheRequestDetails, cacheManager, encoder);
         } else if (templateId == schemaDetails.getAddCacheEntryId()) {
-            handleAddCacheEntry(session, buffer, offset, cacheManager);
+            handleAddCacheEntry(session, buffer, offset, decoder, addCacheEntryRequestDetails, cacheManager);
+            //handleAddCacheEntry(session, buffer, offset, countersCacheManager, addCountersCacheEntryRequestDetails, countersRequestDecoder);
         } else if (templateId == schemaDetails.getGetCacheEntryId()) {
-            handleGetCacheEntry(session, buffer, offset, cacheManager);
+            handleGetCacheEntry(session, buffer, offset, decoder, cacheManager);
         } else if (templateId == schemaDetails.getRemoveCacheEntryId()) {
-            handleRemoveCacheEntry(session, buffer, offset, cacheManager);
+            handleRemoveCacheEntry(session, buffer, offset, decoder, cacheManager);
         } else if (templateId == schemaDetails.getClearCacheId()) {
-            handleClearCache(session, buffer, offset, cacheManager);
+            handleClearCache(session, buffer, offset, decoder, cacheManager);
         } else if (templateId == schemaDetails.getDeleteCacheId()) {
-            handleDeleteCache(session, buffer, offset, cacheManager);
+            handleDeleteCache(session, buffer, offset, decoder, cacheManager);
         } else if (templateId == schemaDetails.getGetAllCacheEntriesId()) {
-            handleGetAllCacheEntries(session, buffer, offset, cacheManager);
+            handleGetAllCacheEntries(session, buffer, offset, decoder, encoder, cacheManager);
         } else if (templateId == schemaDetails.getGetCacheStatsId()) {
-            handleGetCacheStats(session, buffer, offset, cacheManager);
+            handleGetCacheStats(session, buffer, offset, decoder, encoder, cacheManager);
         } else if (templateId == schemaDetails.getCacheSubscriptionRequestId()) {
-            handleCacheSubscriptionRequest(session, buffer, offset);
+            handleCacheSubscriptionRequest(session, buffer, offset, decoder, encoder, subscriptionService, cacheManager);
         } else if (templateId == schemaDetails.getCacheUnsubscribeRequestId()) {
-            handleCacheUnsubscribeRequest(session, buffer, offset);
+            handleCacheUnsubscribeRequest(session, buffer, offset, decoder, encoder, subscriptionService, cacheManager);
         } else if (templateId == schemaDetails.getBulkCacheOpsRequestId()) {
-            handleBulkOpsRequest(session, buffer, offset, cacheManager);
-        } else {
+            handleBulkOpsRequest(session, buffer, offset, cacheManager, encoder);
+        }
+
+
+
+
+        else if (templateId == 24) {
+            handleCreateCache(session, buffer, offset, countersRequestDecoder, createCacheRequestDetails, countersCacheManager, encoder);
+        }else {
             throw new IllegalStateException("Unexpected value: " + templateId);
         }
 
@@ -168,11 +194,11 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
             if (removeResult.getStatus() == CacheOperationStatus.SUCCESS) {
                 // update the subscription service
-                handlePostRemoveCacheEntry(cache, key, removeResult, null);
+                handlePostRemoveCacheEntry(cache, key, removeResult, null, encoder);
             }
         };
 
-        this.cacheTimerService = new CacheClusterTimerService<I,K,V>(cacheManagerFactory.getIndexSupplier(),
+        this.cacheTimerService = new CacheClusterTimerService<>(cacheManagerFactory.getIndexSupplier(),
                 cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getCacheTimersCodec(), timerCorrelationIdProvider, cluster, fw, consumer);
 
         this.idleStrategy = cluster.idleStrategy();
@@ -187,22 +213,23 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     /**
      * Handle a delete cache message.
      *
-     * @param session Session requesting the delete operation.
-     * @param buffer  Buffer containing the message.
-     * @param offset  Offset in the buffer at which the message is encoded.
+     * @param session  Session requesting the delete operation.
+     * @param buffer   Buffer containing the message.
+     * @param offset   Offset in the buffer at which the message is encoded.
+     * @param decoder_
      */
-    <CT extends Reusable> void handleDeleteCache(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, CT> cacheManager) {
-        var requestDetails = getDeleteCacheRequestDetails(session, buffer, offset);
+    <VT extends Reusable> void handleDeleteCache(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheManager<I, K, VT> cacheManager) {
+        var requestDetails = getDeleteCacheRequestDetails(session, buffer, offset, decoder_, deleteCacheRequestDetails);
         tracingService.startHandleDeleteCache(requestDetails);
         I cacheId = requestDetails.getCacheId();
         log.info("DELETE CACHE ID ON REQUEST {}", cacheId);
         var deleteCacheResult = processDeleteCache(cacheId, requestDetails.getRequestId(), cacheManager);
         log.info("DELETE RESULT CACHE ID {}", deleteCacheResult.getCacheId());
-        handlePostDeleteCache(cacheId, deleteCacheResult, session);
+        handlePostDeleteCache(cacheId, deleteCacheResult, session, encoder);
         tracingService.endHandleDeleteCache(requestDetails);
     }
 
-    private <CT extends Reusable> DeleteCacheResult<I> processDeleteCache(I cacheId, String requestId, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> DeleteCacheResult<I> processDeleteCache(I cacheId, String requestId, CacheManager<I, K, VT> cacheManager) {
         log.info("Got delete cache request for cache id {}, request id {}", cacheId, requestId);
         var res = cacheManager.deleteCache(cacheId);
         res.setRequestId(requestId);
@@ -212,21 +239,22 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     /**
      * Handle a cache clear request.
      *
-     * @param session Session requesting the clear operation.
-     * @param buffer  Buffer containing the message.
-     * @param offset  Offset in the buffer at which the message is encoded.
+     * @param session  Session requesting the clear operation.
+     * @param buffer   Buffer containing the message.
+     * @param offset   Offset in the buffer at which the message is encoded.
+     * @param decoder_
      */
-    <CT extends Reusable> void handleClearCache(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, CT> cacheManager) {
-        var requestDetails = getClearCacheRequestDetails(session, buffer, offset);
+    <VT extends Reusable> void handleClearCache(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheManager<I, K, VT> cacheManager) {
+        var requestDetails = getClearCacheRequestDetails(session, buffer, offset, decoder_, clearCacheRequestDetails);
         tracingService.startHandleClearCache(requestDetails);
         I cacheId = requestDetails.getCacheId();
         var requestId = requestDetails.getRequestId();
         var clearCacheResult = processClearCache(cacheId, requestId, cacheManager);
-        handlePostClearCache(cacheId, clearCacheResult, session);
+        handlePostClearCache(cacheId, clearCacheResult, session, encoder);
         tracingService.endHandleClearCache(requestDetails);
     }
 
-    private <CT extends Reusable> ClearCacheResult<I> processClearCache(I cacheId, String requestId, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> ClearCacheResult<I> processClearCache(I cacheId, String requestId, CacheManager<I, K, VT> cacheManager) {
         log.info("Got clear cache request for cache id {} with requestId {}", cacheId, requestId);
         var clearCacheResult = cacheManager.clearCache(cacheId);
         clearCacheResult.setRequestId(requestId);
@@ -236,22 +264,23 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     /**
      * Handle a request to remove a cache entry.
      *
-     * @param session Session requesting the remove cache operation.
-     * @param buffer  Buffer containing the message.
-     * @param offset  Offset in the buffer at which the message is encoded.
+     * @param session  Session requesting the remove cache operation.
+     * @param buffer   Buffer containing the message.
+     * @param offset   Offset in the buffer at which the message is encoded.
+     * @param decoder_
      */
-    <CT extends Reusable> void handleRemoveCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, CT> cacheManager) {
-        var requestDetails = getRemoveCacheEntryRequestDetails(session, buffer, offset);
+    <VT extends Reusable> void handleRemoveCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheManager<I, K, VT> cacheManager) {
+        var requestDetails = getRemoveCacheEntryRequestDetails(session, buffer, offset, decoder_, removeCacheEntryRequestDetails);
         tracingService.startRemoveCacheEntry(requestDetails);
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         var requestId = requestDetails.getRequestId();
         var removeCacheEntryResult = processRemoveCacheEntry(cacheId, key, requestId, cacheManager);
-        handlePostRemoveCacheEntry(cacheId, key, removeCacheEntryResult, session);
+        handlePostRemoveCacheEntry(cacheId, key, removeCacheEntryResult, session, encoder);
         tracingService.endRemoveCacheEntry(requestDetails);
     }
 
-    private <CT extends Reusable> RemoveCacheEntryResult<I, K> processRemoveCacheEntry(I cacheId, K key, String requestId, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> RemoveCacheEntryResult<I, K> processRemoveCacheEntry(I cacheId, K key, String requestId, CacheManager<I, K, VT> cacheManager) {
         log.info("Got remove cache entry request for cache id {}, key {}, request Id: {}", cacheId, key, requestId);
         var removeCacheEntryResult = cacheManager.removeCacheEntry(cacheId, key);
         removeCacheEntryResult.setRequestId(requestId);
@@ -265,23 +294,22 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param buffer  Buffer containing the message.
      * @param offset  Offset in the buffer at which the message is encoded.
      */
-    <CT extends Reusable> void handleAddCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, CT> cacheManager) {
-        var requestDetails = getAddCacheEntryRequestDetails(session, buffer, offset);
+    <VT extends Reusable> void handleAddCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, AddCacheEntryRequestDetails<I, K, VT> addCacheEntryRequestDetails, CacheManager<I, K, VT> cacheManager) {
+        AddCacheEntryRequestDetails<I, K, VT> requestDetails = getAddCacheEntryRequestDetails(session, buffer, offset, decoder, addCacheEntryRequestDetails);
         tracingService.startAddCacheEntry(requestDetails);
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
-        // Here we have to cast or let it assume CT. The request value is of type V.
-        CT value = (CT) requestDetails.getValue();
+        VT value = requestDetails.getValue();
         long ttl = requestDetails.getTtl();
         var requestId = requestDetails.getRequestId();
         var addCacheEntryResult = processAddCacheEntry(cacheId, key, value, ttl, requestId, session, buffer, offset, cacheManager);
 
         log.info("Result for add entry, key: {}, status: {}, ", addCacheEntryResult.getEntryKey(), addCacheEntryResult.getStatus());
-        handlePostAddCacheEntry(requestDetails.getCacheId(), requestDetails.getKey(), requestDetails.getValue(), addCacheEntryResult, session);
+        handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, encoder);
         tracingService.endAddCacheEntry(requestDetails);
     }
 
-    private <CT extends Reusable> AddCacheEntryResult<I,K> processAddCacheEntry(I cacheId, K key, CT value, long ttl, String requestId, ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> AddCacheEntryResult<I,K> processAddCacheEntry(I cacheId, K key, VT value, long ttl, String requestId, ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, VT> cacheManager) {
         log.info("Got add cache entry request for cache id {}, key {}, value {}, ttl {}, request Id: {}", cacheId, key, value, ttl, requestId);
         var cache = cacheManager.getCache(cacheId);
 
@@ -310,7 +338,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         if (ttl > 0 && addCacheEntryResult.getStatus() == CacheOperationStatus.SUCCESS) {
             long now = cluster.time();
             long deadline = now + ttl;
-            cacheTimerService.scheduleItemRemoval(cacheId, key, (Cache<I, K, V>) cache, deadline);
+            cacheTimerService.scheduleItemRemoval(cacheId, key, cache, deadline);
         }
 
         return addCacheEntryResult;
@@ -325,35 +353,36 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param value     The value we tried to add against the key.
      * @param requestId The original request ID.
      */
-    private <CT extends Reusable> void handleMissingCacheOnAddEntry(ClientSession session, DirectBuffer buffer, int offset, I cacheId, K key, CT value, String requestId) {
+    private <VT extends Reusable> void handleMissingCacheOnAddEntry(ClientSession session, DirectBuffer buffer, int offset, I cacheId, K key, VT value, String requestId) {
         addEntryFailureResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
         addEntryFailureResult.setRequestId(requestId);
         addEntryFailureResult.getCacheId().copyFrom(cacheId);
         log.info("Cache {} doesn't exist, tried to add on key key: {}", cacheId, addEntryFailureResult.getEntryKey());
 
-        handlePostAddCacheEntry(cacheId, key, (V) value, addEntryFailureResult, session);
+        handlePostAddCacheEntry(cacheId, key, value, addEntryFailureResult, session, encoder);
     }
 
     /**
      * Handle a request to get a cache entry.
      *
-     * @param session Session requesting the add entry operation.
-     * @param buffer  Buffer containing the message.
-     * @param offset  Offset in the buffer at which the message is encoded.
+     * @param session  Session requesting the add entry operation.
+     * @param buffer   Buffer containing the message.
+     * @param offset   Offset in the buffer at which the message is encoded.
+     * @param decoder_
      */
-    <CT extends Reusable> void handleGetCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, CT> cacheManager) {
-        var requestDetails = getCacheEntryRequestDetails(session, buffer, offset);
+    <VT extends Reusable> void handleGetCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheManager<I, K, VT> cacheManager) {
+        var requestDetails = getCacheEntryRequestDetails(session, buffer, offset, decoder_, getCacheEntryRequestDetails);
         tracingService.startGetCacheEntry(requestDetails);
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         var requestId = requestDetails.getRequestId();
         var getCacheEntryResult = processGetCacheEntry(cacheId, key, requestId, cacheManager);
-        log.info("Sending GET result: cacheId {}, key {}, value {}, reqId {}, status {}", getCacheEntryResult.getCacheId(), getCacheEntryResult.getEntryKey(), getCacheEntryResult.getEntryValue(), getCacheEntryResult.getRequestId(), getCacheEntryResult.getStatus());
-        handlePostGetCacheEntry(cacheId, key, (GetCacheEntryResult<I,K,V>) getCacheEntryResult, session);
+        log.info("Sending GET result: cacheId {}, key {}, value {}, reqId {}, status {}", cacheId, key, getCacheEntryResult.getEntryValue(), getCacheEntryResult.getRequestId(), getCacheEntryResult.getStatus());
+        handlePostGetCacheEntry(cacheId, key, getCacheEntryResult, session, encoder);
         tracingService.endGetCacheEntry(requestDetails);
     }
 
-    private <CT extends Reusable> GetCacheEntryResult<I, K, CT> processGetCacheEntry(I cacheId, K key, String requestId, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> GetCacheEntryResult<I, K, VT> processGetCacheEntry(I cacheId, K key, String requestId, CacheManager<I, K, VT> cacheManager) {
         log.info("Got get cache entry for cache id {} on key {}, requestId {}", cacheId, key, requestId);
         var getCacheEntryResult = cacheManager.getCacheEntry(cacheId, key);
         getCacheEntryResult.setRequestId(requestId);
@@ -364,12 +393,14 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     /**
      * Handle a request to get all items from a cache.
      *
-     * @param session Session requesting the add entry operation.
-     * @param buffer  Buffer containing the message.
-     * @param offset  Offset in the buffer at which the message is encoded.
+     * @param session  Session requesting the add entry operation.
+     * @param buffer   Buffer containing the message.
+     * @param offset   Offset in the buffer at which the message is encoded.
+     * @param decoder_
+     * @param encoder
      */
-    private <CT extends Reusable> void handleGetAllCacheEntries(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, CT> cacheManager) {
-        var requestDetails = getAllCacheEntriesRequestDetails(session, buffer, offset);
+    private <VT extends Reusable> void handleGetAllCacheEntries(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheResponseEncoder<I, K, V> encoder, CacheManager<I, K, VT> cacheManager) {
+        var requestDetails = getAllCacheEntriesRequestDetails(session, buffer, offset, decoder_, getAllCacheEntriesRequestDetails);
         tracingService.startGetAllCacheEntries(requestDetails);
         I cacheId = requestDetails.getCacheId();
         var requestId = requestDetails.getRequestId();
@@ -378,29 +409,32 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         var getAllCacheEntriesResult = cacheManager.getAllCacheEntries(cacheId);
         getAllCacheEntriesResult.setRequestId(requestId);
         getAllCacheEntriesResult.getCacheId().copyFrom(cacheId);
-        handlePostGetAllCacheEntries(cacheId, (GetAllCacheEntriesResult<I,K,V>) getAllCacheEntriesResult, session);
+        handlePostGetAllCacheEntries(cacheId, getAllCacheEntriesResult, session, encoder);
         tracingService.endGetAllCacheEntries(requestDetails);
     }
 
     /**
      * Handle a request to create a cache.
      *
-     * @param session Session requesting the create cache operation.
-     * @param buffer  Buffer containing the message.
-     * @param offset  Offset in the buffer at which the message is encoded.
+     * @param encoder
+     * @param session                   Session requesting the create cache operation.
+     * @param buffer                    Buffer containing the message.
+     * @param offset                    Offset in the buffer at which the message is encoded.
+     * @param decoder_
+     * @param createCacheRequestDetails
      */
-    <CT extends Reusable> void handleCreateCache(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I,K,CT> cacheManager) {
-        CreateCacheRequestDetails<I> requestDetails = getCreateCacheRequestDetails(session, buffer, offset);
+    <VT extends Reusable> void handleCreateCache(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CreateCacheRequestDetails<I> createCacheRequestDetails, CacheManager<I,K,VT> cacheManager, CacheResponseEncoder<I, K, V> encoder) {
+        CreateCacheRequestDetails<I> requestDetails = getCreateCacheRequestDetails(session, buffer, offset, decoder_, createCacheRequestDetails);
         tracingService.startCreateCacheRequest(requestDetails);
         I cacheId = requestDetails.getCacheId();
         var requestId = requestDetails.getRequestId();
         var cacheCreationResult = processCreateCache(cacheId, requestId, cacheManager);
         log.info("Will send result: " + cacheCreationResult.getStatus());
-        handlePostCreateCache(cacheId, cacheCreationResult, session);
+        handlePostCreateCache(cacheId, cacheCreationResult, session, encoder);
         tracingService.endCreateCacheRequest(requestDetails);
     }
 
-    private <CT extends Reusable> CreateCacheResult<I> processCreateCache(I cacheId, String requestId, CacheManager<I,K, CT> cacheManager) {
+    private <VT extends Reusable> CreateCacheResult<I> processCreateCache(I cacheId, String requestId, CacheManager<I,K, VT> cacheManager) {
         log.info("Got create cache request for cache id {}, request Id: {}", cacheId, requestId);
         var cacheCreationResult = cacheManager.createCache(cacheId);
         cacheCreationResult.setRequestId(requestId);
@@ -410,30 +444,34 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     /**
      * Handle a request to get all cache stats.
      *
-     * @param session Session requesting the get all stats operation.
-     * @param buffer  Buffer containing the message.
-     * @param offset  Offset in the buffer at which the message is encoded.
+     * @param session  Session requesting the get all stats operation.
+     * @param buffer   Buffer containing the message.
+     * @param offset   Offset in the buffer at which the message is encoded.
+     * @param decoder_
+     * @param encoder
      */
-    <CT extends Reusable> void handleGetCacheStats(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, CT> cacheManager) {
-        GetCacheStatsRequestDetails requestDetails = getCacheStatsRequestDetails(session, buffer, offset);
+    <VT extends Reusable> void handleGetCacheStats(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheResponseEncoder<I, K, V> encoder, CacheManager<I, K, VT> cacheManager) {
+        GetCacheStatsRequestDetails requestDetails = getCacheStatsRequestDetails(session, buffer, offset, decoder_, getCacheStatsRequestDetails);
         tracingService.startGetAllStatsRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
         log.info("Got request for all cache stats, request Id: {}", requestId);
         var cacheStatsResult = cacheManager.getCacheStatsResult();
         cacheStatsResult.setRequestId(requestId);
-        handlePostGetCacheStats(cacheStatsResult, session);
+        handlePostGetCacheStats(cacheStatsResult, session, encoder);
         tracingService.endGetAllStatsRequest(requestDetails);
     }
 
     /**
      * Handle a request to subscribe to caches.
      *
-     * @param session Session requesting the get all stats operation.
-     * @param buffer  Buffer containing the message.
-     * @param offset  Offset in the buffer at which the message is encoded.
+     * @param session  Session requesting the get all stats operation.
+     * @param buffer   Buffer containing the message.
+     * @param offset   Offset in the buffer at which the message is encoded.
+     * @param decoder_
+     * @param encoder
      */
-    <CT extends Reusable> void handleCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset) {
-        CacheSubscriptionRequestDetails<I> requestDetails = getCacheSubscriptionRequest(session, buffer, offset);
+    <VT extends Reusable> void handleCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheResponseEncoder<I, K, V> encoder, CacheSubscriptionService<I,K, VT> subscriptionService, CacheManager<I,K, VT> cacheManager) {
+        CacheSubscriptionRequestDetails<I> requestDetails = getCacheSubscriptionRequest(session, buffer, offset, decoder_, cacheSubscribeRequestDetails);
         tracingService.startCacheSubscriptionRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
         var cacheIds = requestDetails.getCacheId();
@@ -450,19 +488,19 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
             if (requestDetails.isSendSnapshot()) {
                 log.info("Sending back snapshot for cache {}", cacheId);
-                populateSnapshot(result, cacheId);
+                populateSnapshot(result, cacheId, cacheManager);
             } else {
                 result.entries = null;
             }
 
-            handlePostCacheSubscriptionRequest(result, session);
+            handlePostCacheSubscriptionRequest(result, session, encoder);
         }
 
         tracingService.endCacheSubscriptionRequest(requestDetails);
     }
 
-    private void populateSnapshot(CacheSubscriptionResult<I,K,V> result, I cacheId) {
-        var cache = cacheManager.getCache(cacheId);
+    private <VT extends Reusable> void populateSnapshot(CacheSubscriptionResult<I,K,VT> result, I cacheId, CacheManager<I,K,VT> cacheManager) {
+        Cache<I, K, VT> cache = cacheManager.getCache(cacheId);
 
         if (cache != null) {
             result.entries = cache.getAllEntries();
@@ -474,40 +512,43 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     /**
      * Handle a request to unsubscribe to a cache.
      *
-     * @param session Session requesting the get all stats operation.
-     * @param buffer  Buffer containing the message.
-     * @param offset  Offset in the buffer at which the message is encoded.
+     * @param session  Session requesting the get all stats operation.
+     * @param buffer   Buffer containing the message.
+     * @param offset   Offset in the buffer at which the message is encoded.
+     * @param decoder_
+     * @param encoder
      */
-    void handleCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset) {
-        CacheUnsubscribeRequestDetails<I> requestDetails = getCacheUnsubscribeRequest(session, buffer, offset);
+    <VT extends Reusable> void handleCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheResponseEncoder<I, K, V> encoder, CacheSubscriptionService<I,K, VT> subscriptionService, CacheManager<I,K, VT> cacheManager) {
+        CacheUnsubscribeRequestDetails<I> requestDetails = getCacheUnsubscribeRequest(session, buffer, offset, decoder_, cacheUnsubscribeRequestDetails);
         tracingService.startCacheUnsubscribeRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
         var cacheId = requestDetails.getCacheId();
         log.info("Got request to unsubscribe for cache updates on cache: {}, request Id: {}", cacheId, requestId);
         var result = subscriptionService.unsubscribe(requestDetails, session);
-        handlePostCacheUnsubscribeRequest(result, session);
+        handlePostCacheUnsubscribeRequest(result, session, encoder);
         tracingService.endCacheUnsubscribeRequest(requestDetails);
     }
 
     /**
      * Handle a bulk operation request.
      *
+     * @param encoder
      * @param session Session requesting the get all stats operation.
      * @param buffer  Buffer containing the message.
      * @param offset  Offset in the buffer at which the message is encoded.
      */
-    <CT extends Reusable> void handleBulkOpsRequest(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, CT> cacheManager) {
+    <VT extends Reusable> void handleBulkOpsRequest(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, VT> cacheManager, CacheResponseEncoder<I, K, V> encoder) {
         BulkCacheOpsRequestDetails<I,K,V> requestDetails = getBulkOpsRequest(session, buffer, offset);
         tracingService.startBulkOpsRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
         log.info("Got bulk operations request with Id: {}", requestId);
         BulkCacheOpsResult<I,K,V> res = processBulkOperations(requestDetails, cacheManager);
         res.setRequestId(requestId);
-        handlePostBulkOpsRequest(res, session);
+        handlePostBulkOpsRequest(res, session, encoder);
         tracingService.endBulkOpsRequest(requestDetails);
     }
 
-    private <CT extends Reusable> BulkCacheOpsResult<I,K,V> processBulkOperations(BulkCacheOpsRequestDetails<I,K,V> requestDetails, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> BulkCacheOpsResult<I,K,V> processBulkOperations(BulkCacheOpsRequestDetails<I,K,V> requestDetails, CacheManager<I, K, VT> cacheManager) {
 
         bulkOpsResult.clear();
 
@@ -525,7 +566,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         return bulkOpsResult;
     }
 
-    private <CT extends Reusable> void handleBulkOpRemoveItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> void handleBulkOpRemoveItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, VT> cacheManager) {
         I cacheId = op.getCacheId();
         var requestId = op.getRequestId();
         K key = op.getKey();
@@ -538,11 +579,11 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
         if (result.getStatus() == CacheOperationStatus.SUCCESS) {
             // update the subscription service
-            handlePostRemoveCacheEntry(cacheId, key, result, null);
+            handlePostRemoveCacheEntry(cacheId, key, result, null, encoder);
         }
     }
 
-    private <CT extends Reusable> void handleBulkOpDeleteCache(CacheOperationRequestDetails<I,K,V> op, BulkCacheOpsResult<I,K,V> bulkOpsResult, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> void handleBulkOpDeleteCache(CacheOperationRequestDetails<I,K,V> op, BulkCacheOpsResult<I,K,V> bulkOpsResult, CacheManager<I, K, VT> cacheManager) {
         I cacheId = op.getCacheId();
         var result = processDeleteCache(cacheId, op.getRequestId(), cacheManager);
         DeleteCacheResult<I> bulkResult = new DeleteCacheResult<>(cacheManagerFactory.getIndexSupplier().get());
@@ -552,11 +593,11 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
         // update the subscription service
         if (result.getStatus() == CacheOperationStatus.SUCCESS) {
-            handlePostDeleteCache(cacheId, result, null);
+            handlePostDeleteCache(cacheId, result, null, encoder);
         }
     }
 
-    private <CT extends Reusable> void handleBulkOpGetItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> void handleBulkOpGetItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, VT> cacheManager) {
         I cacheId = op.getCacheId();
         var requestId = op.getRequestId();
         K key = op.getKey();
@@ -568,7 +609,7 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
         bulkOpsResult.addResult(bulkResult);
     }
 
-    private <CT extends Reusable> void handleBulkOpClearCache(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> void handleBulkOpClearCache(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, VT> cacheManager) {
         I cacheId = op.getCacheId();
         var requestId = op.getRequestId();
         var result = processClearCache(cacheId, requestId, cacheManager);
@@ -579,14 +620,14 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
         // update the subscription service
         if (result.getStatus() == CacheOperationStatus.SUCCESS) {
-            handlePostClearCache(cacheId, result, null);
+            handlePostClearCache(cacheId, result, null, encoder);
         }
     }
 
-    private <CT extends Reusable> void handleBulkOpAddItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> void handleBulkOpAddItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, VT> cacheManager) {
         I cacheId = op.getCacheId();
         K key = op.getKey();
-        CT value = (CT) op.getValue();
+        VT value = (VT) op.getValue();
         var ttl = op.getTtl();
         var requestId = op.getRequestId();
         var result = processAddCacheEntry(cacheId, key, value, ttl, requestId, null, null, 0, cacheManager);
@@ -597,11 +638,11 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
 
         // update the subscription service
         if (result.getStatus() == CacheOperationStatus.SUCCESS) {
-            handlePostAddCacheEntry(cacheId, key, (V) value, result, null);
+            handlePostAddCacheEntry(cacheId, key, value, result, null, encoder);
         }
     }
 
-    private <CT extends Reusable> void handleBulkOpCreateCache(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, CT> cacheManager) {
+    private <VT extends Reusable> void handleBulkOpCreateCache(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, VT> cacheManager) {
         I cacheId = op.getCacheId();
         var requestId = op.getRequestId();
         var result = processCreateCache(cacheId, requestId, cacheManager);
@@ -614,32 +655,44 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
     /**
      * Decode the CreateCache message into a request details flyweight.
      *
+     * @param createCacheRequestDetails
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
      * @return The CreateCacheRequestDetails flyweight.
      */
-    protected abstract CreateCacheRequestDetails<I> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+    protected <VT extends Reusable> CreateCacheRequestDetails<I> getCreateCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, CreateCacheRequestDetails<I> createCacheRequestDetails) {
+        decoder.decodeGetCreateCacheRequestDetails(buffer, offset, createCacheRequestDetails);
+        return createCacheRequestDetails;
+    }
 
     /**
      * Decode the ClearCache message into a request details flyweight.
      *
+     * @param clearCacheRequestDetails
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
      * @return The ClearCacheRequestDetails flyweight.
      */
-    protected abstract ClearCacheRequestDetails<I> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+    protected <VT extends Reusable> ClearCacheRequestDetails<I> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, ClearCacheRequestDetails<I> clearCacheRequestDetails) {
+        decoder.decodeClearCacheRequest(buffer, offset, clearCacheRequestDetails);
+        return clearCacheRequestDetails;
+    }
 
     /**
      * Decode the RemoveCacheEntry message into a request details flyweight.
      *
+     * @param removeCacheEntryRequestDetails
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
      * @return The RemoveCacheEntryRequestDetails flyweight.
      */
-    protected abstract RemoveCacheEntryRequestDetails<I, K> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+    protected <VT extends Reusable> RemoveCacheEntryRequestDetails<I, K> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, RemoveCacheEntryRequestDetails<I, K> removeCacheEntryRequestDetails) {
+        decoder.decodeRemoveCacheEntryRequest(buffer, offset, removeCacheEntryRequestDetails);
+        return removeCacheEntryRequestDetails;
+    }
 
     /**
      * Decode the AddCacheEntry message into a request details flyweight.
@@ -649,67 +702,94 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param offset  The offset from within the buffer to decode from.
      * @return The AddCacheEntryRequestDetails flyweight.
      */
-    protected abstract AddCacheEntryRequestDetails<I, K, V> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+    protected <VT extends Reusable> AddCacheEntryRequestDetails<I, K, VT> getAddCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, AddCacheEntryRequestDetails<I, K, VT> addCacheEntryRequestDetails) {
+        decoder.decodeAddCacheEntryRequest(buffer, offset, addCacheEntryRequestDetails);
+        return addCacheEntryRequestDetails;
+    }
 
     /**
      * Decode the GetCacheEntry message into a request details flyweight.
      *
+     * @param getCacheEntryRequestDetails
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
      * @return The GetCacheEntryRequestDetails flyweight.
      */
-    protected abstract GetCacheEntryRequestDetails<I, K> getCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+    protected <VT extends Reusable> GetCacheEntryRequestDetails<I, K> getCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, GetCacheEntryRequestDetails<I, K> getCacheEntryRequestDetails) {
+        decoder.decodeGetCacheEntryRequest(buffer, offset, getCacheEntryRequestDetails);
+        return getCacheEntryRequestDetails;
+    }
 
     /**
      * Decode the GetAllCacheEntries message into a request details flyweight.
      *
+     * @param getAllCacheEntriesRequestDetails
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
      * @return The GetAllCacheEntriesRequestDetails flyweight.
      */
-    protected abstract GetAllCacheEntriesRequestDetails<I> getAllCacheEntriesRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+    protected <VT extends Reusable> GetAllCacheEntriesRequestDetails<I> getAllCacheEntriesRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, GetAllCacheEntriesRequestDetails<I> getAllCacheEntriesRequestDetails) {
+        decoder.decodeGetAllCacheEntriesRequest(buffer, offset, getAllCacheEntriesRequestDetails);
+        return getAllCacheEntriesRequestDetails;
+    }
 
     /**
      * Decode the DeleteCache message into a request details flyweight.
      *
+     * @param deleteCacheRequestDetails
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
      * @return The DeleteCacheRequestDetails flyweight.
      */
-    protected abstract DeleteCacheRequestDetails<I> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+    protected <VT extends Reusable> DeleteCacheRequestDetails<I> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, DeleteCacheRequestDetails<I> deleteCacheRequestDetails) {
+        decoder.decodeGetDeleteCacheRequest(buffer, offset, deleteCacheRequestDetails);
+        return deleteCacheRequestDetails;
+    }
 
     /**
      * Decode the CacheStatsRequest message into a request details flyweight.
      *
+     * @param getCacheStatsRequestDetails
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
      * @return The GetCacheStatsRequestDetails flyweight.
      */
-    protected abstract GetCacheStatsRequestDetails getCacheStatsRequestDetails(ClientSession session, DirectBuffer buffer, int offset);
+    protected <VT extends Reusable> GetCacheStatsRequestDetails getCacheStatsRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, GetCacheStatsRequestDetails getCacheStatsRequestDetails) {
+        decoder.decodeGetCacheStatsRequest(buffer, offset, getCacheStatsRequestDetails);
+        return getCacheStatsRequestDetails;
+    }
 
     /**
      * Decode the CacheSubscriptionRequest message into a request details flyweight.
      *
+     * @param cacheSubscribeRequestDetails
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
      * @return The CacheSubscriptionRequestDetails flyweight.
      */
-    protected abstract CacheSubscriptionRequestDetails<I> getCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset);
+    protected <VT extends Reusable> CacheSubscriptionRequestDetails<I> getCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, CacheSubscriptionRequestDetails<I> cacheSubscribeRequestDetails) {
+        decoder.decodeCacheSubscriptionRequest(buffer, offset, cacheSubscribeRequestDetails);
+        return cacheSubscribeRequestDetails;
+    }
 
     /**
      * Decode the CacheUnsubscribeRequest message into a request details flyweight.
      *
+     * @param cacheUnsubscribeRequestDetails
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
      * @return The CacheUnsubscribeRequestDetails flyweight.
      */
-    protected abstract CacheUnsubscribeRequestDetails<I> getCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset);
+    protected <VT extends Reusable> CacheUnsubscribeRequestDetails<I> getCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, CacheUnsubscribeRequestDetails<I> cacheUnsubscribeRequestDetails) {
+        decoder.decodeGetCacheUnsubscribeRequest(buffer, offset, cacheUnsubscribeRequestDetails);
+        return cacheUnsubscribeRequestDetails;
+    }
 
 
     /**
@@ -720,7 +800,10 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param offset  The offset from within the buffer to decode from.
      * @return The BulkCacheOpsRequestDetails flyweight.
      */
-    protected abstract BulkCacheOpsRequestDetails<I,K,V> getBulkOpsRequest(ClientSession session, DirectBuffer buffer, int offset);
+    protected <VT extends Reusable> BulkCacheOpsRequestDetails<I, K, V> getBulkOpsRequest(ClientSession session, DirectBuffer buffer, int offset) {
+        decoder.decodeBulkCacheOperationsRequest(buffer, offset, bulkCacheOpsRequestDetails);
+        return bulkCacheOpsRequestDetails;
+    }
 
     /**
      * After the cache is created, send out a CacheCreated message.
@@ -728,8 +811,12 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId             The ID of the cache created.
      * @param cacheCreationResult The result from the request to create the cache.
      * @param session             The client session.
+     * @param encoder
      */
-    protected abstract void handlePostCreateCache(I cacheId, CreateCacheResult<I> cacheCreationResult, ClientSession session);
+    protected void handlePostCreateCache(I cacheId, CreateCacheResult<I> cacheCreationResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+        var length = encoder.encodeCacheCreationResult(cacheId, cacheCreationResult, egressBuffer);
+        sendMessage(session, egressBuffer, length);
+    }
 
     /**
      * After an entry is added to a cache, send out a EntryCreated message.
@@ -737,8 +824,15 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId             The ID of the cache in which the entry was created.
      * @param addCacheEntryResult The result from the request to add an entry.
      * @param session             The client session.
+     * @param encoder
      */
-    protected abstract void handlePostAddCacheEntry(I cacheId, K key, V value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session);
+    protected <VT extends Reusable> void handlePostAddCacheEntry(I cacheId, K key, VT value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+        var addCacheEntryResultLength = encoder.encodeAddCacheEntryResult(cacheId, key, addCacheEntryResult, egressBuffer);
+        sendMessage(session, egressBuffer, addCacheEntryResultLength);
+
+        var entryUpdatedLength = encoder.encodeEntryUpdated(key, value, addCacheEntryResult, egressBuffer);
+        subscriptionService.handleEntryAdded(addCacheEntryResult, egressBuffer, key, value, entryUpdatedLength);
+    }
 
     /**
      * Get an entry from the cache, send out a CacheEntry message.
@@ -746,17 +840,25 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId             The ID of the cache we need to get the entry from.
      * @param getCacheEntryResult The result from the request to add an entry.
      * @param session             The client session.
+     * @param encoder
      */
-    protected abstract void handlePostGetCacheEntry(I cacheId, K key, GetCacheEntryResult<I, K, V> getCacheEntryResult, ClientSession session);
+    protected <VT extends Reusable> void handlePostGetCacheEntry(I cacheId, K key, GetCacheEntryResult<I, K, VT> getCacheEntryResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+        var length = encoder.encodeCacheEntryResult(cacheId, getCacheEntryResult, egressBuffer);
+        sendMessage(session, egressBuffer, length);
+    }
 
     /**
      * Get all entries from the cache.
      *
      * @param cacheId             The ID of the cache we need to get all entries from.
-     * @param getCacheEntryResult The result from the request to get all entries.
+     * @param getAllCacheEntriesResult The result from the request to get all entries.
      * @param session             The client session.
+     * @param encoder
      */
-    protected abstract void handlePostGetAllCacheEntries(I cacheId, GetAllCacheEntriesResult<I, K, V> getCacheEntryResult, ClientSession session);
+    protected <VT extends Reusable> void handlePostGetAllCacheEntries(I cacheId, GetAllCacheEntriesResult<I, K, VT> getAllCacheEntriesResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+        var length = encoder.encodeAllCacheEntriesResult(cacheId, getAllCacheEntriesResult, egressBuffer);
+        sendMessage(session, egressBuffer, length);
+    }
 
     /**
      * After an entry is removed from the cache, send out a EntryRemoved message.
@@ -764,8 +866,13 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId                The ID of the cache in which the entry was removed.
      * @param removeCacheEntryResult The result from the request to remove an entry.
      * @param session                The client session.
+     * @param encoder
      */
-    protected abstract void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, ClientSession session);
+    protected void handlePostRemoveCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+        var length = encoder.encodeRemoveCacheEntryResult(cacheId, key, removeCacheEntryResult, egressBuffer);
+        sendMessage(session, egressBuffer, length);
+        subscriptionService.handleEntryRemoved(removeCacheEntryResult, egressBuffer, length, session!=null ? session.id() : Long.MAX_VALUE);
+    }
 
     /**
      * After an entry is removed from the cache on a timer event.
@@ -773,8 +880,12 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId                The ID of the cache in which the entry was removed.
      * @param key
      * @param removeCacheEntryResult The result from the request to remove an entry.
+     * @param encoder
      */
-    protected abstract void handlePostRemoveTimerCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult);
+    protected void handlePostRemoveTimerCacheEntry(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, CacheResponseEncoder<I, K, V> encoder) {
+        var length = encoder.encodeRemoveCacheEntryResult(cacheId, key, removeCacheEntryResult, egressBuffer);
+        subscriptionService.handleTimerEntryRemoved(removeCacheEntryResult, egressBuffer, length);
+    }
 
     /**
      * After a cache is cleared, send out a CacheCleared message.
@@ -782,8 +893,13 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId          The ID of the cache in which the entry was removed.
      * @param clearCacheResult The result from the request to clear a cache.
      * @param session          The client session.
+     * @param encoder
      */
-    protected abstract void handlePostClearCache(I cacheId, ClearCacheResult<I> clearCacheResult, ClientSession session);
+    protected void handlePostClearCache(I cacheId, ClearCacheResult<I> clearCacheResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+        var length = encoder.encodeCacheCleared(cacheId, clearCacheResult, egressBuffer);
+        sendMessage(session, egressBuffer, length);
+        subscriptionService.handleClearCache(clearCacheResult, egressBuffer, length, session!=null ? session.id() : Long.MAX_VALUE);
+    }
 
     /**
      * After a cache is deleted, send out a CacheDeleted message.
@@ -791,40 +907,66 @@ public abstract class AbstractCacheClusterService<I extends Reusable, K extends 
      * @param cacheId           The ID of the cache which was deleted.
      * @param deleteCacheResult The result of deleting the cache.
      * @param session           The client session.
+     * @param encoder
      */
-    protected abstract void handlePostDeleteCache(I cacheId, DeleteCacheResult<I> deleteCacheResult, ClientSession session);
+    protected void handlePostDeleteCache(I cacheId, DeleteCacheResult<I> deleteCacheResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+        var length = encoder.encodeDeleteCache(cacheId, deleteCacheResult, egressBuffer);
+        sendMessage(session, egressBuffer, length);
+        subscriptionService.handleDeleteCache(deleteCacheResult, egressBuffer, length, session!=null ? session.id() : Long.MAX_VALUE);
+    }
 
     /**
      * Send out the cache stats.
      *
      * @param cacheStatsResult The stats across all caches.
      * @param session          The client session.
+     * @param encoder
      */
-    protected abstract void handlePostGetCacheStats(CacheStatsResult<I> cacheStatsResult, ClientSession session);
+    protected void handlePostGetCacheStats(CacheStatsResult<I> cacheStatsResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+        var length = encoder.encodeCacheStatsResult(cacheStatsResult, egressBuffer);
+        sendMessage(session, egressBuffer, length);
+    }
 
     /**
      * Send out the result of subscribing to a cache.
      *
      * @param subscriptionRequestResult The result of subscribing.
      * @param session                   The client session.
+     * @param encoder
      */
-    protected abstract void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I,K,V> subscriptionRequestResult, ClientSession session);
+    protected <VT extends Reusable> void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I,K,VT> subscriptionRequestResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+        encoder.encodeCacheSubscriptionResult(subscriptionRequestResult, egressBuffer, keyComparator, new HydratingPublicationConsumer() {
+            @Override
+            public void accept(MutableDirectBuffer mutableDirectBuffer) {
+                var l = this.getLength();
+                sendMessage(session, mutableDirectBuffer, l);
+            }
+        });
+    }
 
     /**
      * Send out the result of unsubscribing to a cache.
      *
      * @param unsubscribeResponse The result of unsubscribing.
      * @param session             The client session.
+     * @param encoder
      */
-    protected abstract void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<I> unsubscribeResponse, ClientSession session);
+    protected void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<I> unsubscribeResponse, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+        var length = encoder.encodeCacheUnsubscribeResponse(unsubscribeResponse, egressBuffer);
+        sendMessage(session, egressBuffer, length);
+    }
 
     /**
      * Send out the result of bulk operations done on the cache.
      *
      * @param bulkCacheOpsResult The result of the bulk operation.
      * @param session            The client session.
+     * @param encoder
      */
-    protected abstract void handlePostBulkOpsRequest(BulkCacheOpsResult<I,K,V> bulkCacheOpsResult, ClientSession session);
+    protected void handlePostBulkOpsRequest(BulkCacheOpsResult<I, K, V> bulkCacheOpsResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+        var length = encoder.encodeBulkOpsResponse(bulkCacheOpsResult, egressBuffer);
+        sendMessage(session, egressBuffer, length);
+    }
 
 
     /**

@@ -55,7 +55,7 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
      * @param deadline The epoch time at which to remove the item.
      */
     @Override
-    public void scheduleItemRemoval(I cacheId, K key, Cache<I, K, V> cache, long deadline) {
+    public <CT extends Reusable> void scheduleItemRemoval(I cacheId, K key, Cache<I, K, CT> cache, long deadline) {
         lookupKey.clear();
         lookupKey.getCacheId().copyFrom(cacheId);
         lookupKey.getKey().copyFrom(key);

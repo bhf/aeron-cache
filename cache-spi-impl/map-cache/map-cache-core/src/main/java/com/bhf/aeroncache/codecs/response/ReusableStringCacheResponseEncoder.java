@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.codecs.response;
 
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.consumer.HydratingPublicationConsumer;
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.results.*;
@@ -48,18 +49,18 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     }
 
     @Override
-    public int encodeEntryUpdated(ReusableString key, ReusableString value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, MutableDirectBuffer egressBuffer) {
+    public <VT extends Reusable> int encodeEntryUpdated(ReusableString key, VT value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, MutableDirectBuffer egressBuffer) {
         entryUpdateEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         entryUpdateEncoder.cacheId((String) addCacheEntryResult.getCacheId().value())
                 .key(key.value())
-                .value(value.value())
+                .value(value.value().toString())
                 .requestId(addCacheEntryResult.getRequestId());
 
         return entryUpdateEncoder.encodedLength()+headerEncoder.encodedLength();
     }
 
     @Override
-    public int encodeCacheEntryResult(ReusableString cacheId, GetCacheEntryResult<ReusableString, ReusableString, ReusableString> getCacheEntryResult, MutableDirectBuffer egressBuffer) {
+    public <VT extends Reusable> int encodeCacheEntryResult(ReusableString cacheId, GetCacheEntryResult<ReusableString, ReusableString, VT> getCacheEntryResult, MutableDirectBuffer egressBuffer) {
         cacheEntryResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         cacheEntryResultEncoder
                 .status(getOperationStatus(getCacheEntryResult.getStatus()))
@@ -67,7 +68,7 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
                 .key(getCacheEntryResult.getEntryKey().value());
 
         if (getCacheEntryResult.getEntryValue() != null) {
-            cacheEntryResultEncoder.value(getCacheEntryResult.getEntryValue().value());
+            cacheEntryResultEncoder.value(getCacheEntryResult.getEntryValue().toString());
         } else {
             cacheEntryResultEncoder.value(Strings.EMPTY);
         }
@@ -78,7 +79,7 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     }
 
     @Override
-    public int encodeAllCacheEntriesResult(ReusableString cacheId, GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> getAllCacheEntriesResult, MutableDirectBuffer egressBuffer) {
+    public <VT extends Reusable> int encodeAllCacheEntriesResult(ReusableString cacheId, GetAllCacheEntriesResult<ReusableString, ReusableString, VT> getAllCacheEntriesResult, MutableDirectBuffer egressBuffer) {
         allCacheEntriesResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         allCacheEntriesResultEncoder
                 .status(getOperationStatus(getAllCacheEntriesResult.getStatus()))
@@ -90,7 +91,7 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
 
         values.forEach((key, value) -> {
             itemsEncoder.next();
-            itemsEncoder.key(key.value()).value(value.value());
+            itemsEncoder.key(key.value()).value(value.value().toString());
         });
 
         allCacheEntriesResultEncoder
@@ -156,8 +157,8 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     }
 
     @Override
-    public void encodeCacheSubscriptionResult(CacheSubscriptionResult<ReusableString, ReusableString, ReusableString> subscriptionRequestResult,
-                                              MutableDirectBuffer egressBuffer, Comparator<ReusableString> keyComparator, HydratingPublicationConsumer consumer) {
+    public <VT extends Reusable> void encodeCacheSubscriptionResult(CacheSubscriptionResult<ReusableString, ReusableString, VT> subscriptionRequestResult,
+                                                                   MutableDirectBuffer egressBuffer, Comparator<ReusableString> keyComparator, HydratingPublicationConsumer consumer) {
         var entries = subscriptionRequestResult.entries;
         var cacheId = subscriptionRequestResult.getCacheId().value();
         var requestId = subscriptionRequestResult.getRequestId();
@@ -189,7 +190,7 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
                 var itemKey = sortedKeys.get(i + j).value();
                 var itemValue = entries.get(itemKey).value();
                 itemsEncoder.next();
-                itemsEncoder.key(itemKey).value(itemValue).cacheId(cacheId);
+                itemsEncoder.key(itemKey).value(itemValue.toString()).cacheId(cacheId);
             }
 
             cacheSubscriptionResponseEncoder.cacheId(cacheId)
