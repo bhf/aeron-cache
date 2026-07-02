@@ -87,8 +87,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     protected CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService;
     CountersCacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder;
     CountersCacheResponseEncoder<I, K, ReusableLong> countersResponseEncoder;
-    AddCacheEntryRequestDetails<I, K, ReusableLong> addCountersCacheEntryRequestDetails;
-    CacheSubscriptionResult<I,K,ReusableLong> countersSubscribeResult;
+    private final AddCacheEntryRequestDetails<I, K, ReusableLong> addCountersCacheEntryRequestDetails;
+    private final CacheSubscriptionResult<I,K, ReusableLong> countersSubscribeResult;
 
     @Setter
     @Getter
@@ -123,6 +123,9 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         this.decoder = cacheManagerFactory.getCacheRequestDecoder();
         this.encoder = cacheManagerFactory.getCacheResponseEncoder();
         this.keyComparator = cacheManagerFactory.getKeyComparator();
+
+        this.addCountersCacheEntryRequestDetails = new AddCacheEntryRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get(), new ReusableLong());
+        this.countersSubscribeResult = new CacheSubscriptionResult<>(cacheManagerFactory.getIndexSupplier().get());
     }
 
     /**
@@ -140,7 +143,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         final int templateId = (buffer.getShort(offset + 2, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
 
         if (templateId == schemaDetails.getCreateCacheId()) {
-            handleCreateCache(session, buffer, offset, decoder, createCacheRequestDetails, cacheManager, encoder);
+            handleCreateCache(session, buffer, offset, decoder, encoder, createCacheRequestDetails, cacheManager);
         } else if (templateId == schemaDetails.getAddCacheEntryId()) {
             handleAddCacheEntry(session, buffer, offset, decoder, addCacheEntryRequestDetails, cacheManager);
             //handleAddCacheEntry(session, buffer, offset, countersCacheManager, addCountersCacheEntryRequestDetails, countersRequestDecoder);
@@ -168,7 +171,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
 
         else if (templateId == 24) {
-            handleCreateCache(session, buffer, offset, countersRequestDecoder, createCacheRequestDetails, countersCacheManager, encoder);
+            handleCreateCache(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, createCacheRequestDetails, countersCacheManager);
         }else {
             throw new IllegalStateException("Unexpected value: " + templateId);
         }
@@ -210,6 +213,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
         log.info("Starting subscription service");
         this.subscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscribeResult, unsubscribeResult, indexSupplier);
+        this.countersSubscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, countersSubscribeResult, unsubscribeResult, indexSupplier);
     }
 
     /**
@@ -418,15 +422,15 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Handle a request to create a cache.
      *
-     * @param encoder
      * @param session                   Session requesting the create cache operation.
      * @param buffer                    Buffer containing the message.
      * @param offset                    Offset in the buffer at which the message is encoded.
-     * @param decoder_
+     * @param decoder
+     * @param encoder
      * @param createCacheRequestDetails
      */
-    <VT extends Reusable> void handleCreateCache(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CreateCacheRequestDetails<I> createCacheRequestDetails, CacheManager<I,K,VT> cacheManager, CacheResponseEncoder<I, K, V> encoder) {
-        CreateCacheRequestDetails<I> requestDetails = getCreateCacheRequestDetails(session, buffer, offset, decoder_, createCacheRequestDetails);
+    <VT extends Reusable> void handleCreateCache(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, VT> encoder, CreateCacheRequestDetails<I> createCacheRequestDetails, CacheManager<I, K, VT> cacheManager) {
+        CreateCacheRequestDetails<I> requestDetails = getCreateCacheRequestDetails(session, buffer, offset, decoder, createCacheRequestDetails);
         tracingService.startCreateCacheRequest(requestDetails);
         I cacheId = requestDetails.getCacheId();
         var requestId = requestDetails.getRequestId();
@@ -815,7 +819,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session             The client session.
      * @param encoder
      */
-    protected void handlePostCreateCache(I cacheId, CreateCacheResult<I> cacheCreationResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+    protected <VT extends Reusable> void handlePostCreateCache(I cacheId, CreateCacheResult<I> cacheCreationResult, ClientSession session, CacheResponseEncoder<I, K, VT> encoder) {
         var length = encoder.encodeCacheCreationResult(cacheId, cacheCreationResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
     }
