@@ -1,7 +1,9 @@
 package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
+import com.bhf.aeroncache.codecs.request.CountersCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
+import com.bhf.aeroncache.codecs.response.CountersCacheResponseEncoder;
 import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
 import com.bhf.aeroncache.handlers.PublicationFailureHandler;
 import com.bhf.aeroncache.models.Reusable;
@@ -83,8 +85,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
     private final CountersCacheManager<I, K, ReusableLong> countersCacheManager;
     protected CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService;
-    CacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder;
-    CacheResponseEncoder<I, K, ReusableLong> countersResponseEncoder;
+    CountersCacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder;
+    CountersCacheResponseEncoder<I, K, ReusableLong> countersResponseEncoder;
     AddCacheEntryRequestDetails<I, K, ReusableLong> addCountersCacheEntryRequestDetails;
     CacheSubscriptionResult<I,K,ReusableLong> countersSubscribeResult;
 
