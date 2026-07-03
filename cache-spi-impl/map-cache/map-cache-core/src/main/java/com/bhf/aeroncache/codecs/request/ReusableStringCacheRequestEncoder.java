@@ -126,6 +126,8 @@ public class ReusableStringCacheRequestEncoder implements CacheRequestEncoder<Re
                     .value(op.value());
         }
 
+        bulkOpsEncoder.counterItemsCount(0);
+
         bulkOpsEncoder.requestId(requestId);
         return bulkOpsEncoder.encodedLength()+ headerEncoder.encodedLength();
     }

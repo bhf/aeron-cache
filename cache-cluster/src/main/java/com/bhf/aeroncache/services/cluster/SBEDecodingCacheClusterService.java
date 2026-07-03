@@ -6,9 +6,7 @@ import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import lombok.extern.log4j.Log4j2;
 
 /**
- * Decode SBE messages representing cache actions. This level of
- * abstraction is an implementation which does have responsibility for
- * message decoding and encoding.
+ * Decode SBE messages representing cache operations.
  */
 @Log4j2
 public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCacheClusterService<I, K, V>{

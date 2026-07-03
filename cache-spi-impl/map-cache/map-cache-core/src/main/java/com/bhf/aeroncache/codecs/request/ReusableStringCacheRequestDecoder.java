@@ -165,10 +165,10 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
         for(var op : counterItemsDecoder){
             var opType = op.operationType();
             var ttl = op.ttl();
+            var value = op.counterValue();
             var requestId = op.requestId();
             var cacheId = op.counterCacheId();
             var key = op.counterId();
-            var value = op.counterValue();
 
             ReusableString reusableCacheId = new ReusableString();
             ReusableString reusableKey = new ReusableString();

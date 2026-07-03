@@ -43,8 +43,7 @@ import java.util.function.Supplier;
  * The cache cluster service provides access to a CacheManager via an
  * Aeron cluster interface. It processes the core messages of the cache and
  * delegates those to the implementation of the
- * {@link CacheManager}. This level of abstraction is not responsible for
- * decoding of the actual messages.
+ * {@link CacheManager}.
  */
 @Log4j2
 public class AbstractCacheClusterService<I extends Reusable, K extends Reusable, V extends Reusable> implements ClusteredService {
@@ -146,7 +145,6 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
             handleCreateCache(session, buffer, offset, decoder, encoder, createCacheRequestDetails, cacheManager);
         } else if (templateId == schemaDetails.getAddCacheEntryId()) {
             handleAddCacheEntry(session, buffer, offset, decoder, addCacheEntryRequestDetails, cacheManager);
-            //handleAddCacheEntry(session, buffer, offset, countersCacheManager, addCountersCacheEntryRequestDetails, countersRequestDecoder);
         } else if (templateId == schemaDetails.getGetCacheEntryId()) {
             handleGetCacheEntry(session, buffer, offset, decoder, cacheManager);
         } else if (templateId == schemaDetails.getRemoveCacheEntryId()) {
@@ -374,10 +372,10 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session  Session requesting the add entry operation.
      * @param buffer   Buffer containing the message.
      * @param offset   Offset in the buffer at which the message is encoded.
-     * @param decoder_
+     * @param decoder  The request decoder to use.
      */
-    <VT extends Reusable> void handleGetCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheManager<I, K, VT> cacheManager) {
-        var requestDetails = getCacheEntryRequestDetails(session, buffer, offset, decoder_, getCacheEntryRequestDetails);
+    <VT extends Reusable> void handleGetCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheManager<I, K, VT> cacheManager) {
+        var requestDetails = getCacheEntryRequestDetails(session, buffer, offset, decoder, getCacheEntryRequestDetails);
         tracingService.startGetCacheEntry(requestDetails);
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
@@ -402,11 +400,11 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session  Session requesting the add entry operation.
      * @param buffer   Buffer containing the message.
      * @param offset   Offset in the buffer at which the message is encoded.
-     * @param decoder_
-     * @param encoder
+     * @param decoder                   The request decoder to use.
+     * @param encoder                   The response encoder to use.
      */
-    private <VT extends Reusable> void handleGetAllCacheEntries(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheResponseEncoder<I, K, V> encoder, CacheManager<I, K, VT> cacheManager) {
-        var requestDetails = getAllCacheEntriesRequestDetails(session, buffer, offset, decoder_, getAllCacheEntriesRequestDetails);
+    private <VT extends Reusable> void handleGetAllCacheEntries(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, V> encoder, CacheManager<I, K, VT> cacheManager) {
+        var requestDetails = getAllCacheEntriesRequestDetails(session, buffer, offset, decoder, getAllCacheEntriesRequestDetails);
         tracingService.startGetAllCacheEntries(requestDetails);
         I cacheId = requestDetails.getCacheId();
         var requestId = requestDetails.getRequestId();
@@ -425,9 +423,9 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session                   Session requesting the create cache operation.
      * @param buffer                    Buffer containing the message.
      * @param offset                    Offset in the buffer at which the message is encoded.
-     * @param decoder
-     * @param encoder
-     * @param createCacheRequestDetails
+     * @param decoder                   The request decoder to use.
+     * @param encoder                   The response encoder to use.
+     * @param createCacheRequestDetails The flyweight to populate.
      */
     <VT extends Reusable> void handleCreateCache(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, VT> encoder, CreateCacheRequestDetails<I> createCacheRequestDetails, CacheManager<I, K, VT> cacheManager) {
         CreateCacheRequestDetails<I> requestDetails = getCreateCacheRequestDetails(session, buffer, offset, decoder, createCacheRequestDetails);
@@ -453,11 +451,11 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session  Session requesting the get all stats operation.
      * @param buffer   Buffer containing the message.
      * @param offset   Offset in the buffer at which the message is encoded.
-     * @param decoder_
-     * @param encoder
+     * @param decoder                   The request decoder to use.
+     * @param encoder                   The response encoder to use.
      */
-    <VT extends Reusable> void handleGetCacheStats(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheResponseEncoder<I, K, V> encoder, CacheManager<I, K, VT> cacheManager) {
-        GetCacheStatsRequestDetails requestDetails = getCacheStatsRequestDetails(session, buffer, offset, decoder_, getCacheStatsRequestDetails);
+    <VT extends Reusable> void handleGetCacheStats(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, V> encoder, CacheManager<I, K, VT> cacheManager) {
+        GetCacheStatsRequestDetails requestDetails = getCacheStatsRequestDetails(session, buffer, offset, decoder, getCacheStatsRequestDetails);
         tracingService.startGetAllStatsRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
         log.info("Got request for all cache stats, request Id: {}", requestId);
@@ -473,11 +471,11 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session  Session requesting the get all stats operation.
      * @param buffer   Buffer containing the message.
      * @param offset   Offset in the buffer at which the message is encoded.
-     * @param decoder_
-     * @param encoder
+     * @param decoder                   The request decoder to use.
+     * @param encoder                   The response encoder to use.
      */
-    <VT extends Reusable> void handleCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheResponseEncoder<I, K, V> encoder, CacheSubscriptionService<I,K, VT> subscriptionService, CacheManager<I,K, VT> cacheManager) {
-        CacheSubscriptionRequestDetails<I> requestDetails = getCacheSubscriptionRequest(session, buffer, offset, decoder_, cacheSubscribeRequestDetails);
+    <VT extends Reusable> void handleCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, V> encoder, CacheSubscriptionService<I,K, VT> subscriptionService, CacheManager<I,K, VT> cacheManager) {
+        CacheSubscriptionRequestDetails<I> requestDetails = getCacheSubscriptionRequest(session, buffer, offset, decoder, cacheSubscribeRequestDetails);
         tracingService.startCacheSubscriptionRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
         var cacheIds = requestDetails.getCacheId();
@@ -521,11 +519,11 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session  Session requesting the get all stats operation.
      * @param buffer   Buffer containing the message.
      * @param offset   Offset in the buffer at which the message is encoded.
-     * @param decoder_
-     * @param encoder
+     * @param decoder                   The request decoder to use.
+     * @param encoder                   The response encoder to use.
      */
-    <VT extends Reusable> void handleCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheResponseEncoder<I, K, V> encoder, CacheSubscriptionService<I,K, VT> subscriptionService, CacheManager<I,K, VT> cacheManager) {
-        CacheUnsubscribeRequestDetails<I> requestDetails = getCacheUnsubscribeRequest(session, buffer, offset, decoder_, cacheUnsubscribeRequestDetails);
+    <VT extends Reusable> void handleCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, V> encoder, CacheSubscriptionService<I,K, VT> subscriptionService, CacheManager<I,K, VT> cacheManager) {
+        CacheUnsubscribeRequestDetails<I> requestDetails = getCacheUnsubscribeRequest(session, buffer, offset, decoder, cacheUnsubscribeRequestDetails);
         tracingService.startCacheUnsubscribeRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
         var cacheId = requestDetails.getCacheId();
@@ -538,7 +536,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Handle a bulk operation request.
      *
-     * @param encoder
+     * @param encoder  The response encoder to use.
      * @param session Session requesting the get all stats operation.
      * @param buffer  Buffer containing the message.
      * @param offset  Offset in the buffer at which the message is encoded.

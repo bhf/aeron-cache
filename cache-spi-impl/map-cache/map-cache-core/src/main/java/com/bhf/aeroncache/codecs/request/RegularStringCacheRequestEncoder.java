@@ -124,7 +124,7 @@ public class RegularStringCacheRequestEncoder implements CacheRequestEncoder<Str
                     .key(op.key())
                     .value(op.value());
         }
-
+        bulkOpsEncoder.counterItemsCount(0);
         bulkOpsEncoder.requestId(requestId);
         return bulkOpsEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
