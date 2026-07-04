@@ -5,6 +5,8 @@ import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseEncoder;
+import com.bhf.aeroncache.codecs.request.ReusableStringCountersCacheRequestDecoder;
+import com.bhf.aeroncache.codecs.response.ReusableStringCountersCacheResponseEncoder;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
 import com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest;
 import com.bhf.aeroncache.models.results.CacheOperationResultDetails;
@@ -108,6 +110,8 @@ public class TestUtils {
         var encoder = new ReusableStringCacheResponseEncoder();
         var decoder = new ReusableStringCacheRequestDecoder();
         var timersCodec = new ReusableStringTimersCodec(new NoOpMultiTypeStreamingHasher<>());
+        var responseEncoder = new ReusableStringCountersCacheResponseEncoder();
+        var requestDecoder = new ReusableStringCountersCacheRequestDecoder();
         return new MapCacheManagerFactory<>(SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
                 new ReusableStringCacheIdSnapshotCodec(new NoOpStreamingHasher<>()),
@@ -115,7 +119,7 @@ public class TestUtils {
                 new CountersCacheEntrySnapshotCodec(new NoOpStreamingHasher<>()),
                 encoder,
                 decoder,
-                timersCodec);
+                timersCodec, responseEncoder, requestDecoder);
     }
 
     public static void assertRequestIdCacheIdMatch(List<CacheOperationRequest> ops, List<CacheOperationResultDetails<ReusableString, ReusableString, ReusableString>> opResults, int i) {

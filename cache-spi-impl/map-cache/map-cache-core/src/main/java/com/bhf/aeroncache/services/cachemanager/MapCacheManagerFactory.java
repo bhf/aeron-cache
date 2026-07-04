@@ -2,7 +2,9 @@ package com.bhf.aeroncache.services.cachemanager;
 
 import com.bhf.aeroncache.codecs.CacheTimersCodec;
 import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
+import com.bhf.aeroncache.codecs.request.CountersCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
+import com.bhf.aeroncache.codecs.response.CountersCacheResponseEncoder;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
@@ -35,6 +37,9 @@ public class MapCacheManagerFactory<I extends Reusable, K extends Reusable, V ex
     private final CacheResponseEncoder<I,K,V> cacheResponseEncoder;
     private final CacheRequestDecoder<I,K,V> cacheRequestDecoder;
     private final CacheTimersCodec<I, K> timersCodec;
+    private final CountersCacheResponseEncoder<I,K,ReusableLong> countersCacheResponseEncoder;
+    private final CountersCacheRequestDecoder<I,K,ReusableLong> countersCacheRequestDecoder;
+
 
     @Override
     public CacheManager<I, K, V> getCacheManager() {
@@ -86,5 +91,15 @@ public class MapCacheManagerFactory<I extends Reusable, K extends Reusable, V ex
     @Override
     public Comparator<K> getKeyComparator() {
         return cacheEntrySnapshotCodec.getKeyComparator();
+    }
+
+    @Override
+    public CountersCacheRequestDecoder<I, K, ReusableLong> getCountersRequestDecoder() {
+        return this.countersCacheRequestDecoder;
+    }
+
+    @Override
+    public CountersCacheResponseEncoder<I, K, ReusableLong> getCountersResponseEncoder() {
+        return this.countersCacheResponseEncoder;
     }
 }

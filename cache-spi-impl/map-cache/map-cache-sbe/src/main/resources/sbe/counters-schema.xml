@@ -229,4 +229,17 @@
         <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
+    <sbe:message name="ClearCounterCacheRequest" id="46" semanticType="ClearCounterCacheRequest"
+                 description="Clear all counters in the specified cache">
+        <data name="cacheId" id="3" type="varStringEncoding"/>
+        <data name="requestId" id="5" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="ClearCounterCacheResponse" id="47" semanticType="ClearCounterCacheResponse"
+                 description="Response to clear a counter cache">
+        <field name="status" id="1" type="OperationStatus"/>
+        <data name="cacheId" id="2" type="varStringEncoding"/>
+        <data name="requestId" id="3" type="varStringEncoding"/>
+    </sbe:message>
+
 </sbe:messageSchema>

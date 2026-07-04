@@ -24,4 +24,21 @@ public interface CacheSchemaDetailsProvider {
 
     int getBulkCacheOpsRequestId();
 
+    int getCreateCounterCacheId();
+
+    int getAddCounterCacheEntryId();
+
+    int getGetCounterCacheEntryId();
+
+    int getRemoveCounterCacheEntryId();
+
+    int getClearCounterCacheId();
+
+    int getDeleteCounterCacheId();
+
+    int getGetAllCounterCacheEntriesId();
+
+    int getCounterCacheSubscriptionRequestId();
+
+    int getCounterCacheUnsubscribeRequestId();
 }

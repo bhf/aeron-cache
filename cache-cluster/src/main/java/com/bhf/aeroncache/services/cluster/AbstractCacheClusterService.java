@@ -84,8 +84,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
     private final CountersCacheManager<I, K, ReusableLong> countersCacheManager;
     protected CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService;
-    CountersCacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder;
-    CountersCacheResponseEncoder<I, K, ReusableLong> countersResponseEncoder;
+    private final CountersCacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder;
+    private final CountersCacheResponseEncoder<I, K, ReusableLong> countersResponseEncoder;
     private final AddCacheEntryRequestDetails<I, K, ReusableLong> addCountersCacheEntryRequestDetails;
     private final CacheSubscriptionResult<I,K, ReusableLong> countersSubscribeResult;
 
@@ -123,6 +123,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         this.encoder = cacheManagerFactory.getCacheResponseEncoder();
         this.keyComparator = cacheManagerFactory.getKeyComparator();
 
+        this.countersRequestDecoder = cacheManagerFactory.getCountersRequestDecoder();
+        this.countersResponseEncoder = cacheManagerFactory.getCountersResponseEncoder();
         this.addCountersCacheEntryRequestDetails = new AddCacheEntryRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get(), new ReusableLong());
         this.countersSubscribeResult = new CacheSubscriptionResult<>(cacheManagerFactory.getIndexSupplier().get());
     }
@@ -164,16 +166,28 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         } else if (templateId == schemaDetails.getBulkCacheOpsRequestId()) {
             handleBulkOpsRequest(session, buffer, offset, cacheManager, encoder);
         }
-
-
-
-
-        else if (templateId == 24) {
+        // Handle Cache Counter messages
+        else if (templateId == schemaDetails.getCreateCounterCacheId()) {
             handleCreateCache(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, createCacheRequestDetails, countersCacheManager);
-        }else {
-            throw new IllegalStateException("Unexpected value: " + templateId);
+        } else if (templateId == schemaDetails.getAddCounterCacheEntryId()) {
+            handleAddCacheEntry(session, buffer, offset, countersRequestDecoder, addCountersCacheEntryRequestDetails, countersCacheManager);
+        } else if (templateId == schemaDetails.getGetCounterCacheEntryId()) {
+            handleGetCacheEntry(session, buffer, offset, countersRequestDecoder, countersCacheManager);
+        } else if (templateId == schemaDetails.getRemoveCounterCacheEntryId()) {
+            handleRemoveCacheEntry(session, buffer, offset, countersRequestDecoder, countersCacheManager);
+        } else if (templateId == schemaDetails.getClearCounterCacheId()) {
+            handleClearCache(session, buffer, offset, countersRequestDecoder, countersCacheManager);
+        } else if (templateId == schemaDetails.getDeleteCounterCacheId()) {
+            handleDeleteCache(session, buffer, offset, countersRequestDecoder, countersCacheManager);
+        } else if (templateId == schemaDetails.getGetAllCounterCacheEntriesId()) {
+            handleGetAllCacheEntries(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersCacheManager);
+        } else if (templateId == schemaDetails.getCounterCacheSubscriptionRequestId()) {
+            handleCacheSubscriptionRequest(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersSubscriptionService, countersCacheManager);
+        } else if (templateId == schemaDetails.getCounterCacheUnsubscribeRequestId()) {
+            handleCacheUnsubscribeRequest(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersSubscriptionService, countersCacheManager);
+        } else {
+            log.warn("Unexpected message with ID: {}", templateId);
         }
-
     }
 
     /**
@@ -403,7 +417,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param decoder                   The request decoder to use.
      * @param encoder                   The response encoder to use.
      */
-    private <VT extends Reusable> void handleGetAllCacheEntries(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, V> encoder, CacheManager<I, K, VT> cacheManager) {
+    private <VT extends Reusable> void handleGetAllCacheEntries(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, VT> encoder, CacheManager<I, K, VT> cacheManager) {
         var requestDetails = getAllCacheEntriesRequestDetails(session, buffer, offset, decoder, getAllCacheEntriesRequestDetails);
         tracingService.startGetAllCacheEntries(requestDetails);
         I cacheId = requestDetails.getCacheId();
@@ -474,7 +488,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param decoder                   The request decoder to use.
      * @param encoder                   The response encoder to use.
      */
-    <VT extends Reusable> void handleCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, V> encoder, CacheSubscriptionService<I,K, VT> subscriptionService, CacheManager<I,K, VT> cacheManager) {
+    <VT extends Reusable> void handleCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, VT> encoder, CacheSubscriptionService<I,K, VT> subscriptionService, CacheManager<I,K, VT> cacheManager) {
         CacheSubscriptionRequestDetails<I> requestDetails = getCacheSubscriptionRequest(session, buffer, offset, decoder, cacheSubscribeRequestDetails);
         tracingService.startCacheSubscriptionRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
@@ -522,7 +536,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param decoder                   The request decoder to use.
      * @param encoder                   The response encoder to use.
      */
-    <VT extends Reusable> void handleCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, V> encoder, CacheSubscriptionService<I,K, VT> subscriptionService, CacheManager<I,K, VT> cacheManager) {
+    <VT extends Reusable> void handleCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, VT> encoder, CacheSubscriptionService<I,K, VT> subscriptionService, CacheManager<I,K, VT> cacheManager) {
         CacheUnsubscribeRequestDetails<I> requestDetails = getCacheUnsubscribeRequest(session, buffer, offset, decoder, cacheUnsubscribeRequestDetails);
         tracingService.startCacheUnsubscribeRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
@@ -859,7 +873,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session             The client session.
      * @param encoder
      */
-    protected <VT extends Reusable> void handlePostGetAllCacheEntries(I cacheId, GetAllCacheEntriesResult<I, K, VT> getAllCacheEntriesResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+    protected <VT extends Reusable> void handlePostGetAllCacheEntries(I cacheId, GetAllCacheEntriesResult<I, K, VT> getAllCacheEntriesResult, ClientSession session, CacheResponseEncoder<I, K, VT> encoder) {
         var length = encoder.encodeAllCacheEntriesResult(cacheId, getAllCacheEntriesResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
     }
@@ -938,7 +952,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session                   The client session.
      * @param encoder
      */
-    protected <VT extends Reusable> void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I,K,VT> subscriptionRequestResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+    protected <VT extends Reusable> void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I,K,VT> subscriptionRequestResult, ClientSession session, CacheResponseEncoder<I, K, VT> encoder) {
         encoder.encodeCacheSubscriptionResult(subscriptionRequestResult, egressBuffer, keyComparator, new HydratingPublicationConsumer() {
             @Override
             public void accept(MutableDirectBuffer mutableDirectBuffer) {
@@ -955,7 +969,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session             The client session.
      * @param encoder
      */
-    protected void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<I> unsubscribeResponse, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+    protected <VT extends Reusable> void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<I> unsubscribeResponse, ClientSession session, CacheResponseEncoder<I, K, VT> encoder) {
         var length = encoder.encodeCacheUnsubscribeResponse(unsubscribeResponse, egressBuffer);
         sendMessage(session, egressBuffer, length);
     }

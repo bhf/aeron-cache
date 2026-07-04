@@ -1,9 +1,11 @@
 package com.bhf.aeroncache.services.cachemanager;
 
 import com.bhf.aeroncache.codecs.CacheTimersCodec;
-import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
+import com.bhf.aeroncache.codecs.request.CountersCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
+import com.bhf.aeroncache.codecs.response.CountersCacheResponseEncoder;
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.ReusableLong;
 
 import java.util.Comparator;
@@ -30,4 +32,8 @@ public interface CacheManagerFactory<I extends Reusable, K extends Reusable, V e
     CacheSchemaDetailsProvider getSchemaDetailsProvider();
 
     Comparator<K> getKeyComparator();
+
+    CountersCacheRequestDecoder<I,K, ReusableLong> getCountersRequestDecoder();
+
+    CountersCacheResponseEncoder<I,K, ReusableLong> getCountersResponseEncoder();
 }
