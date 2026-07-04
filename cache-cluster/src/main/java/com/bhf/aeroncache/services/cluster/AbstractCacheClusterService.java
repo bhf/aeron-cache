@@ -234,10 +234,10 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session  Session requesting the delete operation.
      * @param buffer   Buffer containing the message.
      * @param offset   Offset in the buffer at which the message is encoded.
-     * @param decoder_
+     * @param decoder
      */
-    <VT extends Reusable> void handleDeleteCache(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder_, CacheManager<I, K, VT> cacheManager) {
-        var requestDetails = getDeleteCacheRequestDetails(session, buffer, offset, decoder_, deleteCacheRequestDetails);
+    <VT extends Reusable> void handleDeleteCache(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheManager<I, K, VT> cacheManager) {
+        var requestDetails = getDeleteCacheRequestDetails(session, buffer, offset, decoder, deleteCacheRequestDetails);
         tracingService.startHandleDeleteCache(requestDetails);
         I cacheId = requestDetails.getCacheId();
         log.info("DELETE CACHE ID ON REQUEST {}", cacheId);
