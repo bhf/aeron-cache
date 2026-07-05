@@ -62,7 +62,7 @@ class BulkPublishRBPublisherTest {
         String cacheId = "cacheId";
         String key = "key-"+ordinal;
         String value = "value";
-        return new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, opRequestId, cacheId, key, value);
+        return new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, 0, opRequestId, cacheId, key, value);
     }
 
 }

@@ -119,12 +119,13 @@ public class RegularStringCacheRequestEncoder implements CacheRequestEncoder<Str
             BulkOperationType opType = BulkOperationType.valueOf(op.operationType().toString());
             itemsEncoder.operationType(opType)
                     .ttl(op.ttl())
+                    .counterValue(0)
                     .requestId(op.requestId())
                     .cacheId(op.cacheId())
                     .key(op.key())
                     .value(op.value());
         }
-        bulkOpsEncoder.counterItemsCount(0);
+
         bulkOpsEncoder.requestId(requestId);
         return bulkOpsEncoder.encodedLength()+ headerEncoder.encodedLength();
     }

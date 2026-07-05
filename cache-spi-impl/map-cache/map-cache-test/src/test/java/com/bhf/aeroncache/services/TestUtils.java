@@ -129,6 +129,6 @@ public class TestUtils {
 
     public static CacheOperationRequest getCacheOperation(BulkOperationType opType, String cacheId, String key, String value, long ttl) {
         String opRequestId = UUID.randomUUID().toString();
-        return new CacheOperationRequest(opType, ttl, opRequestId, cacheId, key, value);
+        return new CacheOperationRequest(opType, ttl, 0, opRequestId, cacheId, key, value);
     }
 }

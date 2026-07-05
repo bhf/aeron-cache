@@ -67,7 +67,7 @@ class AbstractCacheClusterServiceTest {
         Supplier<ReusableString> stringSupplier = ReusableString::new;
         when(cacheManagerFactory.getIndexSupplier()).thenReturn(stringSupplier);
         when(cacheManagerFactory.getKeySupplier()).thenReturn(stringSupplier);
-        when(cacheManagerFactory.getValueSupplier()).thenReturn(stringSupplier);
+        when(cacheManagerFactory.getValueSupplier()).thenReturn(ReusableString::new);
         when(cacheManagerFactory.getCacheManager()).thenReturn(cacheManager);
         when(cacheManagerFactory.getSchemaDetailsProvider()).thenReturn(schemaDetailsProvider);
 

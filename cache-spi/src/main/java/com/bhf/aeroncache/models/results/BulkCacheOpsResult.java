@@ -94,7 +94,7 @@ public class BulkCacheOpsResult <I extends Reusable, K extends Reusable, V exten
         operations.add(cacheOpResult);
     }
 
-    public void addResult(GetCacheEntryResult<I, K, V> result) {
+    public <VT extends Reusable> void addResult(GetCacheEntryResult<I, K, VT> result) {
         var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
         cacheOpResult.requestId.copyFrom(result.requestId);
         cacheOpResult.getCacheId().copyFrom(result.getCacheId());
