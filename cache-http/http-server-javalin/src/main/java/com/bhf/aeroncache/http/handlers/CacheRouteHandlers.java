@@ -7,15 +7,12 @@ import com.bhf.aeroncache.http.requests.PutTimedItemRequest;
 import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.http.responses.CacheStats;
 import com.bhf.aeroncache.models.ErrorMessages;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
-import com.bhf.aeroncache.models.bulk.responses.BulkCacheOpsResponse;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import io.javalin.http.Context;
 import io.opentelemetry.api.trace.Span;
 import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +41,7 @@ public class CacheRouteHandlers {
             CompletableFuture<CacheStats> future = new CompletableFuture<>();
             Consumer<CacheStatsResult<ReusableString>> consumer = HTTPConsumerUtils.getCacheStatsResultConsumer(future, HttpApplication.statsTracker, HttpApplication.cacheToSize, HttpApplication.allCaches);
 
-            CompletableFuture.runAsync(() -> HttpApplication.getObservingPublisher().getAllCacheStats(requestId, consumer));
+            CompletableFuture.runAsync(() -> HttpApplication.getCachePublisher().getAllCacheStats(requestId, consumer));
             var response = future.get();
 
             ctx.status(HTTPStatusUtils.OK);
@@ -90,7 +87,7 @@ public class CacheRouteHandlers {
             var requestId = getRequestId(ctx);
             CompletableFuture<DeleteCacheResponse> future = new CompletableFuture<>();
             Consumer<DeleteCacheResult<ReusableString>> consumer = HTTPConsumerUtils.getDeleteCacheResultConsumer(future);
-            CompletableFuture.runAsync(() -> HttpApplication.getObservingPublisher().deleteCache(requestId, cacheId, consumer));
+            CompletableFuture.runAsync(() -> HttpApplication.getCachePublisher().deleteCache(requestId, cacheId, consumer));
 
             var response = future.get();
 
@@ -128,7 +125,7 @@ public class CacheRouteHandlers {
 
             CompletableFuture<DeleteItemResponse> future = new CompletableFuture<>();
             Consumer<RemoveCacheEntryResult<ReusableString, ReusableString>> consumer = HTTPConsumerUtils.getRemoveCacheEntryResultConsumer(future);
-            CompletableFuture.runAsync(() -> HttpApplication.getObservingPublisher().removeCacheEntry(requestId, cacheId, key, consumer));
+            CompletableFuture.runAsync(() -> HttpApplication.getCachePublisher().removeCacheEntry(requestId, cacheId, key, consumer));
 
             var response = future.get();
 
@@ -163,7 +160,7 @@ public class CacheRouteHandlers {
             var requestId = getRequestId(ctx);
             CompletableFuture<ClearCacheResponse> future = new CompletableFuture<>();
             Consumer<ClearCacheResult<ReusableString>> consumer = HTTPConsumerUtils.getClearCacheResultConsumer(cacheId, future);
-            CompletableFuture.runAsync(() -> HttpApplication.getObservingPublisher().clearCache(requestId, cacheId, consumer));
+            CompletableFuture.runAsync(() -> HttpApplication.getCachePublisher().clearCache(requestId, cacheId, consumer));
 
             var response = future.get();
             ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
@@ -193,7 +190,7 @@ public class CacheRouteHandlers {
             var requestId = getRequestId(ctx);
             CompletableFuture<GetItemResponse> future = new CompletableFuture<>();
             Consumer<GetCacheEntryResult<ReusableString,ReusableString,ReusableString>> consumer = HTTPConsumerUtils.getGetCacheEntryResultConsumer(future);
-            CompletableFuture.runAsync(() -> HttpApplication.getObservingPublisher().getCacheEntry(requestId, cacheId, key, consumer));
+            CompletableFuture.runAsync(() -> HttpApplication.getCachePublisher().getCacheEntry(requestId, cacheId, key, consumer));
 
             var response = future.get();
             ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
@@ -226,7 +223,7 @@ public class CacheRouteHandlers {
             CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
             Consumer<AddCacheEntryResult<ReusableString, ReusableString>> consumer = HTTPConsumerUtils.getAddCacheEntryResultConsumer(request.key(), future);
             long ttl = 0;
-            CompletableFuture.runAsync(() -> HttpApplication.getObservingPublisher().addCacheEntry(requestId, cacheId,
+            CompletableFuture.runAsync(() -> HttpApplication.getCachePublisher().addCacheEntry(requestId, cacheId,
                     request.key(), request.value(), ttl, consumer));
 
             var response = future.get();
@@ -263,7 +260,7 @@ public class CacheRouteHandlers {
             CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
             Consumer<AddCacheEntryResult<ReusableString, ReusableString>> consumer = HTTPConsumerUtils.getAddCacheEntryResultConsumer(request.key(), future);
             long ttl = request.ttl();
-            CompletableFuture.runAsync(() -> HttpApplication.getObservingPublisher().addCacheEntry(requestId, cacheId,
+            CompletableFuture.runAsync(() -> HttpApplication.getCachePublisher().addCacheEntry(requestId, cacheId,
                     request.key(), request.value(), ttl, consumer));
 
             var response = future.get();
@@ -276,36 +273,6 @@ public class CacheRouteHandlers {
             ctx.json(response);
         } catch (Exception e) {
             var errorMsg = "Badly formed request to put timed item from request: " + ctx.body();
-            log.warn(errorMsg);
-            HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
-            ctx.status(HTTPStatusUtils.BAD_REQUEST);
-            ctx.json(badRequest);
-        }
-    }
-
-    /**
-     * Handle a request to perform bulk cache operations.
-     *
-     * @param ctx The context.
-     */
-    public static void handleBulkOpsRequest(@NotNull Context ctx) {
-        try {
-            var request = ctx.bodyAsClass(BulkCacheOpsRequest.class);
-            log.info("Got bulk cache ops request: {}", request);
-
-            var requestId = getRequestId(ctx);
-            CompletableFuture<BulkCacheOpsResponse> future = new CompletableFuture<>();
-            Consumer<BulkCacheOpsResult<ReusableString, ReusableString, ReusableString>> consumer = HTTPConsumerUtils.getBulkCacheOpsResultConsumer(future, request.requestId());
-
-            CompletableFuture.runAsync(() -> HttpApplication.getObservingPublisher().sendBulkOperationsRequest(requestId, request, consumer));
-
-            var response = future.get();
-
-            ctx.status(HTTPStatusUtils.OK);
-            ctx.json(response);
-        } catch (Exception e) {
-            var errorMsg = "Badly formed bulk operation request: " + ctx.body();
             log.warn(errorMsg);
             HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
@@ -346,7 +313,7 @@ public class CacheRouteHandlers {
 
             CompletableFuture<CreateCacheResponse> future = new CompletableFuture<>();
             Consumer<CreateCacheResult<ReusableString>> consumer = HTTPConsumerUtils.getCreateCacheResultConsumer(future);
-            CompletableFuture.runAsync(() -> HttpApplication.getObservingPublisher().sendCreateCache(requestId, request.cacheId(), consumer));
+            CompletableFuture.runAsync(() -> HttpApplication.getCachePublisher().sendCreateCache(requestId, request.cacheId(), consumer));
 
             var response = future.get();
 
@@ -380,7 +347,7 @@ public class CacheRouteHandlers {
             var requestId = getRequestId(ctx);
             CompletableFuture<GetCacheResponse> future = new CompletableFuture<>();
             var consumer = HTTPConsumerUtils.getGetAllCacheEntriesResultConsumer(future);
-            CompletableFuture.runAsync(() -> HttpApplication.getObservingPublisher().getCacheEntries(requestId, cacheId, consumer));
+            CompletableFuture.runAsync(() -> HttpApplication.getCachePublisher().getCacheEntries(requestId, cacheId, consumer));
 
             var response = future.get();
             ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));

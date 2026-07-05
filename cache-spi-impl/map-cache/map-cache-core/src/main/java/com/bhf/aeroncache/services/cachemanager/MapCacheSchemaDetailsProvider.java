@@ -103,4 +103,19 @@ public class MapCacheSchemaDetailsProvider implements CacheSchemaDetailsProvider
     public int getCounterCacheUnsubscribeRequestId() {
         return CounterCacheUnsubscribeRequestEncoder.TEMPLATE_ID;
     }
+
+    @Override
+    public int getCounterIncrementRequestId() {
+        return IncrementCounterRequestEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getCounterDecrementRequestId() {
+        return DecrementCounterRequestEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getSetCounterRequestId() {
+        return SetCounterRequestEncoder.TEMPLATE_ID;
+    }
 }

@@ -4,8 +4,6 @@ import com.bhf.aeroncache.annotations.Flyweight;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.ReusableLong;
-import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
-import com.bhf.aeroncache.models.bulk.requests.CountersBulkOperationType;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

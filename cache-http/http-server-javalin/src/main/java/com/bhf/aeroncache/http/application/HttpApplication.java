@@ -3,11 +3,16 @@ package com.bhf.aeroncache.http.application;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.handlers.CacheRouteHandlers;
+import com.bhf.aeroncache.http.handlers.HTTPConsumerUtils;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
 import com.bhf.aeroncache.http.responses.CacheDetails;
 import com.bhf.aeroncache.http.responses.ClusterToolsResponse;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
+import com.bhf.aeroncache.models.ReusableLong;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.responses.BulkCacheOpsResponse;
+import com.bhf.aeroncache.models.results.BulkCacheOpsResult;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.services.ReconnectingAeronCache;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
@@ -62,10 +67,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+
+import static com.bhf.aeroncache.http.handlers.CacheRouteHandlers.getRequestId;
 
 @Log4j2
 public class HttpApplication {
@@ -76,14 +84,16 @@ public class HttpApplication {
     @Setter
     private static int DEFAULT_HTTP_PORT = 7070;
     private static final String DEFAULT_CLUSTER_TOOLS_ENDPOINT = "http://localhost:7080/api/v1/clustertools/";
-    private static final String API_PREFIX = "/api/v1/cache/";
+    private static final String CACHE_API_PREFIX = "/api/v1/cache/";
+    private static final String COUNTERS_API_PREFIX = "/api/v1/counters/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
 
     private static AeronCacheClusterListener client;
     @Getter
-    private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString> observingPublisher;
+    private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString> cachePublisher;
+    private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableLong> countersPublisher;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     public static final CacheStatsTracker statsTracker = new CacheStatsTracker();
@@ -135,17 +145,17 @@ public class HttpApplication {
 
                 BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cache,
                         HttpIdleStrategies.blockingPublisherIdleStrategy.get(), clientFactory.getCacheRequestEncoder());
-                observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher,
+                cachePublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher,
                         blockingRequestPublisher);
             } else {
                 // Drop normalised cache requests onto an Agrona RB for encoding
                 // to SBE on the Agent thread
                 CacheRequestPublisher rbPublisher = new RBCacheRequestPublisher(rb);
-                observingPublisher = new ObservingCacheRequestPublisher(rbPublisher);
+                cachePublisher = new ObservingCacheRequestPublisher(rbPublisher);
             }
 
             client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);
-            client.setCacheResultsCallbacks(observingPublisher);
+            client.setCacheResultsCallbacks(cachePublisher);
 
             var podName = System.getenv("POD_ADDRESS");
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
@@ -321,16 +331,16 @@ public class HttpApplication {
 
         return Javalin.create(config)
                 .beforeMatched(HttpApplication::checkClusterConnectivity)
-                .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
-                .post(API_PREFIX, CacheRouteHandlers::handleCreateCacheRequest)
-                .post(API_PREFIX+"bulkops/", CacheRouteHandlers::handleBulkOpsRequest)
-                .get(API_PREFIX + "<cacheId>/<key>", CacheRouteHandlers::handleGetItemRequest)
-                .get(API_PREFIX + "<cacheId>", CacheRouteHandlers::handleGetCacheRequest)
-                .post(API_PREFIX + "timed/<cacheId>", CacheRouteHandlers::handlePutTimedItemRequest)
-                .post(API_PREFIX + "<cacheId>", CacheRouteHandlers::handlePutItemRequest)
-                .delete(API_PREFIX + "<cacheId>/<key>", CacheRouteHandlers::handleDeleteItemRequest)
-                .delete(API_PREFIX + "<cacheId>", CacheRouteHandlers::handleDeleteCacheRequest)
-                .patch(API_PREFIX + "<cacheId>", CacheRouteHandlers::handleClearCacheRequest)
+                .before(CACHE_API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
+                .post(CACHE_API_PREFIX, CacheRouteHandlers::handleCreateCacheRequest)
+                .post(CACHE_API_PREFIX + "bulkops/", HttpApplication::handleBulkOpsRequest)
+                .get(CACHE_API_PREFIX + "<cacheId>/<key>", CacheRouteHandlers::handleGetItemRequest)
+                .get(CACHE_API_PREFIX + "<cacheId>", CacheRouteHandlers::handleGetCacheRequest)
+                .post(CACHE_API_PREFIX + "timed/<cacheId>", CacheRouteHandlers::handlePutTimedItemRequest)
+                .post(CACHE_API_PREFIX + "<cacheId>", CacheRouteHandlers::handlePutItemRequest)
+                .delete(CACHE_API_PREFIX + "<cacheId>/<key>", CacheRouteHandlers::handleDeleteItemRequest)
+                .delete(CACHE_API_PREFIX + "<cacheId>", CacheRouteHandlers::handleDeleteCacheRequest)
+                .patch(CACHE_API_PREFIX + "<cacheId>", CacheRouteHandlers::handleClearCacheRequest)
                 .get("/api/v1/caches", CacheRouteHandlers::handleGetCachesRequest)
                 .get("/api/v1/stats", CacheRouteHandlers::handleGetStatsRequest)
                 .post("/api/v1/shutdown", HttpApplication::handleShutdownCluster)
@@ -341,6 +351,37 @@ public class HttpApplication {
                 .post("baselinePost", HttpApplication::postActionBaseline)
                 .get("baselineGet", HttpApplication::getActionBaseline)
                 .start(port);
+    }
+
+
+    /**
+     * Handle a request to perform bulk cache operations.
+     *
+     * @param ctx The context.
+     */
+    public static void handleBulkOpsRequest(@NotNull Context ctx) {
+        try {
+            var request = ctx.bodyAsClass(BulkCacheOpsRequest.class);
+            log.info("Got bulk cache ops request: {}", request);
+
+            var requestId = getRequestId(ctx);
+            CompletableFuture<BulkCacheOpsResponse> future = new CompletableFuture<>();
+            Consumer<BulkCacheOpsResult<ReusableString, ReusableString, ReusableString>> consumer = HTTPConsumerUtils.getBulkCacheOpsResultConsumer(future, request.requestId());
+
+            CompletableFuture.runAsync(() -> HttpApplication.getCachePublisher().sendBulkOperationsRequest(requestId, request, consumer));
+
+            var response = future.get();
+
+            ctx.status(HTTPStatusUtils.OK);
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = "Badly formed bulk operation request: " + ctx.body();
+            log.warn(errorMsg);
+            HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
     }
 
     private static void handleShutdownCluster(@NotNull Context context) {

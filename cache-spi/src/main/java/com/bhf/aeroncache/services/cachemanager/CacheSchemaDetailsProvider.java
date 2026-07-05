@@ -2,6 +2,8 @@ package com.bhf.aeroncache.services.cachemanager;
 
 public interface CacheSchemaDetailsProvider {
 
+    // Cache TIDs
+
     int getCreateCacheId();
 
     int getAddCacheEntryId();
@@ -24,6 +26,8 @@ public interface CacheSchemaDetailsProvider {
 
     int getBulkCacheOpsRequestId();
 
+    // Counters TIDs
+
     int getCreateCounterCacheId();
 
     int getAddCounterCacheEntryId();
@@ -41,4 +45,10 @@ public interface CacheSchemaDetailsProvider {
     int getCounterCacheSubscriptionRequestId();
 
     int getCounterCacheUnsubscribeRequestId();
+
+    int getCounterIncrementRequestId();
+
+    int getCounterDecrementRequestId();
+
+    int getSetCounterRequestId();
 }

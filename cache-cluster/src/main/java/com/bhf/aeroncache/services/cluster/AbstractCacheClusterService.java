@@ -185,7 +185,14 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
             handleCacheSubscriptionRequest(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersSubscriptionService, countersCacheManager);
         } else if (templateId == schemaDetails.getCounterCacheUnsubscribeRequestId()) {
             handleCacheUnsubscribeRequest(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersSubscriptionService, countersCacheManager);
-        } else {
+        } else if (templateId == schemaDetails.getCounterIncrementRequestId()) {
+            handleIncrementCounterRequest(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersSubscriptionService, countersCacheManager);
+        } else if (templateId == schemaDetails.getCounterDecrementRequestId()) {
+            handleDecrementCounterRequest(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersSubscriptionService, countersCacheManager);
+        } else if (templateId == schemaDetails.getSetCounterRequestId()) {
+            handleSetCounterRequest(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersSubscriptionService, countersCacheManager);
+        }
+        else {
             log.warn("Unexpected message with ID: {}", templateId);
         }
     }
@@ -226,6 +233,63 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         log.info("Starting subscription service");
         this.subscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscribeResult, unsubscribeResult, indexSupplier);
         this.countersSubscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, countersSubscribeResult, unsubscribeResult, indexSupplier);
+    }
+
+    /**
+     * Handle setting a counter's value.
+     *
+     * @param session  Session requesting the delete operation.
+     * @param buffer   Buffer containing the message.
+     * @param offset   Offset in the buffer at which the message is encoded.
+     * @param countersRequestDecoder
+     * @param countersResponseEncoder
+     * @param countersSubscriptionService
+     * @param countersCacheManager
+     */
+    private void handleSetCounterRequest(ClientSession session, DirectBuffer buffer, int offset,
+                                         CountersCacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder,
+                                         CountersCacheResponseEncoder<I, K, ReusableLong> countersResponseEncoder,
+                                         CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService,
+                                         CountersCacheManager<I, K, ReusableLong> countersCacheManager) {
+
+    }
+
+    /**
+     * Handle decrementing a counter's value by a specified amount.
+     *
+     * @param session  Session requesting the delete operation.
+     * @param buffer   Buffer containing the message.
+     * @param offset   Offset in the buffer at which the message is encoded.
+     * @param countersRequestDecoder
+     * @param countersResponseEncoder
+     * @param countersSubscriptionService
+     * @param countersCacheManager
+     */
+    private void handleDecrementCounterRequest(ClientSession session, DirectBuffer buffer, int offset,
+                                               CountersCacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder,
+                                               CountersCacheResponseEncoder<I, K, ReusableLong> countersResponseEncoder,
+                                               CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService,
+                                               CountersCacheManager<I, K, ReusableLong> countersCacheManager) {
+
+    }
+
+    /**
+     * Handle incrementing a counter's value by a specified amount.
+     *
+     * @param session  Session requesting the delete operation.
+     * @param buffer   Buffer containing the message.
+     * @param offset   Offset in the buffer at which the message is encoded.
+     * @param countersRequestDecoder
+     * @param countersResponseEncoder
+     * @param countersSubscriptionService
+     * @param countersCacheManager
+     */
+    private void handleIncrementCounterRequest(ClientSession session, DirectBuffer buffer, int offset,
+                                               CountersCacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder,
+                                               CountersCacheResponseEncoder<I, K, ReusableLong> countersResponseEncoder,
+                                               CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService,
+                                               CountersCacheManager<I, K, ReusableLong> countersCacheManager) {
+
     }
 
     /**
@@ -578,10 +642,33 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
                 case GET_ITEM -> handleBulkOpGetItem(op, bulkOpsResult, cacheManager);
                 case DELETE_CACHE -> handleBulkOpDeleteCache(op, bulkOpsResult, cacheManager);
                 case REMOVE_ITEM -> handleBulkOpRemoveItem(op, bulkOpsResult, cacheManager);
+
+                case CREATE_COUNTER_CACHE -> handleBulkOpCreateCache(op, bulkOpsResult, countersCacheManager);
+                case ADD_COUNTER -> handleBulkOpAddItem(op, bulkOpsResult, countersCacheManager);
+                case CLEAR_COUNTER_CACHE -> handleBulkOpClearCache(op, bulkOpsResult, countersCacheManager);
+                case GET_COUNTER -> handleBulkOpGetItem(op, bulkOpsResult, countersCacheManager);
+                case DELETE_COUNTER_CACHE -> handleBulkOpDeleteCache(op, bulkOpsResult, countersCacheManager);
+                case REMOVE_COUNTER -> handleBulkOpRemoveItem(op, bulkOpsResult, countersCacheManager);
+
+                case INCREMENT_COUNTER -> handleBulkOpIncrementCounter(op, bulkOpsResult, countersCacheManager);
+                case DECREMENT_COUNTER -> handleBulkOpDecrementCounter(op, bulkOpsResult, countersCacheManager);
+                case SET_COUNTER -> handleBulkOpSetCounter(op, bulkOpsResult, countersCacheManager);
             }
         }
 
         return bulkOpsResult;
+    }
+
+    private void handleBulkOpSetCounter(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CountersCacheManager<I, K, ReusableLong> countersCacheManager) {
+
+    }
+
+    private void handleBulkOpDecrementCounter(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CountersCacheManager<I, K, ReusableLong> countersCacheManager) {
+        
+    }
+
+    private void handleBulkOpIncrementCounter(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CountersCacheManager<I, K, ReusableLong> countersCacheManager) {
+        
     }
 
     private <VT extends Reusable> void handleBulkOpRemoveItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, VT> cacheManager) {

@@ -2,7 +2,6 @@ package com.bhf.aeroncache.codecs.request;
 
 import com.bhf.aeroncache.messages.*;
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.ReusableLong;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.types.ReusableString;
 import org.agrona.DirectBuffer;
@@ -154,39 +153,15 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
         var itemsDecoder = bulkOperationRequestDecoder.items();
         decodeCacheOperations(bulkCacheOpsRequestDetails, itemsDecoder);
 
-        var counterItemsDecoder = bulkOperationRequestDecoder.counterItems();
-        decodeCounterOperations(bulkCacheOpsRequestDetails, counterItemsDecoder);
-
         var requestId = bulkOperationRequestDecoder.requestId();
         bulkCacheOpsRequestDetails.setRequestId(requestId);
-    }
-
-    private static void decodeCounterOperations(BulkCacheOpsRequestDetails<ReusableString, ReusableString, ReusableString> bulkCacheOpsRequestDetails, BulkOperationRequestDecoder.CounterItemsDecoder counterItemsDecoder) {
-        for(var op : counterItemsDecoder){
-            var opType = op.operationType();
-            var ttl = op.ttl();
-            var value = op.counterValue();
-            var requestId = op.requestId();
-            var cacheId = op.counterCacheId();
-            var key = op.counterId();
-
-            ReusableString reusableCacheId = new ReusableString();
-            ReusableString reusableKey = new ReusableString();
-            ReusableLong reusableValue = new ReusableLong();
-            reusableCacheId.copyFrom(cacheId);
-            reusableKey.copyFrom(key);
-            reusableValue.copyFrom(value);
-
-            bulkCacheOpsRequestDetails.addCounterOperation(
-                    com.bhf.aeroncache.models.bulk.requests.CountersBulkOperationType.valueOf(opType.toString()),
-                    ttl, requestId, reusableCacheId, reusableKey, reusableValue);
-        }
     }
 
     private static void decodeCacheOperations(BulkCacheOpsRequestDetails<ReusableString, ReusableString, ReusableString> bulkCacheOpsRequestDetails, BulkOperationRequestDecoder.ItemsDecoder itemsDecoder) {
         for(var op: itemsDecoder) {
             var opType = op.operationType();
             var ttl = op.ttl();
+            var counterValue = op.counterValue();
             var requestId = op.requestId();
             var cacheId = op.cacheId();
             var key = op.key();
@@ -200,7 +175,7 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
 
             bulkCacheOpsRequestDetails.addOperation(
                     com.bhf.aeroncache.models.bulk.requests.BulkOperationType.valueOf(opType.toString()),
-                    ttl, requestId, reusableCacheId, reusableKey, reusableValue);
+                    ttl, counterValue, requestId, reusableCacheId, reusableKey, reusableValue);
         }
     }
 

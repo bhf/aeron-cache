@@ -52,9 +52,9 @@ public abstract class AbstractMultiStreamBulkOpsTests {
         List<CacheOperationRequest> operations = new ArrayList<>();
         int i=0;
         for (; i < numItems; i++) {
-            operations.add(new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, "req-" + i, KNOWN_CACHE_ID, KNOWN_KEY + "-" + i, KNOWN_VALUE + "-" + i));
+            operations.add(new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0,0,  "req-" + i, KNOWN_CACHE_ID, KNOWN_KEY + "-" + i, KNOWN_VALUE + "-" + i));
         }
-        operations.add(new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, "req-" + i, NON_SUBSCRIBED_CACHE_ID, KNOWN_KEY + "-" + i, KNOWN_VALUE + "-" + i));
+        operations.add(new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0,0,  "req-" + i, NON_SUBSCRIBED_CACHE_ID, KNOWN_KEY + "-" + i, KNOWN_VALUE + "-" + i));
         var bulkRequest = new BulkCacheOpsRequest("bulk-request-1", operations);
 
         // Act
@@ -91,10 +91,10 @@ public abstract class AbstractMultiStreamBulkOpsTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, numItems);
 
         var operations = List.of(
-                new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, firstValue),
-                new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, secondValue),
-                new CacheOperationRequest(BulkOperationType.REMOVE_ITEM, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, null),
-                new CacheOperationRequest(BulkOperationType.CLEAR_CACHE, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, null, null)
+                new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, firstValue),
+                new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, secondValue),
+                new CacheOperationRequest(BulkOperationType.REMOVE_ITEM, 0, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, null),
+                new CacheOperationRequest(BulkOperationType.CLEAR_CACHE, 0, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, null, null)
         );
         var bulkRequest = new BulkCacheOpsRequest("bulk-request-mixed", operations);
 
@@ -149,7 +149,7 @@ public abstract class AbstractMultiStreamBulkOpsTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, numExpectedEvents);
 
         var operations = List.of(
-                new CacheOperationRequest(BulkOperationType.ADD_ITEM, ttlMs, UUID.randomUUID().toString(), KNOWN_CACHE_ID, ttlKey, ttlValue)
+                new CacheOperationRequest(BulkOperationType.ADD_ITEM, ttlMs,0,  UUID.randomUUID().toString(), KNOWN_CACHE_ID, ttlKey, ttlValue)
         );
         var bulkRequest = new BulkCacheOpsRequest("bulk-request-ttl", operations);
 

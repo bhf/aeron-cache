@@ -22,6 +22,7 @@ public class CacheOperationRequestDetails <I extends Reusable, K extends Reusabl
     final I cacheId;
     final K key;
     final V value;
+    long counterValue;
 
     public CacheOperationRequestDetails(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier) {
         cacheId = indexSupplier.get();
@@ -45,6 +46,7 @@ public class CacheOperationRequestDetails <I extends Reusable, K extends Reusabl
         cacheId.clear();
         key.clear();
         value.clear();
+        counterValue = 0;
     }
 
     @Override
@@ -55,6 +57,7 @@ public class CacheOperationRequestDetails <I extends Reusable, K extends Reusabl
         this.cacheId.copyFrom(source.cacheId);
         this.key.copyFrom(source.key);
         this.value.copyFrom(source.value);
+        this.counterValue = source.counterValue;
     }
 
     @Override
