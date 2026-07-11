@@ -79,6 +79,7 @@
         <field name="status" id="1" type="OperationStatus"/>
         <data name="cacheId" id="2" type="varStringEncoding"/>
         <data name="requestId" id="3" type="varStringEncoding"/>
+        <data name="counterId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="RemoveCounterRequest" id="28" semanticType="RemoveCounterRequest"
@@ -94,6 +95,7 @@
         <field name="status" id="1" type="OperationStatus"/>
         <data name="cacheId" id="2" type="varStringEncoding"/>
         <data name="requestId" id="3" type="varStringEncoding"/>
+        <data name="counterId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="IncrementCounterRequest" id="30" semanticType="IncrementCounterRequest"
@@ -111,6 +113,7 @@
         <field name="status" id="1" type="OperationStatus"/>
         <data name="cacheId" id="2" type="varStringEncoding"/>
         <data name="requestId" id="3" type="varStringEncoding"/>
+        <data name="counterId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="DecrementCounterRequest" id="32" semanticType="DecrementCounterRequest"
@@ -128,6 +131,7 @@
         <field name="status" id="1" type="OperationStatus"/>
         <data name="cacheId" id="2" type="varStringEncoding"/>
         <data name="requestId" id="3" type="varStringEncoding"/>
+        <data name="counterId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="SetCounterRequest" id="34" semanticType="SetCounterRequest"
@@ -145,6 +149,7 @@
         <field name="status" id="1" type="OperationStatus"/>
         <data name="cacheId" id="2" type="varStringEncoding"/>
         <data name="requestId" id="3" type="varStringEncoding"/>
+        <data name="counterId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
     <sbe:message name="DeleteCounterCache" id="36" semanticType="DeleteCounterCache"

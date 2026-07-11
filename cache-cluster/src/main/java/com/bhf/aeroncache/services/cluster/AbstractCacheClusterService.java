@@ -89,6 +89,12 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     private final AddCacheEntryRequestDetails<I, K, ReusableLong> addCountersCacheEntryRequestDetails;
     private final CacheSubscriptionResult<I,K, ReusableLong> countersSubscribeResult;
     private final Supplier<ReusableLong> counterCacheValueSupplier = ReusableLong::new;
+    private final IncrementCounterRequestDetails<I, K> incrementCounterRequestDetails;
+    private final DecrementCounterRequestDetails<I, K> decrementCounterRequestDetails;
+    private final SetCounterRequestDetails<I, K> setCounterRequestDetails;
+    private final IncrementCounterResult<I, K> incrementCounterResult;
+    private final DecrementCounterResult<I, K> decrementCounterResult;
+    private final SetCounterResult<I, K> setCounterResult;
 
     @Setter
     @Getter
@@ -129,6 +135,13 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         this.countersResponseEncoder = cacheManagerFactory.getCountersResponseEncoder();
         this.addCountersCacheEntryRequestDetails = new AddCacheEntryRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get(), new ReusableLong());
         this.countersSubscribeResult = new CacheSubscriptionResult<>(cacheManagerFactory.getIndexSupplier().get());
+
+        this.incrementCounterRequestDetails = new IncrementCounterRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        this.decrementCounterRequestDetails = new DecrementCounterRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        this.setCounterRequestDetails = new SetCounterRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        this.incrementCounterResult = new IncrementCounterResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        this.decrementCounterResult = new DecrementCounterResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        this.setCounterResult = new SetCounterResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
     }
 
     /**
