@@ -1,30 +1,24 @@
 package com.bhf.aeroncache.services.cluster;
 
-import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
-import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
-import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
-import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
+import com.bhf.aeroncache.application.TestUtils;
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.AddCacheEntryRequestDetails;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
-import com.bhf.aeroncache.types.ReusableString;
-import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.cluster.service.Cluster;
 import io.aeron.logbuffer.Header;
+import lombok.RequiredArgsConstructor;
+import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.BackoffIdleStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
-import com.bhf.aeroncache.services.TestUtils;
 
 import java.util.UUID;
 
@@ -33,57 +27,64 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Test decoding an add cache entry request.
+ * Test decoding an add cache entry request. Uses a Detroit style for simplicity in
+ * decoding the response buffer.
+ *
+ * @param <I> The cache ID type.
+ * @param <K> The key type.
+ * @param <V> The value type used by the encoder/decoder under test.
+ * @param <FV> The value type of the CacheManagerFactory (may differ from V for counters).
  */
-class AddCacheEntryTest {
+@RequiredArgsConstructor
+public abstract class AbstractAddCacheEntryTest<I extends Reusable, K extends Reusable, V extends Reusable, FV extends Reusable> {
 
     private final Header header = new Header(0, 0);
+    private final CacheManagerFactory<I, K, FV> cacheManagerFactory;
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
-    private AddCacheEntryResult<ReusableString, ReusableString> result;
-    private SBEDecodingCacheClusterService sut;
+    private AddCacheEntryResult<I, K> result;
+    protected SBEDecodingCacheClusterService<I, K, FV> sut;
     private CacheTracingService tracingService;
-    private final CacheRequestEncoder cacheRequestEncoder = new RegularStringCacheRequestEncoder();
-    private final CacheResponseDecoder cacheResponseDecoder = new ReusableStringCacheResponseDecoder();
     private final Cluster cluster = Mockito.mock(Cluster.class);
 
     @BeforeEach
     void setup() {
         tracingService = Mockito.mock(CacheTracingService.class);
-        sut = new SBEDecodingCacheClusterService("node0", tracingService, TestUtils.getCacheManagerFactory());
+        sut = new SBEDecodingCacheClusterService<>("node0", tracingService, cacheManagerFactory);
         sut.onStart(cluster, null);
-
         sut.subscriptionService = Mockito.mock(CacheSubscriptionService.class);
+        sut.countersSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
         responseBuffer = new ExpandableArrayBuffer();
         requestBuffer = new ExpandableArrayBuffer();
-        result = new AddCacheEntryResult<>(SupplierUtils.stringSupplier.get(),
-                SupplierUtils.stringSupplier.get());
+        result = new AddCacheEntryResult<>(cacheManagerFactory.getIndexSupplier().get(),
+                cacheManagerFactory.getKeySupplier().get());
     }
 
-    @ParameterizedTest
+    protected CacheSubscriptionService getSubscriptionServiceToVerify() {
+        return sut.subscriptionService;
+    }
+
+    @Test
     @DisplayName("Should add entry to an existing cache")
-    @ValueSource(strings = {"testCacheId"})
-    @HappyPath
-    void shouldAddToKnownCache(String cacheId) {
+    void shouldAddToKnownCache() {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
-        var key = "someKey★★★";
-        var value = "someValue★★★";
-        var ttl = 10000;
+        I cacheId = getCacheId();
+        K key = getKey();
+        V value = getValue();
+        long ttl = 10000;
 
-        // create the cache
-        TestUtils.createCache(cacheId, session, requestBuffer, sut);
+        createCache(cacheId, session, requestBuffer, sut);
 
-        // add an entry to the cache
         var requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
+        var length = encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeAddCacheEntryResult(responseBuffer, 0, result);
+        decodeAddCacheEntryResult(responseBuffer, 0, result);
 
         // Assert
-        assertEquals(cacheId, result.getCacheId().value());
+        assertEquals(cacheId.value(), result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
         assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
 
@@ -95,59 +96,49 @@ class AddCacheEntryTest {
         verify(cluster, times(1)).scheduleTimer(anyLong(), anyLong());
 
         // Call the subscription service on the back of adding an entry
-        var reusableKey = new ReusableString();
-        reusableKey.copyFrom(key);
-
-        var reusableValue = new ReusableString();
-        reusableValue.copyFrom(value);
-
-        verify(sut.subscriptionService, times(1)).handleEntryAdded(
+        verify(getSubscriptionServiceToVerify(), times(1)).handleEntryAdded(
                 any(AddCacheEntryResult.class),
                 any(MutableDirectBuffer.class),
-                eq(reusableKey),
-                eq(reusableValue),
+                eq(key),
+                eq(value),
                 anyInt());
     }
 
-    @ParameterizedTest
+    @Test
     @DisplayName("Should reschedule ttl")
-    @ValueSource(strings = {"testCacheId-ttl-resched"})
-    @HappyPath
-    void shouldRescheduleTTL(String cacheId) {
+    void shouldRescheduleTTL() {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
-        var key = "someKey★★★";
-        var value = "someValue★★★";
-        var ttl = 10000;
+        I cacheId = getRescheduleCacheId();
+        K key = getKey();
+        V value = getValue();
+        long ttl = 10000;
 
-        // create the cache
-        TestUtils.createCache(cacheId, session, requestBuffer, sut);
+        createCache(cacheId, session, requestBuffer, sut);
 
         // add an entry to the cache
         var requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
+        var length = encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
         // Act
         requestId = UUID.randomUUID().toString();
-        ttl*=2;
-        length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
+        ttl *= 2;
+        length = encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
-        cacheResponseDecoder.decodeAddCacheEntryResult(responseBuffer, 0, result);
+        decodeAddCacheEntryResult(responseBuffer, 0, result);
 
         // Assert
-        assertEquals(cacheId, result.getCacheId().value());
+        assertEquals(cacheId.value(), result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
         assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
-
 
         // we scheduled a timer for the ttl and rescheduled it
         verify(cluster, times(2)).scheduleTimer(anyLong(), anyLong());
 
         // we cancelled the timer before we rescheduled it
         verify(cluster, times(1)).cancelTimer(anyLong());
-
     }
 
     @Test
@@ -155,50 +146,63 @@ class AddCacheEntryTest {
     void shouldNotifyWhenCacheIsUnknown() {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
-        var requestId = UUID.randomUUID().toString();
-        var cacheId = "123L";
-        var key = "someKey";
-        var value = "someValue";
-        var ttl = 0;
+        I cacheId = getUnknownCacheId();
+        K key = getKey();
+        V value = getValue();
+        long ttl = 0;
 
         // Act
-        requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
+        var requestId = UUID.randomUUID().toString();
+        var length = encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeAddCacheEntryResult(responseBuffer, 0, result);
+        decodeAddCacheEntryResult(responseBuffer, 0, result);
 
         // Assert
-        assertEquals(cacheId, result.getCacheId().value());
+        assertEquals(cacheId.value(), result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
         assertEquals(CacheOperationStatus.UNKNOWN_CACHE, result.getStatus());
     }
 
-    @ParameterizedTest
+    @Test
     @DisplayName("Should add entry to a dynamically created cache")
-    @ValueSource(strings = {"Some-Uncreated-Cache"})
-    @HappyPath
-    void shouldAddToDynamicallyCreatedCache(String cacheId) {
+    void shouldAddToDynamicallyCreatedCache() {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
-        var key = "someKey★★★";
-        var value = "someValue★★★";
-        var ttl = 10000;
+        I cacheId = getDynamicCacheId();
+        K key = getKey();
+        V value = getValue();
+        long ttl = 10000;
 
         sut.setDynamicCacheCreationEnabled(true);
 
-        // add an entry to the cache
         var requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
+        var length = encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeAddCacheEntryResult(responseBuffer, 0, result);
+        decodeAddCacheEntryResult(responseBuffer, 0, result);
 
         // Assert
-        assertEquals(cacheId, result.getCacheId().value());
+        assertEquals(cacheId.value(), result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
         assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
-
     }
 
+    public abstract int encodeAddCacheEntry(String requestId, I cacheId, K key, V value, long ttl, MutableDirectBuffer buffer);
+
+    public abstract void decodeAddCacheEntryResult(DirectBuffer buffer, int offset, AddCacheEntryResult<I, K> result);
+
+    protected abstract void createCache(I cacheId, ClientSession session, MutableDirectBuffer requestBuffer, SBEDecodingCacheClusterService<I, K, FV> sut);
+
+    protected abstract I getCacheId();
+
+    protected abstract I getRescheduleCacheId();
+
+    protected abstract I getUnknownCacheId();
+
+    protected abstract I getDynamicCacheId();
+
+    protected abstract K getKey();
+
+    protected abstract V getValue();
 }

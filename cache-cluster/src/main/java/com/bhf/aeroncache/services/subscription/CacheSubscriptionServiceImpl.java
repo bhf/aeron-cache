@@ -143,6 +143,15 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
     }
 
     @Override
+    public void handleCounterUpdated(I cacheId, MutableDirectBuffer egressBuffer, int length) {
+        log.info("Sending counter updated to subscribers on cacheId {}", cacheId);
+        for (var session : getSessionsForCache(cacheId)) {
+            log.debug("Sending counter updated to session: {}", session.id());
+            sendMessage(session, egressBuffer, length);
+        }
+    }
+
+    @Override
     public void onSessionClose(ClientSession session) {
         log.info("Handling client session closed, sessionId: {}", session.id());
         cacheIdToClientSessions.forEach((cacheId, clientSessions) -> {

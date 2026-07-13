@@ -41,5 +41,7 @@ public interface CacheSubscriptionService<I extends Reusable, K extends Reusable
 
     <CT extends Reusable> void handleEntryAdded(AddCacheEntryResult<I, K> addCacheEntryResult, MutableDirectBuffer egressBuffer, K key, CT value, int length);
 
+    void handleCounterUpdated(I cacheId, MutableDirectBuffer egressBuffer, int length);
+
     void onSessionClose(ClientSession session);
 }

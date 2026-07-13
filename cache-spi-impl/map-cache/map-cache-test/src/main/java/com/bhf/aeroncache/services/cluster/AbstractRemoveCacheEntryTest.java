@@ -1,28 +1,23 @@
 package com.bhf.aeroncache.services.cluster;
 
-import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
-import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
-import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
-import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
+import com.bhf.aeroncache.application.TestUtils;
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.RemoveCacheEntryRequestDetails;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
-import com.bhf.aeroncache.services.TestUtils;
+import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
-import com.bhf.aeroncache.types.ReusableString;
-import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.logbuffer.Header;
+import lombok.RequiredArgsConstructor;
 import org.agrona.AbstractMutableDirectBuffer;
+import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 import java.util.UUID;
@@ -33,56 +28,63 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
- * Test decoding a remove cache entry request.
+ * Test decoding a remove cache entry request. Uses a Detroit style for simplicity in
+ * decoding the response buffer.
+ *
+ * @param <I>  The cache ID type.
+ * @param <K>  The key type.
+ * @param <V>  The value type used by the encoder/decoder under test.
+ * @param <FV> The value type of the CacheManagerFactory.
  */
-class RemoveCacheEntryTest {
+@RequiredArgsConstructor
+public abstract class AbstractRemoveCacheEntryTest<I extends Reusable, K extends Reusable, V extends Reusable, FV extends Reusable> {
 
     private final Header header = new Header(0, 0);
+    private final CacheManagerFactory<I, K, FV> cacheManagerFactory;
     private MutableDirectBuffer requestBuffer;
     private MutableDirectBuffer responseBuffer;
-    private RemoveCacheEntryResult<ReusableString, ReusableString> result;
-    private SBEDecodingCacheClusterService sut;
+    private RemoveCacheEntryResult<I, K> result;
+    protected SBEDecodingCacheClusterService<I, K, FV> sut;
     private CacheTracingService tracingService;
-    private final CacheRequestEncoder cacheRequestEncoder = new RegularStringCacheRequestEncoder();
-    private final CacheResponseDecoder cacheResponseDecoder = new ReusableStringCacheResponseDecoder();
 
     @BeforeEach
     void setup() {
         tracingService = Mockito.mock(CacheTracingService.class);
-        sut = new SBEDecodingCacheClusterService("node0", tracingService, TestUtils.getCacheManagerFactory());
+        sut = new SBEDecodingCacheClusterService<>("node0", tracingService, cacheManagerFactory);
         sut.subscriptionService = Mockito.mock(CacheSubscriptionService.class);
+        sut.countersSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
         responseBuffer = new ExpandableArrayBuffer();
         requestBuffer = new ExpandableArrayBuffer();
-        result = new RemoveCacheEntryResult<>(SupplierUtils.stringSupplier.get(), SupplierUtils.stringSupplier.get());
+        result = createResult();
     }
 
-    @ParameterizedTest
+    protected CacheSubscriptionService getSubscriptionServiceToVerify() {
+        return sut.subscriptionService;
+    }
+
+    @Test
     @DisplayName("Should return correct details of removing a cache entry")
-    @ValueSource(strings = {"testCacheId"})
-    @HappyPath
-    void shouldRemoveKnownCache(String cacheId) {
+    void shouldRemoveKnownCacheEntry() {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
-        var key = "someKey★★★";
-        var value = "someValue★★★";
-        var ttl = 0;
+        I cacheId = getCacheId();
+        K key = getKey();
+        V value = getValue();
 
-        // create the cache
-        TestUtils.createCache(cacheId, session, requestBuffer, sut);
+        createCache(cacheId, session, requestBuffer, sut);
 
         // add an entry to the cache
         var requestId = UUID.randomUUID().toString();
-
-        var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, ttl, requestBuffer);
+        var length = encodeAddCacheEntry(requestId, cacheId, key, value, 0, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
         // Act
-        length = cacheRequestEncoder.encodeRemoveCacheEntry(requestId, cacheId, key, requestBuffer);
+        length = encodeRemoveCacheEntry(requestId, cacheId, key, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeCacheEntryRemoved(responseBuffer, 0, result);
+        decodeCacheEntryRemoved(responseBuffer, 0, result);
 
         // Assert
-        assertEquals(cacheId, result.getCacheId().value());
+        assertEquals(cacheId.value(), result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
         assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
 
@@ -90,7 +92,7 @@ class RemoveCacheEntryTest {
         verify(tracingService, times(1)).startRemoveCacheEntry(any(RemoveCacheEntryRequestDetails.class));
         verify(tracingService, times(1)).endRemoveCacheEntry(any(RemoveCacheEntryRequestDetails.class));
 
-        verify(sut.subscriptionService, times(1)).handleEntryRemoved(
+        verify(getSubscriptionServiceToVerify(), times(1)).handleEntryRemoved(
                 any(RemoveCacheEntryResult.class),
                 any(AbstractMutableDirectBuffer.class),
                 anyInt(),
@@ -102,21 +104,38 @@ class RemoveCacheEntryTest {
     void shouldNotifyWhenEntryKeyIsUnknown() {
         // Arrange
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
-        var requestId = UUID.randomUUID().toString();
-        var cacheId = "123L";
-        var key = "someKey";
-        TestUtils.createCache(cacheId, session, requestBuffer, sut);
+        I cacheId = getUnknownKeyCacheId();
+        K key = getKey();
+
+        createCache(cacheId, session, requestBuffer, sut);
 
         // Act
-        requestId = UUID.randomUUID().toString();
-        var length = cacheRequestEncoder.encodeRemoveCacheEntry(requestId, cacheId, key, requestBuffer);
+        var requestId = UUID.randomUUID().toString();
+        var length = encodeRemoveCacheEntry(requestId, cacheId, key, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeCacheEntryRemoved(responseBuffer, 0, result);
+        decodeCacheEntryRemoved(responseBuffer, 0, result);
 
         // Assert
-        assertEquals(cacheId, result.getCacheId().value());
+        assertEquals(cacheId.value(), result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
         assertEquals(CacheOperationStatus.UNKNOWN_KEY, result.getStatus());
     }
 
+    protected abstract RemoveCacheEntryResult<I, K> createResult();
+
+    public abstract int encodeAddCacheEntry(String requestId, I cacheId, K key, V value, long ttl, MutableDirectBuffer buffer);
+
+    public abstract int encodeRemoveCacheEntry(String requestId, I cacheId, K key, MutableDirectBuffer buffer);
+
+    public abstract void decodeCacheEntryRemoved(DirectBuffer buffer, int offset, RemoveCacheEntryResult<I, K> result);
+
+    protected abstract void createCache(I cacheId, ClientSession session, MutableDirectBuffer requestBuffer, SBEDecodingCacheClusterService<I, K, FV> sut);
+
+    protected abstract I getCacheId();
+
+    protected abstract I getUnknownKeyCacheId();
+
+    protected abstract K getKey();
+
+    protected abstract V getValue();
 }

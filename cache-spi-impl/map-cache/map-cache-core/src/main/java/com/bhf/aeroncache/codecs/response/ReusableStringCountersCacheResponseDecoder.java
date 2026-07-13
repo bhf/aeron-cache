@@ -84,6 +84,12 @@ public class ReusableStringCountersCacheResponseDecoder implements CountersCache
             resVal.copyFrom(valLong);
             getCacheEntriesResult.getValues().put(resKey, resVal);
         }
+
+        var requestId = allCacheEntriesResultDecoder.requestId();
+        getCacheEntriesResult.setRequestId(requestId);
+
+        var cacheID = allCacheEntriesResultDecoder.cacheId();
+        getCacheEntriesResult.getCacheId().copyFrom(cacheID);
     }
 
     @Override
@@ -174,6 +180,12 @@ public class ReusableStringCountersCacheResponseDecoder implements CountersCache
 
     @Override
     public void decodeCacheSubscribeResult(DirectBuffer buffer, int offset, CacheSubscriptionResult<ReusableString, ReusableString, ReusableLong> cacheSubscriptionResult) {
+        cacheSubscriptionResult.clear();
+
+        if (cacheSubscriptionResult.getEntries() != null) {
+            cacheSubscriptionResult.getEntries().clear();
+        }
+
         cacheSubscriptionResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
         var status = getOperationStatus(cacheSubscriptionResponseDecoder.status());
@@ -188,7 +200,13 @@ public class ReusableStringCountersCacheResponseDecoder implements CountersCache
             cacheSubscriptionResult.getEntries().put(key, val);
             item.cacheId();
         }
+
+        var cacheId = cacheSubscriptionResponseDecoder.cacheId();
+        var requestId = cacheSubscriptionResponseDecoder.requestId();
+
+        cacheSubscriptionResult.getCacheId().copyFrom(cacheId);
         cacheSubscriptionResult.setStatus(status);
+        cacheSubscriptionResult.setRequestId(requestId);
     }
 
     @Override

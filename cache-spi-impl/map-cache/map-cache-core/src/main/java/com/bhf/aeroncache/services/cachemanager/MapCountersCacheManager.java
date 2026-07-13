@@ -4,11 +4,9 @@ import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.ReusableLong;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.CounterOperationResult;
-import com.bhf.aeroncache.services.cache.Cache;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
 import lombok.extern.log4j.Log4j2;
-import org.agrona.collections.Object2ObjectHashMap;
 
 import java.util.Map;
 import java.util.function.Supplier;
@@ -22,7 +20,6 @@ import java.util.function.Supplier;
 @Log4j2
 public class MapCountersCacheManager<I extends Reusable, K extends Reusable> extends MapCacheManager<I, K, ReusableLong> implements CountersCacheManager<I,K,ReusableLong>{
 
-    private final Map<I, Cache<I, K, ReusableLong>> counterCaches = new Object2ObjectHashMap<>();
     private final CounterOperationResult<I,K> operationResult;
 
     public MapCountersCacheManager(Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier,
@@ -38,20 +35,20 @@ public class MapCountersCacheManager<I extends Reusable, K extends Reusable> ext
     public CounterOperationResult<I,K> incrementCounter(I cacheId, K key, long amount) {
         operationResult.clear();
         operationResult.getCacheId().copyFrom(cacheId);
-        operationResult.getKey().copyFrom(cacheId);
+        operationResult.getKey().copyFrom(key);
 
-        var cache = counterCaches.get(cacheId);
+        var cache = getCache(cacheId);
         if (cache != null) {
-            var value = cache.get(key);
+            var value = cache.getAllEntries().get(key);
             if (value != null) {
-                long latestValue = value.getEntryValue().increment(amount);
+                long latestValue = value.increment(amount);
                 operationResult.setCounterValue(latestValue);
                 operationResult.setStatus(CacheOperationStatus.SUCCESS);
             } else {
                 operationResult.setStatus(CacheOperationStatus.UNKNOWN_KEY);
             }
         } else {
-            operationResult.setStatus(CacheOperationStatus.UNKNOWN_KEY);
+            operationResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
         }
 
         return operationResult;
@@ -61,20 +58,20 @@ public class MapCountersCacheManager<I extends Reusable, K extends Reusable> ext
     public CounterOperationResult<I,K> decrementCounter(I cacheId, K key, long amount) {
         operationResult.clear();
         operationResult.getCacheId().copyFrom(cacheId);
-        operationResult.getKey().copyFrom(cacheId);
+        operationResult.getKey().copyFrom(key);
 
-        var cache = counterCaches.get(cacheId);
+        var cache = getCache(cacheId);
         if (cache != null) {
-            var value = cache.get(key);
+            var value = cache.getAllEntries().get(key);
             if (value != null) {
-                long latestValue = value.getEntryValue().decrement(amount);
+                long latestValue = value.decrement(amount);
                 operationResult.setCounterValue(latestValue);
                 operationResult.setStatus(CacheOperationStatus.SUCCESS);
             } else {
                 operationResult.setStatus(CacheOperationStatus.UNKNOWN_KEY);
             }
         } else {
-            operationResult.setStatus(CacheOperationStatus.UNKNOWN_KEY);
+            operationResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
         }
 
         return operationResult;
@@ -84,21 +81,20 @@ public class MapCountersCacheManager<I extends Reusable, K extends Reusable> ext
     public CounterOperationResult<I,K> setCounter(I cacheId, K key, long value) {
         operationResult.clear();
         operationResult.getCacheId().copyFrom(cacheId);
-        operationResult.getKey().copyFrom(cacheId);
+        operationResult.getKey().copyFrom(key);
 
-        var cache = counterCaches.get(cacheId);
+        var cache = getCache(cacheId);
         if (cache != null) {
-            var currentValue = cache.get(key);
-            if (currentValue.getStatus() != CacheOperationStatus.UNKNOWN_KEY) {
-                currentValue.getEntryValue().copyFrom(value);
-                long latestValue = currentValue.getEntryValue().value();
-                operationResult.setCounterValue(latestValue);
+            var storedValue = cache.getAllEntries().get(key);
+            if (storedValue != null) {
+                storedValue.copyFrom(value);
+                operationResult.setCounterValue(storedValue.value());
                 operationResult.setStatus(CacheOperationStatus.SUCCESS);
             } else {
                 operationResult.setStatus(CacheOperationStatus.UNKNOWN_KEY);
             }
         } else {
-            operationResult.setStatus(CacheOperationStatus.UNKNOWN_KEY);
+            operationResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
         }
 
         return operationResult;

@@ -45,11 +45,11 @@ public class ReusableLong implements Reusable<Long> {
 
     public long increment(long amount) {
         value+=amount;
-        return amount;
+        return value;
     }
 
     public long decrement(long amount) {
         value-=amount;
-        return amount;
+        return value;
     }
 }

@@ -197,8 +197,9 @@ public class ReusableStringCountersCacheResponseEncoder implements CountersCache
             var itemsEncoder = cacheSubscriptionResponseEncoder.itemsCount(currentBatchSize);
 
             for (int j = 0; j < currentBatchSize; j++) {
-                var itemKey = sortedKeys.get(i + j).value();
-                var itemValue = entries.get(itemKey);
+                var rsKey = sortedKeys.get(i + j);
+                var itemKey = rsKey.value();
+                var itemValue = entries.get(rsKey);
                 ReusableLong v = (ReusableLong) itemValue;
                 itemsEncoder.next();
                 itemsEncoder.counterValue(v.value())
@@ -256,6 +257,8 @@ public class ReusableStringCountersCacheResponseEncoder implements CountersCache
             return com.bhf.aeroncache.messages.OperationStatus.ERROR;
         } else if (status == com.bhf.aeroncache.models.results.CacheOperationStatus.UNKNOWN_KEY) {
             return com.bhf.aeroncache.messages.OperationStatus.UNKNOWN_KEY;
+        } else if (status == com.bhf.aeroncache.models.results.CacheOperationStatus.UNKNOWN_CACHE) {
+            return com.bhf.aeroncache.messages.OperationStatus.UNKNOWN_CACHE;
         } else if (status == com.bhf.aeroncache.models.results.CacheOperationStatus.CACHE_EXISTS) {
             return com.bhf.aeroncache.messages.OperationStatus.CACHE_EXISTS;
         }
