@@ -90,10 +90,10 @@ public class HttpApplication {
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
 
-    private static AeronCacheClusterListener client;
+    private static AeronCacheClusterListener<ReusableString, ReusableString, ReusableString> client;
     @Getter
-    private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString> cachePublisher;
-    private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableLong> countersPublisher;
+    private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString, String, String, String> cachePublisher;
+    private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableLong, String, String, Long> countersPublisher;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     public static final CacheStatsTracker statsTracker = new CacheStatsTracker();
@@ -140,7 +140,7 @@ public class HttpApplication {
             if (PRE_ENCODE_CACHE_REQUESTS) {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
                 // sending directly to the cluster
-                CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cache, rb,
+                CacheRequestPublisher<String, String, String> cacheRequestPublisher = new RBClusterMessagePublisher(cache, rb,
                         HttpIdleStrategies.clusterMessagePublisherIdleStrategy.get(), cacheRequestEncoder);
 
                 BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cache,
@@ -150,7 +150,7 @@ public class HttpApplication {
             } else {
                 // Drop normalised cache requests onto an Agrona RB for encoding
                 // to SBE on the Agent thread
-                CacheRequestPublisher rbPublisher = new RBCacheRequestPublisher(rb);
+                CacheRequestPublisher<String, String, String> rbPublisher = new RBCacheRequestPublisher(rb);
                 cachePublisher = new ObservingCacheRequestPublisher(rbPublisher);
             }
 

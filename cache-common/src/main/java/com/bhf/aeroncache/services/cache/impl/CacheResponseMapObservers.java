@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 @Getter
 @Setter
 @Log4j2
-public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V extends Reusable> implements ConsumingResponseHandler<I,K,V> {
+public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V extends Reusable, BI, BK, BV> implements ConsumingResponseHandler<I,K,V, BI, BK, BV> {
 
     final Map<String, Consumer<CreateCacheResult<I>>> createCacheObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<AddCacheEntryResult<I, K>>> addCacheEntryObservers = new ConcurrentHashMap<>();
@@ -48,37 +48,37 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     }
 
     @Override
-    public void sendCreateCache(String requestId, String cacheId, Consumer<CreateCacheResult<I>> consumer) {
+    public void sendCreateCache(String requestId, BI cacheId, Consumer<CreateCacheResult<I>> consumer) {
         createCacheObservers.put(requestId, consumer);
     }
 
     @Override
-    public void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl, Consumer<AddCacheEntryResult<I, K>> c) {
+    public void addCacheEntry(String requestId, BI cacheId, BK key, BV value, long ttl, Consumer<AddCacheEntryResult<I, K>> c) {
         addCacheEntryObservers.put(requestId, c);
     }
 
     @Override
-    public void getCacheEntry(String requestId, String cacheId, String key, Consumer<GetCacheEntryResult<I, K, V>> c) {
+    public void getCacheEntry(String requestId, BI cacheId, BK key, Consumer<GetCacheEntryResult<I, K, V>> c) {
         getCacheEntryObservers.put(requestId, c);
     }
 
     @Override
-    public void deleteCache(String requestId, String cacheId, Consumer<DeleteCacheResult<I>> consumer) {
+    public void deleteCache(String requestId, BI cacheId, Consumer<DeleteCacheResult<I>> consumer) {
         deleteCacheObservers.put(requestId, consumer);
     }
 
     @Override
-    public void removeCacheEntry(String requestId, String cacheId, String key, Consumer<RemoveCacheEntryResult<I, K>> c) {
+    public void removeCacheEntry(String requestId, BI cacheId, BK key, Consumer<RemoveCacheEntryResult<I, K>> c) {
         removeCacheEntryObservers.put(requestId, c);
     }
 
     @Override
-    public void clearCache(String requestId, String cacheId, Consumer<ClearCacheResult<I>> c) {
+    public void clearCache(String requestId, BI cacheId, Consumer<ClearCacheResult<I>> c) {
         clearCacheObservers.put(requestId, c);
     }
 
     @Override
-    public void getCacheEntries(String requestId, String cacheId, Consumer<GetAllCacheEntriesResult<I, K, V>> c) {
+    public void getCacheEntries(String requestId, BI cacheId, Consumer<GetAllCacheEntriesResult<I, K, V>> c) {
         getCacheEntriesObservers.put(requestId, c);
     }
 
@@ -88,12 +88,12 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
+    public void sendCacheSubscribe(String requestId, List<BI> cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
         cacheSubscribeObservers.put(requestId, c);
     }
 
     @Override
-    public void sendCacheUnsubscribe(String requestId, String cacheId, Consumer<CacheUnsubscribeResult<I>> c) {
+    public void sendCacheUnsubscribe(String requestId, BI cacheId, Consumer<CacheUnsubscribeResult<I>> c) {
         cacheUnsubscribeObservers.put(requestId, c);
     }
 

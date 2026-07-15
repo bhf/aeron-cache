@@ -22,7 +22,7 @@ import java.util.List;
 @Setter
 @Log4j2
 @RequiredArgsConstructor
-public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingClusterRequestPublisher {
+public class ClusterMessagePublisher implements CacheRequestPublisher<String, String, String>, BlockingClusterRequestPublisher {
 
     private final MutableDirectBuffer msgBuffer = new ExpandableDirectByteBuffer();
     private final AeronCache cluster;

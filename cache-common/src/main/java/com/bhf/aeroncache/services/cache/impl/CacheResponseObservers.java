@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 @Getter
 @Setter
 @Log4j2
-public class CacheResponseObservers<I extends Reusable, K extends Reusable, V extends Reusable> implements CacheRequestConsumingPublisher<I,K,V>, CacheResponseHandler<I,K,V> {
+public class CacheResponseObservers<I extends Reusable, K extends Reusable, V extends Reusable> implements CacheRequestConsumingPublisher<I,K,V, String, String, String>, CacheResponseHandler<I,K,V> {
 
     final List<IdentifiableConsumer<String, CreateCacheResult<I>>> createCacheObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, AddCacheEntryResult<I, K>>> addCacheEntryObservers = new CopyOnWriteArrayList<>();

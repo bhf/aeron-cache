@@ -20,7 +20,7 @@ import java.util.List;
  */
 @RequiredArgsConstructor
 @Log4j2
-public class RBCacheRequestPublisher implements CacheRequestPublisher {
+public class RBCacheRequestPublisher implements CacheRequestPublisher<String, String, String> {
 
     final RingBuffer rb;
     private final MutableDirectBuffer writeBuffer = new ExpandableArrayBuffer(4096);
