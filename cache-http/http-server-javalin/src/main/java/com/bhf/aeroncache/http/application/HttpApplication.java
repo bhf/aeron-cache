@@ -3,6 +3,7 @@ package com.bhf.aeroncache.http.application;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.handlers.CacheRouteHandlers;
+import com.bhf.aeroncache.http.handlers.CountersRouteHandlers;
 import com.bhf.aeroncache.http.handlers.HTTPConsumerUtils;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
 import com.bhf.aeroncache.http.responses.CacheDetails;
@@ -73,7 +74,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-import static com.bhf.aeroncache.http.handlers.CacheRouteHandlers.getRequestId;
+import static com.bhf.aeroncache.http.handlers.AbstractRouteHandlers.getRequestId;
 
 @Log4j2
 public class HttpApplication {
@@ -152,10 +153,37 @@ public class HttpApplication {
                 // to SBE on the Agent thread
                 CacheRequestPublisher<String, String, String> rbPublisher = new RBCacheRequestPublisher(rb);
                 cachePublisher = new ObservingCacheRequestPublisher(rbPublisher);
+
+                CacheRequestPublisher<String, String, Long> countersRbPublisher = null;
+                countersPublisher = new ObservingCacheRequestPublisher<>(countersRbPublisher);
             }
 
             client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);
             client.setCacheResultsCallbacks(cachePublisher);
+
+            var handlers = new CacheRouteHandlers(cachePublisher);
+            app.post(CACHE_API_PREFIX, handlers::handleCreateCacheRequest)
+               .get(CACHE_API_PREFIX + "<cacheId>/<key>", handlers::handleGetItemRequest)
+               .get(CACHE_API_PREFIX + "<cacheId>", handlers::handleGetCacheRequest)
+               .post(CACHE_API_PREFIX + "timed/<cacheId>", handlers::handlePutTimedItemRequest)
+               .post(CACHE_API_PREFIX + "<cacheId>", handlers::handlePutItemRequest)
+               .delete(CACHE_API_PREFIX + "<cacheId>/<key>", handlers::handleDeleteItemRequest)
+               .delete(CACHE_API_PREFIX + "<cacheId>", handlers::handleDeleteCacheRequest)
+               .patch(CACHE_API_PREFIX + "<cacheId>", handlers::handleClearCacheRequest)
+               .get("/api/v1/caches", handlers::handleGetCachesRequest)
+               .get("/api/v1/stats", handlers::handleGetStatsRequest);
+
+            var countersHandlers = new CountersRouteHandlers(countersPublisher);
+            app.post(COUNTERS_API_PREFIX, countersHandlers::handleCreateCacheRequest)
+               .get(COUNTERS_API_PREFIX + "<cacheId>/<key>", countersHandlers::handleGetItemRequest)
+               .get(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handleGetCacheRequest)
+               .post(COUNTERS_API_PREFIX + "timed/<cacheId>", countersHandlers::handlePutTimedItemRequest)
+               .post(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handlePutItemRequest)
+               .delete(COUNTERS_API_PREFIX + "<cacheId>/<key>", countersHandlers::handleDeleteItemRequest)
+               .delete(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handleDeleteCacheRequest)
+               .patch(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handleClearCacheRequest)
+               .get("/api/v1/counters-caches", countersHandlers::handleGetCachesRequest)
+               .get("/api/v1/counters-stats", countersHandlers::handleGetStatsRequest);
 
             var podName = System.getenv("POD_ADDRESS");
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
@@ -332,17 +360,7 @@ public class HttpApplication {
         return Javalin.create(config)
                 .beforeMatched(HttpApplication::checkClusterConnectivity)
                 .before(CACHE_API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
-                .post(CACHE_API_PREFIX, CacheRouteHandlers::handleCreateCacheRequest)
                 .post(CACHE_API_PREFIX + "bulkops/", HttpApplication::handleBulkOpsRequest)
-                .get(CACHE_API_PREFIX + "<cacheId>/<key>", CacheRouteHandlers::handleGetItemRequest)
-                .get(CACHE_API_PREFIX + "<cacheId>", CacheRouteHandlers::handleGetCacheRequest)
-                .post(CACHE_API_PREFIX + "timed/<cacheId>", CacheRouteHandlers::handlePutTimedItemRequest)
-                .post(CACHE_API_PREFIX + "<cacheId>", CacheRouteHandlers::handlePutItemRequest)
-                .delete(CACHE_API_PREFIX + "<cacheId>/<key>", CacheRouteHandlers::handleDeleteItemRequest)
-                .delete(CACHE_API_PREFIX + "<cacheId>", CacheRouteHandlers::handleDeleteCacheRequest)
-                .patch(CACHE_API_PREFIX + "<cacheId>", CacheRouteHandlers::handleClearCacheRequest)
-                .get("/api/v1/caches", CacheRouteHandlers::handleGetCachesRequest)
-                .get("/api/v1/stats", CacheRouteHandlers::handleGetStatsRequest)
                 .post("/api/v1/shutdown", HttpApplication::handleShutdownCluster)
                 .post("/api/v1/snapshot", HttpApplication::handleTakeSnapshot)
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
