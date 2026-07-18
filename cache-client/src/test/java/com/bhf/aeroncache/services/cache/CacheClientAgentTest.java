@@ -38,13 +38,15 @@ class CacheClientAgentTest {
     @Mock
     IdleStrategy idleStrategy;
     ClusterMessagePublisher publisher;
+    ClusterMessagePublisher countersPublisher;
     ManyToOneRingBuffer rb;
 
     @BeforeEach
     void setup() {
         publisher = Mockito.mock(ClusterMessagePublisher.class);
+        countersPublisher = Mockito.mock(ClusterMessagePublisher.class);
         rb = RingBufferUtils.buildRingbuffer(4096);
-        sut = new CacheClientAgent(cluster, rb, idleStrategy, publisher, "AeronCache-CacheClient-Agent");
+        sut = new CacheClientAgent(cluster, rb, idleStrategy, publisher, countersPublisher, "AeronCache-CacheClient-Agent");
     }
 
     @Test
@@ -85,7 +87,7 @@ class CacheClientAgentTest {
         sut.runSingleCycle();
 
         // Assert
-        verify(sut.getPublisher(), times(1)).sendCreateCache(requestId, cacheId);
+        verify(sut.getCachePublisher(), times(1)).sendCreateCache(requestId, cacheId);
     }
 
     public static Stream<Arguments> provideCreateCacheParams() {

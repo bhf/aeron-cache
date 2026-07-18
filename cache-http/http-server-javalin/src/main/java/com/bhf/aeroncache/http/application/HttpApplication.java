@@ -133,6 +133,8 @@ public class HttpApplication {
             CacheClientFactory clientFactory = getCacheClientFactory();
             var cacheRequestEncoder = clientFactory.getCacheRequestEncoder();
             var responseDecoder = clientFactory.getCacheResponseDecoder();
+            var countersRequestEncoder = clientFactory.getCountersRequestEncoder();
+            var countersResponseDecoder = clientFactory.getCountersResponseDecoder();
             var schemaDetailsProvider = clientFactory.getSchemaDetails();
             var indexSupplier = clientFactory.getIndexSupplier();
             var keySupplier = clientFactory.getKeySupplier();
@@ -208,11 +210,14 @@ public class HttpApplication {
             System.out.println("Building cluster agent for http service, cluster connected: "+clusterConnected.get());
             var clusterClientAgentIdleStrategy = HttpIdleStrategies.clusterClientAgentIdleStrategy.get();
             var clusterMessagePublisherIdleStrategy = HttpIdleStrategies.clusterMessagePublisherIdleStrategy.get();
+            var cacheProtocolPublisher = new ClusterMessagePublisher(cache,
+                    clusterMessagePublisherIdleStrategy, cacheRequestEncoder);
+
+            var countersProtocolPublisher = new ClusterMessagePublisher<>(cache, clusterMessagePublisherIdleStrategy, countersRequestEncoder);
+
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
-                    new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, cacheRequestEncoder), "AeronCache-ClusterClient-Agent") :
-                    new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, cacheRequestEncoder), "AeronCache-CacheClient-Agent");
+                    new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, cacheProtocolPublisher, "AeronCache-ClusterClient-Agent") :
+                    new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, cacheProtocolPublisher, countersProtocolPublisher, "AeronCache-CacheClient-Agent");
 
             var errorHandler = new RethrowingErrorHandler();
             var errorCounter = (org.agrona.concurrent.status.AtomicCounter) null;

@@ -24,7 +24,7 @@ import org.agrona.concurrent.ringbuffer.RingBuffer;
 public class ClusterClientAgent extends AbstractClientAgent {
 
     public ClusterClientAgent(AeronCache cluster, RingBuffer rb, IdleStrategy idleStrategy, ClusterMessagePublisher publisher, String roleName) {
-        super(cluster, rb, idleStrategy, publisher, roleName);
+        super(cluster, rb, idleStrategy, publisher, null, roleName);
     }
 
     public void processInboundMessages(RingBuffer rb) {

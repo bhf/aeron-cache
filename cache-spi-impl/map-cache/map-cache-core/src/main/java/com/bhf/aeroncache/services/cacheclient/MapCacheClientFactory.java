@@ -1,9 +1,10 @@
 package com.bhf.aeroncache.services.cacheclient;
 
 import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CountersCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
-import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
-import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseDecoder;
+import com.bhf.aeroncache.codecs.request.RegularStringCountersCacheRequestEncoder;
+import com.bhf.aeroncache.codecs.response.*;
 import com.bhf.aeroncache.utils.SupplierUtils;
 
 import java.util.function.Supplier;
@@ -38,4 +39,16 @@ public class MapCacheClientFactory implements CacheClientFactory{
     public Supplier getValueSupplier() {
         return SupplierUtils.stringSupplier;
     }
+
+    @Override
+    public CountersCacheRequestEncoder getCountersRequestEncoder() {
+        return new RegularStringCountersCacheRequestEncoder();
+    }
+
+    @Override
+    public CountersCacheResponseDecoder getCountersResponseDecoder() {
+        return new ReusableStringCountersCacheResponseDecoder();
+    }
+
+
 }
