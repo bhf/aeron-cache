@@ -28,7 +28,7 @@ public class ClusterMessagePublisher implements CacheRequestPublisher<String, St
     private final AeronCache cluster;
     private final IdleStrategy idleStrategy;
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
-    private final CacheRequestEncoder cacheRequestEncoder;
+    private final CacheRequestEncoder<String, String, String> cacheRequestEncoder;
 
     @Override
     public void sendCreateCacheBlocking(String requestId, String cacheId) {
