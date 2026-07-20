@@ -26,4 +26,30 @@ public interface CacheClientSchemDetailsProvider {
 
     int bulkOperationsResponseId();
 
+    // Counter cache response TIDs
+
+    int getCounterCacheCreatedId();
+
+    int getCounterCacheEntryCreatedId();
+
+    int getCounterCacheEntryResultId();
+
+    int getCounterCacheClearedId();
+
+    int getCounterCacheDeletedId();
+
+    int getCounterCacheEntryRemovedId();
+
+    int getAllCounterCacheEntriesResultId();
+
+    int getCounterCacheSubscriptionResponseId();
+
+    int getCounterCacheUnsubscribeResponseId();
+
+    int getIncrementCounterResponseId();
+
+    int getDecrementCounterResponseId();
+
+    int getSetCounterResponseId();
+
 }

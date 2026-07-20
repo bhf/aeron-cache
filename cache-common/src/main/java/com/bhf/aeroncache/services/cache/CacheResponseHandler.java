@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cache;
 
+import com.bhf.aeroncache.models.ReusableLong;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 
@@ -98,4 +99,46 @@ public interface CacheResponseHandler<I extends Reusable, K extends Reusable, V 
      * @param bulkCacheOpsResult The bulk operation result details.
      */
     void handleBulkOperationsResult(BulkCacheOpsResult<I,K,V> bulkCacheOpsResult);
+
+    /**
+     * Handle a counter increment result.
+     *
+     * @param result The counter increment result.
+     */
+    default void handleCounterIncremented(IncrementCounterResult<I, K> result) {}
+
+    /**
+     * Handle a counter decrement result.
+     *
+     * @param result The counter decrement result.
+     */
+    default void handleCounterDecremented(DecrementCounterResult<I, K> result) {}
+
+    /**
+     * Handle a set counter result.
+     *
+     * @param result The set counter result.
+     */
+    default void handleCounterSet(SetCounterResult<I, K> result) {}
+
+    /**
+     * Handle a counter cache entry result.
+     *
+     * @param result The counter cache entry result.
+     */
+    default void handleCounterCacheEntryResult(GetCacheEntryResult<I, K, ReusableLong> result) {}
+
+    /**
+     * Handle all counter cache entries result.
+     *
+     * @param result The counter cache entries result.
+     */
+    default void handleAllCounterCacheEntries(GetAllCacheEntriesResult<I, K, ReusableLong> result) {}
+
+    /**
+     * Handle a counter cache subscription response.
+     *
+     * @param result The counter subscription result.
+     */
+    default void handleCounterCacheSubscribeResponse(CacheSubscriptionResult<I, K, ReusableLong> result) {}
 }
