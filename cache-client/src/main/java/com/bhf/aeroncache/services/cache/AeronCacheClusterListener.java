@@ -158,6 +158,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
      *
      * @param buffer The buffer to decode from.
      * @param offset The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleCacheEntryResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder) {
         decoder.decodeGetCacheEntryResult(buffer, offset, getCacheEntryResult);
@@ -173,8 +174,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of getting all cache entries.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleAllCacheEntriesResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder) {
         decoder.decodeAllCacheEntriesResult(buffer, offset, getCacheEntriesResult);
@@ -190,8 +192,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
      * Handle a cache created event by decoding it and delegating the
      * result to the {@link CacheResponseHandler}.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleCacheCreated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
         decoder.decodeCacheCreated(buffer, offset, createCacheResult);
@@ -206,8 +209,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle a cache entry being created by decoding it and delegating the result to the consumer.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleCacheEntryCreated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
         decoder.decodeAddCacheEntryResult(buffer, offset, addCacheEntryResult);
@@ -223,8 +227,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle a cache entry being removed by decoding it and delegating the result to the consumer.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleCacheEntryRemoved(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
         decoder.decodeCacheEntryRemoved(buffer, offset, removeCacheEntryResult);
@@ -240,8 +245,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle a cache being cleared by decoding it and delegating the result to the consumer.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleCacheCleared(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
         decoder.decodeCacheCleared(buffer, offset, clearCacheResult);
@@ -256,8 +262,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle a cache being deleted by decoding it and delegating the result to the consumer.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleCacheDeleted(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
         decoder.decodeCacheDeleted(buffer, offset, deleteCacheResult);
@@ -272,8 +279,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of getting all cache stats.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleAllCacheStatsResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
         decoder.decodeAllCacheStatsResult(buffer, offset, cacheStatsResult);
@@ -287,8 +295,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of a subscription request.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleCacheSubscribeResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder) {
         decoder.decodeCacheSubscribeResult(buffer, offset, cacheSubscriptionResult);
@@ -303,8 +312,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of an unsubscribe request.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleCacheUnsubscribeResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
         decoder.decodeCacheUnsubscribeResult(buffer, offset, cacheUnsubscribeResult);
@@ -319,8 +329,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of a cache entry being added.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleCacheEntryUpdated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder) {
         decoder.decodeCacheEntryUpdated(buffer, offset, cacheEntryUpdateResult);
@@ -335,8 +346,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of a bulk operation done on the cache.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleBulkOperationResponse(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder) {
         decoder.decodeBulkCacheOpsResult(buffer, offset, bulkCacheOpsResult);
@@ -350,9 +362,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle a counter cache entry result.
      *
-     * @param buffer
-     * @param offset
-     * @param decoder
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleCounterCacheEntryResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ReusableLong> decoder) {
         decoder.decodeGetCacheEntryResult(buffer, offset, counterCacheEntryResult);
@@ -368,9 +380,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle all counter cache entries result.
      *
-     * @param buffer
-     * @param offset
-     * @param decoder
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleAllCounterCacheEntriesResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ReusableLong> decoder) {
         decoder.decodeAllCacheEntriesResult(buffer, offset, counterCacheEntriesResult);
@@ -385,9 +397,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle a counter cache subscription result.
      *
-     * @param buffer
-     * @param offset
-     * @param decoder
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleCounterCacheSubscribeResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ReusableLong> decoder) {
         decoder.decodeCacheSubscribeResult(buffer, offset, counterSubscriptionResult);
@@ -401,6 +413,10 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
 
     /**
      * Handle a counter increment result.
+     *
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleIncrementCounterResult(DirectBuffer buffer, int offset, CountersCacheResponseDecoder<I, K, ReusableLong> decoder) {
         decoder.decodeIncrementCounterResponse(buffer, offset, incrementCounterResult);
@@ -415,6 +431,10 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
 
     /**
      * Handle a counter decrement result.
+     *
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleDecrementCounterResult(DirectBuffer buffer, int offset, CountersCacheResponseDecoder<I, K, ReusableLong> decoder) {
         decoder.decodeDecrementCounterResponse(buffer, offset, decrementCounterResult);
@@ -429,6 +449,10 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
 
     /**
      * Handle a set counter result.
+     *
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
      */
     private void handleSetCounterResult(DirectBuffer buffer, int offset, CountersCacheResponseDecoder<I, K, ReusableLong> decoder) {
         decoder.decodeSetCounterResponse(buffer, offset, setCounterResult);
