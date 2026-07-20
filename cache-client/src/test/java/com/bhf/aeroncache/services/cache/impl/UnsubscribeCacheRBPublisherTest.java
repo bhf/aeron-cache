@@ -1,83 +1,25 @@
 package com.bhf.aeroncache.services.cache.impl;
 
-import com.bhf.aeroncache.annotations.HappyPath;
-import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.ringbuffer.RingBuffer;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatcher;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.internal.matchers.GreaterThan;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
 
-import static org.mockito.Mockito.*;
+@DisplayName("Unsubscribe Cache - RBCacheRequestPublisher")
+class UnsubscribeCacheRBPublisherTest extends AbstractRBPublisherOperationTest {
 
-@ExtendWith(MockitoExtension.class)
-class UnsubscribeCacheRBPublisherTest {
-
-    RBCacheRequestPublisher sut;
-
-    @Mock
-    RingBuffer rb;
-
-    @BeforeEach
-    void setup() {
-        sut = new RBCacheRequestPublisher(rb);
+    @Override
+    AbstractRBRequestPublisher<?> createSut(RingBuffer rb) {
+        return new RBCacheRequestPublisher(rb);
     }
 
-    @Test
-    @DisplayName("Should throw NPE on null requestId without interacting with RingBuffer when unsubscribing too cache")
-    void shouldThrowExceptionOnNullRequestId() {
-        // Arrange
-        var cacheId = "123L";
-
-        // Act + Assert
-        Assertions.assertThrows(NullPointerException.class,
-                () -> sut.sendCacheUnsubscribe(null, cacheId));
-
-        verifyNoInteractions(rb);
+    @Override
+    void invokeWithNullRequestId() {
+        sut.sendCacheUnsubscribe(null, "123L");
     }
 
-    @Test
-    @DisplayName("Should abort claim on RingBuffer on RuntimeException when unsubscribing too cache")
-    void shouldAbortOnRingBufferOnException() {
-        // Arrange
-        var cacheId = "123L";
-        var requestId = UUID.randomUUID().toString();
-        when(rb.buffer()).thenThrow(RuntimeException.class);
-
-        // Act
-        sut.sendCacheUnsubscribe(requestId, cacheId);
-
-        // Assert
-        verify(rb, atMostOnce()).abort(intThat(isGreaterThanZero()));
+    @Override
+    void invokeWithValidRequestId() {
+        sut.sendCacheUnsubscribe(UUID.randomUUID().toString(), "123L");
     }
-
-    @Test
-    @HappyPath
-    @DisplayName("Should commit claim on RingBuffer when unsubscribing too cache")
-    void shouldCommitClaimOnRBWhenUnsubscribingCache() {
-        // Arrange
-        var cacheId = "123L";
-        var requestId = UUID.randomUUID().toString();
-        var mockBuffer = Mockito.mock(AtomicBuffer.class);
-        when(rb.buffer()).thenReturn(mockBuffer);
-
-        // Act
-        sut.sendCacheUnsubscribe(requestId, cacheId);
-
-        // Assert
-        verify(rb, atMostOnce()).commit(intThat(isGreaterThanZero()));
-    }
-
-    private static ArgumentMatcher<Integer> isGreaterThanZero() {
-        return new GreaterThan<>(0);
-    }
-
 }
