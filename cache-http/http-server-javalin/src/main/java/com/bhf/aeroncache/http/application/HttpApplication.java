@@ -21,6 +21,7 @@ import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
+import com.bhf.aeroncache.services.cache.impl.RBCountersRequestPublisher;
 import com.bhf.aeroncache.services.cacheclient.CacheClientFactory;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
@@ -156,12 +157,14 @@ public class HttpApplication {
                 CacheRequestPublisher<String, String, String> rbPublisher = new RBCacheRequestPublisher(rb);
                 cachePublisher = new ObservingCacheRequestPublisher(rbPublisher);
 
-                CacheRequestPublisher<String, String, Long> countersRbPublisher = null;
+                CacheRequestPublisher<String, String, Long> countersRbPublisher = new RBCountersRequestPublisher(rb);
                 countersPublisher = new ObservingCacheRequestPublisher<>(countersRbPublisher);
             }
 
             client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);
             client.setCacheResultsCallbacks(cachePublisher);
+            client.setCountersResultsCallbacks(countersPublisher);
+            client.setCountersCacheResponseDecoder(countersResponseDecoder);
 
             setupCacheRouteHandlers(app);
             setupCacheCountersRouteHandlers(app);

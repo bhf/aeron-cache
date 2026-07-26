@@ -3,6 +3,7 @@ package com.bhf.aeroncache.integration.http;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -10,8 +11,10 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
 abstract class GetItemTests {
 
@@ -23,17 +26,19 @@ abstract class GetItemTests {
     private static final String UNKNOWN_KEY = "UNKNOWN_KEY";
 
     private final String GET_ENDPOINT;
+    private static TestEndpointsProvider getEndpointsProvider;
 
-    GetItemTests(String getEndpoint) {
-        GET_ENDPOINT = getEndpoint;
+    GetItemTests(TestEndpointsProvider getEndpoint) {
+        GET_ENDPOINT = getEndpoint.getItemEndpoint();
+        getEndpointsProvider = getEndpoint;
     }
 
     @BeforeAll
-    static void setup(BackendTestResource backend) {
+    void setup(BackendTestResource backend) {
 
         // seed the cache with a single cache and a known key-value pair
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, getEndpointsProvider);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, getEndpointsProvider);
     }
 
     @Test
@@ -58,7 +63,7 @@ abstract class GetItemTests {
     @DisplayName("Should get a blank value back on an unknown key")
     void shouldGetBlankValueOnUnknownKey(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.removeItem(KNOWN_CACHE_ID, UNKNOWN_KEY, backend);
+        CacheTestUtils.removeItem(KNOWN_CACHE_ID, UNKNOWN_KEY, backend, getEndpointsProvider);
 
         RestAssured.given().port(getHttpPort(backend)).baseUri(getHttpUri(backend))
                 .contentType(ContentType.JSON)

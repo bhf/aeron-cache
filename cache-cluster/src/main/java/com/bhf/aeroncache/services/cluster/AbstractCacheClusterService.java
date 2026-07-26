@@ -1227,6 +1227,9 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
         log.info("Taking cache manager snapshot");
         cacheManager.takeSnapshot(snapshotPublication);
+
+        log.info("Taking counters cache manager snapshot");
+        countersCacheManager.takeSnapshot(snapshotPublication);
     }
 
     /**
@@ -1242,6 +1245,9 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
         log.info("Loading cache manager snapshot");
         cacheManager.loadSnapshot(snapshotImage);
+
+        log.info("Loading counters cache manager snapshot");
+        countersCacheManager.loadSnapshot(snapshotImage);
     }
 
     /**

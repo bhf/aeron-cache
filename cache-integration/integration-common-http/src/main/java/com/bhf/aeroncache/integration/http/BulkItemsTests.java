@@ -3,6 +3,7 @@ package com.bhf.aeroncache.integration.http;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -12,6 +13,7 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -19,18 +21,25 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.stream.Stream;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
 abstract class BulkItemsTests {
 
-    static final String BULK_ITEM_ENDPOINT = "/api/v1/cache/bulkops/";
+    final String BULK_ITEM_ENDPOINT;
     static final String KNOWN_CACHE_ID = "bulkops-test-cache";
     static final String UNKNOWN_CACHE_ID = "unknown-cache";
     static final String KNOWN_KEY = "SomeKey";
     static final String KNOWN_VALUE = "SomeValue";
+    private static TestEndpointsProvider bulkItemsTestEndpoint;
+
+    BulkItemsTests(TestEndpointsProvider bulkEndpoint) {
+        BULK_ITEM_ENDPOINT = bulkEndpoint.getBulkItemEndpointCache();
+        bulkItemsTestEndpoint = bulkEndpoint;
+    }
 
     @BeforeAll
-    static void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
+    void setup(BackendTestResource backend) {
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, bulkItemsTestEndpoint);
     }
 
     public static Stream<Arguments> provideBadParamsToBulkOps() {

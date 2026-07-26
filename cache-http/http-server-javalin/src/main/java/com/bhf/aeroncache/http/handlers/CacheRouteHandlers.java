@@ -29,7 +29,7 @@ public class CacheRouteHandlers extends AbstractRouteHandlers<ReusableString, St
     }
 
     @Override
-    protected boolean validateCreateRequest(CreateCacheRequest request, Context ctx) {
+    protected boolean isCreateRequestValid(CreateCacheRequest request, Context ctx) {
         if (specialCharacters.matcher(request.cacheId()).find()) {
             var errorMsg = "Cache ID shouldn't contain special characters";
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_SPECIAL_CHARACTERS,

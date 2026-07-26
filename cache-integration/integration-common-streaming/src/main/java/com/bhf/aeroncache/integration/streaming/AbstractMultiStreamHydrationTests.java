@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import org.awaitility.Awaitility;
 import org.hamcrest.MatcherAssert;
@@ -11,25 +12,29 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
 public abstract class AbstractMultiStreamHydrationTests {
 
     private final StreamingHelper[] streamingHelpers;
     private static final String HYDRATION_CACHE = "hydration-cache";
+    private TestEndpointsProvider hydratingStreamEndpoints;
 
-    protected AbstractMultiStreamHydrationTests(StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamHydrationTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
+        hydratingStreamEndpoints = endpointsProvider;
     }
 
     @BeforeAll
-    static void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(HYDRATION_CACHE, backend);
+    void setup(BackendTestResource backend) {
+        CacheTestUtils.createCache(HYDRATION_CACHE, backend, hydratingStreamEndpoints);
     }
 
     @Test
@@ -43,8 +48,8 @@ public abstract class AbstractMultiStreamHydrationTests {
         var hydrationKey2 = "HydrationKey2";
         var hydrationValue2 = "HydrationValue2";
 
-        CacheTestUtils.addItem(HYDRATION_CACHE, hydrationKey1, hydrationValue1, backend);
-        CacheTestUtils.addItem(HYDRATION_CACHE, hydrationKey2, hydrationValue2, backend);
+        CacheTestUtils.addItem(HYDRATION_CACHE, hydrationKey1, hydrationValue1, backend, hydratingStreamEndpoints);
+        CacheTestUtils.addItem(HYDRATION_CACHE, hydrationKey2, hydrationValue2, backend, hydratingStreamEndpoints);
 
         // Act
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsWithHydration(streamingHelpers, backend, HYDRATION_CACHE, 2);
@@ -79,16 +84,16 @@ public abstract class AbstractMultiStreamHydrationTests {
         // Arrange
         var cache1 = "multi-hydration-cache-1";
         var cache2 = "multi-hydration-cache-2";
-        CacheTestUtils.createCache(cache1, backend);
-        CacheTestUtils.createCache(cache2, backend);
+        CacheTestUtils.createCache(cache1, backend, hydratingStreamEndpoints);
+        CacheTestUtils.createCache(cache2, backend, hydratingStreamEndpoints);
 
         var cache1Key = "cache1Key";
         var cache1Value = "cache1Value";
         var cache2Key = "cache2Key";
         var cache2Value = "cache2Value";
 
-        CacheTestUtils.addItem(cache1, cache1Key, cache1Value, backend);
-        CacheTestUtils.addItem(cache2, cache2Key, cache2Value, backend);
+        CacheTestUtils.addItem(cache1, cache1Key, cache1Value, backend, hydratingStreamEndpoints);
+        CacheTestUtils.addItem(cache2, cache2Key, cache2Value, backend, hydratingStreamEndpoints);
 
         // Act
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsMultipleCachesWithHydration(

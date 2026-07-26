@@ -3,6 +3,7 @@ package com.bhf.aeroncache.integration.http;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -11,6 +12,7 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -18,18 +20,25 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.stream.Stream;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
 abstract class PutItemTests {
 
-    static final String PUT_ITEM_ENDPOINT = "/api/v1/cache/";
+    final String PUT_ITEM_ENDPOINT;
     static final String KNOWN_CACHE_ID = "1";
     static final String UNKNOWN_CACHE_ID = "123";
     static final String KNOWN_KEY = "SomeKey";
     static final String KNOWN_VALUE = "SomeValue";
+    private static TestEndpointsProvider putItemsEndpointProvider;
+
+    PutItemTests(TestEndpointsProvider putEndpoint) {
+        PUT_ITEM_ENDPOINT = putEndpoint.getPutItemEndpointCache();
+        putItemsEndpointProvider = putEndpoint;
+    }
 
     @BeforeAll
-    static void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
+    void setup(BackendTestResource backend) {
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, putItemsEndpointProvider);
     }
 
     public static Stream<Arguments> provideBadParamsToPutItem() {
@@ -85,7 +94,7 @@ abstract class PutItemTests {
     @DisplayName("Should get 404 on unknown cache")
     void shouldGet404OnUnknownCache(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.deleteCache(UNKNOWN_CACHE_ID, backend);
+        CacheTestUtils.deleteCache(UNKNOWN_CACHE_ID, backend, putItemsEndpointProvider);
         JSONObject requestBody = new JSONObject()
                 .put("key", KNOWN_KEY)
                 .put("value", KNOWN_VALUE);

@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.integration.ws;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamHydrationTests;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
@@ -8,6 +9,6 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class ClusteredHydrationTests extends AbstractMultiStreamHydrationTests {
 
     public ClusteredHydrationTests() {
-        super(new WSStreamingHelper());
+        super(new CacheTestEndpoints(), new WSStreamingHelper());
     }
 }

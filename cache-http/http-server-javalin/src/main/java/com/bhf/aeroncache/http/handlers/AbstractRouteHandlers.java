@@ -110,7 +110,7 @@ public abstract class AbstractRouteHandlers<V extends Reusable, BV> {
             var request = ctx.bodyAsClass(CreateCacheRequest.class);
             log.info("Got create cache request on cacheId {}", request.cacheId());
 
-            if (!validateCreateRequest(request, ctx)) {
+            if (!isCreateRequestValid(request, ctx)) {
                 return;
             }
 
@@ -210,7 +210,7 @@ public abstract class AbstractRouteHandlers<V extends Reusable, BV> {
         }
     }
 
-    protected boolean validateCreateRequest(CreateCacheRequest request, Context ctx) {
+    protected boolean isCreateRequestValid(CreateCacheRequest request, Context ctx) {
         return true;
     }
 

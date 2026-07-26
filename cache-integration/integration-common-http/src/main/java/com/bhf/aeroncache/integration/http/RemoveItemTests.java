@@ -3,6 +3,7 @@ package com.bhf.aeroncache.integration.http;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -10,21 +11,29 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
 abstract class RemoveItemTests {
 
-    private static final String REMOVE_ITEM_ENDPOINT = "/api/v1/cache/";
+    private final String REMOVE_ITEM_ENDPOINT;
     private static final String KNOWN_CACHE_ID = "1";
     private static final String UNKNOWN_CACHE_ID = "123";
     private static final String KNOWN_KEY = "SomeKey";
     private static final String UNKNOWN_KEY = "UnknownKey";
     private static final String KNOWN_VALUE = "SomeValue";
+    private static TestEndpointsProvider removeItemsEndpoints;
+
+    RemoveItemTests(TestEndpointsProvider endpointsProvider) {
+        REMOVE_ITEM_ENDPOINT = endpointsProvider.getRemoveItemEndpoint();
+        removeItemsEndpoints = endpointsProvider;
+    }
 
     @BeforeAll
-    static void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
+    void setup(BackendTestResource backend) {
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, removeItemsEndpoints);
     }
 
     @Test
@@ -32,7 +41,7 @@ abstract class RemoveItemTests {
     @HappyPath
     void shouldRemoveExistingItem(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, removeItemsEndpoints);
 
         JSONObject requestBody = new JSONObject().put("cacheId", KNOWN_CACHE_ID)
                 .put("key", KNOWN_KEY)
@@ -55,7 +64,7 @@ abstract class RemoveItemTests {
     @DisplayName("Should get 404 on unknown cache")
     void shouldGetNAOnUnknownCache(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.deleteCache(UNKNOWN_CACHE_ID, backend);
+        CacheTestUtils.deleteCache(UNKNOWN_CACHE_ID, backend, removeItemsEndpoints);
 
         RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
@@ -73,7 +82,7 @@ abstract class RemoveItemTests {
     @DisplayName("Should get 404 on unknown key")
     void shouldGet404OnUnknownKey(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.removeItem(KNOWN_CACHE_ID, UNKNOWN_KEY, backend);
+        CacheTestUtils.removeItem(KNOWN_CACHE_ID, UNKNOWN_KEY, backend, removeItemsEndpoints);
 
         RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)

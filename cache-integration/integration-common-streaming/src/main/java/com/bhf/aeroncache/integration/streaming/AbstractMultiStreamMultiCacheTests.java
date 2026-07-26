@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import org.awaitility.Awaitility;
 import org.hamcrest.MatcherAssert;
@@ -11,11 +12,13 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
 public abstract class AbstractMultiStreamMultiCacheTests {
 
@@ -28,15 +31,17 @@ public abstract class AbstractMultiStreamMultiCacheTests {
     private static final String ANOTHER_KNOWN_VALUE = "SomeOtherValue";
 
     private final StreamingHelper[] streamingHelpers;
+    private TestEndpointsProvider multiStreamMultiCacheEndpoints;
 
-    protected AbstractMultiStreamMultiCacheTests(StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamMultiCacheTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
+        multiStreamMultiCacheEndpoints = endpointsProvider;
     }
 
     @BeforeAll
-    static void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
-        CacheTestUtils.createCache(ANOTHER_KNOWN_CACHE_ID, backend);
+    void setup(BackendTestResource backend) {
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, multiStreamMultiCacheEndpoints);
+        CacheTestUtils.createCache(ANOTHER_KNOWN_CACHE_ID, backend, multiStreamMultiCacheEndpoints);
     }
 
     @Test
@@ -48,8 +53,8 @@ public abstract class AbstractMultiStreamMultiCacheTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsMultipleCaches(streamingHelpers, backend, cacheIds, 2);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
-        CacheTestUtils.addItem(ANOTHER_KNOWN_CACHE_ID, ANOTHER_KNOWN_KEY, ANOTHER_KNOWN_VALUE, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, multiStreamMultiCacheEndpoints);
+        CacheTestUtils.addItem(ANOTHER_KNOWN_CACHE_ID, ANOTHER_KNOWN_KEY, ANOTHER_KNOWN_VALUE, backend, multiStreamMultiCacheEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {

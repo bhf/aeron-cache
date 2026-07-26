@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.integration.sse;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
-import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamClearCacheTest;
+import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamDeleteCacheTest;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 
@@ -9,6 +9,6 @@ import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 class ClusteredDeleteCacheTests extends AbstractMultiStreamDeleteCacheTest {
 
     public ClusteredDeleteCacheTests() {
-        super(new SSEStreamingHelper());
+        super(new CacheTestEndpoints(), new SSEStreamingHelper());
     }
 }

@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.integration.http;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamDynamicCacheTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
@@ -9,7 +10,7 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class EphemeralMultiStreamDynamicCacheCreationTests extends AbstractMultiStreamDynamicCacheTests {
 
     public EphemeralMultiStreamDynamicCacheCreationTests() {
-        super(new WSStreamingHelper(), new SSEStreamingHelper());
+        super(new CacheTestEndpoints(), new WSStreamingHelper(), new SSEStreamingHelper());
     }
 
 }

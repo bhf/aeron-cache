@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import org.awaitility.Awaitility;
 import org.hamcrest.MatcherAssert;
@@ -11,11 +12,13 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
 public abstract class AbstractMultiStreamRemoveItemTest {
 
@@ -24,14 +27,16 @@ public abstract class AbstractMultiStreamRemoveItemTest {
     private static final String KNOWN_VALUE = "SomeValue";
 
     private final StreamingHelper[] streamingHelpers;
+    private TestEndpointsProvider removeEndpoints;
 
-    protected AbstractMultiStreamRemoveItemTest(StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamRemoveItemTest(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
+        removeEndpoints = endpointsProvider;
     }
 
     @BeforeAll
-    static void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
+    void setup(BackendTestResource backend) {
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, removeEndpoints);
     }
 
     @Test
@@ -42,8 +47,8 @@ public abstract class AbstractMultiStreamRemoveItemTest {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 2);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
-        CacheTestUtils.removeItem(KNOWN_CACHE_ID, KNOWN_KEY, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, removeEndpoints);
+        CacheTestUtils.removeItem(KNOWN_CACHE_ID, KNOWN_KEY, backend, removeEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {

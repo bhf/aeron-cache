@@ -4,12 +4,14 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.ReusableLong;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.CacheTimerService;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheSchemaDetailsProvider;
+import com.bhf.aeroncache.services.cachemanager.CountersCacheManager;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.types.ReusableString;
@@ -43,6 +45,9 @@ class AbstractCacheClusterServiceTest {
     private CacheManagerFactory<ReusableString, ReusableString, ReusableString> cacheManagerFactory;
 
     @Mock
+    private CountersCacheManager<ReusableString, ReusableString, ReusableLong> countersCacheManager;
+
+    @Mock
     private CacheManager<ReusableString, ReusableString, ReusableString> cacheManager;
 
     @Mock
@@ -71,6 +76,7 @@ class AbstractCacheClusterServiceTest {
         when(cacheManagerFactory.getValueSupplier()).thenReturn(ReusableString::new);
         when(cacheManagerFactory.getCacheManager()).thenReturn(cacheManager);
         when(cacheManagerFactory.getSchemaDetailsProvider()).thenReturn(schemaDetailsProvider);
+        when(cacheManagerFactory.getCountersCacheManager()).thenReturn(countersCacheManager);
 
         sut = new TestCacheClusterService("test-node", tracingService, cacheManagerFactory);
 

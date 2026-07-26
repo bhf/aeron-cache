@@ -3,6 +3,7 @@ package com.bhf.aeroncache.integration.http;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -10,10 +11,12 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
 abstract class GetCacheTests {
 
@@ -26,15 +29,17 @@ abstract class GetCacheTests {
     );
 
     protected final String getCacheEntriesEndpoint;
+    private static TestEndpointsProvider getCacheEndpointsProvider;
 
-    GetCacheTests(String getEndpoint) {
-        getCacheEntriesEndpoint = getEndpoint;
+    protected GetCacheTests(TestEndpointsProvider getEndpoint) {
+        getCacheEntriesEndpoint = getEndpoint.getItemEndpoint();
+        getCacheEndpointsProvider = getEndpoint;
     }
 
     @BeforeAll
-    static void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
-        KNOWN_ITEMS.forEach((key, value) -> CacheTestUtils.addItem(KNOWN_CACHE_ID, key, value, backend));
+    void setup(BackendTestResource backend) {
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, getCacheEndpointsProvider);
+        KNOWN_ITEMS.forEach((key, value) -> CacheTestUtils.addItem(KNOWN_CACHE_ID, key, value, backend, getCacheEndpointsProvider));
     }
 
     @Test

@@ -31,6 +31,9 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     @Setter
     private CacheResponseHandler<I,K,V> cacheResultsCallbacks;
 
+    @Setter
+    private CacheResponseHandler<I,K,ReusableLong> countersResultsCallbacks;
+
     @Getter
     private final IdleStrategy idleStrategy = new BackoffIdleStrategy();
 
@@ -97,7 +100,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         log.debug("Got client side message with TID {}", templateId);
 
         if (templateId == schemaDetails.getCacheCreatedId()) {
-            handleCacheCreated(buffer, offset, cacheResponseDecoder);
+            handleCacheCreated(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheEntryCreatedId()) {
             handleCacheEntryCreated(buffer, offset, cacheResponseDecoder);
         } else if (templateId == schemaDetails.getCacheEntryResultId()) {
@@ -123,7 +126,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         }
 
         else if (templateId == schemaDetails.getCounterCacheCreatedId()) {
-            handleCacheCreated(buffer, offset, countersCacheResponseDecoder);
+            handleCacheCreated(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks);
         } else if (templateId == schemaDetails.getCounterCacheEntryCreatedId()) {
             handleCacheEntryCreated(buffer, offset, countersCacheResponseDecoder);
         } else if (templateId == schemaDetails.getCounterCacheEntryResultId()) {
@@ -192,16 +195,18 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
      * Handle a cache created event by decoding it and delegating the
      * result to the {@link CacheResponseHandler}.
      *
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                   The buffer to decode from.
+     * @param offset                   The offset at which to start decoding.
+     * @param decoder                  The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleCacheCreated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
+    private <BV extends Reusable> void handleCacheCreated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder, CacheResponseHandler<I, K, BV> cacheResultsCallbacks) {
         decoder.decodeCacheCreated(buffer, offset, createCacheResult);
         log.info("Created cache {}, requestId: {}, status {}",
                 createCacheResult.getCacheId(), createCacheResult.getRequestId(), createCacheResult.getStatus());
 
         if (cacheResultsCallbacks != null) {
+            log.info("Delegating to create cache callback");
             cacheResultsCallbacks.handleCacheCreated(createCacheResult);
         }
     }

@@ -4,9 +4,9 @@ import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
-class ClusteredGetCacheTests extends GetCacheTests {
+class ClusteredRemoveCounterItemTests extends RemoveItemTests {
 
-    ClusteredGetCacheTests() {
+    ClusteredRemoveCounterItemTests() {
         super(new CacheTestEndpoints());
     }
 }

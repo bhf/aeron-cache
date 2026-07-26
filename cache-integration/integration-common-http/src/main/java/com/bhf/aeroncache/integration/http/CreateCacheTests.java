@@ -3,10 +3,12 @@ package com.bhf.aeroncache.integration.http;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import com.bhf.aeroncache.models.ErrorMessages;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import lombok.RequiredArgsConstructor;
 import org.hamcrest.Matchers;
 import org.json.JSONObject;
 import org.junit.jupiter.api.DisplayName;
@@ -20,9 +22,11 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.stream.Stream;
 
 @ExtendWith(BackendTestLauncher.class)
+@RequiredArgsConstructor
 abstract class CreateCacheTests {
 
-    private static final String CREATE_ENDPOINT = "/api/v1/cache/";
+    private final String CREATE_ENDPOINT;
+    private final TestEndpointsProvider endpointsProvider;
 
     @Test
     @DisplayName("Should create basic cache")
@@ -30,7 +34,7 @@ abstract class CreateCacheTests {
     void shouldCreateBasicCache(BackendTestResource backend) {
         // Arrange
         var cacheId = "12";
-        CacheTestUtils.deleteCache(cacheId, backend);
+        CacheTestUtils.deleteCache(cacheId, backend, endpointsProvider);
 
         JSONObject requestBody = new JSONObject().put("cacheId", cacheId);
 

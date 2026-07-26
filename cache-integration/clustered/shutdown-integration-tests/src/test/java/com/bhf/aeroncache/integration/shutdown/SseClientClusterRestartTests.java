@@ -5,6 +5,8 @@ import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.StreamingHelper;
 import com.bhf.aeroncache.integration.streaming.StreamingHelperUtil;
@@ -30,13 +32,14 @@ class SseClientClusterRestartTests {
     static final String KNOWN_CACHE_ID = "SSERestartCache★";
     static final String KNOWN_KEY = "SSERestartKey★★★";
     static final String KNOWN_VALUE = "SSERestartValue★★★";
+    private TestEndpointsProvider sseRestartEndpointsProvider = new CacheTestEndpoints();
 
     @Test
     @DisplayName("Should get streaming updates via SSE after cluster restart")
     @HappyPath
     void shouldHandleClusterRestart(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, sseRestartEndpointsProvider);
 
         // Act
         ContainerRestartUtils.stopClusterContainers(backend);
@@ -46,12 +49,12 @@ class SseClientClusterRestartTests {
         ContainerRestartUtils.awaitSSEReadiness(backend);
 
         // Generate an event
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, sseRestartEndpointsProvider);
 
         var streamingHelpers = new StreamingHelper[]{new SSEStreamingHelper()};
         var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 1);
 
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, sseRestartEndpointsProvider);
 
         // Assert
         for (var streamingSourceEventsFuture : postRestartEvents) {
