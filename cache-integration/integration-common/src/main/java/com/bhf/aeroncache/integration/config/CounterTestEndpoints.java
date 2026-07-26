@@ -6,12 +6,12 @@ import org.jetbrains.annotations.Nullable;
 @Getter
 public class CounterTestEndpoints implements TestEndpointsProvider{
 
-    final String CREATE_ENDPOINT_COUNTER = "/api/v1/counter/";
-    final String PUT_ITEM_ENDPOINT_COUNTER = "/api/v1/counter/";
-    final String DELETE_ENDPOINT_COUNTER = "/api/v1/counter/";
-    final String CLEAR_ENDPOINT_COUNTER = "/api/v1/counter/";
-    final String REMOVE_ITEM_ENDPOINT = "/api/v1/counter/";
-    final String GET_ITEM_ENDPOINT = "/api/v1/counter/";
+    final String CREATE_ENDPOINT_COUNTER = "/api/v1/counters/";
+    final String PUT_ITEM_ENDPOINT_COUNTER = "/api/v1/counters/";
+    final String DELETE_ENDPOINT_COUNTER = "/api/v1/counters/";
+    final String CLEAR_ENDPOINT_COUNTER = "/api/v1/counters/";
+    final String REMOVE_ITEM_ENDPOINT = "/api/v1/counters/";
+    final String GET_ITEM_ENDPOINT = "/api/v1/counters/";
 
     @Override
     public String getCreateEndpointCache() {

@@ -102,47 +102,47 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         if (templateId == schemaDetails.getCacheCreatedId()) {
             handleCacheCreated(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheEntryCreatedId()) {
-            handleCacheEntryCreated(buffer, offset, cacheResponseDecoder);
+            handleCacheEntryCreated(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheEntryResultId()) {
-            handleCacheEntryResult(buffer, offset, cacheResponseDecoder);
+            handleCacheEntryResult(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheClearedId()) {
-            handleCacheCleared(buffer, offset, cacheResponseDecoder);
+            handleCacheCleared(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheDeletedId()) {
-            handleCacheDeleted(buffer, offset, cacheResponseDecoder);
+            handleCacheDeleted(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheEntryRemovedId()) {
-            handleCacheEntryRemoved(buffer, offset, cacheResponseDecoder);
+            handleCacheEntryRemoved(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getAllCacheEntriesResultId()) {
-            handleAllCacheEntriesResult(buffer, offset, cacheResponseDecoder);
+            handleAllCacheEntriesResult(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getAllCacheStatsResultId()) {
-            handleAllCacheStatsResult(buffer, offset, cacheResponseDecoder);
+            handleAllCacheStatsResult(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheSubscriptionResponseId()) {
-            handleCacheSubscribeResult(buffer, offset, cacheResponseDecoder);
+            handleCacheSubscribeResult(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheUnsubscribeResponseId()) {
-            handleCacheUnsubscribeResult(buffer, offset, cacheResponseDecoder);
+            handleCacheUnsubscribeResult(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheEntryUpdateId()) {
-            handleCacheEntryUpdated(buffer, offset, cacheResponseDecoder);
+            handleCacheEntryUpdated(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.bulkOperationsResponseId()) {
-            handleBulkOperationResponse(buffer, offset, cacheResponseDecoder);
+            handleBulkOperationResponse(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         }
 
         else if (templateId == schemaDetails.getCounterCacheCreatedId()) {
             handleCacheCreated(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks);
         } else if (templateId == schemaDetails.getCounterCacheEntryCreatedId()) {
-            handleCacheEntryCreated(buffer, offset, countersCacheResponseDecoder);
+            handleCacheEntryCreated(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks);
+        } else if (templateId == schemaDetails.getCounterCacheClearedId()) {
+            handleCacheCleared(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks);
+        } else if (templateId == schemaDetails.getCounterCacheDeletedId()) {
+            handleCacheDeleted(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks);
+        } else if (templateId == schemaDetails.getCounterCacheEntryRemovedId()) {
+            handleCacheEntryRemoved(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks);
+        } else if (templateId == schemaDetails.getCounterCacheUnsubscribeResponseId()) {
+            handleCacheUnsubscribeResult(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks);
         } else if (templateId == schemaDetails.getCounterCacheEntryResultId()) {
             handleCounterCacheEntryResult(buffer, offset, countersCacheResponseDecoder);
-        } else if (templateId == schemaDetails.getCounterCacheClearedId()) {
-            handleCacheCleared(buffer, offset, countersCacheResponseDecoder);
-        } else if (templateId == schemaDetails.getCounterCacheDeletedId()) {
-            handleCacheDeleted(buffer, offset, countersCacheResponseDecoder);
-        } else if (templateId == schemaDetails.getCounterCacheEntryRemovedId()) {
-            handleCacheEntryRemoved(buffer, offset, countersCacheResponseDecoder);
         } else if (templateId == schemaDetails.getAllCounterCacheEntriesResultId()) {
             handleAllCounterCacheEntriesResult(buffer, offset, countersCacheResponseDecoder);
         } else if (templateId == schemaDetails.getCounterCacheSubscriptionResponseId()) {
             handleCounterCacheSubscribeResult(buffer, offset, countersCacheResponseDecoder);
-        } else if (templateId == schemaDetails.getCounterCacheUnsubscribeResponseId()) {
-            handleCacheUnsubscribeResult(buffer, offset, countersCacheResponseDecoder);
         } else if (templateId == schemaDetails.getIncrementCounterResponseId()) {
             handleIncrementCounterResult(buffer, offset, countersCacheResponseDecoder);
         } else if (templateId == schemaDetails.getDecrementCounterResponseId()) {
@@ -159,11 +159,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of getting a cache entry.
      *
-     * @param buffer The buffer to decode from.
-     * @param offset The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleCacheEntryResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder) {
+    private void handleCacheEntryResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder, CacheResponseHandler<I, K, V> cacheResultsCallbacks) {
         decoder.decodeGetCacheEntryResult(buffer, offset, getCacheEntryResult);
         log.info("Got cache entry result from cache {} with key {}, value: {}, requestId: {}, status {}",
                 getCacheEntryResult.getCacheId(), getCacheEntryResult.getEntryKey(), getCacheEntryResult.getEntryValue(),
@@ -177,11 +178,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of getting all cache entries.
      *
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleAllCacheEntriesResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder) {
+    private void handleAllCacheEntriesResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder, CacheResponseHandler<I, K, V> cacheResultsCallbacks) {
         decoder.decodeAllCacheEntriesResult(buffer, offset, getCacheEntriesResult);
         log.info("Got cache content result from cache {}, requestId: {}, status {}",
                 getCacheEntriesResult.getCacheId(), getCacheEntriesResult.getRequestId(), getCacheEntriesResult.getStatus());
@@ -214,11 +216,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle a cache entry being created by decoding it and delegating the result to the consumer.
      *
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleCacheEntryCreated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
+    private <BV extends Reusable> void handleCacheEntryCreated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder, CacheResponseHandler<I, K, BV> cacheResultsCallbacks) {
         decoder.decodeAddCacheEntryResult(buffer, offset, addCacheEntryResult);
         log.info("Got cache entry created message for cache {} with key {}, requestId: {}, status {}",
                 addCacheEntryResult.getCacheId(), addCacheEntryResult.getEntryKey(),
@@ -232,11 +235,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle a cache entry being removed by decoding it and delegating the result to the consumer.
      *
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleCacheEntryRemoved(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
+    private <BV extends Reusable> void handleCacheEntryRemoved(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder, CacheResponseHandler<I, K, BV> cacheResultsCallbacks) {
         decoder.decodeCacheEntryRemoved(buffer, offset, removeCacheEntryResult);
         log.info("Got cache entry removed for cache {} with key {}, requestId: {}, status {}",
                 removeCacheEntryResult.getCacheId(), removeCacheEntryResult.getKey(),
@@ -250,11 +254,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle a cache being cleared by decoding it and delegating the result to the consumer.
      *
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleCacheCleared(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
+    private <BV extends Reusable> void handleCacheCleared(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder, CacheResponseHandler<I, K, BV> cacheResultsCallbacks) {
         decoder.decodeCacheCleared(buffer, offset, clearCacheResult);
         log.info("Got cache cleared on cache {}, requestId: {}, status: {}",
                 clearCacheResult.getCacheId(), clearCacheResult.getRequestId(), clearCacheResult.getStatus());
@@ -267,11 +272,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle a cache being deleted by decoding it and delegating the result to the consumer.
      *
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleCacheDeleted(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
+    private <BV extends Reusable> void handleCacheDeleted(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder, CacheResponseHandler<I, K, BV> cacheResultsCallbacks) {
         decoder.decodeCacheDeleted(buffer, offset, deleteCacheResult);
         log.info("Got cache deleted on cache {}, requestId: {}, status {}",
                 deleteCacheResult.getCacheId(), deleteCacheResult.getRequestId(), deleteCacheResult.getStatus());
@@ -284,11 +290,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of getting all cache stats.
      *
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleAllCacheStatsResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
+    private void handleAllCacheStatsResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder, CacheResponseHandler<I, K, V> cacheResultsCallbacks) {
         decoder.decodeAllCacheStatsResult(buffer, offset, cacheStatsResult);
         log.debug("Got cache stats result, requestId: {}", cacheStatsResult.getRequestId());
 
@@ -300,11 +307,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of a subscription request.
      *
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleCacheSubscribeResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder) {
+    private void handleCacheSubscribeResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder, CacheResponseHandler<I, K, V> cacheResultsCallbacks) {
         decoder.decodeCacheSubscribeResult(buffer, offset, cacheSubscriptionResult);
         log.info("Got cache subscription result on cacheId {}, status {} requestId {}",
                 cacheSubscriptionResult.getCacheId(), cacheSubscriptionResult.getStatus(), cacheSubscriptionResult.getRequestId());
@@ -317,11 +325,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of an unsubscribe request.
      *
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleCacheUnsubscribeResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder) {
+    private <BV extends Reusable> void handleCacheUnsubscribeResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder, CacheResponseHandler<I, K, BV> cacheResultsCallbacks) {
         decoder.decodeCacheUnsubscribeResult(buffer, offset, cacheUnsubscribeResult);
         log.info("Got cache unsubscribe result on cacheId {}, status {} requestId {}",
                 cacheUnsubscribeResult.getCacheId(), cacheUnsubscribeResult.getStatus(), cacheUnsubscribeResult.getRequestId());
@@ -334,11 +343,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of a cache entry being added.
      *
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleCacheEntryUpdated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder) {
+    private void handleCacheEntryUpdated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder, CacheResponseHandler<I, K, V> cacheResultsCallbacks) {
         decoder.decodeCacheEntryUpdated(buffer, offset, cacheEntryUpdateResult);
         log.info("Got cache entry updated on cacheId {}, key {} requestId {}",
                 cacheEntryUpdateResult.getCacheId(), cacheEntryUpdateResult.getKey(), cacheEntryUpdateResult.getRequestId());
@@ -351,11 +361,12 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     /**
      * Handle the result of a bulk operation done on the cache.
      *
-     * @param buffer  The buffer to decode from.
-     * @param offset  The offset at which to start decoding.
-     * @param decoder The decoder to use.
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleBulkOperationResponse(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder) {
+    private void handleBulkOperationResponse(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder, CacheResponseHandler<I, K, V> cacheResultsCallbacks) {
         decoder.decodeBulkCacheOpsResult(buffer, offset, bulkCacheOpsResult);
         log.info("Got bulk ops results from cache on request Id {}", bulkCacheOpsResult.getRequestId());
 
