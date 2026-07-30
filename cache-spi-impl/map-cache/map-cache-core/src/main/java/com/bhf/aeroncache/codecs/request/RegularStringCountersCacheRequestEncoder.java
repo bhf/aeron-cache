@@ -6,7 +6,7 @@ import org.agrona.MutableDirectBuffer;
 
 import java.util.List;
 
-public class RegularStringCountersCacheRequestEncoder implements CountersCacheRequestEncoder<String, String, String> {
+public class RegularStringCountersCacheRequestEncoder implements CountersCacheRequestEncoder<String, String, Long> {
 
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final CreateCounterCacheEncoder createCacheEncoder = new CreateCounterCacheEncoder();
@@ -64,9 +64,9 @@ public class RegularStringCountersCacheRequestEncoder implements CountersCacheRe
     }
 
     @Override
-    public int encodeAddCacheEntry(String requestId, String cacheId, String key, String value, long ttl, MutableDirectBuffer msgBuffer) {
+    public int encodeAddCacheEntry(String requestId, String cacheId, String key, Long value, long ttl, MutableDirectBuffer msgBuffer) {
         addCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
-                .initialValue(Long.parseLong(value))
+                .initialValue(value)
                 .ttl(ttl)
                 .cacheId(cacheId)
                 .counterId(key)

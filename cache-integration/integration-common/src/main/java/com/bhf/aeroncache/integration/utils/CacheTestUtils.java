@@ -36,7 +36,7 @@ public class CacheTestUtils {
      * @param key     The key to add the item against.
      * @param value   The value to add.
      */
-    public static void addItem(String cacheId, String key, String value, BackendTestResource backend, TestEndpointsProvider endpointsProvider) {
+    public static <V> void addItem(String cacheId, String key, V value, BackendTestResource backend, TestEndpointsProvider endpointsProvider) {
         JSONObject jsonObj = new JSONObject()
                 .put("key", key)
                 .put("value", value);

@@ -1,17 +1,17 @@
 package com.bhf.aeroncache.integration.http;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
-import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.CounterTestEndpoints;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = false, useTestContainersEnvironment = true)
-class EphemeralRemoveItemTests extends RemoveItemTests<String>{
+class EphemeralRemoveCounterItemTests extends RemoveItemTests<Long>{
 
-    EphemeralRemoveItemTests() {
-        super(new CacheTestEndpoints());
+    EphemeralRemoveCounterItemTests() {
+        super(new CounterTestEndpoints());
     }
 
     @Override
-    String getKnownValue() {
-        return "knownValue";
+    Long getKnownValue() {
+        return 123L;
     }
 }

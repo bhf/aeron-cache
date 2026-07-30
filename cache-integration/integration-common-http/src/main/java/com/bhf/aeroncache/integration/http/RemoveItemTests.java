@@ -16,20 +16,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
-abstract class RemoveItemTests {
+abstract class RemoveItemTests<V> {
 
     private final String REMOVE_ITEM_ENDPOINT;
     private static final String KNOWN_CACHE_ID = "1";
     private static final String UNKNOWN_CACHE_ID = "123";
     private static final String KNOWN_KEY = "SomeKey";
     private static final String UNKNOWN_KEY = "UnknownKey";
-    private static final String KNOWN_VALUE = "SomeValue";
     private static TestEndpointsProvider removeItemsEndpoints;
 
     RemoveItemTests(TestEndpointsProvider endpointsProvider) {
         REMOVE_ITEM_ENDPOINT = endpointsProvider.getRemoveItemEndpoint();
         removeItemsEndpoints = endpointsProvider;
     }
+
+    abstract V getKnownValue();
 
     @BeforeAll
     void setup(BackendTestResource backend) {
@@ -41,11 +42,12 @@ abstract class RemoveItemTests {
     @HappyPath
     void shouldRemoveExistingItem(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, removeItemsEndpoints);
+        var value = getKnownValue();
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, value, backend, removeItemsEndpoints);
 
         JSONObject requestBody = new JSONObject().put("cacheId", KNOWN_CACHE_ID)
                 .put("key", KNOWN_KEY)
-                .put("value", KNOWN_VALUE);
+                .put("value", value);
 
         RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
