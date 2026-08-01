@@ -16,29 +16,32 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
-abstract class GetItemTests {
+abstract class GetItemTests<V> {
 
     //static String GET_ENDPOINT = "/api/v1/cache/";
     private static final String KNOWN_CACHE_ID = "1";
     private static final String UNKNOWN_CACHE_ID = "123";
     private static final String KNOWN_KEY = "SomeKey";
-    private static final String KNOWN_VALUE = "SomeValue";
     private static final String UNKNOWN_KEY = "UNKNOWN_KEY";
 
     private final String GET_ENDPOINT;
-    private static TestEndpointsProvider getEndpointsProvider;
+    private final TestEndpointsProvider getEndpointsProvider;
 
     GetItemTests(TestEndpointsProvider getEndpoint) {
         GET_ENDPOINT = getEndpoint.getItemEndpoint();
         getEndpointsProvider = getEndpoint;
     }
 
+    abstract V getKnownValue();
+    abstract V getNotFoundValue();
+    abstract V getUnknownCacheValue();
+
     @BeforeAll
     void setup(BackendTestResource backend) {
 
         // seed the cache with a single cache and a known key-value pair
         CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, getEndpointsProvider);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, getEndpointsProvider);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, getKnownValue(), backend, getEndpointsProvider);
     }
 
     @Test
@@ -56,7 +59,7 @@ abstract class GetItemTests {
                 // Assert
                 .then().assertThat()
                 .statusCode(200)
-                .body("value", Matchers.comparesEqualTo(KNOWN_VALUE));
+                .body("value", Matchers.equalTo(getKnownValue()));
     }
 
     @Test
@@ -75,7 +78,7 @@ abstract class GetItemTests {
                 // Assert
                 .then().assertThat()
                 .statusCode(404)
-                .body("value", Matchers.comparesEqualTo(""));
+                .body("value", Matchers.equalTo(getNotFoundValue()));
     }
 
     @Test
@@ -94,7 +97,7 @@ abstract class GetItemTests {
                 .statusCode(404)
                 .body("cacheId", Matchers.comparesEqualTo("0"))
                 .body("key", Matchers.comparesEqualTo("NA"))
-                .body("value", Matchers.comparesEqualTo("NA"));
+                .body("value", Matchers.equalTo(getUnknownCacheValue()));
     }
 
     String getHttpUri(BackendTestResource backend) {

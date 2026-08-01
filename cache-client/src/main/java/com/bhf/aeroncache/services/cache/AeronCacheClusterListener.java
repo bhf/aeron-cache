@@ -388,8 +388,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
                 counterCacheEntryResult.getCacheId(), counterCacheEntryResult.getEntryKey(), counterCacheEntryResult.getEntryValue(),
                 counterCacheEntryResult.getRequestId(), counterCacheEntryResult.getStatus());
 
-        if (cacheResultsCallbacks != null) {
-            cacheResultsCallbacks.handleCounterCacheEntryResult(counterCacheEntryResult);
+        if (countersResultsCallbacks != null) {
+            countersResultsCallbacks.handleCacheEntryResult(counterCacheEntryResult);
         }
     }
 
@@ -405,8 +405,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         log.info("Got counter cache content result from cache {}, requestId: {}, status {}",
                 counterCacheEntriesResult.getCacheId(), counterCacheEntriesResult.getRequestId(), counterCacheEntriesResult.getStatus());
 
-        if (cacheResultsCallbacks != null) {
-            cacheResultsCallbacks.handleAllCounterCacheEntries(counterCacheEntriesResult);
+        if (countersResultsCallbacks != null) {
+            countersResultsCallbacks.handleAllCacheEntries(counterCacheEntriesResult);
         }
     }
 
@@ -422,8 +422,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         log.info("Got counter cache subscription result on cacheId {}, status {} requestId {}",
                 counterSubscriptionResult.getCacheId(), counterSubscriptionResult.getStatus(), counterSubscriptionResult.getRequestId());
 
-        if (cacheResultsCallbacks != null) {
-            cacheResultsCallbacks.handleCounterCacheSubscribeResponse(counterSubscriptionResult);
+        if (countersResultsCallbacks != null) {
+            countersResultsCallbacks.handleCacheSubscribeResponse(counterSubscriptionResult);
         }
     }
 
@@ -440,8 +440,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
                 incrementCounterResult.getCacheId(), incrementCounterResult.getKey(), incrementCounterResult.getCounterValue(),
                 incrementCounterResult.getRequestId(), incrementCounterResult.getStatus());
 
-        if (cacheResultsCallbacks != null) {
-            cacheResultsCallbacks.handleCounterIncremented(incrementCounterResult);
+        if (countersResultsCallbacks != null) {
+            countersResultsCallbacks.handleCounterIncremented(incrementCounterResult);
         }
     }
 
@@ -458,8 +458,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
                 decrementCounterResult.getCacheId(), decrementCounterResult.getKey(), decrementCounterResult.getCounterValue(),
                 decrementCounterResult.getRequestId(), decrementCounterResult.getStatus());
 
-        if (cacheResultsCallbacks != null) {
-            cacheResultsCallbacks.handleCounterDecremented(decrementCounterResult);
+        if (countersResultsCallbacks != null) {
+            countersResultsCallbacks.handleCounterDecremented(decrementCounterResult);
         }
     }
 
@@ -476,8 +476,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
                 setCounterResult.getCacheId(), setCounterResult.getKey(), setCounterResult.getCounterValue(),
                 setCounterResult.getRequestId(), setCounterResult.getStatus());
 
-        if (cacheResultsCallbacks != null) {
-            cacheResultsCallbacks.handleCounterSet(setCounterResult);
+        if (countersResultsCallbacks != null) {
+            countersResultsCallbacks.handleCounterSet(setCounterResult);
         }
     }
 

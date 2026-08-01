@@ -22,19 +22,20 @@ import java.util.stream.Stream;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
-abstract class PutItemTests {
+abstract class PutItemTests<V> {
 
     final String PUT_ITEM_ENDPOINT;
     static final String KNOWN_CACHE_ID = "1";
     static final String UNKNOWN_CACHE_ID = "123";
     static final String KNOWN_KEY = "SomeKey";
-    static final String KNOWN_VALUE = "SomeValue";
-    private static TestEndpointsProvider putItemsEndpointProvider;
+    private final TestEndpointsProvider putItemsEndpointProvider;
 
     PutItemTests(TestEndpointsProvider putEndpoint) {
         PUT_ITEM_ENDPOINT = putEndpoint.getPutItemEndpointCache();
         putItemsEndpointProvider = putEndpoint;
     }
+
+    abstract V getKnownValue();
 
     @BeforeAll
     void setup(BackendTestResource backend) {
@@ -75,7 +76,7 @@ abstract class PutItemTests {
         // Arrange
         JSONObject requestBody = new JSONObject()
                 .put("key", KNOWN_KEY)
-                .put("value", KNOWN_VALUE);
+                .put("value", getKnownValue());
 
         RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
@@ -97,7 +98,7 @@ abstract class PutItemTests {
         CacheTestUtils.deleteCache(UNKNOWN_CACHE_ID, backend, putItemsEndpointProvider);
         JSONObject requestBody = new JSONObject()
                 .put("key", KNOWN_KEY)
-                .put("value", KNOWN_VALUE);
+                .put("value", getKnownValue());
 
         RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)

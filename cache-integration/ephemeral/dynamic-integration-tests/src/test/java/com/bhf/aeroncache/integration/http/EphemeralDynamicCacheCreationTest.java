@@ -4,9 +4,9 @@ import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
 
 @BackendTestConfig(dynamicCacheCreationEnabled = true, httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = false, useTestContainersEnvironment = true)
-class EphemeralDynamicCacheCreation extends DynamicCreateCacheTests {
+class EphemeralDynamicCacheCreationTest extends DynamicCreateCacheTests {
 
-    public EphemeralDynamicCacheCreation() {
+    public EphemeralDynamicCacheCreationTest() {
         super(new CacheTestEndpoints());
     }
 }

@@ -1,17 +1,17 @@
 package com.bhf.aeroncache.integration.http;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
-import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.CounterTestEndpoints;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
-class ClusteredPutItemTests extends PutItemTests<String> {
+class ClusteredPutCounterItemTests extends PutItemTests<Integer> {
 
-    ClusteredPutItemTests() {
-        super(new CacheTestEndpoints());
+    ClusteredPutCounterItemTests() {
+        super(new CounterTestEndpoints());
     }
 
     @Override
-    String getKnownValue() {
-        return "SomeValue";
+    Integer getKnownValue() {
+        return 123;
     }
 }
