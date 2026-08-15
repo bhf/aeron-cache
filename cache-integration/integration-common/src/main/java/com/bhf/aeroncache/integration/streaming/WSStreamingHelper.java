@@ -20,10 +20,7 @@ import java.util.concurrent.CountDownLatch;
 
 public class WSStreamingHelper implements StreamingHelper {
 
-    private static final String STREAMING_API_PREFIX = "/api/ws/v1/cache/";
-    private static final String STREAMING_MULTI_CACHE_API_PREFIX = "/api/ws/v1/caches/";
-    private static final String STREAMING_HYDRATE_API_PREFIX = "/api/ws/v1/cache/hydrate/";
-    private static final String STREAMING_MULTI_CACHE_HYDRATE_API_PREFIX = "/api/ws/v1/caches/hydrate/";
+
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
@@ -33,7 +30,7 @@ public class WSStreamingHelper implements StreamingHelper {
         List<CacheUpdateEvent> events = new ArrayList<>();
 
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
-                + backend.getWsPort() + STREAMING_API_PREFIX + cacheId;
+                + backend.getWsPort() + endpointsProvider.getStreamingApiPrefix() + cacheId;
 
         connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
 
@@ -47,7 +44,7 @@ public class WSStreamingHelper implements StreamingHelper {
         List<CacheUpdateEvent> events = new ArrayList<>();
 
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
-                + backend.getWsPort() + STREAMING_MULTI_CACHE_API_PREFIX + String.join(",", cacheIds);
+                + backend.getWsPort() + endpointsProvider.getStreamingMultiCacheApiPrefix() + String.join(",", cacheIds);
 
         connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
 
@@ -61,7 +58,7 @@ public class WSStreamingHelper implements StreamingHelper {
         List<CacheUpdateEvent> events = new ArrayList<>();
 
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
-                + backend.getWsPort() + STREAMING_HYDRATE_API_PREFIX + cacheId;
+                + backend.getWsPort() + endpointsProvider.getStreamingHydrateApiPrefix() + cacheId;
 
         connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
 
@@ -75,7 +72,7 @@ public class WSStreamingHelper implements StreamingHelper {
         List<CacheUpdateEvent> events = new ArrayList<>();
 
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
-                + backend.getWsPort() + STREAMING_MULTI_CACHE_HYDRATE_API_PREFIX + String.join(",", cacheIds);
+                + backend.getWsPort() + endpointsProvider.getStreamingMultiCacheHydrateApiPrefix() + String.join(",", cacheIds);
 
         connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
 
