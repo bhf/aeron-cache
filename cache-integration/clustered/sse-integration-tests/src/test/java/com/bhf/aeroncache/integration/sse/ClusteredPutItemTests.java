@@ -2,6 +2,7 @@ package com.bhf.aeroncache.integration.sse;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.StreamingCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamPutItemTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 
@@ -9,6 +10,6 @@ import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 class ClusteredPutItemTests extends AbstractMultiStreamPutItemTests {
 
     public ClusteredPutItemTests() {
-        super(new CacheTestEndpoints(), new SSEStreamingHelper());
+        super(new CacheTestEndpoints(), new StreamingCacheTestEndpoints(), new SSEStreamingHelper());
     }
 }

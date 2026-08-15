@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import org.awaitility.Awaitility;
@@ -26,10 +27,12 @@ public abstract class AbstractMultiStreamDynamicCacheTests {
     private static final String KNOWN_VALUE = "SomeValue";
 
     private final StreamingHelper[] streamingHelpers;
+    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider multiStreamDynamicCacheEndpoints;
 
-    protected AbstractMultiStreamDynamicCacheTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamDynamicCacheTests(TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
+        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
         multiStreamDynamicCacheEndpoints = endpointsProvider;
     }
 
@@ -43,7 +46,7 @@ public abstract class AbstractMultiStreamDynamicCacheTests {
     @HappyPath
     void shouldGetStreamingUpdateWhenPuttingIntoDynamicallyCreatedCache(BackendTestResource backend) {
         // Arrange
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, DYNAMIC_CACHE_ID, 1);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, DYNAMIC_CACHE_ID, 1);
 
         // Act
         CacheTestUtils.addItem(DYNAMIC_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, multiStreamDynamicCacheEndpoints);

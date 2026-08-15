@@ -2,6 +2,7 @@ package com.bhf.aeroncache.integration.sse;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.StreamingCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamRemoveItemTest;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 
@@ -9,6 +10,6 @@ import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 class ClusteredRemoveItemTests extends AbstractMultiStreamRemoveItemTest {
 
     public ClusteredRemoveItemTests() {
-        super(new CacheTestEndpoints(), new SSEStreamingHelper());
+        super(new CacheTestEndpoints(), new StreamingCacheTestEndpoints(), new SSEStreamingHelper());
     }
 }

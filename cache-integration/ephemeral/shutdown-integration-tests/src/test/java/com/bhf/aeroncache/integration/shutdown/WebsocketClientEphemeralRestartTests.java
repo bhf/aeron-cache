@@ -4,9 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
-import com.bhf.aeroncache.integration.config.BackendTestConfig;
-import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
-import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
+import com.bhf.aeroncache.integration.config.*;
 import com.bhf.aeroncache.integration.streaming.StreamingHelper;
 import com.bhf.aeroncache.integration.streaming.StreamingHelperUtil;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
@@ -32,7 +30,8 @@ class WebsocketClientEphemeralRestartTests {
     static final String KNOWN_CACHE_ID = "WSRestartCache★";
     static final String KNOWN_KEY = "WSRestartKey★★★";
     static final String KNOWN_VALUE = "WSRestartValue★★★";
-    private TestEndpointsProvider ephemeralEndpointsProvider = new CacheTestEndpoints();
+    private final TestEndpointsProvider ephemeralEndpointsProvider = new CacheTestEndpoints();
+    private final StreamingTestEndpointsProvider streamingTestEndpointsProvider = new StreamingCacheTestEndpoints();
 
     @Test
     @DisplayName("Should get streaming updates via WebSocket after ephemeral cache restart")
@@ -49,7 +48,7 @@ class WebsocketClientEphemeralRestartTests {
         ContainerRestartUtils.awaitWSReadiness(backend);
 
         var streamingHelpers = new StreamingHelper[]{new WSStreamingHelper()};
-        var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 1);
+        var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingTestEndpointsProvider, KNOWN_CACHE_ID, 1);
 
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, ephemeralEndpointsProvider);
 

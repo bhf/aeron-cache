@@ -2,6 +2,7 @@ package com.bhf.aeroncache.integration.streaming;
 
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.OkHttpClient;
@@ -26,7 +27,7 @@ public class WSStreamingHelper implements StreamingHelper {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
-    public CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready) {
+    public CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, StreamingTestEndpointsProvider endpointsProvider, String cacheId, int count, CompletableFuture<Void> ready) {
         CountDownLatch latch = new CountDownLatch(count);
         CompletableFuture<List<CacheUpdateEvent>> messageFuture = new CompletableFuture<>();
         List<CacheUpdateEvent> events = new ArrayList<>();
@@ -40,7 +41,7 @@ public class WSStreamingHelper implements StreamingHelper {
     }
 
     @Override
-    public CompletableFuture<List<CacheUpdateEvent>> getEventsMultipleCaches(BackendTestResource backend, List<String> cacheIds, int count, CompletableFuture<Void> ready) {
+    public CompletableFuture<List<CacheUpdateEvent>> getEventsMultipleCaches(BackendTestResource backend, StreamingTestEndpointsProvider endpointsProvider, List<String> cacheIds, int count, CompletableFuture<Void> ready) {
         CountDownLatch latch = new CountDownLatch(count);
         CompletableFuture<List<CacheUpdateEvent>> messageFuture = new CompletableFuture<>();
         List<CacheUpdateEvent> events = new ArrayList<>();
@@ -54,7 +55,7 @@ public class WSStreamingHelper implements StreamingHelper {
     }
 
     @Override
-    public CompletableFuture<List<CacheUpdateEvent>> getEventsWithHydration(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready) {
+    public CompletableFuture<List<CacheUpdateEvent>> getEventsWithHydration(BackendTestResource backend, StreamingTestEndpointsProvider endpointsProvider, String cacheId, int count, CompletableFuture<Void> ready) {
         CountDownLatch latch = new CountDownLatch(count);
         CompletableFuture<List<CacheUpdateEvent>> messageFuture = new CompletableFuture<>();
         List<CacheUpdateEvent> events = new ArrayList<>();
@@ -68,7 +69,7 @@ public class WSStreamingHelper implements StreamingHelper {
     }
 
     @Override
-    public CompletableFuture<List<CacheUpdateEvent>> getEventsMultipleCachesWithHydration(BackendTestResource backend, List<String> cacheIds, int count, CompletableFuture<Void> ready) {
+    public CompletableFuture<List<CacheUpdateEvent>> getEventsMultipleCachesWithHydration(BackendTestResource backend, StreamingTestEndpointsProvider endpointsProvider, List<String> cacheIds, int count, CompletableFuture<Void> ready) {
         CountDownLatch latch = new CountDownLatch(count);
         CompletableFuture<List<CacheUpdateEvent>> messageFuture = new CompletableFuture<>();
         List<CacheUpdateEvent> events = new ArrayList<>();

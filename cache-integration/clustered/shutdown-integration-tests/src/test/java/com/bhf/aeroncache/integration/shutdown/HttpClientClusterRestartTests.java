@@ -27,7 +27,7 @@ class HttpClientClusterRestartTests {
     static final String KNOWN_CACHE_ID = "HttpRestart★";
     static final String KNOWN_KEY = "HttpRestartKey★★★";
     static final String KNOWN_VALUE = "HttpRestartValue★★★";
-    private TestEndpointsProvider endpointsProvider = new CacheTestEndpoints();
+    private final TestEndpointsProvider endpointsProvider = new CacheTestEndpoints();
 
     @Test
     @DisplayName("Should perform operations via HTTP interface after cluster restart")

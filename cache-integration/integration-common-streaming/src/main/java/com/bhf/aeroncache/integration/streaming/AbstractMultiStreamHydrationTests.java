@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import org.awaitility.Awaitility;
@@ -25,10 +26,12 @@ public abstract class AbstractMultiStreamHydrationTests {
 
     private final StreamingHelper[] streamingHelpers;
     private static final String HYDRATION_CACHE = "hydration-cache";
+    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider hydratingStreamEndpoints;
 
-    protected AbstractMultiStreamHydrationTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamHydrationTests(TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
+        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
         hydratingStreamEndpoints = endpointsProvider;
     }
 
@@ -52,7 +55,7 @@ public abstract class AbstractMultiStreamHydrationTests {
         CacheTestUtils.addItem(HYDRATION_CACHE, hydrationKey2, hydrationValue2, backend, hydratingStreamEndpoints);
 
         // Act
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsWithHydration(streamingHelpers, backend, HYDRATION_CACHE, 2);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsWithHydration(streamingHelpers, backend, streamingEndpointsProvider, HYDRATION_CACHE, 2);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -97,7 +100,7 @@ public abstract class AbstractMultiStreamHydrationTests {
 
         // Act
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsMultipleCachesWithHydration(
-                streamingHelpers, backend, List.of(cache1, cache2), 2);
+                streamingHelpers, backend, streamingEndpointsProvider, List.of(cache1, cache2), 2);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {

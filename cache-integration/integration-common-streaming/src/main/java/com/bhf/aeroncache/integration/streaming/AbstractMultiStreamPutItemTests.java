@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import org.awaitility.Awaitility;
@@ -27,11 +28,13 @@ public abstract class AbstractMultiStreamPutItemTests {
 
     private static final String ANOTHER_KNOWN_KEY = "SomeOtherKey";
     private static final String ANOTHER_KNOWN_VALUE = "SomeOtherValue";
+    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider putItemsEndpoints;
     private final StreamingHelper[] streamingHelpers;
 
-    protected AbstractMultiStreamPutItemTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamPutItemTests(TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
+        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
         putItemsEndpoints = endpointsProvider;
     }
 
@@ -45,7 +48,7 @@ public abstract class AbstractMultiStreamPutItemTests {
     @HappyPath
     void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
         // Arrange
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 1);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 1);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, putItemsEndpoints);
@@ -72,7 +75,7 @@ public abstract class AbstractMultiStreamPutItemTests {
     @HappyPath
     void shouldGetStreamingUpdateWhenPuttingExistingKeyIntoKnownCache(BackendTestResource backend) {
         // Arrange
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 2);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 2);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, putItemsEndpoints);
@@ -105,7 +108,7 @@ public abstract class AbstractMultiStreamPutItemTests {
     @HappyPath
     protected void shouldGetOrderedUpdatesOnTimedRemoved(BackendTestResource backend) {
         // Arrange
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 4);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 4);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"orderedtimer", KNOWN_VALUE, 5000, backend, putItemsEndpoints);
@@ -148,7 +151,7 @@ public abstract class AbstractMultiStreamPutItemTests {
     @HappyPath
     protected void shouldCancelOldTimerWhenUpdatingTtl(BackendTestResource backend) {
         // Arrange
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 3);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 3);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"canceltimer", KNOWN_VALUE, 60000, backend, putItemsEndpoints);

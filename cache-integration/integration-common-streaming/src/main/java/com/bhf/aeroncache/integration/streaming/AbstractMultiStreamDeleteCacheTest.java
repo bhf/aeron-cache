@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import org.awaitility.Awaitility;
@@ -27,10 +28,12 @@ public abstract class AbstractMultiStreamDeleteCacheTest {
     private static final String KNOWN_VALUE = "SomeValue";
 
     private final StreamingHelper[] streamingHelpers;
+    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider streamDeleteEndpoints;
 
-    protected AbstractMultiStreamDeleteCacheTest(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamDeleteCacheTest(TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
+        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
         streamDeleteEndpoints = endpointsProvider;
     }
 
@@ -44,7 +47,7 @@ public abstract class AbstractMultiStreamDeleteCacheTest {
     @HappyPath
     void shouldGetStreamingUpdateWhenDeletingExistingCache(BackendTestResource backend) {
         // Arrange
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 2);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 2);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, streamDeleteEndpoints);

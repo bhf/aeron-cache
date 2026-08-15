@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import org.awaitility.Awaitility;
@@ -27,11 +28,13 @@ public abstract class AbstractPutItemTests {
     private static final String KNOWN_VALUE = "SomeValue";
 
     private final StreamingHelper streamingHelper;
+    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider putItemsEndpoints;
 
-    protected AbstractPutItemTests(TestEndpointsProvider endpointsProvider, StreamingHelper streamingHelper) {
+    protected AbstractPutItemTests(TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider, StreamingHelper streamingHelper) {
         this.streamingHelper = streamingHelper;
         putItemsEndpoints = endpointsProvider;
+        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
     }
 
     @BeforeAll
@@ -45,7 +48,7 @@ public abstract class AbstractPutItemTests {
     void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
         // Arrange
         var readyFuture = new CompletableFuture<Void>();
-        var eventData = streamingHelper.getEvents(backend, KNOWN_CACHE_ID, 1, readyFuture);
+        var eventData = streamingHelper.getEvents(backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 1, readyFuture);
 
         Awaitility.await().atMost(60, TimeUnit.SECONDS).until(readyFuture::isDone);
 

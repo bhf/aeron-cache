@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
@@ -33,10 +34,12 @@ public abstract class AbstractMultiStreamBulkOpsTests {
     private static final String KNOWN_VALUE = "SomeValue";
 
     private final StreamingHelper[] streamingHelpers;
+    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider bulkOpsEndpoints;
 
-    protected AbstractMultiStreamBulkOpsTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamBulkOpsTests(TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
+        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
         bulkOpsEndpoints = endpointsProvider;
     }
 
@@ -52,7 +55,7 @@ public abstract class AbstractMultiStreamBulkOpsTests {
     void shouldGetStreamingUpdatesWhenAddingMultipleItemsForSubscribedCache(BackendTestResource backend) {
         // Arrange
         int numItems = 3;
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, numItems);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, numItems);
 
         List<CacheOperationRequest> operations = new ArrayList<>();
         int i=0;
@@ -93,7 +96,7 @@ public abstract class AbstractMultiStreamBulkOpsTests {
         var firstValue = "value-1";
         var secondValue = "value-2";
         int numItems = 4;
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, numItems);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, numItems);
 
         var operations = List.of(
                 new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, firstValue),
@@ -151,7 +154,7 @@ public abstract class AbstractMultiStreamBulkOpsTests {
         var ttlValue = "ttl-value";
         long ttlMs = 1000;
         int numExpectedEvents = 2;
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, numExpectedEvents);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, numExpectedEvents);
 
         var operations = List.of(
                 new CacheOperationRequest(BulkOperationType.ADD_ITEM, ttlMs,0,  UUID.randomUUID().toString(), KNOWN_CACHE_ID, ttlKey, ttlValue)
