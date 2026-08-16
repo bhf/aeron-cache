@@ -93,6 +93,7 @@ public class WSStreamingHelper implements StreamingHelper {
 
             @Override
             public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
+                System.out.println("WS MESSAGE: " + text);
                 try {
                     CacheUpdateEvent event = OBJECT_MAPPER.readValue(text, CacheUpdateEvent.class);
                     synchronized (events) {

@@ -247,4 +247,12 @@
         <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
+    <sbe:message name="CounterCacheEntryUpdate" id="48" semanticType="CounterCacheEntryUpdate"
+                 description="An update to a counter cache entry">
+        <field name="value" id="1" type="int64"/>
+        <data name="cacheId" id="2" type="varStringEncoding"/>
+        <data name="key" id="3" type="varStringEncoding"/>
+        <data name="requestId" id="4" type="varStringEncoding"/>
+    </sbe:message>
+
 </sbe:messageSchema>

@@ -20,14 +20,12 @@ import java.util.concurrent.TimeUnit;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
-public abstract class AbstractMultiStreamPutItemTests {
+public abstract class AbstractMultiStreamPutItemTests<V> {
 
     private static final String KNOWN_CACHE_ID = "1";
     private static final String KNOWN_KEY = "SomeKey";
-    private static final String KNOWN_VALUE = "SomeValue";
-
     private static final String ANOTHER_KNOWN_KEY = "SomeOtherKey";
-    private static final String ANOTHER_KNOWN_VALUE = "SomeOtherValue";
+
     private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider putItemsEndpoints;
     private final StreamingHelper[] streamingHelpers;
@@ -51,7 +49,7 @@ public abstract class AbstractMultiStreamPutItemTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 1);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, putItemsEndpoints);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, getKnownValue(), backend, putItemsEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -66,7 +64,7 @@ public abstract class AbstractMultiStreamPutItemTests {
             MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
             MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
-            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(getKnownValue()));
         }
     }
 
@@ -78,8 +76,8 @@ public abstract class AbstractMultiStreamPutItemTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 2);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, putItemsEndpoints);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, ANOTHER_KNOWN_VALUE, backend, putItemsEndpoints);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, getKnownValue(), backend, putItemsEndpoints);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, getAnotherKnownValue(), backend, putItemsEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -93,13 +91,13 @@ public abstract class AbstractMultiStreamPutItemTests {
             MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
             MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
-            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(getKnownValue()));
 
             var secondUpdateEvent = streamingSoureEvents.get(1);
             MatcherAssert.assertThat(secondUpdateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(secondUpdateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
             MatcherAssert.assertThat(secondUpdateEvent.itemKey(), Matchers.is(KNOWN_KEY));
-            MatcherAssert.assertThat(secondUpdateEvent.itemValue(), Matchers.is(ANOTHER_KNOWN_VALUE));
+            MatcherAssert.assertThat(secondUpdateEvent.itemValue(), Matchers.is(getAnotherKnownValue()));
         }
     }
 
@@ -111,8 +109,8 @@ public abstract class AbstractMultiStreamPutItemTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 4);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"orderedtimer", KNOWN_VALUE, 5000, backend, putItemsEndpoints);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, ANOTHER_KNOWN_KEY+"orderedtimer", ANOTHER_KNOWN_VALUE, 6000, backend, putItemsEndpoints);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"orderedtimer", getKnownValue(), 5000, backend, putItemsEndpoints);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, ANOTHER_KNOWN_KEY+"orderedtimer", getAnotherKnownValue(), 6000, backend, putItemsEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -126,13 +124,13 @@ public abstract class AbstractMultiStreamPutItemTests {
             MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
             MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY+"orderedtimer"));
-            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(getKnownValue()));
 
             var secondUpdateEvent = streamingSoureEvents.get(1);
             MatcherAssert.assertThat(secondUpdateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(secondUpdateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
             MatcherAssert.assertThat(secondUpdateEvent.itemKey(), Matchers.is(ANOTHER_KNOWN_KEY+"orderedtimer"));
-            MatcherAssert.assertThat(secondUpdateEvent.itemValue(), Matchers.is(ANOTHER_KNOWN_VALUE));
+            MatcherAssert.assertThat(secondUpdateEvent.itemValue(), Matchers.is(getAnotherKnownValue()));
 
             var firstRemove = streamingSoureEvents.get(2);
             MatcherAssert.assertThat(firstRemove.eventType(), Matchers.is(CacheUpdateEvent.EventType.REMOVE_ITEM));
@@ -154,8 +152,8 @@ public abstract class AbstractMultiStreamPutItemTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 3);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"canceltimer", KNOWN_VALUE, 60000, backend, putItemsEndpoints);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"canceltimer", ANOTHER_KNOWN_VALUE, 5000, backend, putItemsEndpoints);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"canceltimer", getKnownValue(), 60000, backend, putItemsEndpoints);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"canceltimer", getAnotherKnownValue(), 5000, backend, putItemsEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -168,17 +166,21 @@ public abstract class AbstractMultiStreamPutItemTests {
             var firstAdd = streamingSourceEvents.get(0);
             MatcherAssert.assertThat(firstAdd.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(firstAdd.itemKey(), Matchers.is(KNOWN_KEY+"canceltimer"));
-            MatcherAssert.assertThat(firstAdd.itemValue(), Matchers.is(KNOWN_VALUE));
+            MatcherAssert.assertThat(firstAdd.itemValue(), Matchers.is(getKnownValue()));
 
             var secondAdd = streamingSourceEvents.get(1);
             MatcherAssert.assertThat(secondAdd.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(secondAdd.itemKey(), Matchers.is(KNOWN_KEY+"canceltimer"));
-            MatcherAssert.assertThat(secondAdd.itemValue(), Matchers.is(ANOTHER_KNOWN_VALUE));
+            MatcherAssert.assertThat(secondAdd.itemValue(), Matchers.is(getAnotherKnownValue()));
 
             var removeEvent = streamingSourceEvents.get(2);
             MatcherAssert.assertThat(removeEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.REMOVE_ITEM));
             MatcherAssert.assertThat(removeEvent.itemKey(), Matchers.is(KNOWN_KEY+"canceltimer"));
         }
     }
+
+
+    protected abstract V getKnownValue();
+    protected abstract V getAnotherKnownValue();
 
 }

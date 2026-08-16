@@ -11,7 +11,7 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = false, useTestContainersEnvironment = true)
-class EphemeralMultiStreamPutItemTests extends AbstractMultiStreamPutItemTests {
+class EphemeralMultiStreamPutItemTests extends AbstractMultiStreamPutItemTests<String> {
 
     public EphemeralMultiStreamPutItemTests() {
         super(new CacheTestEndpoints(), new StreamingCacheTestEndpoints(), new SSEStreamingHelper(), new WSStreamingHelper());
@@ -27,5 +27,15 @@ class EphemeralMultiStreamPutItemTests extends AbstractMultiStreamPutItemTests {
     protected void shouldCancelOldTimerWhenUpdatingTtl(BackendTestResource backend) {
         // not supported for ephemeral caches
         assertTrue(true);
+    }
+
+    @Override
+    protected String getKnownValue() {
+        return "EphemeralMultiStreamPutItemTests";
+    }
+
+    @Override
+    protected String getAnotherKnownValue() {
+        return "EphemeralMultiStreamPutItemTests-second-value";
     }
 }

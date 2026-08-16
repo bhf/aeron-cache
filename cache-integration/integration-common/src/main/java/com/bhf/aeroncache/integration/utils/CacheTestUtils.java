@@ -58,7 +58,7 @@ public class CacheTestUtils {
      * @param ttl     The TTL.
      * @param backend Environment to use.
      */
-    public static void addItem(String cacheId, String key, String value, long ttl, BackendTestResource backend, TestEndpointsProvider endpointsProvider) {
+    public static <V> void addItem(String cacheId, String key, V value, long ttl, BackendTestResource backend, TestEndpointsProvider endpointsProvider) {
         JSONObject jsonObj = new JSONObject()
                 .put("key", key)
                 .put("value", value)

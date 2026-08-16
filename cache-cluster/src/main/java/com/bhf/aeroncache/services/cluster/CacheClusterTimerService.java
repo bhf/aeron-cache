@@ -68,7 +68,9 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
         }
 
         var timerCorrelationId = this.timerCorrelationIdProvider.getNextId();
-        boolean success = cluster.scheduleTimer(timerCorrelationId, deadline);
+        while(!cluster.scheduleTimer(timerCorrelationId, deadline)){
+
+        }
         log.info("Scheduled timer for {} to remove key {} from cache {} correlationId {}", deadline, key, cacheId, timerCorrelationId);
 
         final var keyToRemove = keySupplier.get();
@@ -139,6 +141,8 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
     @Override
     public void onTimerEvent(final long correlationId, final long timestamp) {
         var pendingRemove = pendingRemoves.remove(correlationId);
+
+        log.info("Timer event received for correlationId {} at timestamp {}, pendingRemove: {}", correlationId, timestamp, pendingRemove);
 
         if (pendingRemove != null) {
             I cache = pendingRemove.getCacheToRemoveOn();

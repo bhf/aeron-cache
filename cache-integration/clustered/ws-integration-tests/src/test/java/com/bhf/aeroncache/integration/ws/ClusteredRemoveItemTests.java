@@ -7,10 +7,14 @@ import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamRemoveItemTes
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
-class ClusteredRemoveItemTests extends AbstractMultiStreamRemoveItemTest {
+class ClusteredRemoveItemTests extends AbstractMultiStreamRemoveItemTest<String> {
 
     public ClusteredRemoveItemTests() {
         super(new CacheTestEndpoints(), new StreamingCacheTestEndpoints(), new WSStreamingHelper());
     }
 
+    @Override
+    public String getKnownValue() {
+        return "ClusteredRemoveItemTests";
+    }
 }

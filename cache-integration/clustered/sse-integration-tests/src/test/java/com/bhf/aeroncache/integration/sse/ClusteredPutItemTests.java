@@ -7,9 +7,19 @@ import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamPutItemTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = true, useClusteredMode = true, useTestContainersEnvironment = true)
-class ClusteredPutItemTests extends AbstractMultiStreamPutItemTests {
+class ClusteredPutItemTests extends AbstractMultiStreamPutItemTests<String> {
 
     public ClusteredPutItemTests() {
         super(new CacheTestEndpoints(), new StreamingCacheTestEndpoints(), new SSEStreamingHelper());
+    }
+
+    @Override
+    protected String getKnownValue() {
+        return "ClusteredPutItemTests";
+    }
+
+    @Override
+    protected String getAnotherKnownValue() {
+        return "ClusteredPutItemTests-second-value";
     }
 }

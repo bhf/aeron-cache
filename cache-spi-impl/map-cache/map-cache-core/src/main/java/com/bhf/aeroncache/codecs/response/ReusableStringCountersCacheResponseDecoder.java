@@ -223,9 +223,22 @@ public class ReusableStringCountersCacheResponseDecoder implements CountersCache
         cacheUnsubscribeResult.setStatus(status);
     }
 
+    private final CounterCacheEntryUpdateDecoder cacheEntryUpdateDecoder = new CounterCacheEntryUpdateDecoder();
+
     @Override
     public void decodeCacheEntryUpdated(DirectBuffer buffer, int offset, CacheEntryUpdateResult<ReusableString, ReusableString, ReusableLong> cacheEntryUpdateResult) {
+        cacheEntryUpdateDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
+        var cacheId = cacheEntryUpdateDecoder.cacheId();
+        var key = cacheEntryUpdateDecoder.key();
+        var value = cacheEntryUpdateDecoder.value();
+        var requestId = cacheEntryUpdateDecoder.requestId();
+
+        cacheEntryUpdateResult.clear();
+        cacheEntryUpdateResult.getCacheId().copyFrom(cacheId);
+        cacheEntryUpdateResult.setRequestId(requestId);
+        cacheEntryUpdateResult.getKey().copyFrom(key);
+        cacheEntryUpdateResult.getValue().copyFrom(value);
     }
 
     @Override

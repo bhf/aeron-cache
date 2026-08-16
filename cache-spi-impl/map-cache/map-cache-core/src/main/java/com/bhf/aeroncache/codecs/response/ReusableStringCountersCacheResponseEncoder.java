@@ -23,7 +23,8 @@ public class ReusableStringCountersCacheResponseEncoder implements CountersCache
     private final DeleteCounterCacheResponseEncoder cacheDeletedEncoder = new DeleteCounterCacheResponseEncoder();
     private final CounterCacheSubscriptionResponseEncoder cacheSubscriptionResponseEncoder = new CounterCacheSubscriptionResponseEncoder();
     private final CounterCacheUnsubscribeResponseEncoder cacheUnsubscribeResponseEncoder = new CounterCacheUnsubscribeResponseEncoder();
-    
+
+    private final CounterCacheEntryUpdateEncoder entryUpdateEncoder = new CounterCacheEntryUpdateEncoder();
     private final IncrementCounterResponseEncoder incrementEncoder = new IncrementCounterResponseEncoder();
     private final DecrementCounterResponseEncoder decrementEncoder = new DecrementCounterResponseEncoder();
     private final SetCounterResponseEncoder setEncoder = new SetCounterResponseEncoder();
@@ -86,7 +87,13 @@ public class ReusableStringCountersCacheResponseEncoder implements CountersCache
 
     @Override
     public <VT extends Reusable> int encodeEntryUpdated(ReusableString key, VT value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, MutableDirectBuffer egressBuffer) {
-        return 0;
+        entryUpdateEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        entryUpdateEncoder.value((Long) value.value());
+        entryUpdateEncoder.cacheId(addCacheEntryResult.getCacheId().value())
+                .key(key.value())
+                .requestId(addCacheEntryResult.getRequestId());
+
+        return entryUpdateEncoder.encodedLength()+headerEncoder.encodedLength();
     }
 
     @Override

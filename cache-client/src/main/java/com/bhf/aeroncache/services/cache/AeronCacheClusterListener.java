@@ -52,6 +52,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     private final CacheSubscriptionResult<I,K,V> cacheSubscriptionResult;
     private final CacheUnsubscribeResult<I> cacheUnsubscribeResult;
     private final CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult;
+    private final CacheEntryUpdateResult<I, K, ReusableLong> counterCacheEntryUpdateResult;
     private final BulkCacheOpsResult<I,K,V> bulkCacheOpsResult;
     private final ClusterSessionEventHandler sessionEventHandler = new NoOpClusterSessionEventHandler();
     private final CacheStatsResult<I> cacheStatsResult = new CacheStatsResult<>();
@@ -84,6 +85,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         counterCacheEntryResult = new GetCacheEntryResult<>(indexSupplier.get(), keySupplier.get(), new ReusableLong());
         counterCacheEntriesResult = new GetAllCacheEntriesResult<>(indexSupplier.get());
         counterSubscriptionResult = new CacheSubscriptionResult<>(indexSupplier.get());
+
+        counterCacheEntryUpdateResult = new CacheEntryUpdateResult<>(indexSupplier.get(), keySupplier.get(), new ReusableLong());
     }
 
     @Override
@@ -120,7 +123,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         } else if (templateId == schemaDetails.getCacheUnsubscribeResponseId()) {
             handleCacheUnsubscribeResult(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheEntryUpdateId()) {
-            handleCacheEntryUpdated(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
+            handleCacheEntryUpdated(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks, cacheEntryUpdateResult);
         } else if (templateId == schemaDetails.bulkOperationsResponseId()) {
             handleBulkOperationResponse(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         }
@@ -149,6 +152,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
             handleDecrementCounterResult(buffer, offset, countersCacheResponseDecoder);
         } else if (templateId == schemaDetails.getSetCounterResponseId()) {
             handleSetCounterResult(buffer, offset, countersCacheResponseDecoder);
+        } else if (templateId == schemaDetails.getCounterCacheEntryUpdateId()) {
+            handleCacheEntryUpdated(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks, counterCacheEntryUpdateResult);
         }
         else {
             log.warn("Got unknown message with TID {}", templateId);
@@ -348,7 +353,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
      * @param decoder               The decoder to use.
      * @param cacheResultsCallbacks     Callbacks for the cache results.
      */
-    private void handleCacheEntryUpdated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder, CacheResponseHandler<I, K, V> cacheResultsCallbacks) {
+    private <VT extends Reusable> void handleCacheEntryUpdated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, VT> decoder,
+                                              CacheResponseHandler<I, K, VT> cacheResultsCallbacks, CacheEntryUpdateResult<I, K, VT> cacheEntryUpdateResult) {
         decoder.decodeCacheEntryUpdated(buffer, offset, cacheEntryUpdateResult);
         log.info("Got cache entry updated on cacheId {}, key {} requestId {}",
                 cacheEntryUpdateResult.getCacheId(), cacheEntryUpdateResult.getKey(), cacheEntryUpdateResult.getRequestId());
