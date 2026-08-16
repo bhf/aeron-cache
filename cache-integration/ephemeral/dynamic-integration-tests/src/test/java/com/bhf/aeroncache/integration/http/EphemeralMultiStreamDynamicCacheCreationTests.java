@@ -8,10 +8,14 @@ import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
 @BackendTestConfig(dynamicCacheCreationEnabled = true, httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = false, useTestContainersEnvironment = true)
-class EphemeralMultiStreamDynamicCacheCreationTests extends AbstractMultiStreamDynamicCacheTests {
+class EphemeralMultiStreamDynamicCacheCreationTests extends AbstractMultiStreamDynamicCacheTests<String> {
 
     public EphemeralMultiStreamDynamicCacheCreationTests() {
         super(new CacheTestEndpoints(), new StreamingCacheTestEndpoints(), new WSStreamingHelper(), new SSEStreamingHelper());
     }
 
+    @Override
+    protected String getKnownValue() {
+        return "EphemeralMultiStreamDynamicCacheCreationTests";
+    }
 }

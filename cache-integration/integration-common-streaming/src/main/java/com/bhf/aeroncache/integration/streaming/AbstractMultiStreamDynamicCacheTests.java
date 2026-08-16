@@ -20,11 +20,11 @@ import java.util.concurrent.TimeUnit;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
-public abstract class AbstractMultiStreamDynamicCacheTests {
+public abstract class AbstractMultiStreamDynamicCacheTests<V> {
 
     private static final String DYNAMIC_CACHE_ID = "1-dynamic";
     private static final String KNOWN_KEY = "SomeKey";
-    private static final String KNOWN_VALUE = "SomeValue";
+
 
     private final StreamingHelper[] streamingHelpers;
     private final StreamingTestEndpointsProvider streamingEndpointsProvider;
@@ -49,7 +49,7 @@ public abstract class AbstractMultiStreamDynamicCacheTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, DYNAMIC_CACHE_ID, 1);
 
         // Act
-        CacheTestUtils.addItem(DYNAMIC_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, multiStreamDynamicCacheEndpoints);
+        CacheTestUtils.addItem(DYNAMIC_CACHE_ID, KNOWN_KEY, getKnownValue(), backend, multiStreamDynamicCacheEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -64,8 +64,10 @@ public abstract class AbstractMultiStreamDynamicCacheTests {
             MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(DYNAMIC_CACHE_ID));
             MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
-            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+            MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(getKnownValue()));
         }
     }
+
+    protected abstract V getKnownValue();
 
 }

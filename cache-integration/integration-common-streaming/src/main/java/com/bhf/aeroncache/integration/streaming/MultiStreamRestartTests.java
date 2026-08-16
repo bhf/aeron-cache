@@ -21,12 +21,10 @@ import java.util.concurrent.TimeUnit;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
-public abstract class MultiStreamRestartTests {
+public abstract class MultiStreamRestartTests<V> {
 
     private static final String KNOWN_CACHE_ID = "1";
     private static final String KNOWN_KEY = "SomeKey";
-    private static final String KNOWN_VALUE = "SomeValue";
-    private static final String ANOTHER_KNOWN_VALUE = "SomeOtherValue";
 
     private final SSEStreamingHelper sseStreamingHelper;
     private final WSStreamingHelper wsStreamingHelper;
@@ -78,7 +76,7 @@ public abstract class MultiStreamRestartTests {
         ContainerRestartUtils.stopWebsocketContainer(backend);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"-sse", KNOWN_VALUE, backend, multiStreamRestartEndpoints);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"-sse", getKnownValue(), backend, multiStreamRestartEndpoints);
 
         // Assert
         try {
@@ -94,7 +92,7 @@ public abstract class MultiStreamRestartTests {
                 MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
                 MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
                 MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY+"-sse"));
-                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(getKnownValue()));
             }
         } finally {
             perStreamingSourceEvents.forEach(f -> f.cancel(true));
@@ -110,7 +108,7 @@ public abstract class MultiStreamRestartTests {
         ContainerRestartUtils.stopSSEContainer(backend);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"-ws", KNOWN_VALUE, backend, multiStreamRestartEndpoints);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"-ws", getKnownValue(), backend, multiStreamRestartEndpoints);
 
         // Assert
         try {
@@ -126,7 +124,7 @@ public abstract class MultiStreamRestartTests {
                 MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
                 MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
                 MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY+"-ws"));
-                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(getKnownValue()));
             }
         } finally {
             perStreamingSourceEvents.forEach(f -> f.cancel(true));
@@ -141,7 +139,7 @@ public abstract class MultiStreamRestartTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(sseHelper, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 1);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, ANOTHER_KNOWN_VALUE, backend, multiStreamRestartEndpoints);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, getAnotherKnownValue(), backend, multiStreamRestartEndpoints);
 
         // Assert
         try {
@@ -157,11 +155,14 @@ public abstract class MultiStreamRestartTests {
                 MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
                 MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
                 MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
-                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(ANOTHER_KNOWN_VALUE));
+                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(getAnotherKnownValue()));
             }
         } finally {
             perStreamingSourceEvents.forEach(f -> f.cancel(true));
         }
     }
+
+    protected abstract V getKnownValue();
+    protected abstract V getAnotherKnownValue();
 
 }
