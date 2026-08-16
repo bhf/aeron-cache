@@ -49,6 +49,7 @@ public abstract class AbstractAddCacheEntryTest<I extends Reusable, K extends Re
 
     @BeforeEach
     void setup() {
+        when(cluster.scheduleTimer(anyLong(), anyLong())).thenReturn(true);
         tracingService = Mockito.mock(CacheTracingService.class);
         sut = new SBEDecodingCacheClusterService<>("node0", tracingService, cacheManagerFactory);
         sut.onStart(cluster, null);
