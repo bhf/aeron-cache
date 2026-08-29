@@ -99,7 +99,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                 subscriptionResult.getEntries().forEach((k, v) -> {
                     CacheUpdateEvent.EventType eventType = CacheUpdateEvent.EventType.ADD_ITEM;
                     var ik = String.valueOf(k.value());
-                    var iv = String.valueOf(v.value());
+                    var iv = (v.value());
                     streamingEventConsumer.accept(new CacheUpdateEvent(subscriptionResult.getCacheId().toString(), eventType, ik, iv, requestId));
                 });
             }
@@ -206,7 +206,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             var cacheId = String.valueOf(cacheEntryUpdateResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
             var key = cacheEntryUpdateResult.getKey().value().toString();
-            var value = cacheEntryUpdateResult.getValue().value().toString();
+            var value = cacheEntryUpdateResult.getValue().value();
             subscribers.forEach(c -> {
                 try {
                     c.accept(
