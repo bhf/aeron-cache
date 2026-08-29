@@ -31,7 +31,6 @@ class WebsocketClientEphemeralRestartTests {
     static final String KNOWN_KEY = "WSRestartKey★★★";
     static final String KNOWN_VALUE = "WSRestartValue★★★";
     private final TestEndpointsProvider ephemeralEndpointsProvider = new CacheTestEndpoints();
-    private final StreamingTestEndpointsProvider streamingTestEndpointsProvider = new StreamingCacheTestEndpoints();
 
     @Test
     @DisplayName("Should get streaming updates via WebSocket after ephemeral cache restart")
@@ -47,8 +46,8 @@ class WebsocketClientEphemeralRestartTests {
         // Use readiness endpoint to wait for the WebSocket interface to detect the reconnection to the cluster
         ContainerRestartUtils.awaitWSReadiness(backend);
 
-        var streamingHelpers = new StreamingHelper[]{new WSStreamingHelper()};
-        var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingTestEndpointsProvider, KNOWN_CACHE_ID, 1);
+        var streamingHelpers = new StreamingHelper[]{new WSStreamingHelper(new StreamingCacheTestEndpoints())};
+        var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 1);
 
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, ephemeralEndpointsProvider);
 

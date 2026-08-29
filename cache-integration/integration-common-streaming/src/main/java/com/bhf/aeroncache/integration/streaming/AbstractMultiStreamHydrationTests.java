@@ -25,20 +25,19 @@ import java.util.stream.Collectors;
 public abstract class AbstractMultiStreamHydrationTests {
 
     private final StreamingHelper[] streamingHelpers;
-    private static final String HYDRATION_CACHE = "hydration-cache";
-    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider hydratingStreamEndpoints;
 
-    protected AbstractMultiStreamHydrationTests(TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider, StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamHydrationTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
-        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
         hydratingStreamEndpoints = endpointsProvider;
     }
 
     @BeforeAll
     void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(HYDRATION_CACHE, backend, hydratingStreamEndpoints);
+        CacheTestUtils.createCache(getKnownCacheId(), backend, hydratingStreamEndpoints);
     }
+
+    protected abstract String getKnownCacheId();
 
     @Test
     @DisplayName("Should get hydrated streaming updates when subscribing to a cache with existing items")
@@ -51,11 +50,11 @@ public abstract class AbstractMultiStreamHydrationTests {
         var hydrationKey2 = "HydrationKey2";
         var hydrationValue2 = "HydrationValue2";
 
-        CacheTestUtils.addItem(HYDRATION_CACHE, hydrationKey1, hydrationValue1, backend, hydratingStreamEndpoints);
-        CacheTestUtils.addItem(HYDRATION_CACHE, hydrationKey2, hydrationValue2, backend, hydratingStreamEndpoints);
+        CacheTestUtils.addItem(getKnownCacheId(), hydrationKey1, hydrationValue1, backend, hydratingStreamEndpoints);
+        CacheTestUtils.addItem(getKnownCacheId(), hydrationKey2, hydrationValue2, backend, hydratingStreamEndpoints);
 
         // Act
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsWithHydration(streamingHelpers, backend, streamingEndpointsProvider, HYDRATION_CACHE, 2);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsWithHydration(streamingHelpers, backend, getKnownCacheId(), 2);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -69,7 +68,7 @@ public abstract class AbstractMultiStreamHydrationTests {
 
             for (var event : streamingSoureEvents) {
                 MatcherAssert.assertThat(event.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
-                MatcherAssert.assertThat(event.cacheId(), Matchers.is(HYDRATION_CACHE));
+                MatcherAssert.assertThat(event.cacheId(), Matchers.is(getKnownCacheId()));
             }
 
             var eventMap = streamingSoureEvents.stream().collect(
@@ -100,7 +99,7 @@ public abstract class AbstractMultiStreamHydrationTests {
 
         // Act
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsMultipleCachesWithHydration(
-                streamingHelpers, backend, streamingEndpointsProvider, List.of(cache1, cache2), 2);
+                streamingHelpers, backend, List.of(cache1, cache2), 2);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {

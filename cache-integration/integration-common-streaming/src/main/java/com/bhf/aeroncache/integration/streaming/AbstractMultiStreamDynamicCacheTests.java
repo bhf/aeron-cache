@@ -27,12 +27,10 @@ public abstract class AbstractMultiStreamDynamicCacheTests<V> {
 
 
     private final StreamingHelper[] streamingHelpers;
-    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider multiStreamDynamicCacheEndpoints;
 
-    protected AbstractMultiStreamDynamicCacheTests(TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider, StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamDynamicCacheTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
-        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
         multiStreamDynamicCacheEndpoints = endpointsProvider;
     }
 
@@ -46,7 +44,7 @@ public abstract class AbstractMultiStreamDynamicCacheTests<V> {
     @HappyPath
     void shouldGetStreamingUpdateWhenPuttingIntoDynamicallyCreatedCache(BackendTestResource backend) {
         // Arrange
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, DYNAMIC_CACHE_ID, 1);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, DYNAMIC_CACHE_ID, 1);
 
         // Act
         CacheTestUtils.addItem(DYNAMIC_CACHE_ID, KNOWN_KEY, getKnownValue(), backend, multiStreamDynamicCacheEndpoints);

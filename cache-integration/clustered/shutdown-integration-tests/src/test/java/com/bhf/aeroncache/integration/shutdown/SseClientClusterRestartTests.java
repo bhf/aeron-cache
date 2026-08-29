@@ -50,8 +50,8 @@ class SseClientClusterRestartTests {
         // Generate an event
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, sseRestartEndpointsProvider);
 
-        var streamingHelpers = new StreamingHelper[]{new SSEStreamingHelper()};
-        var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingTestEndpointsProvider, KNOWN_CACHE_ID, 1);
+        var streamingHelpers = new StreamingHelper[]{new SSEStreamingHelper(new SSECacheTestEndpoints())};
+        var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 1);
 
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, sseRestartEndpointsProvider);
 

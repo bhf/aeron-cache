@@ -15,13 +15,13 @@ import java.util.stream.Collectors;
 public class StreamingHelperUtil {
 
     public static List<CompletableFuture<List<CacheUpdateEvent>>> getPerStreamEvents(StreamingHelper[] streamingHelpers,
-                                                                                     BackendTestResource backend, StreamingTestEndpointsProvider endpointsProvider, String cacheId, int eventCount) {
+                                                                                     BackendTestResource backend, String cacheId, int eventCount) {
         List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
         var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
                 .map(helper -> {
                     CompletableFuture<Void> ready = new CompletableFuture<>();
                     readyFutures.add(ready);
-                    return helper.getEvents(backend, endpointsProvider, cacheId, eventCount, ready);
+                    return helper.getEvents(backend, cacheId, eventCount, ready);
                 })
                 .collect(Collectors.toList());
 
@@ -36,14 +36,14 @@ public class StreamingHelperUtil {
     }
 
     public static List<CompletableFuture<List<CacheUpdateEvent>>> getPerStreamEventsMultipleCaches(StreamingHelper[] streamingHelpers,
-                                                                                                   BackendTestResource backend, StreamingTestEndpointsProvider endpointsProvider,
+                                                                                                   BackendTestResource backend,
                                                                                                    List<String> cacheIds, int eventCount) {
         List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
         var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
                 .map(helper -> {
                     CompletableFuture<Void> ready = new CompletableFuture<>();
                     readyFutures.add(ready);
-                    return helper.getEventsMultipleCaches(backend, endpointsProvider, cacheIds, eventCount, ready);
+                    return helper.getEventsMultipleCaches(backend, cacheIds, eventCount, ready);
                 })
                 .collect(Collectors.toList());
 
@@ -58,14 +58,14 @@ public class StreamingHelperUtil {
     }
 
     public static List<CompletableFuture<List<CacheUpdateEvent>>> getPerStreamEventsWithHydration(StreamingHelper[] streamingHelpers,
-                                                                                                  BackendTestResource backend, StreamingTestEndpointsProvider endpointsProvider,
+                                                                                                  BackendTestResource backend,
                                                                                                   String cacheId, int eventCount) {
         List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
         var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
                 .map(helper -> {
                     CompletableFuture<Void> ready = new CompletableFuture<>();
                     readyFutures.add(ready);
-                    return helper.getEventsWithHydration(backend, endpointsProvider, cacheId, eventCount, ready);
+                    return helper.getEventsWithHydration(backend, cacheId, eventCount, ready);
                 })
                 .collect(Collectors.toList());
 
@@ -75,14 +75,13 @@ public class StreamingHelperUtil {
     }
 
     public static List<CompletableFuture<List<CacheUpdateEvent>>> getPerStreamEventsMultipleCachesWithHydration(StreamingHelper[] streamingHelpers,
-                                                                                                  BackendTestResource backend, StreamingTestEndpointsProvider endpointsProvider,
-                                                                                                                List<String> cacheIds, int eventCount) {
+                                                                                                  BackendTestResource backend, List<String> cacheIds, int eventCount) {
         List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
         var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
                 .map(helper -> {
                     CompletableFuture<Void> ready = new CompletableFuture<>();
                     readyFutures.add(ready);
-                    return helper.getEventsMultipleCachesWithHydration(backend, endpointsProvider, cacheIds, eventCount, ready);
+                    return helper.getEventsMultipleCachesWithHydration(backend, cacheIds, eventCount, ready);
                 })
                 .collect(Collectors.toList());
 

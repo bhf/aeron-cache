@@ -10,7 +10,7 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class ClusteredBulkOpsTests extends AbstractMultiStreamBulkOpsTests {
 
     public ClusteredBulkOpsTests() {
-        super(new CacheTestEndpoints(), new StreamingCacheTestEndpoints(), new WSStreamingHelper());
+        super(new CacheTestEndpoints(), new WSStreamingHelper(new StreamingCacheTestEndpoints()));
     }
 
 }

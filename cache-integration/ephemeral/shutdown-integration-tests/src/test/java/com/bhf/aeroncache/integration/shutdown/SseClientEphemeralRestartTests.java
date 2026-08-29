@@ -31,7 +31,6 @@ class SseClientEphemeralRestartTests {
     static final String KNOWN_KEY = "SSERestartKey★★★";
     static final String KNOWN_VALUE = "SSERestartValue★★★";
     private final TestEndpointsProvider endpointsProvider = new CacheTestEndpoints();
-    private final StreamingTestEndpointsProvider streamingTestEndpointsProvider = new StreamingCacheTestEndpoints();
 
     @Test
     @DisplayName("Should get streaming updates via SSE after ephemeral cache restart")
@@ -47,8 +46,8 @@ class SseClientEphemeralRestartTests {
         // Use readiness endpoint to wait for the SSE interface to detect the reconnection to the cluster
         ContainerRestartUtils.awaitSSEReadiness(backend);
 
-        var streamingHelpers = new StreamingHelper[]{new SSEStreamingHelper()};
-        var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingTestEndpointsProvider, KNOWN_CACHE_ID, 1);
+        var streamingHelpers = new StreamingHelper[]{new SSEStreamingHelper(new SSECacheTestEndpoints())};
+        var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 1);
 
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, endpointsProvider);
 

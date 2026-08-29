@@ -10,7 +10,12 @@ import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 class ClusteredPutItemTests extends AbstractMultiStreamPutItemTests<String> {
 
     public ClusteredPutItemTests() {
-        super(new CacheTestEndpoints(), new SSECacheTestEndpoints(), new SSEStreamingHelper());
+        super(new CacheTestEndpoints(), new SSEStreamingHelper(new SSECacheTestEndpoints()));
+    }
+
+    @Override
+    protected String getKnownCacheId() {
+        return "ClusteredPutItemTestsCache-SSE";
     }
 
     @Override

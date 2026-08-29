@@ -4,7 +4,6 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
-import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import com.bhf.aeroncache.integration.utils.ContainerRestartUtils;
@@ -28,14 +27,12 @@ public abstract class MultiStreamRestartTests<V> {
 
     private final SSEStreamingHelper sseStreamingHelper;
     private final WSStreamingHelper wsStreamingHelper;
-    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider multiStreamRestartEndpoints;
 
-    public MultiStreamRestartTests(SSEStreamingHelper sseStreamingHelper, WSStreamingHelper wsStreamingHelper, TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider) {
+    public MultiStreamRestartTests(SSEStreamingHelper sseStreamingHelper, WSStreamingHelper wsStreamingHelper, TestEndpointsProvider endpointsProvider) {
         this.sseStreamingHelper = sseStreamingHelper;
         this.wsStreamingHelper = wsStreamingHelper;
         multiStreamRestartEndpoints = endpointsProvider;
-        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
     }
 
     @BeforeAll
@@ -71,7 +68,7 @@ public abstract class MultiStreamRestartTests<V> {
     private void shouldGetUpdateOnSSEAfterWebsocketShutdown(BackendTestResource backend) {
         // Arrange
         StreamingHelper[] sseHelper = new StreamingHelper[]{sseStreamingHelper};
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(sseHelper, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 1);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(sseHelper, backend, KNOWN_CACHE_ID, 1);
 
         ContainerRestartUtils.stopWebsocketContainer(backend);
 
@@ -103,7 +100,7 @@ public abstract class MultiStreamRestartTests<V> {
     private void shouldGetUpdateOnWSAfterSSEShutdown(BackendTestResource backend) {
         // Arrange
         StreamingHelper[] wsHelper = new StreamingHelper[]{wsStreamingHelper};
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(wsHelper, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 1);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(wsHelper, backend, KNOWN_CACHE_ID, 1);
 
         ContainerRestartUtils.stopSSEContainer(backend);
 
@@ -136,7 +133,7 @@ public abstract class MultiStreamRestartTests<V> {
     private void shouldGetUpdatesOnBothStreams(BackendTestResource backend) {
         // Arrange
         StreamingHelper[] sseHelper = new StreamingHelper[]{sseStreamingHelper, wsStreamingHelper};
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(sseHelper, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 1);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(sseHelper, backend, KNOWN_CACHE_ID, 1);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, getAnotherKnownValue(), backend, multiStreamRestartEndpoints);

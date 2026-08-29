@@ -4,7 +4,6 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
-import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import org.awaitility.Awaitility;
@@ -32,12 +31,10 @@ public abstract class AbstractMultiStreamMultiCacheTests {
     private static final String ANOTHER_KNOWN_VALUE = "SomeOtherValue";
 
     private final StreamingHelper[] streamingHelpers;
-    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider multiStreamMultiCacheEndpoints;
 
-    protected AbstractMultiStreamMultiCacheTests(TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider, StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamMultiCacheTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
-        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
         multiStreamMultiCacheEndpoints = endpointsProvider;
     }
 
@@ -53,7 +50,7 @@ public abstract class AbstractMultiStreamMultiCacheTests {
     void shouldGetStreamingUpdatesOnMultiCacheSubscriptions(BackendTestResource backend) {
         // Arrange
         var cacheIds = List.of(KNOWN_CACHE_ID, ANOTHER_KNOWN_CACHE_ID);
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsMultipleCaches(streamingHelpers, backend, streamingEndpointsProvider, cacheIds, 2);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsMultipleCaches(streamingHelpers, backend, cacheIds, 2);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, multiStreamMultiCacheEndpoints);

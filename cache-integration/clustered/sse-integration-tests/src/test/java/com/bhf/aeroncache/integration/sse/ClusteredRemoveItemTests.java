@@ -10,7 +10,12 @@ import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 class ClusteredRemoveItemTests extends AbstractMultiStreamRemoveItemTest<String> {
 
     public ClusteredRemoveItemTests() {
-        super(new CacheTestEndpoints(), new SSECacheTestEndpoints(), new SSEStreamingHelper());
+        super(new CacheTestEndpoints(), new SSEStreamingHelper(new SSECacheTestEndpoints()));
+    }
+
+    @Override
+    protected String getKnownCacheId() {
+        return "ClusteredRemoveItemTests-SSE";
     }
 
     @Override

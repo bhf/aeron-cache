@@ -10,7 +10,12 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class ClusteredPutItemTests extends AbstractMultiStreamPutItemTests<String> {
 
     public ClusteredPutItemTests() {
-        super(new CacheTestEndpoints(), new StreamingCacheTestEndpoints(), new WSStreamingHelper());
+        super(new CacheTestEndpoints(), new WSStreamingHelper(new StreamingCacheTestEndpoints()));
+    }
+
+    @Override
+    protected String getKnownCacheId() {
+        return "ClusteredPutItemTests-WS";
     }
 
     @Override

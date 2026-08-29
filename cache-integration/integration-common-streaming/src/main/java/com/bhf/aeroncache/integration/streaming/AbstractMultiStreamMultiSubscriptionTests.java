@@ -4,7 +4,6 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
-import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import org.awaitility.Awaitility;
@@ -31,12 +30,10 @@ public abstract class AbstractMultiStreamMultiSubscriptionTests {
     private static final String ANOTHER_KNOWN_VALUE = "SomeOtherValue";
 
     private final StreamingHelper[] streamingHelpers;
-    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider subsEndpoints;
 
-    protected AbstractMultiStreamMultiSubscriptionTests(TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider, StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamMultiSubscriptionTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
-        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
         subsEndpoints = endpointsProvider;
     }
 
@@ -51,8 +48,8 @@ public abstract class AbstractMultiStreamMultiSubscriptionTests {
     @HappyPath
     void shouldGetStreamingUpdatesFromMultipleIndividualSubscriptions(BackendTestResource backend) {
         // Arrange
-        var subscription1 = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 1);
-        var subscription2 = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, ANOTHER_KNOWN_CACHE_ID, 1);
+        var subscription1 = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 1);
+        var subscription2 = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, ANOTHER_KNOWN_CACHE_ID, 1);
 
         // Act
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, subsEndpoints);

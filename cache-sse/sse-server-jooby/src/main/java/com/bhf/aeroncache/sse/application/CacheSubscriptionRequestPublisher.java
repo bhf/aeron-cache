@@ -95,7 +95,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                 }
             }
 
-            if(subscriptionResult.getEntries()!=null && !subscriptionResult.getEntries().isEmpty()){
+            if(subscriptionResult.getEntries()!=null && !subscriptionResult.getEntries().isEmpty()) {
                 subscriptionResult.getEntries().forEach((k, v) -> {
                     CacheUpdateEvent.EventType eventType = CacheUpdateEvent.EventType.ADD_ITEM;
                     var ik = String.valueOf(k.value());

@@ -10,6 +10,6 @@ import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 class ClusteredBulkOpsTests extends AbstractMultiStreamBulkOpsTests {
 
     public ClusteredBulkOpsTests() {
-        super(new CacheTestEndpoints(), new SSECacheTestEndpoints(), new SSEStreamingHelper());
+        super(new CacheTestEndpoints(), new SSEStreamingHelper(new SSECacheTestEndpoints()));
     }
 }

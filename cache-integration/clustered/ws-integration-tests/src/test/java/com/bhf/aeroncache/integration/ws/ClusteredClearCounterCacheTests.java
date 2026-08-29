@@ -8,7 +8,12 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class ClusteredClearCounterCacheTests extends AbstractMultiStreamClearCacheTest<Integer> {
 
     public ClusteredClearCounterCacheTests() {
-        super(new CounterTestEndpoints(), new StreamingCountersCacheTestEndpoints(), new WSStreamingHelper());
+        super(new CounterTestEndpoints(), new WSStreamingHelper(new StreamingCountersCacheTestEndpoints()));
+    }
+
+    @Override
+    protected String getKnownCacheId() {
+        return "ClusteredClearCounterCacheTests-WS";
     }
 
     @Override

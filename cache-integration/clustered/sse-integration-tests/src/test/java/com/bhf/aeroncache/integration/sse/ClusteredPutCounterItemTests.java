@@ -11,7 +11,7 @@ import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 class ClusteredPutCounterItemTests extends AbstractMultiStreamPutItemTests<Integer> {
 
     public ClusteredPutCounterItemTests() {
-        super(new CounterTestEndpoints(), new SSECountersCacheTestEndpoints(), new SSEStreamingHelper());
+        super(new CounterTestEndpoints(), new SSEStreamingHelper(new SSECountersCacheTestEndpoints()));
     }
 
     @Override
@@ -22,6 +22,11 @@ class ClusteredPutCounterItemTests extends AbstractMultiStreamPutItemTests<Integ
     @Override
     protected Integer getAnotherKnownValue() {
         return 2;
+    }
+
+    @Override
+    protected String getKnownCacheId() {
+        return "ClusteredPutCounterItemTests-SSE";
     }
 
     @Override

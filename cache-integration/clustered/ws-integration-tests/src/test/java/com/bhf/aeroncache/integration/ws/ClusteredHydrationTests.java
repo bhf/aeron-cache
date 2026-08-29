@@ -10,6 +10,11 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class ClusteredHydrationTests extends AbstractMultiStreamHydrationTests {
 
     public ClusteredHydrationTests() {
-        super(new CacheTestEndpoints(), new StreamingCacheTestEndpoints(), new WSStreamingHelper());
+        super(new CacheTestEndpoints(), new WSStreamingHelper(new StreamingCacheTestEndpoints()));
+    }
+
+    @Override
+    protected String getKnownCacheId() {
+        return "clustered-hydration-test-cache-ws";
     }
 }

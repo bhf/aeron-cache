@@ -10,7 +10,7 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class EphemeralWSMultiCacheTests extends AbstractMultiStreamMultiCacheTests {
 
     public EphemeralWSMultiCacheTests() {
-        super(new CacheTestEndpoints(), new StreamingCacheTestEndpoints(), new WSStreamingHelper());
+        super(new CacheTestEndpoints(), new WSStreamingHelper(new StreamingCacheTestEndpoints()));
     }
 
 }

@@ -50,8 +50,8 @@ class WebsocketClientClusterRestartTests {
         // Generates an event
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, endpoints);
 
-        var streamingHelpers = new StreamingHelper[]{new WSStreamingHelper()};
-        var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingTestEndpointsProvider, KNOWN_CACHE_ID, 1);
+        var streamingHelpers = new StreamingHelper[]{new WSStreamingHelper(new StreamingCacheTestEndpoints())};
+        var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 1);
 
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, endpoints);
 

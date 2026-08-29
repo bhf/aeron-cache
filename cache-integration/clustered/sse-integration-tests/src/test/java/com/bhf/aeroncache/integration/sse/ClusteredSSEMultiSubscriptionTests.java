@@ -10,6 +10,6 @@ import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 class ClusteredSSEMultiSubscriptionTests extends AbstractMultiStreamMultiSubscriptionTests {
 
     public ClusteredSSEMultiSubscriptionTests() {
-        super(new CacheTestEndpoints(), new SSECacheTestEndpoints(), new SSEStreamingHelper());
+        super(new CacheTestEndpoints(), new SSEStreamingHelper(new SSECacheTestEndpoints()));
     }
 }

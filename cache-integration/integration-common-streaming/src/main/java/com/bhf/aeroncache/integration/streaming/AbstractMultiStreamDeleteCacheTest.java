@@ -4,7 +4,6 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
-import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import org.awaitility.Awaitility;
@@ -23,34 +22,33 @@ import java.util.concurrent.TimeUnit;
 @ExtendWith(BackendTestLauncher.class)
 public abstract class AbstractMultiStreamDeleteCacheTest<V> {
 
-    private static final String KNOWN_CACHE_ID = "1";
     private static final String KNOWN_KEY = "SomeKey";
 
     private final StreamingHelper[] streamingHelpers;
-    private final StreamingTestEndpointsProvider streamingEndpointsProvider;
     private TestEndpointsProvider streamDeleteEndpoints;
 
-    protected AbstractMultiStreamDeleteCacheTest(TestEndpointsProvider endpointsProvider, StreamingTestEndpointsProvider streamingTestEndpointsProvider, StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamDeleteCacheTest(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
-        this.streamingEndpointsProvider = streamingTestEndpointsProvider;
         streamDeleteEndpoints = endpointsProvider;
     }
 
     @BeforeAll
     void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, streamDeleteEndpoints);
+        CacheTestUtils.createCache(getKnownCacheId(), backend, streamDeleteEndpoints);
     }
+
+    protected abstract String getKnownCacheId();
 
     @Test
     @DisplayName("Should get a streaming update when deleting an existing cache")
     @HappyPath
     void shouldGetStreamingUpdateWhenDeletingExistingCache(BackendTestResource backend) {
         // Arrange
-        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, streamingEndpointsProvider, KNOWN_CACHE_ID, 2);
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, getKnownCacheId(), 2);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, getKnownValue(), backend, streamDeleteEndpoints);
-        CacheTestUtils.deleteCache(KNOWN_CACHE_ID, backend, streamDeleteEndpoints);
+        CacheTestUtils.addItem(getKnownCacheId(), KNOWN_KEY, getKnownValue(), backend, streamDeleteEndpoints);
+        CacheTestUtils.deleteCache(getKnownCacheId(), backend, streamDeleteEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -58,21 +56,21 @@ public abstract class AbstractMultiStreamDeleteCacheTest<V> {
                     .atMost(60, TimeUnit.SECONDS)
                     .until(streamingSourceEventsFuture::isDone);
 
-            assertOnSingleStreamingSourceEvents(streamingSourceEventsFuture.join(), getKnownValue());
+            assertOnSingleStreamingSourceEvents(streamingSourceEventsFuture.join(), getKnownCacheId(), getKnownValue());
         }
     }
 
 
-    private static <V> void assertOnSingleStreamingSourceEvents(List<CacheUpdateEvent> streamingSoureEvents, V knownValue) {
+    private static <V> void assertOnSingleStreamingSourceEvents(List<CacheUpdateEvent> streamingSoureEvents, String knownCacheId, V knownValue) {
         var addEvent = streamingSoureEvents.get(0);
         MatcherAssert.assertThat(addEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
-        MatcherAssert.assertThat(addEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+        MatcherAssert.assertThat(addEvent.cacheId(), Matchers.is(knownCacheId));
         MatcherAssert.assertThat(addEvent.itemKey(), Matchers.is(KNOWN_KEY));
         MatcherAssert.assertThat(addEvent.itemValue(), Matchers.is(knownValue));
 
         var removeEvent = streamingSoureEvents.get(1);
         MatcherAssert.assertThat(removeEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.DELETE_CACHE));
-        MatcherAssert.assertThat(removeEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+        MatcherAssert.assertThat(removeEvent.cacheId(), Matchers.is(knownCacheId));
     }
 
     public abstract V getKnownValue();
