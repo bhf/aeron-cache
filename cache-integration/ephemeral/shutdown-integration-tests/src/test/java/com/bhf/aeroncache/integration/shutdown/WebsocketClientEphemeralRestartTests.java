@@ -46,7 +46,7 @@ class WebsocketClientEphemeralRestartTests {
         // Use readiness endpoint to wait for the WebSocket interface to detect the reconnection to the cluster
         ContainerRestartUtils.awaitWSReadiness(backend);
 
-        var streamingHelpers = new StreamingHelper[]{new WSStreamingHelper(new StreamingCacheTestEndpoints())};
+        var streamingHelpers = new StreamingHelper[]{new WSStreamingHelper(new WSCacheTestEndpoints())};
         var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 1);
 
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, ephemeralEndpointsProvider);

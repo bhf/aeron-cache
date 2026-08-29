@@ -3,7 +3,7 @@ package com.bhf.aeroncache.integration.multistream;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
 import com.bhf.aeroncache.integration.config.SSECacheTestEndpoints;
-import com.bhf.aeroncache.integration.config.StreamingCacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.WSCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamPutItemTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
@@ -12,7 +12,7 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class ClusteredMultiStreamPutItemTests extends AbstractMultiStreamPutItemTests<String> {
 
     public ClusteredMultiStreamPutItemTests() {
-        super(new CacheTestEndpoints(), new WSStreamingHelper(new StreamingCacheTestEndpoints()), new SSEStreamingHelper(new SSECacheTestEndpoints()));
+        super(new CacheTestEndpoints(), new WSStreamingHelper(new WSCacheTestEndpoints()), new SSEStreamingHelper(new SSECacheTestEndpoints()));
     }
 
     @Override

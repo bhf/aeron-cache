@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.integration.config;
 
-public class StreamingCountersCacheTestEndpoints implements StreamingTestEndpointsProvider {
+public class WSCountersCacheTestEndpoints implements StreamingTestEndpointsProvider {
     private static final String STREAMING_API_PREFIX = "/api/ws/v1/counter/";
     private static final String STREAMING_MULTI_CACHE_API_PREFIX = "/api/ws/v1/counters/";
     private static final String STREAMING_HYDRATE_API_PREFIX = "/api/ws/v1/counter/hydrate/";

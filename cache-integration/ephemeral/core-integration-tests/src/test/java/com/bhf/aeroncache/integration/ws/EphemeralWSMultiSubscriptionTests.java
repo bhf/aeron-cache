@@ -2,7 +2,7 @@ package com.bhf.aeroncache.integration.ws;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
-import com.bhf.aeroncache.integration.config.StreamingCacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.WSCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamMultiSubscriptionTests;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
@@ -10,6 +10,6 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class EphemeralWSMultiSubscriptionTests extends AbstractMultiStreamMultiSubscriptionTests {
 
     public EphemeralWSMultiSubscriptionTests() {
-        super(new CacheTestEndpoints(), new WSStreamingHelper(new StreamingCacheTestEndpoints()));
+        super(new CacheTestEndpoints(), new WSStreamingHelper(new WSCacheTestEndpoints()));
     }
 }

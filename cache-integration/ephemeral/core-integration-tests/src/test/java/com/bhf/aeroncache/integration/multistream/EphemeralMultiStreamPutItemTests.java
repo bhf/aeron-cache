@@ -4,7 +4,7 @@ import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
 import com.bhf.aeroncache.integration.config.SSECacheTestEndpoints;
-import com.bhf.aeroncache.integration.config.StreamingCacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.WSCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamPutItemTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class EphemeralMultiStreamPutItemTests extends AbstractMultiStreamPutItemTests<String> {
 
     public EphemeralMultiStreamPutItemTests() {
-        super(new CacheTestEndpoints(), new SSEStreamingHelper(new SSECacheTestEndpoints()), new WSStreamingHelper(new StreamingCacheTestEndpoints()));
+        super(new CacheTestEndpoints(), new SSEStreamingHelper(new SSECacheTestEndpoints()), new WSStreamingHelper(new WSCacheTestEndpoints()));
     }
 
     @Override

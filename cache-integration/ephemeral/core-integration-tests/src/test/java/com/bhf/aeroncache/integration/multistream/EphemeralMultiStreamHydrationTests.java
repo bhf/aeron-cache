@@ -3,7 +3,7 @@ package com.bhf.aeroncache.integration.multistream;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
 import com.bhf.aeroncache.integration.config.SSECacheTestEndpoints;
-import com.bhf.aeroncache.integration.config.StreamingCacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.WSCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamHydrationTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
@@ -13,7 +13,7 @@ class EphemeralMultiStreamHydrationTests extends AbstractMultiStreamHydrationTes
 
     public EphemeralMultiStreamHydrationTests() {
         super(new CacheTestEndpoints(), new SSEStreamingHelper(new SSECacheTestEndpoints()),
-                new WSStreamingHelper(new StreamingCacheTestEndpoints()));
+                new WSStreamingHelper(new WSCacheTestEndpoints()));
     }
 
     @Override

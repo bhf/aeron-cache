@@ -9,7 +9,7 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class ClusteredPutCounterItemTests extends AbstractMultiStreamPutItemTests<Integer> {
 
     public ClusteredPutCounterItemTests() {
-        super(new CounterTestEndpoints(), new WSStreamingHelper(new StreamingCountersCacheTestEndpoints()));
+        super(new CounterTestEndpoints(), new WSStreamingHelper(new WSCountersCacheTestEndpoints()));
     }
 
     @Override

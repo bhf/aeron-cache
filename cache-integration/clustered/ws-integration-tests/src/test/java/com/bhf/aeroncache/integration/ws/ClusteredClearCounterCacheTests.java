@@ -8,7 +8,7 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class ClusteredClearCounterCacheTests extends AbstractMultiStreamClearCacheTest<Integer> {
 
     public ClusteredClearCounterCacheTests() {
-        super(new CounterTestEndpoints(), new WSStreamingHelper(new StreamingCountersCacheTestEndpoints()));
+        super(new CounterTestEndpoints(), new WSStreamingHelper(new WSCountersCacheTestEndpoints()));
     }
 
     @Override

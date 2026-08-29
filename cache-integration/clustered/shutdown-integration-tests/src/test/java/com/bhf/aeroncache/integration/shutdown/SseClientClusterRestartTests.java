@@ -31,7 +31,7 @@ class SseClientClusterRestartTests {
     static final String KNOWN_KEY = "SSERestartKey★★★";
     static final String KNOWN_VALUE = "SSERestartValue★★★";
     private final TestEndpointsProvider sseRestartEndpointsProvider = new CacheTestEndpoints();
-    private final StreamingTestEndpointsProvider streamingTestEndpointsProvider = new StreamingCacheTestEndpoints();
+    private final StreamingTestEndpointsProvider streamingTestEndpointsProvider = new WSCacheTestEndpoints();
 
     @Test
     @DisplayName("Should get streaming updates via SSE after cluster restart")

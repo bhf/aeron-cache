@@ -31,7 +31,7 @@ class WebsocketClientClusterRestartTests {
     static final String KNOWN_KEY = "WSRestartKey★★★";
     static final String KNOWN_VALUE = "WSRestartValue★★★";
     private final TestEndpointsProvider endpoints = new CacheTestEndpoints();
-    private final StreamingTestEndpointsProvider streamingTestEndpointsProvider = new StreamingCacheTestEndpoints();
+    private final StreamingTestEndpointsProvider streamingTestEndpointsProvider = new WSCacheTestEndpoints();
 
     @Test
     @DisplayName("Should get streaming updates via WebSocket after cluster restart")
@@ -50,7 +50,7 @@ class WebsocketClientClusterRestartTests {
         // Generates an event
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, endpoints);
 
-        var streamingHelpers = new StreamingHelper[]{new WSStreamingHelper(new StreamingCacheTestEndpoints())};
+        var streamingHelpers = new StreamingHelper[]{new WSStreamingHelper(new WSCacheTestEndpoints())};
         var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 1);
 
         CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, endpoints);
