@@ -7,7 +7,7 @@ import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamHydrationTest
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
-class ClusteredHydrationTests extends AbstractMultiStreamHydrationTests {
+class ClusteredHydrationTests extends AbstractMultiStreamHydrationTests<String> {
 
     public ClusteredHydrationTests() {
         super(new CacheTestEndpoints(), new WSStreamingHelper(new WSCacheTestEndpoints()));
@@ -16,5 +16,15 @@ class ClusteredHydrationTests extends AbstractMultiStreamHydrationTests {
     @Override
     protected String getKnownCacheId() {
         return "clustered-hydration-test-cache-ws";
+    }
+
+    @Override
+    protected String getHydrationValue2() {
+        return "value2";
+    }
+
+    @Override
+    protected String getHydrationValue1() {
+        return "value1";
     }
 }

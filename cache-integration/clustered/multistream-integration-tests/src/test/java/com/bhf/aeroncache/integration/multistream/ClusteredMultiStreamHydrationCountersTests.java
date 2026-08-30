@@ -8,17 +8,16 @@ import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamHydrationTest
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
-@BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = false, useTestContainersEnvironment = true)
-class EphemeralMultiStreamHydrationTests extends AbstractMultiStreamHydrationTests<String> {
+@BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = true, useTestContainersEnvironment = true)
+class ClusteredMultiStreamHydrationCountersTests extends AbstractMultiStreamHydrationTests<String> {
 
-    public EphemeralMultiStreamHydrationTests() {
-        super(new CacheTestEndpoints(), new SSEStreamingHelper(new SSECacheTestEndpoints()),
-                new WSStreamingHelper(new WSCacheTestEndpoints()));
+    public ClusteredMultiStreamHydrationCountersTests() {
+        super(new CacheTestEndpoints(), new WSStreamingHelper(new WSCacheTestEndpoints()), new SSEStreamingHelper(new SSECacheTestEndpoints()));
     }
 
     @Override
     protected String getKnownCacheId() {
-        return "ephemeral-multistream-hydration-tests-cache";
+        return "clustered-multistream-hydration-test-cache";
     }
 
     @Override
