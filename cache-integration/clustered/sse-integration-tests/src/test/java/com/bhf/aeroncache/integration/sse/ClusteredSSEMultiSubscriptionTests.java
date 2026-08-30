@@ -7,9 +7,29 @@ import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamMultiSubscrip
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = true, useClusteredMode = true, useTestContainersEnvironment = true)
-class ClusteredSSEMultiSubscriptionTests extends AbstractMultiStreamMultiSubscriptionTests {
+class ClusteredSSEMultiSubscriptionTests extends AbstractMultiStreamMultiSubscriptionTests<String> {
 
     public ClusteredSSEMultiSubscriptionTests() {
         super(new CacheTestEndpoints(), new SSEStreamingHelper(new SSECacheTestEndpoints()));
+    }
+
+    @Override
+    protected String getKnownCacheId() {
+        return "ClusteredSSEMultiSubscriptionTestsCache1";
+    }
+
+    @Override
+    protected String getAnotherKnownCacheId() {
+        return "ClusteredSSEMultiSubscriptionTestsCache2";
+    }
+
+    @Override
+    protected String getAnotherKnownValue() {
+        return "AnotherKnownValue";
+    }
+
+    @Override
+    protected String getKnownValue() {
+        return "KnownValue";
     }
 }
