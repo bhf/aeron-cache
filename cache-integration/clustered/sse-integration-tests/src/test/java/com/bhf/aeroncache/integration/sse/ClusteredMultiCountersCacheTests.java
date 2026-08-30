@@ -1,16 +1,16 @@
 package com.bhf.aeroncache.integration.sse;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
-import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
-import com.bhf.aeroncache.integration.config.SSECacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.CounterTestEndpoints;
+import com.bhf.aeroncache.integration.config.SSECountersCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamMultiCacheTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = true, useClusteredMode = true, useTestContainersEnvironment = true)
-class ClusteredMultiCacheTests extends AbstractMultiStreamMultiCacheTests<String> {
+class ClusteredMultiCountersCacheTests extends AbstractMultiStreamMultiCacheTests<Integer> {
 
-    public ClusteredMultiCacheTests() {
-        super(new CacheTestEndpoints(), new SSEStreamingHelper(new SSECacheTestEndpoints()));
+    public ClusteredMultiCountersCacheTests() {
+        super(new CounterTestEndpoints(), new SSEStreamingHelper(new SSECountersCacheTestEndpoints()));
     }
 
     @Override
@@ -24,12 +24,13 @@ class ClusteredMultiCacheTests extends AbstractMultiStreamMultiCacheTests<String
     }
 
     @Override
-    protected String getAnotherKnownValue() {
-        return "ClusteredMultiCacheTests-value-2";
+    protected Integer getAnotherKnownValue() {
+        return 2;
     }
 
     @Override
-    protected String getKnownValue() {
-        return "ClusteredMultiCacheTests-value-1";
+    protected Integer getKnownValue() {
+        return 1;
     }
+
 }

@@ -20,15 +20,11 @@ import java.util.concurrent.TimeUnit;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
-public abstract class AbstractMultiStreamMultiCacheTests {
-
-    private static final String KNOWN_CACHE_ID = "1";
+public abstract class AbstractMultiStreamMultiCacheTests<V> {
+    
     private static final String KNOWN_KEY = "SomeKey";
-    private static final String KNOWN_VALUE = "SomeValue";
-
-    private static final String ANOTHER_KNOWN_CACHE_ID = "AnotherCache";
+    
     private static final String ANOTHER_KNOWN_KEY = "SomeOtherKey";
-    private static final String ANOTHER_KNOWN_VALUE = "SomeOtherValue";
 
     private final StreamingHelper[] streamingHelpers;
     private TestEndpointsProvider multiStreamMultiCacheEndpoints;
@@ -40,21 +36,29 @@ public abstract class AbstractMultiStreamMultiCacheTests {
 
     @BeforeAll
     void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, multiStreamMultiCacheEndpoints);
-        CacheTestUtils.createCache(ANOTHER_KNOWN_CACHE_ID, backend, multiStreamMultiCacheEndpoints);
+        CacheTestUtils.createCache(getKnownCacheId(), backend, multiStreamMultiCacheEndpoints);
+        CacheTestUtils.createCache(getAnotherKnownCacheId(), backend, multiStreamMultiCacheEndpoints);
     }
+
+    protected abstract String getKnownCacheId();
+
+    protected abstract String getAnotherKnownCacheId();
+
+    protected abstract V getAnotherKnownValue();
+
+    protected abstract V getKnownValue();
 
     @Test
     @DisplayName("Should get streaming updates on multi cache subscriptions")
     @HappyPath
     void shouldGetStreamingUpdatesOnMultiCacheSubscriptions(BackendTestResource backend) {
         // Arrange
-        var cacheIds = List.of(KNOWN_CACHE_ID, ANOTHER_KNOWN_CACHE_ID);
+        var cacheIds = List.of(getKnownCacheId(), getAnotherKnownCacheId());
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEventsMultipleCaches(streamingHelpers, backend, cacheIds, 2);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, multiStreamMultiCacheEndpoints);
-        CacheTestUtils.addItem(ANOTHER_KNOWN_CACHE_ID, ANOTHER_KNOWN_KEY, ANOTHER_KNOWN_VALUE, backend, multiStreamMultiCacheEndpoints);
+        CacheTestUtils.addItem(getKnownCacheId(), KNOWN_KEY, getKnownValue(), backend, multiStreamMultiCacheEndpoints);
+        CacheTestUtils.addItem(getAnotherKnownCacheId(), ANOTHER_KNOWN_KEY, getAnotherKnownValue(), backend, multiStreamMultiCacheEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -66,25 +70,24 @@ public abstract class AbstractMultiStreamMultiCacheTests {
 
             MatcherAssert.assertThat(streamingSourceEvents.size(), Matchers.is(2));
 
-            // Assert on the first event (from KNOWN_CACHE_ID)
+            // Assert on the first event (from getKnownCacheId())
             var event1 = streamingSourceEvents.stream()
-                    .filter(e -> e.cacheId().equals(KNOWN_CACHE_ID))
+                    .filter(e -> e.cacheId().equals(getKnownCacheId()))
                     .findFirst()
                     .orElseThrow();
             MatcherAssert.assertThat(event1.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(event1.itemKey(), Matchers.is(KNOWN_KEY));
-            MatcherAssert.assertThat(event1.itemValue(), Matchers.is(KNOWN_VALUE));
+            MatcherAssert.assertThat(event1.itemValue(), Matchers.is(getKnownValue()));
 
-            // Assert on the second event (from ANOTHER_KNOWN_CACHE_ID)
+            // Assert on the second event (from getAnotherKnownCacheId())
             var event2 = streamingSourceEvents.stream()
-                    .filter(e -> e.cacheId().equals(ANOTHER_KNOWN_CACHE_ID))
+                    .filter(e -> e.cacheId().equals(getAnotherKnownCacheId()))
                     .findFirst()
                     .orElseThrow();
             MatcherAssert.assertThat(event2.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
             MatcherAssert.assertThat(event2.itemKey(), Matchers.is(ANOTHER_KNOWN_KEY));
-            MatcherAssert.assertThat(event2.itemValue(), Matchers.is(ANOTHER_KNOWN_VALUE));
+            MatcherAssert.assertThat(event2.itemValue(), Matchers.is(getAnotherKnownValue()));
         }
     }
-
 
 }

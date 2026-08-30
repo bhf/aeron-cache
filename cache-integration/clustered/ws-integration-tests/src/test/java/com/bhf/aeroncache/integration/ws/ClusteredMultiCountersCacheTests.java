@@ -1,16 +1,14 @@
 package com.bhf.aeroncache.integration.ws;
 
-import com.bhf.aeroncache.integration.config.BackendTestConfig;
-import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
-import com.bhf.aeroncache.integration.config.WSCacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.*;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamMultiCacheTests;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
-class ClusteredMultiCacheTests extends AbstractMultiStreamMultiCacheTests<String> {
+class ClusteredMultiCountersCacheTests extends AbstractMultiStreamMultiCacheTests<Integer> {
 
-    public ClusteredMultiCacheTests() {
-        super(new CacheTestEndpoints(), new WSStreamingHelper(new WSCacheTestEndpoints()));
+    public ClusteredMultiCountersCacheTests() {
+        super(new CounterTestEndpoints(), new WSStreamingHelper(new WSCountersCacheTestEndpoints()));
     }
 
     @Override
@@ -24,12 +22,13 @@ class ClusteredMultiCacheTests extends AbstractMultiStreamMultiCacheTests<String
     }
 
     @Override
-    protected String getAnotherKnownValue() {
-        return "ClusteredMultiCacheTests-known-value-2";
+    protected Integer getAnotherKnownValue() {
+        return 2;
     }
 
     @Override
-    protected String getKnownValue() {
-        return "ClusteredMultiCacheTests-known-value-1";
+    protected Integer getKnownValue() {
+        return 1;
     }
+
 }
