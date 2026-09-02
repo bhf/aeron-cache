@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @Log4j2
-public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V extends Reusable> implements CacheTimerService<I,K,V> {
+public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V extends Reusable> implements CacheTimerService<I,K> {
 
     private final Cluster cluster;
     private final Supplier<I> indexSupplier;

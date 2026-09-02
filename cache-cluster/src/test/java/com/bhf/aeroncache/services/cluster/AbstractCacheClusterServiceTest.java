@@ -54,7 +54,10 @@ class AbstractCacheClusterServiceTest {
     private CacheTracingService tracingService;
 
     @Mock
-    private CacheTimerService<ReusableString, ReusableString, ReusableString> cacheTimerService;
+    private CacheTimerService<ReusableString, ReusableString> cacheTimerService;
+
+    @Mock
+    private CacheTimerService<ReusableString, ReusableString> cacheCountersTimerService;
 
     @Mock
     private ExclusivePublication snapshotPublication;
@@ -81,6 +84,7 @@ class AbstractCacheClusterServiceTest {
         sut = new TestCacheClusterService("test-node", tracingService, cacheManagerFactory);
 
         setTimerServiceWithReflection();
+        setCountersTimerServiceWithReflection();
     }
 
     /**
@@ -94,6 +98,12 @@ class AbstractCacheClusterServiceTest {
         Field timerField = AbstractCacheClusterService.class.getDeclaredField("cacheTimerService");
         timerField.setAccessible(true);
         timerField.set(sut, cacheTimerService);
+    }
+
+    private void setCountersTimerServiceWithReflection() throws NoSuchFieldException, IllegalAccessException {
+        Field timerField = AbstractCacheClusterService.class.getDeclaredField("cacheCountersTimerService");
+        timerField.setAccessible(true);
+        timerField.set(sut, cacheCountersTimerService);
     }
 
     @Test

@@ -99,7 +99,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     @Setter
     @Getter
     private boolean dynamicCacheCreationEnabled = false;
-    private CacheTimerService<I, K, V> cacheTimerService;
+    private CacheTimerService<I, K> cacheTimerService;
+    private CacheTimerService<I, K> cacheCountersTimerService;
 
 
     protected AbstractCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory) {
@@ -161,7 +162,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         if (templateId == schemaDetails.getCreateCacheId()) {
             handleCreateCache(session, buffer, offset, decoder, encoder, createCacheRequestDetails, cacheManager);
         } else if (templateId == schemaDetails.getAddCacheEntryId()) {
-            handleAddCacheEntry(session, buffer, offset, decoder, encoder, addCacheEntryRequestDetails, cacheManager, subscriptionService);
+            handleAddCacheEntry(session, buffer, offset, decoder, encoder, addCacheEntryRequestDetails, cacheManager, subscriptionService, cacheTimerService);
         } else if (templateId == schemaDetails.getGetCacheEntryId()) {
             handleGetCacheEntry(session, buffer, offset, decoder, encoder, cacheManager);
         } else if (templateId == schemaDetails.getRemoveCacheEntryId()) {
@@ -179,13 +180,13 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         } else if (templateId == schemaDetails.getCacheUnsubscribeRequestId()) {
             handleCacheUnsubscribeRequest(session, buffer, offset, decoder, encoder, subscriptionService, cacheManager);
         } else if (templateId == schemaDetails.getBulkCacheOpsRequestId()) {
-            handleBulkOpsRequest(session, buffer, offset, cacheManager, encoder, subscriptionService, cacheManagerFactory.getValueSupplier(), counterCacheValueSupplier);
+            handleBulkOpsRequest(session, buffer, offset, cacheManager, encoder, subscriptionService, cacheManagerFactory.getValueSupplier(), counterCacheValueSupplier, cacheTimerService, cacheCountersTimerService);
         }
         // Handle Cache Counter messages
         else if (templateId == schemaDetails.getCreateCounterCacheId()) {
             handleCreateCache(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, createCacheRequestDetails, countersCacheManager);
         } else if (templateId == schemaDetails.getAddCounterCacheEntryId()) {
-            handleAddCacheEntry(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, addCountersCacheEntryRequestDetails, countersCacheManager, countersSubscriptionService);
+            handleAddCacheEntry(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, addCountersCacheEntryRequestDetails, countersCacheManager, countersSubscriptionService, cacheCountersTimerService);
         } else if (templateId == schemaDetails.getGetCounterCacheEntryId()) {
             handleGetCacheEntry(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersCacheManager);
         } else if (templateId == schemaDetails.getRemoveCounterCacheEntryId()) {
@@ -223,31 +224,15 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         log.info("On start called on cluster service");
         this.cluster = cluster;
 
-        TimerDetailsFlyweight<I, K> fw = new TimerDetailsFlyweight<>();
-
-        Consumer<TimerDetailsFlyweight<I, K>> consumer = timerDetailsFlyweight -> {
-            var cache = timerDetailsFlyweight.getCache();
-            var key = timerDetailsFlyweight.getKey();
-            var correlationId = timerDetailsFlyweight.getCorrelationId();
-            var removeResult = processRemoveCacheEntry(cache, key, "timer-" + correlationId, cacheManager);
-
-            if (removeResult.getStatus() == CacheOperationStatus.SUCCESS) {
-                // update the subscription service
-                handlePostRemoveTimerCacheEntry(cache, key, removeResult, encoder, subscriptionService);
-                return;
-            }
-
-            removeResult = processRemoveCacheEntry(cache, key, "timer-" + correlationId, countersCacheManager);
-
-            if (removeResult.getStatus() == CacheOperationStatus.SUCCESS) {
-                // update the subscription service
-                handlePostRemoveTimerCacheEntry(cache, key, removeResult, countersResponseEncoder, countersSubscriptionService);
-                return;
-            }
-        };
-
+        TimerDetailsFlyweight<I, K> cacheTimersFlyweight = new TimerDetailsFlyweight<>();
+        Consumer<TimerDetailsFlyweight<I, K>> cacheTimersConsumer = getCachesTimerDetailsFlyweightConsumer();
         this.cacheTimerService = new CacheClusterTimerService<>(cacheManagerFactory.getIndexSupplier(),
-                cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getCacheTimersCodec(), timerCorrelationIdProvider, cluster, fw, consumer);
+                cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getCacheTimersCodec(), timerCorrelationIdProvider, cluster, cacheTimersFlyweight, cacheTimersConsumer);
+
+        TimerDetailsFlyweight<I, K> countersTimersFlyweight = new TimerDetailsFlyweight<>();
+        Consumer<TimerDetailsFlyweight<I, K>> countersTimersConsumer = getCountersTimerDetailsFlyweightConsumer();
+        this.cacheCountersTimerService = new CacheClusterTimerService<>(cacheManagerFactory.getIndexSupplier(),
+                cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getCacheTimersCodec(), timerCorrelationIdProvider, cluster, countersTimersFlyweight, countersTimersConsumer);
 
         this.idleStrategy = cluster.idleStrategy();
         if (null != snapshotImage) {
@@ -259,16 +244,48 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         this.countersSubscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, countersSubscribeResult, unsubscribeResult, indexSupplier);
     }
 
+    private Consumer<TimerDetailsFlyweight<I, K>> getCountersTimerDetailsFlyweightConsumer() {
+        Consumer<TimerDetailsFlyweight<I, K>> consumer = timerDetailsFlyweight -> {
+            var cache = timerDetailsFlyweight.getCache();
+            var key = timerDetailsFlyweight.getKey();
+            var correlationId = timerDetailsFlyweight.getCorrelationId();
+
+            var removeResult = processRemoveCacheEntry(cache, key, "timer-" + correlationId, countersCacheManager);
+
+            if (removeResult.getStatus() == CacheOperationStatus.SUCCESS) {
+                // update the subscription service
+                handlePostRemoveTimerCacheEntry(cache, key, removeResult, countersResponseEncoder, countersSubscriptionService);
+            }
+        };
+        return consumer;
+    }
+
+    private Consumer<TimerDetailsFlyweight<I, K>> getCachesTimerDetailsFlyweightConsumer() {
+        Consumer<TimerDetailsFlyweight<I, K>> consumer = timerDetailsFlyweight -> {
+            var cache = timerDetailsFlyweight.getCache();
+            var key = timerDetailsFlyweight.getKey();
+            var correlationId = timerDetailsFlyweight.getCorrelationId();
+
+            var removeResult = processRemoveCacheEntry(cache, key, "timer-" + correlationId, cacheManager);
+
+            if (removeResult.getStatus() == CacheOperationStatus.SUCCESS) {
+                // update the subscription service
+                handlePostRemoveTimerCacheEntry(cache, key, removeResult, encoder, subscriptionService);
+            }
+        };
+        return consumer;
+    }
+
     /**
      * Handle setting a counter's value.
      *
      * @param session  Session requesting the delete operation.
      * @param buffer   Buffer containing the message.
      * @param offset   Offset in the buffer at which the message is encoded.
-     * @param countersRequestDecoder
-     * @param countersResponseEncoder
-     * @param countersSubscriptionService
-     * @param countersCacheManager
+     * @param countersRequestDecoder Counters request decoder.
+     * @param countersResponseEncoder Counters response decoder.
+     * @param countersSubscriptionService Counters subscription service.
+     * @param countersCacheManager Counters cache manager.
      */
     private void handleSetCounterRequest(ClientSession session, DirectBuffer buffer, int offset,
                                          CountersCacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder,
@@ -312,10 +329,10 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session  Session requesting the delete operation.
      * @param buffer   Buffer containing the message.
      * @param offset   Offset in the buffer at which the message is encoded.
-     * @param countersRequestDecoder
-     * @param countersResponseEncoder
-     * @param countersSubscriptionService
-     * @param countersCacheManager
+     * @param countersRequestDecoder Counters request decoder.
+     * @param countersResponseEncoder Counters response decoder.
+     * @param countersSubscriptionService Counters subscription service.
+     * @param countersCacheManager Counters cache manager.
      */
     private void handleDecrementCounterRequest(ClientSession session, DirectBuffer buffer, int offset,
                                                CountersCacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder,
@@ -359,10 +376,10 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session  Session requesting the delete operation.
      * @param buffer   Buffer containing the message.
      * @param offset   Offset in the buffer at which the message is encoded.
-     * @param countersRequestDecoder
-     * @param countersResponseEncoder
-     * @param countersSubscriptionService
-     * @param countersCacheManager
+     * @param countersRequestDecoder Counters request decoder.
+     * @param countersResponseEncoder Counters response decoder.
+     * @param countersSubscriptionService Counters subscription service.
+     * @param countersCacheManager Counters cache manager.
      */
     private void handleIncrementCounterRequest(ClientSession session, DirectBuffer buffer, int offset,
                                                CountersCacheRequestDecoder<I, K, ReusableLong> countersRequestDecoder,
@@ -480,11 +497,12 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Handle a request to add an entry to a cache.
      *
-     * @param session Session requesting the add entry operation.
-     * @param buffer  Buffer containing the message.
-     * @param offset  Offset in the buffer at which the message is encoded.
+     * @param session            Session requesting the add entry operation.
+     * @param buffer             Buffer containing the message.
+     * @param offset             Offset in the buffer at which the message is encoded.
+     * @param cacheTimerService_
      */
-    <VT extends Reusable> void handleAddCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, CacheResponseEncoder<I, K, VT> responseEncoder, AddCacheEntryRequestDetails<I, K, VT> addCacheEntryRequestDetails, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService) {
+    <VT extends Reusable> void handleAddCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, CacheResponseEncoder<I, K, VT> responseEncoder, AddCacheEntryRequestDetails<I, K, VT> addCacheEntryRequestDetails, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService, CacheTimerService<I, K> cacheTimerService_) {
         AddCacheEntryRequestDetails<I, K, VT> requestDetails = getAddCacheEntryRequestDetails(session, buffer, offset, decoder, addCacheEntryRequestDetails);
         tracingService.startAddCacheEntry(requestDetails);
         I cacheId = requestDetails.getCacheId();
@@ -492,14 +510,14 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         VT value = requestDetails.getValue();
         long ttl = requestDetails.getTtl();
         var requestId = requestDetails.getRequestId();
-        var addCacheEntryResult = processAddCacheEntry(cacheId, key, value, ttl, requestId, session, buffer, offset, responseEncoder, cacheManager, subscriptionService);
+        var addCacheEntryResult = processAddCacheEntry(cacheId, key, value, ttl, requestId, session, buffer, offset, responseEncoder, cacheManager, subscriptionService, cacheTimerService_);
 
         log.info("Result for add entry, key: {}, status: {}, ", addCacheEntryResult.getEntryKey(), addCacheEntryResult.getStatus());
         handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, responseEncoder, subscriptionService);
         tracingService.endAddCacheEntry(requestDetails);
     }
 
-    private <VT extends Reusable> AddCacheEntryResult<I,K> processAddCacheEntry(I cacheId, K key, VT value, long ttl, String requestId, ClientSession session, DirectBuffer buffer, int offset, CacheResponseEncoder<I, K, VT> responseEncoder, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService) {
+    private <VT extends Reusable> AddCacheEntryResult<I,K> processAddCacheEntry(I cacheId, K key, VT value, long ttl, String requestId, ClientSession session, DirectBuffer buffer, int offset, CacheResponseEncoder<I, K, VT> responseEncoder, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService, CacheTimerService<I, K> timerService) {
         log.info("Got add cache entry request for cache id {}, key {}, value {}, ttl {}, request Id: {}", cacheId, key, value, ttl, requestId);
         var cache = cacheManager.getCache(cacheId);
 
@@ -528,7 +546,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         if (ttl > 0 && addCacheEntryResult.getStatus() == CacheOperationStatus.SUCCESS) {
             long now = cluster.time();
             long deadline = now + ttl;
-            cacheTimerService.scheduleItemRemoval(cacheId, key, cache, deadline);
+            timerService.scheduleItemRemoval(cacheId, key, cache, deadline);
         }
 
         return addCacheEntryResult;
@@ -722,39 +740,41 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Handle a bulk operation request.
      *
-     * @param session                   Session requesting the get all stats operation.
-     * @param buffer                    Buffer containing the message.
-     * @param offset                    Offset in the buffer at which the message is encoded.
-     * @param encoder                   The response encoder to use.
+     * @param session                    Session requesting the get all stats operation.
+     * @param buffer                     Buffer containing the message.
+     * @param offset                     Offset in the buffer at which the message is encoded.
+     * @param encoder                    The response encoder to use.
      * @param cacheValueSupplier
      * @param counterCacheValueSupplier
+     * @param cacheTimerService_
+     * @param cacheCountersTimerService_
      */
-    <VT extends Reusable> void handleBulkOpsRequest(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, VT> cacheManager, CacheResponseEncoder<I, K, V> encoder, CacheSubscriptionService<I, K, VT> subscriptionService, Supplier<VT> cacheValueSupplier, Supplier<ReusableLong> counterCacheValueSupplier) {
+    <VT extends Reusable> void handleBulkOpsRequest(ClientSession session, DirectBuffer buffer, int offset, CacheManager<I, K, VT> cacheManager, CacheResponseEncoder<I, K, V> encoder, CacheSubscriptionService<I, K, VT> subscriptionService, Supplier<VT> cacheValueSupplier, Supplier<ReusableLong> counterCacheValueSupplier, CacheTimerService<I, K> cacheTimerService_, CacheTimerService<I, K> cacheCountersTimerService_) {
         BulkCacheOpsRequestDetails<I,K,V> requestDetails = getBulkOpsRequest(session, buffer, offset);
         tracingService.startBulkOpsRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
         log.info("Got bulk operations request with Id: {}", requestId);
-        BulkCacheOpsResult<I,K,V> res = processBulkOperations(requestDetails, cacheManager, subscriptionService, cacheValueSupplier, counterCacheValueSupplier);
+        BulkCacheOpsResult<I,K,V> res = processBulkOperations(requestDetails, cacheManager, subscriptionService, cacheValueSupplier, counterCacheValueSupplier, cacheTimerService_, cacheCountersTimerService_);
         res.setRequestId(requestId);
         handlePostBulkOpsRequest(res, session, encoder);
         tracingService.endBulkOpsRequest(requestDetails);
     }
 
-    private <VT extends Reusable> BulkCacheOpsResult<I,K,V> processBulkOperations(BulkCacheOpsRequestDetails<I,K,V> requestDetails, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService, Supplier<VT> cacheValueSupplier, Supplier<ReusableLong> counterCacheValueSupplier) {
+    private <VT extends Reusable> BulkCacheOpsResult<I,K,V> processBulkOperations(BulkCacheOpsRequestDetails<I,K,V> requestDetails, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService, Supplier<VT> cacheValueSupplier, Supplier<ReusableLong> counterCacheValueSupplier, CacheTimerService<I, K> cacheTimerService_, CacheTimerService<I, K> cacheCountersTimerService_) {
 
         bulkOpsResult.clear();
 
         for (var op : requestDetails.getOperations()) {
             switch (op.getOperationType()) {
                 case CREATE_CACHE -> handleBulkOpCreateCache(op, bulkOpsResult, cacheManager);
-                case ADD_ITEM -> handleBulkOpAddItem(op, bulkOpsResult, cacheManager, subscriptionService);
+                case ADD_ITEM -> handleBulkOpAddItem(op, bulkOpsResult, cacheManager, subscriptionService, cacheTimerService_);
                 case CLEAR_CACHE -> handleBulkOpClearCache(op, bulkOpsResult, cacheManager, subscriptionService);
                 case GET_ITEM -> handleBulkOpGetItem(op, bulkOpsResult, cacheManager, cacheValueSupplier);
                 case DELETE_CACHE -> handleBulkOpDeleteCache(op, bulkOpsResult, cacheManager, subscriptionService);
                 case REMOVE_ITEM -> handleBulkOpRemoveItem(op, bulkOpsResult, cacheManager, subscriptionService);
 
                 case CREATE_COUNTER_CACHE -> handleBulkOpCreateCache(op, bulkOpsResult, countersCacheManager);
-                case ADD_COUNTER -> handleBulkOpAddItem(op, bulkOpsResult, countersCacheManager, countersSubscriptionService);
+                case ADD_COUNTER -> handleBulkOpAddItem(op, bulkOpsResult, countersCacheManager, countersSubscriptionService, cacheCountersTimerService_);
                 case CLEAR_COUNTER_CACHE -> handleBulkOpClearCache(op, bulkOpsResult, countersCacheManager, countersSubscriptionService);
                 case GET_COUNTER -> handleBulkOpGetItem(op, bulkOpsResult, countersCacheManager, counterCacheValueSupplier);
                 case DELETE_COUNTER_CACHE -> handleBulkOpDeleteCache(op, bulkOpsResult, countersCacheManager, countersSubscriptionService);
@@ -863,13 +883,13 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         }
     }
 
-    private <VT extends Reusable> void handleBulkOpAddItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService) {
+    private <VT extends Reusable> void handleBulkOpAddItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService, CacheTimerService<I, K> cacheTimerService_) {
         I cacheId = op.getCacheId();
         K key = op.getKey();
         VT value = (VT) op.getValue();
         var ttl = op.getTtl();
         var requestId = op.getRequestId();
-        var result = processAddCacheEntry(cacheId, key, value, ttl, requestId, null, null, 0, (CacheResponseEncoder<I, K, VT>) encoder, cacheManager, subscriptionService);
+        var result = processAddCacheEntry(cacheId, key, value, ttl, requestId, null, null, 0, (CacheResponseEncoder<I, K, VT>) encoder, cacheManager, subscriptionService, cacheTimerService_);
         AddCacheEntryResult<I, K> bulkResult = new AddCacheEntryResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
         bulkResult.copyFrom(result);
         log.debug("Bulk request, add item result: {}", bulkResult);
@@ -894,7 +914,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Decode the CreateCache message into a request details flyweight.
      *
-     * @param createCacheRequestDetails
+     * @param createCacheRequestDetails The request details flyweight to populate.
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
@@ -908,7 +928,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Decode the ClearCache message into a request details flyweight.
      *
-     * @param clearCacheRequestDetails
+     * @param clearCacheRequestDetails The request details flyweight to populate.
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
@@ -922,7 +942,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Decode the RemoveCacheEntry message into a request details flyweight.
      *
-     * @param removeCacheEntryRequestDetails
+     * @param removeCacheEntryRequestDetails The request details flyweight to populate.
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
@@ -949,7 +969,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Decode the GetCacheEntry message into a request details flyweight.
      *
-     * @param getCacheEntryRequestDetails
+     * @param getCacheEntryRequestDetails The request details flyweight to populate.
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
@@ -963,7 +983,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Decode the GetAllCacheEntries message into a request details flyweight.
      *
-     * @param getAllCacheEntriesRequestDetails
+     * @param getAllCacheEntriesRequestDetails The request details flyweight to populate.
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
@@ -977,7 +997,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Decode the DeleteCache message into a request details flyweight.
      *
-     * @param deleteCacheRequestDetails
+     * @param deleteCacheRequestDetails The request details flyweight to populate.
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
@@ -991,7 +1011,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Decode the CacheStatsRequest message into a request details flyweight.
      *
-     * @param getCacheStatsRequestDetails
+     * @param getCacheStatsRequestDetails The request details flyweight to populate.
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
@@ -1005,7 +1025,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Decode the CacheSubscriptionRequest message into a request details flyweight.
      *
-     * @param cacheSubscribeRequestDetails
+     * @param cacheSubscribeRequestDetails The request details flyweight to populate.
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
@@ -1019,7 +1039,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     /**
      * Decode the CacheUnsubscribeRequest message into a request details flyweight.
      *
-     * @param cacheUnsubscribeRequestDetails
+     * @param cacheUnsubscribeRequestDetails The request details flyweight to populate.
      * @param session The client session.
      * @param buffer  The buffer to decode from.
      * @param offset  The offset from within the buffer to decode from.
@@ -1234,6 +1254,9 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         int cumulativeLength = cacheTimerService.onTakeSnapshot(snapshotPublication, timersBuffer);
         snapshotPublication.offer(timersBuffer, 0, cumulativeLength);
 
+        cumulativeLength = cacheCountersTimerService.onTakeSnapshot(snapshotPublication, timersBuffer);
+        snapshotPublication.offer(timersBuffer, 0, cumulativeLength);
+
         log.info("Taking cache manager snapshot");
         cacheManager.takeSnapshot(snapshotPublication);
 
@@ -1251,6 +1274,9 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
         log.info("Loading cache timers from snapshot");
         cacheTimerService.loadSnapshot(cluster, snapshotImage);
+
+        log.info("Loading cache counter timers from snapshot");
+        cacheCountersTimerService.loadSnapshot(cluster, snapshotImage);
 
         log.info("Loading cache manager snapshot");
         cacheManager.loadSnapshot(snapshotImage);
@@ -1298,6 +1324,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      */
     public void onTimerEvent(final long correlationId, final long timestamp) {
         cacheTimerService.onTimerEvent(correlationId, timestamp);
+        cacheCountersTimerService.onTimerEvent(correlationId, timestamp);
     }
 
 
