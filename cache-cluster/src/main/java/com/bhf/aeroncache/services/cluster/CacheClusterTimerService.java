@@ -160,6 +160,9 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
                 removeConsumer.accept(timerDetailsFlyweight);
             }
         }
+        else{
+            log.warn("No pending remove on timer event found for correlationId {}", correlationId);
+        }
     }
 
 }

@@ -234,6 +234,15 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
             if (removeResult.getStatus() == CacheOperationStatus.SUCCESS) {
                 // update the subscription service
                 handlePostRemoveTimerCacheEntry(cache, key, removeResult, encoder, subscriptionService);
+                return;
+            }
+
+            removeResult = processRemoveCacheEntry(cache, key, "timer-" + correlationId, countersCacheManager);
+
+            if (removeResult.getStatus() == CacheOperationStatus.SUCCESS) {
+                // update the subscription service
+                handlePostRemoveTimerCacheEntry(cache, key, removeResult, countersResponseEncoder, countersSubscriptionService);
+                return;
             }
         };
 

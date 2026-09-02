@@ -1,7 +1,9 @@
 package com.bhf.aeroncache.integration.multistream;
 
-import com.bhf.aeroncache.integration.BackendTestResource;
-import com.bhf.aeroncache.integration.config.*;
+import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.CounterTestEndpoints;
+import com.bhf.aeroncache.integration.config.SSECountersCacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.WSCountersCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamPutItemTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
@@ -29,13 +31,4 @@ class ClusteredMultiStreamPutCounterItemTests extends AbstractMultiStreamPutItem
         return 2;
     }
 
-    @Override
-    protected void shouldGetOrderedUpdatesOnTimedRemoved(BackendTestResource backend) {
-        assert(true);
-    }
-
-    @Override
-    protected void shouldCancelOldTimerWhenUpdatingTtl(BackendTestResource backend) {
-        assert(true);
-    }
 }

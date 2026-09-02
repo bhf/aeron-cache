@@ -25,7 +25,7 @@ public abstract class AbstractMultiStreamPutItemTests<V> {
     private static final String KNOWN_KEY = "SomeKey";
     private static final String ANOTHER_KNOWN_KEY = "SomeOtherKey";
 
-    private TestEndpointsProvider putItemsEndpoints;
+    private final TestEndpointsProvider putItemsEndpoints;
     private final StreamingHelper[] streamingHelpers;
 
     protected AbstractMultiStreamPutItemTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
@@ -43,7 +43,7 @@ public abstract class AbstractMultiStreamPutItemTests<V> {
     @Test
     @DisplayName("Should get a streaming updates when putting into a known cache")
     @HappyPath
-    void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
+    protected void shouldGetStreamingUpdateWhenPuttingIntoKnownCache(BackendTestResource backend) {
         // Arrange
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, getKnownCacheId(), 1);
 
@@ -70,7 +70,7 @@ public abstract class AbstractMultiStreamPutItemTests<V> {
     @Test
     @DisplayName("Should get a streaming updates when putting on existing key into a known cache")
     @HappyPath
-    void shouldGetStreamingUpdateWhenPuttingExistingKeyIntoKnownCache(BackendTestResource backend) {
+    protected void shouldGetStreamingUpdateWhenPuttingExistingKeyIntoKnownCache(BackendTestResource backend) {
         // Arrange
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, getKnownCacheId(), 2);
 

@@ -180,21 +180,32 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         if (subscribers != null) {
             var cacheId = String.valueOf(deleteCacheResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.DELETE_CACHE;
-            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, deleteCacheResult.getRequestId())));
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, deleteCacheResult.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
         }
     }
 
     @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult) {
-        log.info("Got cache entry removed to send to ws");
+        log.info("Got cache entry removed to send to ws on requestId {}", removeCacheEntryResult.getRequestId());
         var subscribers = cacheSubscriptions.get(removeCacheEntryResult.getCacheId().value());
 
         if (subscribers != null) {
             var cacheId = String.valueOf(removeCacheEntryResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.REMOVE_ITEM;
             var key = removeCacheEntryResult.getKey().value().toString();
-            subscribers.forEach(c -> c.accept(
-                    new CacheUpdateEvent(cacheId, eventType, key, null, removeCacheEntryResult.getRequestId())));
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(new CacheUpdateEvent(cacheId, eventType, key, null, removeCacheEntryResult.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
         }
     }
 

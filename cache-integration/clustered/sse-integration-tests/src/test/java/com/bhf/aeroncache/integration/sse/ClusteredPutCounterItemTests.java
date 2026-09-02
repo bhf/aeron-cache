@@ -1,6 +1,5 @@
 package com.bhf.aeroncache.integration.sse;
 
-import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
 import com.bhf.aeroncache.integration.config.CounterTestEndpoints;
 import com.bhf.aeroncache.integration.config.SSECountersCacheTestEndpoints;
@@ -29,13 +28,4 @@ class ClusteredPutCounterItemTests extends AbstractMultiStreamPutItemTests<Integ
         return "ClusteredPutCounterItemTests-SSE";
     }
 
-    @Override
-    protected void shouldGetOrderedUpdatesOnTimedRemoved(BackendTestResource backend) {
-        assert(true);
-    }
-
-    @Override
-    protected void shouldCancelOldTimerWhenUpdatingTtl(BackendTestResource backend) {
-        assert(true);
-    }
 }
