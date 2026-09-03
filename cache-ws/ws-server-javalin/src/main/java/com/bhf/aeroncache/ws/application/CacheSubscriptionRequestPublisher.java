@@ -168,7 +168,13 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         if (subscribers != null) {
             var cacheId = String.valueOf(clearCacheResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.CLEAR_CACHE;
-            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, clearCacheResult.getRequestId())));
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, clearCacheResult.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
         }
     }
 

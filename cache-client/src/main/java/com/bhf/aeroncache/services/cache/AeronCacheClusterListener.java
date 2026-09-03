@@ -356,8 +356,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     private <VT extends Reusable> void handleCacheEntryUpdated(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, VT> decoder,
                                               CacheResponseHandler<I, K, VT> cacheResultsCallbacks, CacheEntryUpdateResult<I, K, VT> cacheEntryUpdateResult) {
         decoder.decodeCacheEntryUpdated(buffer, offset, cacheEntryUpdateResult);
-        log.info("Got cache entry updated on cacheId {}, key {} requestId {}",
-                cacheEntryUpdateResult.getCacheId(), cacheEntryUpdateResult.getKey(), cacheEntryUpdateResult.getRequestId());
+        log.info("Got cache entry updated on cacheId {}, key {} requestId {}, value: {}",
+                cacheEntryUpdateResult.getCacheId(), cacheEntryUpdateResult.getKey(), cacheEntryUpdateResult.getRequestId(), cacheEntryUpdateResult.getValue());
         
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryUpdated(cacheEntryUpdateResult);

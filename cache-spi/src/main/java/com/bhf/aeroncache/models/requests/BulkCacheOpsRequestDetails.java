@@ -60,6 +60,7 @@ public class BulkCacheOpsRequestDetails <I extends Reusable, K extends Reusable,
         var details = new CacheOperationRequestDetails(indexSupplier, keySupplier, valueSupplier);
         details.operationType = opType;
         details.ttl = ttl;
+        details.counterValue = counterValue;
         details.setRequestId(requestId);
         details.getCacheId().copyFrom(cacheId);
         details.getKey().copyFrom(key);

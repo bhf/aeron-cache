@@ -115,7 +115,7 @@ public class CacheTestUtils {
     public static void sendBulkRequest(BulkCacheOpsRequest request, BackendTestResource backend, TestEndpointsProvider endpointsProvider){
         var allOps = new JSONArray();
         for(var op : request.operations()){
-            allOps.put(getCacheOperation(op.requestId(), op.operationType().toString(), op.cacheId(), op.key(), op.value(), op.ttl()));
+            allOps.put(getCacheOperation(op.requestId(), op.operationType().toString(), op.cacheId(), op.key(), op.value(), op.ttl(), op.counterValue()));
         }
 
         JSONObject requestBody = new JSONObject()
@@ -131,13 +131,14 @@ public class CacheTestUtils {
     }
 
 
-    public static JSONObject getCacheOperation(String requestId, String opType, String cacheId, String key, String value, long ttl) {
+    public static JSONObject getCacheOperation(String requestId, String opType, String cacheId, String key, String value, long ttl, long counterValue) {
         return new JSONObject()
                 .put("requestId", requestId)
                 .put("operationType", opType)
                 .put("cacheId", cacheId)
                 .put("key", key)
                 .put("value", value)
+                .put("counterValue", counterValue)
                 .put("ttl", ttl);
     }
 }

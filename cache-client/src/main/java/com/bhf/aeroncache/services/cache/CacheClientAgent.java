@@ -100,11 +100,14 @@ public class CacheClientAgent extends AbstractClientAgent {
             var ttl = buffer.getLong(cumulativeReadPosition);
             cumulativeReadPosition += 8;
 
+            var counterValue = buffer.getLong(cumulativeReadPosition);
+            cumulativeReadPosition += 8;
+
             var ordinal = buffer.getInt(cumulativeReadPosition);
             var opType = BulkOperationType.values()[ordinal];
             cumulativeReadPosition += 4;
 
-            CacheOperationRequest r = new CacheOperationRequest(opType, ttl, 0, opRequestId, cacheId, key, value);
+            CacheOperationRequest r = new CacheOperationRequest(opType, ttl, counterValue, opRequestId, cacheId, key, value);
             operations.add(r);
         }
 

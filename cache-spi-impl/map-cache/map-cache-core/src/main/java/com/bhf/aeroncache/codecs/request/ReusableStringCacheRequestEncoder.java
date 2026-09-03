@@ -120,7 +120,7 @@ public class ReusableStringCacheRequestEncoder implements CacheRequestEncoder<Re
             BulkOperationType opType = BulkOperationType.valueOf(op.operationType().toString());
             itemsEncoder.operationType(opType)
                     .ttl(op.ttl())
-                    .counterValue(0)
+                    .counterValue(op.counterValue())
                     .requestId(op.requestId())
                     .cacheId(op.cacheId())
                     .key(op.key())

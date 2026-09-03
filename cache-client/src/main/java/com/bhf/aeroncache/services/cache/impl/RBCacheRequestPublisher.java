@@ -98,6 +98,7 @@ public class RBCacheRequestPublisher extends AbstractRBRequestPublisher<String> 
             var key = op.key();
             var value = op.value();
             var ttl = op.ttl();
+            var counterValue = op.counterValue();
             var opType = op.operationType();
 
             writeCursor += buffer.putStringUtf8(writeCursor, opRequestId);
@@ -106,6 +107,9 @@ public class RBCacheRequestPublisher extends AbstractRBRequestPublisher<String> 
             writeCursor += buffer.putStringUtf8(writeCursor, value);
 
             buffer.putLong(writeCursor, ttl);
+            writeCursor += 8;
+
+            buffer.putLong(writeCursor, counterValue);
             writeCursor += 8;
 
             buffer.putInt(writeCursor, opType.ordinal());

@@ -12,6 +12,7 @@ public class CounterTestEndpoints implements TestEndpointsProvider{
     final String CLEAR_ENDPOINT_COUNTER = "/api/v1/counters/";
     final String REMOVE_ITEM_ENDPOINT = "/api/v1/counters/";
     final String GET_ITEM_ENDPOINT = "/api/v1/counters/";
+    final String BULK_ITEM_ENDPOINT_CACHE = "/api/v1/cache/bulkops/";
 
     @Override
     public String getCreateEndpointCache() {
@@ -36,7 +37,7 @@ public class CounterTestEndpoints implements TestEndpointsProvider{
     @Nullable
     @Override
     public String getBulkItemEndpointCache() {
-        return null;
+        return BULK_ITEM_ENDPOINT_CACHE;
     }
 
     @Override
