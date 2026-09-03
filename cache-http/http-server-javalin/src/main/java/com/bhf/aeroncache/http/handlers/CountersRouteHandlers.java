@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.http.handlers;
 
 import com.bhf.aeroncache.http.application.HttpApplication;
+import com.bhf.aeroncache.http.requests.CreateCacheRequest;
 import com.bhf.aeroncache.http.requests.PutCounterRequest;
 import com.bhf.aeroncache.http.requests.PutTimedCounterRequest;
 import com.bhf.aeroncache.http.responses.*;
@@ -17,6 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+
+import static com.bhf.aeroncache.http.handlers.CacheRouteHandlers.invalidCacheNames;
+import static com.bhf.aeroncache.http.handlers.CacheRouteHandlers.specialCharacters;
 
 @Log4j2
 public class CountersRouteHandlers extends AbstractRouteHandlers<ReusableLong, Long> {
@@ -146,5 +150,28 @@ public class CountersRouteHandlers extends AbstractRouteHandlers<ReusableLong, L
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
+    }
+
+    @Override
+    protected boolean isCreateRequestValid(CreateCacheRequest request, Context ctx) {
+        if (specialCharacters.matcher(request.cacheId()).find()) {
+            var errorMsg = "Cache ID shouldn't contain special characters";
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_SPECIAL_CHARACTERS,
+                    CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+            return false;
+        }
+
+        if (invalidCacheNames.contains(request.cacheId())) {
+            var errorMsg = "Cache ID shouldn't be a reserved name";
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_RESERVED_NAMES,
+                    CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+            return false;
+        }
+
+        return true;
     }
 }
