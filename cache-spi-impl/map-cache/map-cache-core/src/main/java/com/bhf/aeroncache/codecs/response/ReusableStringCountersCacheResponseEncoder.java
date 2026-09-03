@@ -268,6 +268,10 @@ public class ReusableStringCountersCacheResponseEncoder implements CountersCache
             return com.bhf.aeroncache.messages.OperationStatus.UNKNOWN_CACHE;
         } else if (status == com.bhf.aeroncache.models.results.CacheOperationStatus.CACHE_EXISTS) {
             return com.bhf.aeroncache.messages.OperationStatus.CACHE_EXISTS;
+        } else if (status == com.bhf.aeroncache.models.results.CacheOperationStatus.DUPLICATE_SUBSCRIPTION) {
+            return com.bhf.aeroncache.messages.OperationStatus.DUPLICATE_SUBSCRIPTION;
+        } else if (status == com.bhf.aeroncache.models.results.CacheOperationStatus.UNKNOWN_SUBSCRIPTION) {
+            return com.bhf.aeroncache.messages.OperationStatus.UNKNOWN_SUBSCRIPTION;
         }
         return com.bhf.aeroncache.messages.OperationStatus.ERROR;
     }
