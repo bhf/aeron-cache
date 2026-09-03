@@ -76,9 +76,9 @@ abstract class BulkItemsTests {
         // Arrange
 
         var allOps = new JSONArray();
-        allOps.put(CacheTestUtils.getCacheOperation("request-id-1", "ADD_ITEM", KNOWN_CACHE_ID, KNOWN_KEY + "-0", KNOWN_VALUE, 0));
-        allOps.put(CacheTestUtils.getCacheOperation("request-id-2", "ADD_ITEM", KNOWN_CACHE_ID, KNOWN_KEY + "-1", KNOWN_VALUE, 0));
-        allOps.put(CacheTestUtils.getCacheOperation("request-id-3", "ADD_ITEM", KNOWN_CACHE_ID, KNOWN_KEY + "-2", KNOWN_VALUE, 0));
+        allOps.put(CacheTestUtils.getCacheOperation("request-id-1", "ADD_ITEM", KNOWN_CACHE_ID, KNOWN_KEY + "-0", KNOWN_VALUE, 0, 0));
+        allOps.put(CacheTestUtils.getCacheOperation("request-id-2", "ADD_ITEM", KNOWN_CACHE_ID, KNOWN_KEY + "-1", KNOWN_VALUE, 0, 0));
+        allOps.put(CacheTestUtils.getCacheOperation("request-id-3", "ADD_ITEM", KNOWN_CACHE_ID, KNOWN_KEY + "-2", KNOWN_VALUE, 0, 0));
 
         JSONObject requestBody = new JSONObject()
                 .put("requestId", "bulk-request-1")
@@ -124,10 +124,10 @@ abstract class BulkItemsTests {
         var requestId = "bulk-request-mixed";
 
         var allOps = new JSONArray();
-        allOps.put(CacheTestUtils.getCacheOperation("addRequestId", "ADD_ITEM", KNOWN_CACHE_ID, key, value, 0));
-        allOps.put(CacheTestUtils.getCacheOperation("getRequestId", "GET_ITEM", KNOWN_CACHE_ID, key, "", 0));
-        allOps.put(CacheTestUtils.getCacheOperation("removeRequestId", "REMOVE_ITEM", KNOWN_CACHE_ID, key, "", 0));
-        allOps.put(CacheTestUtils.getCacheOperation("getAfterRemoveRequestId", "GET_ITEM", KNOWN_CACHE_ID, key, "", 0));
+        allOps.put(CacheTestUtils.getCacheOperation("addRequestId", "ADD_ITEM", KNOWN_CACHE_ID, key, value, 0, 0));
+        allOps.put(CacheTestUtils.getCacheOperation("getRequestId", "GET_ITEM", KNOWN_CACHE_ID, key, "", 0, 0));
+        allOps.put(CacheTestUtils.getCacheOperation("removeRequestId", "REMOVE_ITEM", KNOWN_CACHE_ID, key, "", 0, 0));
+        allOps.put(CacheTestUtils.getCacheOperation("getAfterRemoveRequestId", "GET_ITEM", KNOWN_CACHE_ID, key, "", 0, 0));
 
         JSONObject requestBody = new JSONObject()
                 .put("requestId", requestId)
@@ -178,9 +178,9 @@ abstract class BulkItemsTests {
         String testValue = KNOWN_VALUE + "-bulk-unknown-test";
 
         var allOps = new JSONArray();
-        allOps.put(CacheTestUtils.getCacheOperation("addRequestId", "ADD_ITEM", UNKNOWN_CACHE_ID, testKey, testValue, 0));
-        allOps.put(CacheTestUtils.getCacheOperation("getRequestId", "GET_ITEM", UNKNOWN_CACHE_ID, testKey, "", 0));
-        allOps.put(CacheTestUtils.getCacheOperation("removeRequestId", "REMOVE_ITEM", UNKNOWN_CACHE_ID, testKey, "", 0));
+        allOps.put(CacheTestUtils.getCacheOperation("addRequestId", "ADD_ITEM", UNKNOWN_CACHE_ID, testKey, testValue, 0, 0));
+        allOps.put(CacheTestUtils.getCacheOperation("getRequestId", "GET_ITEM", UNKNOWN_CACHE_ID, testKey, "", 0, 0));
+        allOps.put(CacheTestUtils.getCacheOperation("removeRequestId", "REMOVE_ITEM", UNKNOWN_CACHE_ID, testKey, "", 0, 0));
 
         JSONObject requestBody = new JSONObject()
                 .put("requestId", "bulk-request-unknown")

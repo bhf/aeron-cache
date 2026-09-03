@@ -62,8 +62,8 @@ abstract class DynamicCreateCacheTests {
         var dynamicBulkCacheId = "bulk-dynamic-1";
         CacheTestUtils.deleteCache(dynamicBulkCacheId, backend, endpointsProvider);
 
-        var op1 = CacheTestUtils.getCacheOperation("req-1", "ADD_ITEM", dynamicBulkCacheId, KNOWN_KEY, KNOWN_VALUE, 0);
-        var op2 = CacheTestUtils.getCacheOperation("req-2", "ADD_ITEM", dynamicBulkCacheId, "AnotherKey", "AnotherValue", 0);
+        var op1 = CacheTestUtils.getCacheOperation("req-1", "ADD_ITEM", dynamicBulkCacheId, KNOWN_KEY, KNOWN_VALUE, 0, 0);
+        var op2 = CacheTestUtils.getCacheOperation("req-2", "ADD_ITEM", dynamicBulkCacheId, "AnotherKey", "AnotherValue", 0, 0);
         var ops = new JSONArray().put(op1).put(op2);
         
         var requestBody = new JSONObject()
