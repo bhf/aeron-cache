@@ -364,6 +364,7 @@ public class HttpApplication {
                 .get(COUNTERS_API_PREFIX + "<cacheId>/<key>", countersHandlers::handleGetItemRequest)
                 .get(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handleGetCacheRequest)
                 .post(COUNTERS_API_PREFIX + "timed/<cacheId>", countersHandlers::handlePutTimedItemRequest)
+                .post(COUNTERS_API_PREFIX + "increment/<cacheId>", countersHandlers::handleIncrementItemRequest)
                 .post(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handlePutItemRequest)
                 .delete(COUNTERS_API_PREFIX + "<cacheId>/<key>", countersHandlers::handleDeleteItemRequest)
                 .delete(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handleDeleteCacheRequest)

@@ -236,4 +236,25 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             });
         }
     }
+
+    @Override
+    public void handleCounterIncremented(IncrementCounterResult<I, K> result) {
+        log.info("Got counter incremented to send to ws on cacheId {}", result.getCacheId().value());
+        var subscribers = cacheSubscriptions.get(result.getCacheId().value());
+
+        if (subscribers != null) {
+            log.info("Subscribers is not null, sending counter increment event to {} subscribers", subscribers.size());
+            var cacheId = String.valueOf(result.getCacheId());
+            var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
+            var key = result.getKey().value().toString();
+            var value = result.getCounterValue();
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, result.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
+        }
+    }
 }

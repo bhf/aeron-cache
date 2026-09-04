@@ -30,4 +30,5 @@ public class CacheRequestMessageTypes {
     public static final int UNSUBSCRIBE_TO_COUNTER_CACHE_MSG_ID = 108;
     public static final int GET_COUNTER_STATS_MSG_ID = 109;
     public static final int REMOVE_COUNTER_ENTRY_MSG_ID = 110;
+    public static final int INCREMENT_COUNTER_ENTRY_MSG_ID = 111;
 }

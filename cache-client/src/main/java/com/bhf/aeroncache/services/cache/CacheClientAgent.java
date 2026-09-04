@@ -72,6 +72,7 @@ public class CacheClientAgent extends AbstractClientAgent {
                 case UNSUBSCRIBE_TO_COUNTER_CACHE_MSG_ID -> handleUnsubscribeToCache(buffer, index, counterOpsPublisher);
                 case GET_COUNTER_STATS_MSG_ID -> handleGetCacheStats(buffer, index, counterOpsPublisher);
                 case REMOVE_COUNTER_ENTRY_MSG_ID -> handleRemoveCacheEntry(buffer, index, counterOpsPublisher);
+                case INCREMENT_COUNTER_ENTRY_MSG_ID -> handleIncrementCounter(buffer, index, counterOpsPublisher);
                 default -> log.warn("Got unknown msgType: {} processing inbound client cache requests", msgTypeId);
             }
         });
@@ -224,5 +225,19 @@ public class CacheClientAgent extends AbstractClientAgent {
         var ttl = buffer.getLong(cumulativeReadPosition);
         log.debug("ADD CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", key=" + key + ", value=" + value+", ttl="+ttl);
         counterOpsPublisher.addCacheEntry(requestId, cacheId, key, value, ttl);
+    }
+
+    private void handleIncrementCounter(MutableDirectBuffer buffer, int index, ClusterMessagePublisher<String, String, Long> counterOpsPublisher) {
+        var requestId = buffer.getStringUtf8(index);
+        var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
+        var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
+        cumulativeReadPosition += buffer.getInt(cumulativeReadPosition) + 4;
+        var key = buffer.getStringUtf8(cumulativeReadPosition);
+        cumulativeReadPosition += buffer.getInt(cumulativeReadPosition) + 4;
+        var amount = buffer.getLong(cumulativeReadPosition);
+        cumulativeReadPosition += 8;
+        var ttl = buffer.getLong(cumulativeReadPosition);
+        log.debug("INCREMENT COUNTER Request has ID " + requestId + ", on cache ID " + cacheId + ", key=" + key + ", amount=" + amount + ", ttl=" + ttl);
+        counterOpsPublisher.incrementCounter(requestId, cacheId, key, amount, ttl);
     }
 }

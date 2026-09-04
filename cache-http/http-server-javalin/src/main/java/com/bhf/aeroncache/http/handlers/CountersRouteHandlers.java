@@ -2,6 +2,7 @@ package com.bhf.aeroncache.http.handlers;
 
 import com.bhf.aeroncache.http.application.HttpApplication;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
+import com.bhf.aeroncache.http.requests.IncrementCounterRequest;
 import com.bhf.aeroncache.http.requests.PutCounterRequest;
 import com.bhf.aeroncache.http.requests.PutTimedCounterRequest;
 import com.bhf.aeroncache.http.responses.*;
@@ -116,6 +117,41 @@ public class CountersRouteHandlers extends AbstractRouteHandlers<ReusableLong, L
             ctx.json(response);
         } catch (Exception e) {
             var errorMsg = "Badly formed request to put counter from request: " + ctx.body();
+            log.warn(errorMsg);
+            HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
+    public void handleIncrementItemRequest(Context ctx) {
+        try {
+            var cacheId = ctx.pathParam("cacheId");
+            var request = ctx.bodyAsClass(IncrementCounterRequest.class);
+            log.info("Got increment counter request on cacheId {}, key {}, amount {}", cacheId, request.key(), request.amount());
+
+            var requestId = getRequestId(ctx);
+            CompletableFuture<IncrementCounterResponse> future = new CompletableFuture<>();
+            Consumer<IncrementCounterResult<ReusableString, ReusableString>> consumer = c -> {
+                log.info("Increment counter response from cluster on cacheId {}, key {}, value {}", c.getCacheId(),
+                        c.getKey(), c.getCounterValue());
+                var noCache = c.getStatus() == CacheOperationStatus.UNKNOWN_CACHE;
+                var response = noCache ?
+                        new IncrementCounterResponse("0", "NA", 0L, c.getStatus()) :
+                        new IncrementCounterResponse(c.getCacheId().value().toString(), c.getKey().value().toString(),
+                                c.getCounterValue(), c.getStatus());
+                future.complete(response);
+            };
+            long ttl = 0;
+            CompletableFuture.runAsync(() -> publisher.incrementCounter(requestId, cacheId,
+                    request.key(), request.amount(), ttl, consumer));
+
+            var response = future.get();
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to increment counter from request: " + ctx.body();
             log.warn(errorMsg);
             HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);

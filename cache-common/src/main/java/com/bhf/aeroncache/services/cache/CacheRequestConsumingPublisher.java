@@ -113,4 +113,18 @@ public interface CacheRequestConsumingPublisher<RI extends Reusable, RK extends 
      * @param consumer  The consumer that will handle the result.
      */
     void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request, Consumer<BulkCacheOpsResult<RI, RK, RV>> consumer);
+
+    /**
+     * Send a message to increment a counter and handle the result via a consumer.
+     *
+     * @param requestId The request ID.
+     * @param cacheId   The ID of the counter cache.
+     * @param key       The key of the counter to increment.
+     * @param amount    The amount to increment the counter by.
+     * @param ttl       The time to live for the counter entry.
+     * @param c         The consumer that will handle the result.
+     */
+    default void incrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl, Consumer<IncrementCounterResult<RI, RK>> c) {
+        throw new UnsupportedOperationException("Increment counter is only supported for counter caches");
+    }
 }

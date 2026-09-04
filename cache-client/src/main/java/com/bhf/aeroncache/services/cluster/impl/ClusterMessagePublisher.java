@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CountersCacheRequestEncoder;
 import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
 import com.bhf.aeroncache.handlers.PublicationFailureHandler;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
@@ -106,6 +107,13 @@ public class ClusterMessagePublisher<BI, BK, BV> implements CacheRequestPublishe
         var length = cacheRequestEncoder.encodeRemoveCacheEntry(requestId, cacheId, key, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent remove cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
+    }
+
+    @Override
+    public void incrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl) {
+        var length = ((CountersCacheRequestEncoder<BI, BK, BV>) cacheRequestEncoder).encodeIncrementCounterRequest(requestId, cacheId, key, amount, ttl, msgBuffer);
+        publishToCache(msgBuffer, 0, length);
+        log.info("Sent increment counter request on cache {}, key {}, amount {}, with request Id {}", cacheId, key, amount, requestId);
     }
 
     @Override

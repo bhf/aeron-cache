@@ -26,6 +26,7 @@ public class ReusableStringCountersCacheResponseDecoder implements CountersCache
     @Override
     public void decodeIncrementCounterResponse(DirectBuffer buffer, int offset, IncrementCounterResult<ReusableString, ReusableString> result) {
         incrementCounterResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        result.clear();
         result.setCounterValue(incrementCounterResponseDecoder.counterValue());
         result.setStatus(getOperationStatus(incrementCounterResponseDecoder.status()));
         result.getCacheId().copyFrom(incrementCounterResponseDecoder.cacheId());

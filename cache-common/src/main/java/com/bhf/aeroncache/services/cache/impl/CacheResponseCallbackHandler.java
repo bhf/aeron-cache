@@ -70,4 +70,9 @@ public class CacheResponseCallbackHandler<I extends Reusable, K extends Reusable
     public void handleBulkOperationsResult(BulkCacheOpsResult<I, K, V> bulkCacheOpsResult) {
         observerGroup.handleBulkOperationsResult(bulkCacheOpsResult);
     }
+
+    @Override
+    public void handleCounterIncremented(IncrementCounterResult<I, K> result) {
+        observerGroup.handleCounterIncremented(result);
+    }
 }

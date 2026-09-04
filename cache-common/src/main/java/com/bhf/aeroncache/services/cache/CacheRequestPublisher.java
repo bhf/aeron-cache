@@ -104,4 +104,17 @@ public interface CacheRequestPublisher<BI,BK,BV> {
      * @param request   The bulk request.
      */
     void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request);
+
+    /**
+     * Send a message to increment a counter by a given amount.
+     *
+     * @param requestId The Id of this request.
+     * @param cacheId   The ID of the counter cache.
+     * @param key       The key of the counter to increment.
+     * @param amount    The amount to increment the counter by.
+     * @param ttl       The time to live for the counter entry.
+     */
+    default void incrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl) {
+        throw new UnsupportedOperationException("Increment counter is only supported for counter caches");
+    }
 }
