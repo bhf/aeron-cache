@@ -26,8 +26,9 @@ test.describe('Aeron Cache Management', () => {
 
         await expect(page.getByText(/Success/i)).toBeVisible();
         
-        // Use the filter to find our new cache
-        await page.getByTestId('all-caches-filter-input').fill(cacheId);
+        // Use the filter to find our new cache. Scope to the caches tab panel
+        // since the counters tab renders the same table (and shared testids).
+        await page.getByTestId('caches-tab-panel').getByTestId('all-caches-filter-input').fill(cacheId);
         
         // Verify it appears in the table
         await expect(page.getByRole('cell', { name: cacheId })).toBeVisible();
