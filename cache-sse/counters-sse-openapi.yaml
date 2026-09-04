@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: Aeron Cache SSE API
-  description: Server-Sent Events API for subscribing to Aeron Cache updates.
+  title: Aeron Cache Counters SSE API
+  description: Server-Sent Events API for subscribing to Aeron Cache counter cache updates.
   termsOfService: https://www.github.com/bhf
   contact:
     name: Sanjeev
@@ -12,16 +12,16 @@ servers:
   - url: http://localhost:7072
     description: Local SSE server
 paths:
-  /api/sse/v1/cache/{cacheId}:
+  /api/sse/v1/counter/{cacheId}:
     get:
-      summary: Subscribe to a single cache
+      summary: Subscribe to a single counter cache
       description: |
-        Establish an SSE connection to subscribe to updates for a single cache.
+        Establish an SSE connection to subscribe to updates for a single counter cache.
       parameters:
         - name: cacheId
           in: path
           required: true
-          description: The ID of the cache to subscribe to.
+          description: The ID of the counter cache to subscribe to.
           schema:
             type: string
       responses:
@@ -30,22 +30,22 @@ paths:
           content:
             text/event-stream:
               schema:
-                $ref: '#/components/schemas/CacheUpdateEvent'
+                $ref: '#/components/schemas/CounterUpdateEvent'
         400:
           description: Bad Request - Invalid cache ID.
         503:
           description: Service Unavailable - Cluster not connected.
 
-  /api/sse/v1/caches/{cacheIds}:
+  /api/sse/v1/counters/{cacheIds}:
     get:
-      summary: Subscribe to multiple caches
+      summary: Subscribe to multiple counter caches
       description: |
-        Establish an SSE connection to subscribe to updates for multiple caches.
+        Establish an SSE connection to subscribe to updates for multiple counter caches.
       parameters:
         - name: cacheIds
           in: path
           required: true
-          description: Comma-separated list of cache IDs to subscribe to.
+          description: Comma-separated list of counter cache IDs to subscribe to.
           schema:
             type: string
       responses:
@@ -54,22 +54,22 @@ paths:
           content:
             text/event-stream:
               schema:
-                $ref: '#/components/schemas/CacheUpdateEvent'
+                $ref: '#/components/schemas/CounterUpdateEvent'
         400:
           description: Bad Request - Invalid cache IDs.
         503:
           description: Service Unavailable - Cluster not connected.
 
-  /api/sse/v1/cache/hydrate/{cacheId}:
+  /api/sse/v1/counter/hydrate/{cacheId}:
     get:
-      summary: Subscribe to a single cache with hydration
+      summary: Subscribe to a single counter cache with hydration
       description: |
-        Establish an SSE connection to subscribe to updates for a single cache, with initial state hydration.
+        Establish an SSE connection to subscribe to updates for a single counter cache, with initial state hydration.
       parameters:
         - name: cacheId
           in: path
           required: true
-          description: The ID of the cache to subscribe to.
+          description: The ID of the counter cache to subscribe to.
           schema:
             type: string
       responses:
@@ -78,22 +78,22 @@ paths:
           content:
             text/event-stream:
               schema:
-                $ref: '#/components/schemas/CacheUpdateEvent'
+                $ref: '#/components/schemas/CounterUpdateEvent'
         400:
           description: Bad Request - Invalid cache ID.
         503:
           description: Service Unavailable - Cluster not connected.
 
-  /api/sse/v1/caches/hydrate/{cacheIds}:
+  /api/sse/v1/counters/hydrate/{cacheIds}:
     get:
-      summary: Subscribe to multiple caches with hydration
+      summary: Subscribe to multiple counter caches with hydration
       description: |
-        Establish an SSE connection to subscribe to updates for multiple caches, with initial state hydration.
+        Establish an SSE connection to subscribe to updates for multiple counter caches, with initial state hydration.
       parameters:
         - name: cacheIds
           in: path
           required: true
-          description: Comma-separated list of cache IDs to subscribe to.
+          description: Comma-separated list of counter cache IDs to subscribe to.
           schema:
             type: string
       responses:
@@ -102,7 +102,7 @@ paths:
           content:
             text/event-stream:
               schema:
-                $ref: '#/components/schemas/CacheUpdateEvent'
+                $ref: '#/components/schemas/CounterUpdateEvent'
         400:
           description: Bad Request - Invalid cache IDs.
         503:
@@ -110,13 +110,13 @@ paths:
 
 components:
   schemas:
-    CacheUpdateEvent:
+    CounterUpdateEvent:
       type: object
-      description: A cache update event published over the SSE connection.
+      description: A counter cache update event published over the SSE connection.
       properties:
         cacheId:
           type: string
-          description: The ID of the cache.
+          description: The ID of the counter cache.
         eventType:
           type: string
           description: The type of event.
@@ -128,11 +128,12 @@ components:
         itemKey:
           type: string
           nullable: true
-          description: The key of the item.
+          description: The key of the counter.
         itemValue:
-          type: string
+          type: integer
+          format: int64
           nullable: true
-          description: The value of the item.
+          description: The value of the counter.
         requestId:
           type: string
           description: The request ID associated with the event.

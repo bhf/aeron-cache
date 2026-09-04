@@ -1,0 +1,610 @@
+openapi: 3.0.1
+info:
+  title: Aeron Cache Counters HTTP API
+  description: This API exposes endpoints to interact with Aeron Cache counter caches.
+  termsOfService: https://www.github.com/bhf
+  contact:
+    name: Sanjeev
+    url: https://www.sanjeev.pages.dev
+    email: na@na.com
+  license:
+    name: MIT License
+    url: https://choosealicense.com/licenses/mit/
+  version: '1.0'
+servers:
+  - url: http://localhost:7070
+    description: Dev server
+paths:
+  /api/v1/counters/:
+    post:
+      tags:
+        - CreateCounterCache
+      summary: Create a new counter cache
+      description: Create a counter cache by specifying the cache Id in the request body
+      operationId: createCounterCache
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/counters/{cacheId}:
+    get:
+      tags:
+        - GetCounterCache
+      summary: Get all counters from a counter cache
+      description: Get all counters from the specified counter cache
+      operationId: getCounterCache
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCountersResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - PutCounter
+      summary: Put a counter into a counter cache
+      description: Put a counter key/value into the specified counter cache
+      operationId: putCounter
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutCounterRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - DeleteCounterCache
+      summary: Delete a counter cache
+      description: Delete the specified counter cache
+      operationId: deleteCounterCache
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteCacheResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+        - ClearCounterCache
+      summary: Clear a counter cache
+      description: Remove all counters from the specified counter cache
+      operationId: clearCounterCache
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClearCacheResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/counters/{cacheId}/{key}:
+    get:
+      tags:
+        - GetCounter
+      summary: Get a single counter
+      description: Get a single counter by cache Id and key
+      operationId: getCounter
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCounterResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - DeleteCounter
+      summary: Delete a single counter
+      description: Delete a single counter by cache Id and key
+      operationId: deleteCounter
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/counters/timed/{cacheId}:
+    post:
+      tags:
+        - PutTimedCounter
+      summary: Put a counter with a TTL
+      description: Put a counter key/value with a time-to-live into the specified counter cache
+      operationId: putTimedCounter
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutTimedCounterRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/counters/increment/{cacheId}:
+    post:
+      tags:
+        - IncrementCounter
+      summary: Increment a counter
+      description: Increment a counter by a given amount in the specified counter cache
+      operationId: incrementCounter
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncrementCounterRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncrementCounterResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/counters/decrement/{cacheId}:
+    post:
+      tags:
+        - DecrementCounter
+      summary: Decrement a counter
+      description: Decrement a counter by a given amount in the specified counter cache
+      operationId: decrementCounter
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecrementCounterRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecrementCounterResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/counters/set/{cacheId}:
+    post:
+      tags:
+        - SetCounter
+      summary: Set a counter
+      description: Set a counter to a given value in the specified counter cache
+      operationId: setCounter
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetCounterRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetCounterResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/counters-caches:
+    get:
+      tags:
+        - GetCounterCaches
+      summary: Get details of all counter caches
+      description: Get the Id and item count of every counter cache
+      operationId: getCounterCaches
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CacheDetails'
+  /api/v1/counters-stats:
+    get:
+      tags:
+        - GetCounterStats
+      summary: Get counter cache statistics
+      description: Get aggregate statistics across all counter caches
+      operationId: getCounterStats
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheStatsResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        errorMsg:
+          type: string
+          example: 'Details about the error that occurred'
+        helpMsg:
+          type: string
+          example: 'A user friendly help message'
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    CreateRequest:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCounterCacheID"
+    CreateResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "CreatedCounterCache"
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    PutCounterRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        value:
+          type: integer
+          format: int64
+          example: 42
+    PutTimedCounterRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        value:
+          type: integer
+          format: int64
+          example: 42
+        ttl:
+          type: integer
+          format: int64
+          example: 60000
+    IncrementCounterRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        amount:
+          type: integer
+          format: int64
+          example: 1
+    DecrementCounterRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        amount:
+          type: integer
+          format: int64
+          example: 1
+    SetCounterRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        value:
+          type: integer
+          format: int64
+          example: 42
+    CounterItem:
+      type: object
+      properties:
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        value:
+          type: integer
+          format: int64
+          example: 42
+    PutItemResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCounterCacheID"
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    GetCounterResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCounterCacheID"
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        value:
+          type: integer
+          format: int64
+          example: 42
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    GetCountersResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCounterCacheID"
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CounterItem'
+    IncrementCounterResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCounterCacheID"
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        value:
+          type: integer
+          format: int64
+          example: 43
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    DecrementCounterResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCounterCacheID"
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        value:
+          type: integer
+          format: int64
+          example: 41
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    SetCounterResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCounterCacheID"
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        value:
+          type: integer
+          format: int64
+          example: 42
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    DeleteItemResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCounterCacheID"
+        key:
+          type: string
+          example: 'SomeCounterKey'
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    DeleteCacheResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCounterCacheID"
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    ClearCacheResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCounterCacheID"
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    CacheDetails:
+      type: object
+      properties:
+        cacheId:
+          type: string
+        itemCount:
+          type: integer
+          format: int64
+    CacheStatsResponse:
+      type: object
+      properties:
+        totalOpsCount:
+          type: integer
+          format: int32
+        totalCachesCount:
+          type: integer
+          format: int32
+        totalItemsCount:
+          type: integer
+          format: int32
+        errorCount:
+          type: integer
+          format: int32
+    CacheOperationStatus:
+      type: string
+      enum:
+        - NONE
+        - SUCCESS
+        - ERROR
+        - UNKNOWN_CACHE
+        - UNKNOWN_KEY
+        - CACHE_EXISTS
+        - DUPLICATE_SUBSCRIPTION
+        - UNKNOWN_SUBSCRIPTION
