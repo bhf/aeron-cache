@@ -1,23 +1,27 @@
 package com.bhf.aeroncache.http.application;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
-import com.bhf.aeroncache.models.bulk.responses.CacheOperationResponse;
 import com.bhf.aeroncache.http.config.HttpIdleStrategies;
+import com.bhf.aeroncache.http.handlers.CacheRouteHandlers;
+import com.bhf.aeroncache.http.handlers.CountersRouteHandlers;
+import com.bhf.aeroncache.http.handlers.HTTPConsumerUtils;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
-import com.bhf.aeroncache.http.requests.CreateCacheRequest;
-import com.bhf.aeroncache.http.requests.PutItemRequest;
-import com.bhf.aeroncache.http.requests.PutTimedItemRequest;
-import com.bhf.aeroncache.http.responses.*;
-import com.bhf.aeroncache.http.responses.CacheStats;
-import com.bhf.aeroncache.models.bulk.responses.BulkCacheOpsResponse;
+import com.bhf.aeroncache.http.responses.CacheDetails;
+import com.bhf.aeroncache.http.responses.ClusterToolsResponse;
+import com.bhf.aeroncache.http.responses.RequestErrorResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
-import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.models.ReusableLong;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.responses.BulkCacheOpsResponse;
+import com.bhf.aeroncache.models.results.BulkCacheOpsResult;
+import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.services.ReconnectingAeronCache;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
+import com.bhf.aeroncache.services.cache.impl.RBCountersRequestPublisher;
 import com.bhf.aeroncache.services.cacheclient.CacheClientFactory;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
@@ -28,7 +32,6 @@ import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
-import com.bhf.aeroncache.services.ReconnectingAeronCache;
 import com.bhf.aeroncache.utils.RingBufferUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aeron.Aeron;
@@ -49,7 +52,7 @@ import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.binder.system.UptimeMetrics;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
-import io.opentelemetry.api.trace.Span;
+import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.MutableDirectBuffer;
@@ -71,7 +74,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
-import java.util.regex.Pattern;
+
+import static com.bhf.aeroncache.http.handlers.AbstractRouteHandlers.getRequestId;
 
 @Log4j2
 public class HttpApplication {
@@ -82,25 +86,28 @@ public class HttpApplication {
     @Setter
     private static int DEFAULT_HTTP_PORT = 7070;
     private static final String DEFAULT_CLUSTER_TOOLS_ENDPOINT = "http://localhost:7080/api/v1/clustertools/";
-    private static final String API_PREFIX = "/api/v1/cache/";
+    private static final String CACHE_API_PREFIX = "/api/v1/cache/";
+    private static final String COUNTERS_API_PREFIX = "/api/v1/counters/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
 
-    private static AeronCacheClusterListener client;
-    private static ObservingCacheRequestPublisher observingPublisher;
+    private static AeronCacheClusterListener<ReusableString, ReusableString, ReusableString> client;
+    @Getter
+    private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString, String, String, String> cachePublisher;
+    private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableLong, String, String, Long> countersPublisher;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
-    private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
-    private final static Set<String> allCaches = new ConcurrentSkipListSet<>();
-    private final static Map<String, Long> cacheToSize = new ConcurrentHashMap<>();
+    public static final CacheStatsTracker statsTracker = new CacheStatsTracker();
+    public static final Set<String> allCaches = new ConcurrentSkipListSet<>();
+    public static final Map<String, Long> cacheToSize = new ConcurrentHashMap<>();
+    public static final Set<String> allCounterCaches = new ConcurrentSkipListSet<>();
+    public static final Map<String, Long> counterCacheToSize = new ConcurrentHashMap<>();
 
-    private static String tracingServiceName;
+    public static String tracingServiceName;
     private static AgentRunner agentRunner;
     private static MediaDriver mediaDriver;
 
-    private static final Pattern specialCharacters = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!]");
-    private static final Set<String> invalidCacheNames = Set.of("bulkops", "timed");
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -129,6 +136,8 @@ public class HttpApplication {
             CacheClientFactory clientFactory = getCacheClientFactory();
             var cacheRequestEncoder = clientFactory.getCacheRequestEncoder();
             var responseDecoder = clientFactory.getCacheResponseDecoder();
+            var countersRequestEncoder = clientFactory.getCountersRequestEncoder();
+            var countersResponseDecoder = clientFactory.getCountersResponseDecoder();
             var schemaDetailsProvider = clientFactory.getSchemaDetails();
             var indexSupplier = clientFactory.getIndexSupplier();
             var keySupplier = clientFactory.getKeySupplier();
@@ -137,22 +146,30 @@ public class HttpApplication {
             if (PRE_ENCODE_CACHE_REQUESTS) {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
                 // sending directly to the cluster
-                CacheRequestPublisher cacheRequestPublisher = new RBClusterMessagePublisher(cache, rb,
+                CacheRequestPublisher<String, String, String> cacheRequestPublisher = new RBClusterMessagePublisher(cache, rb,
                         HttpIdleStrategies.clusterMessagePublisherIdleStrategy.get(), cacheRequestEncoder);
 
                 BlockingClusterRequestPublisher blockingRequestPublisher = new ClusterMessagePublisher(cache,
                         HttpIdleStrategies.blockingPublisherIdleStrategy.get(), clientFactory.getCacheRequestEncoder());
-                observingPublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher,
+                cachePublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher,
                         blockingRequestPublisher);
             } else {
                 // Drop normalised cache requests onto an Agrona RB for encoding
                 // to SBE on the Agent thread
-                CacheRequestPublisher rbPublisher = new RBCacheRequestPublisher(rb);
-                observingPublisher = new ObservingCacheRequestPublisher(rbPublisher);
+                CacheRequestPublisher<String, String, String> rbPublisher = new RBCacheRequestPublisher(rb);
+                cachePublisher = new ObservingCacheRequestPublisher(rbPublisher);
+
+                CacheRequestPublisher<String, String, Long> countersRbPublisher = new RBCountersRequestPublisher(rb);
+                countersPublisher = new ObservingCacheRequestPublisher<>(countersRbPublisher);
             }
 
             client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);
-            client.setCacheResultsCallbacks(observingPublisher);
+            client.setCacheResultsCallbacks(cachePublisher);
+            client.setCountersResultsCallbacks(countersPublisher);
+            client.setCountersCacheResponseDecoder(countersResponseDecoder);
+
+            setupCacheRouteHandlers(app);
+            setupCacheCountersRouteHandlers(app);
 
             var podName = System.getenv("POD_ADDRESS");
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
@@ -198,11 +215,14 @@ public class HttpApplication {
             System.out.println("Building cluster agent for http service, cluster connected: "+clusterConnected.get());
             var clusterClientAgentIdleStrategy = HttpIdleStrategies.clusterClientAgentIdleStrategy.get();
             var clusterMessagePublisherIdleStrategy = HttpIdleStrategies.clusterMessagePublisherIdleStrategy.get();
+            var cacheProtocolPublisher = new ClusterMessagePublisher(cache,
+                    clusterMessagePublisherIdleStrategy, cacheRequestEncoder);
+
+            var countersProtocolPublisher = new ClusterMessagePublisher<>(cache, clusterMessagePublisherIdleStrategy, countersRequestEncoder);
+
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
-                    new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, cacheRequestEncoder), "AeronCache-ClusterClient-Agent") :
-                    new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, cacheRequestEncoder), "AeronCache-CacheClient-Agent");
+                    new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, cacheProtocolPublisher, "AeronCache-ClusterClient-Agent") :
+                    new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, cacheProtocolPublisher, countersProtocolPublisher, "AeronCache-CacheClient-Agent");
 
             var errorHandler = new RethrowingErrorHandler();
             var errorCounter = (org.agrona.concurrent.status.AtomicCounter) null;
@@ -328,18 +348,8 @@ public class HttpApplication {
 
         return Javalin.create(config)
                 .beforeMatched(HttpApplication::checkClusterConnectivity)
-                .before(API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
-                .post(API_PREFIX, HttpApplication::handleCreateCacheRequest)
-                .post(API_PREFIX+"bulkops/", HttpApplication::handleBulkOpsRequest)
-                .get(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleGetItemRequest)
-                .get(API_PREFIX + "<cacheId>", HttpApplication::handleGetCacheRequest)
-                .post(API_PREFIX + "timed/<cacheId>", HttpApplication::handlePutTimedItemRequest)
-                .post(API_PREFIX + "<cacheId>", HttpApplication::handlePutItemRequest)
-                .delete(API_PREFIX + "<cacheId>/<key>", HttpApplication::handleDeleteItemRequest)
-                .delete(API_PREFIX + "<cacheId>", HttpApplication::handleDeleteCacheRequest)
-                .patch(API_PREFIX + "<cacheId>", HttpApplication::handleClearCacheRequest)
-                .get("/api/v1/caches", HttpApplication::handleGetCachesRequest)
-                .get("/api/v1/stats", HttpApplication::handleGetStatsRequest)
+                .before(CACHE_API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
+                .post(CACHE_API_PREFIX + "bulkops/", HttpApplication::handleBulkOpsRequest)
                 .post("/api/v1/shutdown", HttpApplication::handleShutdownCluster)
                 .post("/api/v1/snapshot", HttpApplication::handleTakeSnapshot)
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
@@ -348,6 +358,67 @@ public class HttpApplication {
                 .post("baselinePost", HttpApplication::postActionBaseline)
                 .get("baselineGet", HttpApplication::getActionBaseline)
                 .start(port);
+    }
+
+    private static void setupCacheCountersRouteHandlers(Javalin app) {
+        var countersHandlers = new CountersRouteHandlers(countersPublisher);
+        app.post(COUNTERS_API_PREFIX, countersHandlers::handleCreateCacheRequest)
+                .get(COUNTERS_API_PREFIX + "<cacheId>/<key>", countersHandlers::handleGetItemRequest)
+                .get(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handleGetCacheRequest)
+                .post(COUNTERS_API_PREFIX + "timed/<cacheId>", countersHandlers::handlePutTimedItemRequest)
+                .post(COUNTERS_API_PREFIX + "increment/<cacheId>", countersHandlers::handleIncrementItemRequest)
+                .post(COUNTERS_API_PREFIX + "decrement/<cacheId>", countersHandlers::handleDecrementItemRequest)
+                .post(COUNTERS_API_PREFIX + "set/<cacheId>", countersHandlers::handleSetItemRequest)
+                .post(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handlePutItemRequest)
+                .delete(COUNTERS_API_PREFIX + "<cacheId>/<key>", countersHandlers::handleDeleteItemRequest)
+                .delete(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handleDeleteCacheRequest)
+                .patch(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handleClearCacheRequest)
+                .get("/api/v1/counters-caches", countersHandlers::handleGetCachesRequest)
+                .get("/api/v1/counters-stats", countersHandlers::handleGetStatsRequest);
+    }
+
+    private static void setupCacheRouteHandlers(Javalin app) {
+        var handlers = new CacheRouteHandlers(cachePublisher);
+        app.post(CACHE_API_PREFIX, handlers::handleCreateCacheRequest)
+                .get(CACHE_API_PREFIX + "<cacheId>/<key>", handlers::handleGetItemRequest)
+                .get(CACHE_API_PREFIX + "<cacheId>", handlers::handleGetCacheRequest)
+                .post(CACHE_API_PREFIX + "timed/<cacheId>", handlers::handlePutTimedItemRequest)
+                .post(CACHE_API_PREFIX + "<cacheId>", handlers::handlePutItemRequest)
+                .delete(CACHE_API_PREFIX + "<cacheId>/<key>", handlers::handleDeleteItemRequest)
+                .delete(CACHE_API_PREFIX + "<cacheId>", handlers::handleDeleteCacheRequest)
+                .patch(CACHE_API_PREFIX + "<cacheId>", handlers::handleClearCacheRequest)
+                .get("/api/v1/caches", handlers::handleGetCachesRequest)
+                .get("/api/v1/stats", handlers::handleGetStatsRequest);
+    }
+
+    /**
+     * Handle a request to perform bulk cache operations.
+     *
+     * @param ctx The context.
+     */
+    public static void handleBulkOpsRequest(@NotNull Context ctx) {
+        try {
+            var request = ctx.bodyAsClass(BulkCacheOpsRequest.class);
+            log.info("Got bulk cache ops request: {}", request);
+
+            var requestId = getRequestId(ctx);
+            CompletableFuture<BulkCacheOpsResponse> future = new CompletableFuture<>();
+            Consumer<BulkCacheOpsResult<ReusableString, ReusableString, ReusableString>> consumer = HTTPConsumerUtils.getBulkCacheOpsResultConsumer(future, request.requestId());
+
+            CompletableFuture.runAsync(() -> HttpApplication.getCachePublisher().sendBulkOperationsRequest(requestId, request, consumer));
+
+            var response = future.get();
+
+            ctx.status(HTTPStatusUtils.OK);
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = "Badly formed bulk operation request: " + ctx.body();
+            log.warn(errorMsg);
+            HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
     }
 
     private static void handleShutdownCluster(@NotNull Context context) {
@@ -439,59 +510,6 @@ public class HttpApplication {
         statsTracker.getTotalOpsCount().incrementAndGet();
     }
 
-    private static void handleGetStatsRequest(Context ctx) {
-        log.info("Got request to get cache stats");
-
-        try {
-            var requestId = getRequestId(ctx);
-            CompletableFuture<CacheStats> future = new CompletableFuture<>();
-            Consumer<CacheStatsResult> consumer = getCacheStatsResultConsumer(future);
-
-            CompletableFuture.runAsync(() -> observingPublisher.getAllCacheStats(requestId, consumer));
-            var response = future.get();
-
-            ctx.status(HTTPStatusUtils.OK);
-            ctx.json(response);
-        } catch (Exception e) {
-            var errorMsg = "Badly formed request to get cache stats";
-            log.warn(errorMsg);
-            statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
-            ctx.status(HTTPStatusUtils.BAD_REQUEST);
-            ctx.json(badRequest);
-        }
-    }
-
-    @NotNull
-    private static Consumer<CacheStatsResult> getCacheStatsResultConsumer(CompletableFuture<CacheStats> future) {
-        Consumer<CacheStatsResult> consumer = c -> {
-            {
-                log.info("Got cache stats, requestId {}", c.getRequestId());
-                int totalOps = statsTracker.getTotalOpsCount().get();
-                int totalCaches = 0;
-                int totalItems = 0;
-
-                List<com.bhf.aeroncache.models.results.CacheStats> stats = c.getStats();
-                Set<String> latestCaches = new HashSet<>();
-                for (var x : stats) {
-                    totalCaches++;
-                    totalItems += x.size;
-                    var cacheId = x.getCacheId().value().toString();
-                    latestCaches.add(cacheId);
-                    cacheToSize.put(cacheId, x.size);
-                }
-                
-                allCaches.retainAll(latestCaches);
-                allCaches.addAll(latestCaches);
-
-                var statsTrackerStats = statsTracker.getCacheStats();
-                var response = new CacheStats(totalOps, totalCaches, totalItems, statsTrackerStats.errorCount());
-                future.complete(response);
-            }
-        };
-        return consumer;
-    }
-
 
     /**
      * Handle getting details of available caches. Currently only
@@ -564,462 +582,5 @@ public class HttpApplication {
         }
     }
 
-    /**
-     * Handle a request to delete a cache.
-     *
-     * @param ctx The context.
-     */
-    private static void handleDeleteCacheRequest(Context ctx) {
-        try {
-            var cacheId = ctx.pathParam("cacheId");
-            log.info("Got delete cache request for cacheId {}", cacheId);
-
-            var requestId = getRequestId(ctx);
-            CompletableFuture<DeleteCacheResponse> future = new CompletableFuture<>();
-            Consumer<DeleteCacheResult> consumer = getDeleteCacheResultConsumer(future);
-            CompletableFuture.runAsync(() -> observingPublisher.deleteCache(requestId, cacheId, consumer));
-
-            var response = future.get();
-
-            if (response.operationStatus() == CacheOperationStatus.SUCCESS) {
-                allCaches.remove(response.cacheId());
-                statsTracker.getTotalCaches().decrementAndGet();
-            }
-
-            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
-            ctx.json(response);
-        } catch (Exception e) {
-            var errorMsg = "Badly formed request to delete cache with Id: " + ctx.pathParam("cacheId");
-            log.warn(errorMsg);
-            statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
-                    CacheOperationStatus.ERROR);
-            ctx.status(HTTPStatusUtils.BAD_REQUEST);
-            ctx.json(badRequest);
-        }
-    }
-
-    @NotNull
-    private static Consumer<DeleteCacheResult> getDeleteCacheResultConsumer(CompletableFuture<DeleteCacheResponse> future) {
-        Consumer<DeleteCacheResult> consumer = c -> {
-
-            var deletedCacheId = c.getCacheId();
-            log.info("Got delete cache response from cluster on cacheId {}", deletedCacheId);
-            var response = new DeleteCacheResponse(deletedCacheId.value().toString(), c.getStatus());
-            future.complete(response);
-        };
-        return consumer;
-    }
-
-
-    /**
-     * Handle a request to delete an item from a cache.
-     *
-     * @param ctx The context.
-     */
-    private static void handleDeleteItemRequest(Context ctx) {
-        try {
-            var cacheId = ctx.pathParam("cacheId");
-            var key = ctx.pathParam("key");
-            log.info("Got delete item request on cacheId {}, key {}",
-                    cacheId, key);
-
-            var requestId = getRequestId(ctx);
-
-            CompletableFuture<DeleteItemResponse> future = new CompletableFuture<>();
-            Consumer<RemoveCacheEntryResult> consumer = getRemoveCacheEntryResultConsumer(future);
-            CompletableFuture.runAsync(() -> observingPublisher.removeCacheEntry(requestId, cacheId, key, consumer));
-
-            var response = future.get();
-
-            if (response.operationStatus() == CacheOperationStatus.SUCCESS) {
-                statsTracker.getTotalItems().decrementAndGet();
-            }
-
-            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
-            ctx.json(response);
-        } catch (Exception e) {
-            var errorMsg =
-                    "Badly formed request to delete item with key " + ctx.pathParam("key") + " from cache with Id: " + ctx.pathParam("cacheId");
-            log.warn(errorMsg);
-            statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
-                    CacheOperationStatus.ERROR);
-            ctx.status(HTTPStatusUtils.BAD_REQUEST);
-            ctx.json(badRequest);
-        }
-    }
-
-    @NotNull
-    private static Consumer<RemoveCacheEntryResult> getRemoveCacheEntryResultConsumer(CompletableFuture<DeleteItemResponse> future) {
-        Consumer<RemoveCacheEntryResult> consumer = c -> {
-
-            log.info("Got delete item response from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
-            var response = new DeleteItemResponse(c.getCacheId().value().toString(), c.getKey().value().toString(), c.getStatus());
-            future.complete(response);
-        };
-        return consumer;
-    }
-
-    /**
-     * Handle a request to clear a cache.
-     *
-     * @param ctx The context.
-     */
-    private static void handleClearCacheRequest(Context ctx) {
-        try {
-            var cacheId = ctx.pathParam("cacheId");
-            log.info("Got clear request on cacheId {}", cacheId);
-
-            var requestId = getRequestId(ctx);
-            CompletableFuture<ClearCacheResponse> future = new CompletableFuture<>();
-            Consumer<ClearCacheResult> consumer = getClearCacheResultConsumer(cacheId, future);
-            CompletableFuture.runAsync(() -> observingPublisher.clearCache(requestId, cacheId, consumer));
-
-            var response = future.get();
-            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
-            ctx.json(response);
-        } catch (Exception e) {
-            var errorMsg = "Badly formed request to clear cache with ID " + ctx.pathParam("cacheId");
-            log.warn(errorMsg);
-            statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
-            ctx.status(HTTPStatusUtils.BAD_REQUEST);
-            ctx.json(badRequest);
-        }
-    }
-
-    @NotNull
-    private static Consumer<ClearCacheResult> getClearCacheResultConsumer(String cacheId, CompletableFuture<ClearCacheResponse> future) {
-        Consumer<ClearCacheResult> consumer = c -> {
-
-            log.info("Got clear cache response from cluster on cacheId {}", c.getCacheId());
-            var response = new ClearCacheResponse(cacheId, c.getStatus());
-            future.complete(response);
-        };
-        return consumer;
-    }
-
-    /**
-     * Handle a request to get an item from a cache.
-     *
-     * @param ctx The context.
-     */
-    private static void handleGetItemRequest(Context ctx) {
-        try {
-            var cacheId = ctx.pathParam("cacheId");
-            var key = ctx.pathParam("key");
-            log.info("Got get item request on cacheId {}, key {}",
-                    cacheId, key);
-
-            var requestId = getRequestId(ctx);
-            CompletableFuture<GetItemResponse> future = new CompletableFuture<>();
-            Consumer<GetCacheEntryResult> consumer = getGetCacheEntryResultConsumer(future);
-            CompletableFuture.runAsync(() -> observingPublisher.getCacheEntry(requestId, cacheId, key, consumer));
-
-            var response = future.get();
-            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
-            ctx.json(response);
-        } catch (Exception e) {
-            var errorMsg =
-                    "Badly formed request to get item with key " + ctx.pathParam("key") + " from cache with Id: " + ctx.pathParam("cacheId");
-            log.warn(errorMsg);
-            statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
-                    CacheOperationStatus.ERROR);
-            ctx.status(HTTPStatusUtils.BAD_REQUEST);
-            ctx.json(badRequest);
-        }
-    }
-
-    @NotNull
-    private static Consumer<GetCacheEntryResult> getGetCacheEntryResultConsumer(CompletableFuture<GetItemResponse> future) {
-        Consumer<GetCacheEntryResult> consumer = c -> {
-
-            log.info("Get item response from cluster on cacheId {}, key {}, value {}", c.getCacheId(),
-                    c.getEntryKey(), c.getEntryValue());
-            var noCache = c.getStatus() == CacheOperationStatus.UNKNOWN_CACHE;
-            var response = noCache ?
-                    new GetItemResponse("0", "NA", "NA", c.getStatus()) :
-                    new GetItemResponse(c.getCacheId().value().toString(), c.getEntryKey().value().toString(),
-                            c.getEntryValue().value().toString(), c.getStatus());
-            future.complete(response);
-        };
-        return consumer;
-    }
-
-    /**
-     * Handle a request to add an item to a cache.
-     *
-     * @param ctx The context.
-     */
-    private static void handlePutItemRequest(Context ctx) {
-        try {
-            var cacheId = ctx.pathParam("cacheId");
-            var request = ctx.bodyAsClass(PutItemRequest.class);
-            log.info("Got put item request on cacheId {}, key {}, value {}",
-                    cacheId, request.key(), request.value());
-
-            var requestId = getRequestId(ctx);
-            CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
-            Consumer<AddCacheEntryResult> consumer = getAddCacheEntryResultConsumer(request.key(), future);
-            long ttl = 0;
-            CompletableFuture.runAsync(() -> observingPublisher.addCacheEntry(requestId, cacheId,
-                    request.key(), request.value(), ttl, consumer));
-
-            var response = future.get();
-
-            if (response.operationStatus() == CacheOperationStatus.SUCCESS) {
-                statsTracker.getTotalItems().incrementAndGet();
-            }
-
-            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
-            ctx.json(response);
-        } catch (Exception e) {
-            var errorMsg = "Badly formed request to put item from request: " + ctx.body();
-            log.warn(errorMsg);
-            statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
-            ctx.status(HTTPStatusUtils.BAD_REQUEST);
-            ctx.json(badRequest);
-        }
-    }
-
-    /**
-     * Handle a request to add a timed item to a cache.
-     *
-     * @param ctx The context.
-     */
-    private static void handlePutTimedItemRequest(Context ctx) {
-        try {
-            var cacheId = ctx.pathParam("cacheId");
-            var request = ctx.bodyAsClass(PutTimedItemRequest.class);
-            log.info("Got put item request on cacheId {}, key {}, value {}, ttl {}",
-                    cacheId, request.key(), request.value(), request.ttl());
-
-            var requestId = getRequestId(ctx);
-            CompletableFuture<PutItemResponse> future = new CompletableFuture<>();
-            Consumer<AddCacheEntryResult> consumer = getAddCacheEntryResultConsumer(request.key(), future);
-            long ttl = request.ttl();
-            CompletableFuture.runAsync(() -> observingPublisher.addCacheEntry(requestId, cacheId,
-                    request.key(), request.value(), ttl, consumer));
-
-            var response = future.get();
-
-            if (response.operationStatus() == CacheOperationStatus.SUCCESS) {
-                statsTracker.getTotalItems().incrementAndGet();
-            }
-
-            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
-            ctx.json(response);
-        } catch (Exception e) {
-            var errorMsg = "Badly formed request to put timed item from request: " + ctx.body();
-            log.warn(errorMsg);
-            statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
-            ctx.status(HTTPStatusUtils.BAD_REQUEST);
-            ctx.json(badRequest);
-        }
-    }
-
-    @NotNull
-    private static Consumer<AddCacheEntryResult> getAddCacheEntryResultConsumer(String key, CompletableFuture<PutItemResponse> future) {
-        Consumer<AddCacheEntryResult> consumer = c -> {
-
-            var cacheId = c.getCacheId();
-            log.info("Got put item response from cluster on cacheId {}", cacheId);
-            var response = new PutItemResponse(cacheId.value().toString(), key, c.getStatus());
-            future.complete(response);
-        };
-        return consumer;
-    }
-
-    private static void handleBulkOpsRequest(@NotNull Context ctx) {
-        try {
-            var request = ctx.bodyAsClass(BulkCacheOpsRequest.class);
-            log.info("Got bulk cache ops request: {}", request);
-
-            var requestId = getRequestId(ctx);
-            CompletableFuture<BulkCacheOpsResponse> future = new CompletableFuture<>();
-            Consumer<BulkCacheOpsResult> consumer = getBulkCacheOpsResultConsumer(future, request.requestId());
-
-            CompletableFuture.runAsync(() -> observingPublisher.sendBulkOperationsRequest(requestId, request, consumer));
-
-            var response = future.get();
-
-            ctx.status(HTTPStatusUtils.OK);
-            ctx.json(response);
-        } catch (Exception e) {
-            var errorMsg = "Badly formed bulk operation request: " + ctx.body();
-            log.warn(errorMsg);
-            statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
-            ctx.status(HTTPStatusUtils.BAD_REQUEST);
-            ctx.json(badRequest);
-        }
-    }
-
-    @NotNull
-    private static Consumer<BulkCacheOpsResult> getBulkCacheOpsResultConsumer(CompletableFuture<BulkCacheOpsResponse> future, String requestId) {
-        return c -> {
-            List<CacheOperationResponse> operationResponses = new ArrayList<>();
-
-            List<CacheOperationResultDetails<ReusableString, ReusableString, ReusableString>> ops = c.getOperations();
-            for(var o : ops){
-                var opRequestId = o.getRequestId();
-                var cacheId = o.getCacheId();
-                var value = o.getValue();
-                var key = o.getKey();
-                var status = o.getOperationStatus();
-                operationResponses.add(new CacheOperationResponse(opRequestId, status, cacheId.value(), key.value(), value.value()));
-            }
-
-            BulkCacheOpsResponse response = new BulkCacheOpsResponse(requestId, operationResponses);
-            future.complete(response);
-        };
-    }
-
-    /**
-     * Handle a request to create a cache.
-     *
-     * @param ctx The context.
-     */
-    private static void handleCreateCacheRequest(Context ctx) {
-        try {
-            var request = ctx.bodyAsClass(CreateCacheRequest.class);
-            log.info("Got create cache request on cacheId {}", request.cacheId());
-
-            if (specialCharacters.matcher(request.cacheId()).find()) {
-                var errorMsg = "Cache ID shouldn't contain special characters";
-                var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_SPECIAL_CHARACTERS,
-                        CacheOperationStatus.ERROR);
-                ctx.status(HTTPStatusUtils.BAD_REQUEST);
-                ctx.json(badRequest);
-                return;
-            }
-
-            if(invalidCacheNames.contains(request.cacheId())){
-                var errorMsg = "Cache ID shouldn't be a reserved name";
-                var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CACHE_ID_NO_RESERVED_NAMES,
-                        CacheOperationStatus.ERROR);
-                ctx.status(HTTPStatusUtils.BAD_REQUEST);
-                ctx.json(badRequest);
-                return;
-            }
-
-            var requestId = getRequestId(ctx);
-
-            CompletableFuture<CreateCacheResponse> future = new CompletableFuture<>();
-            Consumer<CreateCacheResult> consumer = getCreateCacheResultConsumer(future);
-            CompletableFuture.runAsync(() -> observingPublisher.sendCreateCache(requestId, request.cacheId(), consumer));
-
-            var response = future.get();
-
-            if (response.operationStatus() == CacheOperationStatus.SUCCESS) {
-                allCaches.add(response.cacheId());
-                statsTracker.getTotalCaches().incrementAndGet();
-            }
-
-            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
-            ctx.json(response);
-        } catch (Exception e) {
-            var errorMsg = "Badly formed request to create cache from request: " + ctx.body();
-            log.warn(errorMsg);
-            statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
-            ctx.status(HTTPStatusUtils.BAD_REQUEST);
-            ctx.json(badRequest);
-        }
-    }
-
-    @NotNull
-    private static Consumer<CreateCacheResult> getCreateCacheResultConsumer(CompletableFuture<CreateCacheResponse> future) {
-        Consumer<CreateCacheResult> consumer = new Consumer<CreateCacheResult>() {
-            @Override
-            public void accept(CreateCacheResult c) {
-
-                var cacheId = c.getCacheId();
-                log.info("Got create cache response from cluster on cacheId {}", cacheId);
-                var response = new CreateCacheResponse(cacheId.value().toString(), c.getStatus());
-                future.complete(response);
-            }
-        };
-        return consumer;
-    }
-
-    /**
-     * Handle a request to get a whole cache.
-     *
-     * @param ctx The context.
-     */
-    private static void handleGetCacheRequest(Context ctx) {
-        try {
-            var cacheId = ctx.pathParam("cacheId");
-            log.info("Got get cache content request on cacheId {}", cacheId);
-
-            var requestId = getRequestId(ctx);
-            CompletableFuture<GetCacheResponse> future = new CompletableFuture<>();
-            Consumer<GetAllCacheEntriesResult> consumer = getGetAllCacheEntriesResultConsumer(future);
-            CompletableFuture.runAsync(() -> observingPublisher.getCacheEntries(requestId, cacheId, consumer));
-
-            var response = future.get();
-            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
-            ctx.json(response);
-        } catch (Exception e) {
-            var errorMsg = "Badly formed request to get cache content for cache ID " + ctx.pathParam("cacheId");
-            log.warn(errorMsg);
-            statsTracker.getTotalErrors().incrementAndGet();
-            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
-            ctx.status(HTTPStatusUtils.BAD_REQUEST);
-            ctx.json(badRequest);
-        }
-    }
-
-    @NotNull
-    private static Consumer<GetAllCacheEntriesResult> getGetAllCacheEntriesResultConsumer(CompletableFuture<GetCacheResponse> future) {
-        Consumer<GetAllCacheEntriesResult> consumer = c -> {
-
-            log.info("Get cache content response from cluster on cacheId {}", c.getCacheId());
-            var noCache = c.getStatus() == CacheOperationStatus.UNKNOWN_CACHE;
-            var response = noCache ?
-                    new GetCacheResponse(c.getCacheId().toString(), CacheOperationStatus.UNKNOWN_CACHE, List.of()) :
-                    new GetCacheResponse(c.getCacheId().toString(), c.getStatus(), buildItemsList(c));
-            future.complete(response);
-        };
-        return consumer;
-    }
-
-    private static List<CacheItem> buildItemsList(GetAllCacheEntriesResult<ReusableString, ReusableString,
-            ReusableString> c) {
-        List<CacheItem> res = new ArrayList<>();
-        c.getValues().forEach((key, value) -> {
-            res.add(new CacheItem(key.value(), value.value()));
-        });
-        return res;
-    }
-
-    /**
-     * Build the requestId based on whether tracing is enabled.
-     *
-     * @param ctx The Context.
-     * @return A requestId
-     */
-    private static String getRequestId(Context ctx) {
-        return tracingServiceName != null ? getTraceBasedRequestId(ctx) : UUID.randomUUID().toString();
-    }
-
-    /**
-     * Use the current span and trace Ids to build a requestId to
-     * be sent to the Aeron Cache cluster.
-     *
-     * @param ctx
-     * @return
-     */
-    private static String getTraceBasedRequestId(Context ctx) {
-        var currentSpanId = Span.current().getSpanContext().getSpanId();
-        var currentTraceId = Span.current().getSpanContext().getTraceId();
-        log.info("Creating requestId using traceID {} and spanID {}", currentTraceId, currentSpanId);
-        return currentTraceId + "@" + currentSpanId;
-    }
 
 }

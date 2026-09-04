@@ -63,11 +63,11 @@ class CacheEntriesResultTest {
 
         // Assert
         verify(
-                cacheResponseDecoder, times(CACHE_ENTRIES_TID)).decodeAllCacheEntriesResult(
+                cacheResponseDecoder, times(1)).decodeAllCacheEntriesResult(
                 any(DirectBuffer.class), anyInt(), any(GetAllCacheEntriesResult.class)
         );
 
-        verify(callbackHandler, times(CACHE_ENTRIES_TID))
+        verify(callbackHandler, times(1))
                 .handleAllCacheEntries(any(GetAllCacheEntriesResult.class));
     }
 

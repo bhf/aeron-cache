@@ -9,7 +9,7 @@ import lombok.extern.log4j.Log4j2;
 @RequiredArgsConstructor
 @Log4j2
 public class CacheResponseCallbackHandler<I extends Reusable, K extends Reusable, V extends Reusable> implements CacheResponseHandler<I,K,V> {
-    private final CacheResponseHandler observerGroup;
+    private final CacheResponseHandler<I,K,V> observerGroup;
 
     @Override
     public void handleCacheEntryResult(GetCacheEntryResult<I, K, V> getCacheEntryResult) {
@@ -29,7 +29,6 @@ public class CacheResponseCallbackHandler<I extends Reusable, K extends Reusable
     @Override
     public void handleCacheEntryCreated(AddCacheEntryResult<I, K> addCacheEntryResult) {
         observerGroup.handleCacheEntryCreated(addCacheEntryResult);
-
     }
 
     @Override
@@ -70,5 +69,20 @@ public class CacheResponseCallbackHandler<I extends Reusable, K extends Reusable
     @Override
     public void handleBulkOperationsResult(BulkCacheOpsResult<I, K, V> bulkCacheOpsResult) {
         observerGroup.handleBulkOperationsResult(bulkCacheOpsResult);
+    }
+
+    @Override
+    public void handleCounterIncremented(IncrementCounterResult<I, K> result) {
+        observerGroup.handleCounterIncremented(result);
+    }
+
+    @Override
+    public void handleCounterDecremented(DecrementCounterResult<I, K> result) {
+        observerGroup.handleCounterDecremented(result);
+    }
+
+    @Override
+    public void handleCounterSet(SetCounterResult<I, K> result) {
+        observerGroup.handleCounterSet(result);
     }
 }

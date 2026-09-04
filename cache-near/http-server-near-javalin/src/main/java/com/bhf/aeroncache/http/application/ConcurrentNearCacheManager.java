@@ -21,7 +21,7 @@ public class ConcurrentNearCacheManager {
     public void handleCacheUpdate(CacheUpdateEvent cacheUpdateEvent) {
 
         switch(cacheUpdateEvent.eventType()){
-            case ADD_ITEM -> put(cacheUpdateEvent.cacheId(), cacheUpdateEvent.itemKey(), cacheUpdateEvent.itemValue());
+            case ADD_ITEM -> put(cacheUpdateEvent.cacheId(), cacheUpdateEvent.itemKey(), (String) cacheUpdateEvent.itemValue());
             case DELETE_CACHE -> nearCacheMap.remove(cacheUpdateEvent.cacheId());
             case REMOVE_ITEM -> {
                 if(nearCacheMap.containsKey(cacheUpdateEvent.cacheId())){

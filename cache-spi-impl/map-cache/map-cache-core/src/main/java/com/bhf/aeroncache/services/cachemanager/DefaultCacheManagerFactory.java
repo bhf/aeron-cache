@@ -3,14 +3,15 @@ package com.bhf.aeroncache.services.cachemanager;
 import com.bhf.aeroncache.codecs.CacheTimersCodec;
 import com.bhf.aeroncache.codecs.ReusableStringTimersCodec;
 import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
+import com.bhf.aeroncache.codecs.request.CountersCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
+import com.bhf.aeroncache.codecs.request.ReusableStringCountersCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
+import com.bhf.aeroncache.codecs.response.CountersCacheResponseEncoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseEncoder;
+import com.bhf.aeroncache.codecs.response.ReusableStringCountersCacheResponseEncoder;
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
-import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
-import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapshotCodec;
-import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
+import com.bhf.aeroncache.services.cache.snapshot.*;
 import com.bhf.aeroncache.services.integrity.NoOpMultiTypeStreamingHasher;
 import com.bhf.aeroncache.services.integrity.NoOpStreamingHasher;
 import com.bhf.aeroncache.utils.SupplierUtils;
@@ -26,8 +27,11 @@ public class DefaultCacheManagerFactory extends MapCacheManagerFactory<Reusable<
                 (Supplier) SupplierUtils.mapSupplier,
                 (CacheIdSnapshotCodec) new ReusableStringCacheIdSnapshotCodec(new NoOpStreamingHasher<>()),
                 (CacheEntrySnapshotCodec) new ReusableStringCacheEntrySnapshotCodec(new NoOpStreamingHasher<>()),
+                (CacheEntrySnapshotCodec) new CountersCacheEntrySnapshotCodec(new NoOpStreamingHasher<>()),
                 (CacheResponseEncoder) new ReusableStringCacheResponseEncoder(),
                 (CacheRequestDecoder) new ReusableStringCacheRequestDecoder(),
-                (CacheTimersCodec) new ReusableStringTimersCodec(new NoOpMultiTypeStreamingHasher<>()));
+                (CacheTimersCodec) new ReusableStringTimersCodec(new NoOpMultiTypeStreamingHasher<>()),
+                (CountersCacheResponseEncoder) new ReusableStringCountersCacheResponseEncoder(),
+                (CountersCacheRequestDecoder) new ReusableStringCountersCacheRequestDecoder());
     }
 }

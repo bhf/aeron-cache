@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
@@ -14,6 +15,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
 public abstract class AbstractMultiStreamBulkOpsTests {
 
@@ -30,15 +33,17 @@ public abstract class AbstractMultiStreamBulkOpsTests {
     private static final String KNOWN_VALUE = "SomeValue";
 
     private final StreamingHelper[] streamingHelpers;
+    private TestEndpointsProvider bulkOpsEndpoints;
 
-    protected AbstractMultiStreamBulkOpsTests(StreamingHelper... streamingHelpers) {
+    protected AbstractMultiStreamBulkOpsTests(TestEndpointsProvider endpointsProvider, StreamingHelper... streamingHelpers) {
         this.streamingHelpers = streamingHelpers;
+        bulkOpsEndpoints = endpointsProvider;
     }
 
     @BeforeAll
-    static void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
-        CacheTestUtils.createCache(NON_SUBSCRIBED_CACHE_ID, backend);
+    void setup(BackendTestResource backend) {
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, bulkOpsEndpoints);
+        CacheTestUtils.createCache(NON_SUBSCRIBED_CACHE_ID, backend, bulkOpsEndpoints);
     }
 
     @Test
@@ -52,13 +57,13 @@ public abstract class AbstractMultiStreamBulkOpsTests {
         List<CacheOperationRequest> operations = new ArrayList<>();
         int i=0;
         for (; i < numItems; i++) {
-            operations.add(new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, "req-" + i, KNOWN_CACHE_ID, KNOWN_KEY + "-" + i, KNOWN_VALUE + "-" + i));
+            operations.add(new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0,0,  "req-" + i, KNOWN_CACHE_ID, KNOWN_KEY + "-" + i, KNOWN_VALUE + "-" + i));
         }
-        operations.add(new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, "req-" + i, NON_SUBSCRIBED_CACHE_ID, KNOWN_KEY + "-" + i, KNOWN_VALUE + "-" + i));
+        operations.add(new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0,0,  "req-" + i, NON_SUBSCRIBED_CACHE_ID, KNOWN_KEY + "-" + i, KNOWN_VALUE + "-" + i));
         var bulkRequest = new BulkCacheOpsRequest("bulk-request-1", operations);
 
         // Act
-        CacheTestUtils.sendBulkRequest(bulkRequest, backend);
+        CacheTestUtils.sendBulkRequest(bulkRequest, backend, bulkOpsEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -91,15 +96,15 @@ public abstract class AbstractMultiStreamBulkOpsTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, numItems);
 
         var operations = List.of(
-                new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, firstValue),
-                new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, secondValue),
-                new CacheOperationRequest(BulkOperationType.REMOVE_ITEM, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, null),
-                new CacheOperationRequest(BulkOperationType.CLEAR_CACHE, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, null, null)
+                new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, firstValue),
+                new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, secondValue),
+                new CacheOperationRequest(BulkOperationType.REMOVE_ITEM, 0, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, testKey, null),
+                new CacheOperationRequest(BulkOperationType.CLEAR_CACHE, 0, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, null, null)
         );
         var bulkRequest = new BulkCacheOpsRequest("bulk-request-mixed", operations);
 
         // Act
-        CacheTestUtils.sendBulkRequest(bulkRequest, backend);
+        CacheTestUtils.sendBulkRequest(bulkRequest, backend, bulkOpsEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
@@ -149,12 +154,12 @@ public abstract class AbstractMultiStreamBulkOpsTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, numExpectedEvents);
 
         var operations = List.of(
-                new CacheOperationRequest(BulkOperationType.ADD_ITEM, ttlMs, UUID.randomUUID().toString(), KNOWN_CACHE_ID, ttlKey, ttlValue)
+                new CacheOperationRequest(BulkOperationType.ADD_ITEM, ttlMs,0,  UUID.randomUUID().toString(), KNOWN_CACHE_ID, ttlKey, ttlValue)
         );
         var bulkRequest = new BulkCacheOpsRequest("bulk-request-ttl", operations);
 
         // Act
-        CacheTestUtils.sendBulkRequest(bulkRequest, backend);
+        CacheTestUtils.sendBulkRequest(bulkRequest, backend, bulkOpsEndpoints);
 
         // Assert
         for (var streamingSourceEventsFuture : perStreamingSourceEvents) {

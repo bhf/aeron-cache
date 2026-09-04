@@ -2,8 +2,10 @@ package com.bhf.aeroncache.integration.streaming;
 
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -17,13 +19,13 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
+@RequiredArgsConstructor
 public class WSStreamingHelper implements StreamingHelper {
 
-    private static final String STREAMING_API_PREFIX = "/api/ws/v1/cache/";
-    private static final String STREAMING_MULTI_CACHE_API_PREFIX = "/api/ws/v1/caches/";
-    private static final String STREAMING_HYDRATE_API_PREFIX = "/api/ws/v1/cache/hydrate/";
-    private static final String STREAMING_MULTI_CACHE_HYDRATE_API_PREFIX = "/api/ws/v1/caches/hydrate/";
+
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private final StreamingTestEndpointsProvider endpointsProvider;
 
     @Override
     public CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready) {
@@ -32,7 +34,7 @@ public class WSStreamingHelper implements StreamingHelper {
         List<CacheUpdateEvent> events = new ArrayList<>();
 
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
-                + backend.getWsPort() + STREAMING_API_PREFIX + cacheId;
+                + backend.getWsPort() + endpointsProvider.getStreamingApiPrefix() + cacheId;
 
         connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
 
@@ -46,7 +48,7 @@ public class WSStreamingHelper implements StreamingHelper {
         List<CacheUpdateEvent> events = new ArrayList<>();
 
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
-                + backend.getWsPort() + STREAMING_MULTI_CACHE_API_PREFIX + String.join(",", cacheIds);
+                + backend.getWsPort() + endpointsProvider.getStreamingMultiCacheApiPrefix() + String.join(",", cacheIds);
 
         connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
 
@@ -60,7 +62,7 @@ public class WSStreamingHelper implements StreamingHelper {
         List<CacheUpdateEvent> events = new ArrayList<>();
 
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
-                + backend.getWsPort() + STREAMING_HYDRATE_API_PREFIX + cacheId;
+                + backend.getWsPort() + endpointsProvider.getStreamingHydrateApiPrefix() + cacheId;
 
         connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
 
@@ -74,7 +76,7 @@ public class WSStreamingHelper implements StreamingHelper {
         List<CacheUpdateEvent> events = new ArrayList<>();
 
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
-                + backend.getWsPort() + STREAMING_MULTI_CACHE_HYDRATE_API_PREFIX + String.join(",", cacheIds);
+                + backend.getWsPort() + endpointsProvider.getStreamingMultiCacheHydrateApiPrefix() + String.join(",", cacheIds);
 
         connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
 
@@ -95,6 +97,7 @@ public class WSStreamingHelper implements StreamingHelper {
 
             @Override
             public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
+                System.out.println("WS MESSAGE: " + text);
                 try {
                     CacheUpdateEvent event = OBJECT_MAPPER.readValue(text, CacheUpdateEvent.class);
                     synchronized (events) {

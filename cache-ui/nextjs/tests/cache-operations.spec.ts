@@ -20,8 +20,9 @@ test.describe('Aeron Cache Operations', () => {
         await page.getByTestId('create-cache-button').click();
         await expect(page.getByText(/Success/i)).toBeVisible();
 
-        // Navigate to the cache view
-        await page.getByTestId('all-caches-filter-input').fill(cacheId);
+        // Navigate to the cache view. Scope to the caches tab panel since the
+        // counters tab renders the same table (and shared testids).
+        await page.getByTestId('caches-tab-panel').getByTestId('all-caches-filter-input').fill(cacheId);
 
         await page.getByTestId(`view-cache-${cacheId}`).click();
         await expect(page).toHaveURL(new RegExp(`/cache/${cacheId}`));
@@ -83,8 +84,10 @@ test.describe('Aeron Cache Operations', () => {
         await expect(page).toHaveURL(/\/$/);
         
         // Check the cache is now gone from the main table 
-        // - filter for it and expect the empty row state
-        await page.getByTestId('all-caches-filter-input').fill(cacheId);
-        await expect(page.getByTestId('all-caches-empty-row')).toBeVisible();
+        // - filter for it and expect the empty row state. Scope to the caches
+        // tab panel since the counters tab renders the same table.
+        const cachesPanel = page.getByTestId('caches-tab-panel');
+        await cachesPanel.getByTestId('all-caches-filter-input').fill(cacheId);
+        await expect(cachesPanel.getByTestId('all-caches-empty-row')).toBeVisible();
     });
 });

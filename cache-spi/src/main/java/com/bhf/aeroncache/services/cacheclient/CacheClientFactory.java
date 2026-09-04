@@ -1,7 +1,9 @@
 package com.bhf.aeroncache.services.cacheclient;
 
 import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CountersCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.response.CacheResponseDecoder;
+import com.bhf.aeroncache.codecs.response.CountersCacheResponseDecoder;
 import com.bhf.aeroncache.models.Reusable;
 
 import java.util.function.Supplier;
@@ -23,4 +25,8 @@ public interface CacheClientFactory<I extends Reusable, K extends Reusable, V ex
     Supplier<K> getKeySupplier();
 
     Supplier<V> getValueSupplier();
+
+    CountersCacheRequestEncoder<I,K,V> getCountersRequestEncoder();
+
+    CountersCacheResponseDecoder<I,K,V> getCountersResponseDecoder();
 }

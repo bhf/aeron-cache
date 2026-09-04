@@ -1,6 +1,9 @@
 package com.bhf.aeroncache.integration.multistream;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.SSECacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.WSCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamBulkOpsTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
@@ -9,7 +12,7 @@ import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 class ClusteredMultiStreamBulkOpsTests extends AbstractMultiStreamBulkOpsTests {
 
     public ClusteredMultiStreamBulkOpsTests() {
-        super(new WSStreamingHelper(), new SSEStreamingHelper());
+        super(new CacheTestEndpoints(), new WSStreamingHelper(new WSCacheTestEndpoints()), new SSEStreamingHelper(new SSECacheTestEndpoints()));
     }
 
 }

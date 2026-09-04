@@ -2,8 +2,11 @@ package com.bhf.aeroncache.integration.streaming;
 
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -18,13 +21,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
+@RequiredArgsConstructor
 public class SSEStreamingHelper implements StreamingHelper{
 
-    private static final String STREAMING_API_PREFIX = "/api/sse/v1/cache/";
-    private static final String STREAMING_MULTI_CACHE_API_PREFIX = "/api/sse/v1/caches/";
-    private static final String STREAMING_HYDRATION_API_PREFIX = "/api/sse/v1/cache/hydrate/";
-    private static final String STREAMING_MULTI_CACHE_HYDRATION_API_PREFIX = "/api/sse/v1/caches/hydrate/";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private final StreamingTestEndpointsProvider endpointsProvider;
 
     @Override
     public CompletableFuture<List<CacheUpdateEvent>> getEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> connectionReady) {
@@ -33,7 +34,7 @@ public class SSEStreamingHelper implements StreamingHelper{
         CompletableFuture<List<CacheUpdateEvent>> eventData = new CompletableFuture<>();
 
         var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
-                + backend.getSsePort() + STREAMING_API_PREFIX + cacheId;
+                + backend.getSsePort() + endpointsProvider.getStreamingApiPrefix() + cacheId;
 
         connect(cacheSubscriptionURI, latch, eventData, events, connectionReady);
 
@@ -47,7 +48,7 @@ public class SSEStreamingHelper implements StreamingHelper{
         CompletableFuture<List<CacheUpdateEvent>> eventData = new CompletableFuture<>();
 
         var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
-                + backend.getSsePort() + STREAMING_MULTI_CACHE_API_PREFIX + String.join(",", cacheIds);
+                + backend.getSsePort() + endpointsProvider.getStreamingMultiCacheApiPrefix() + String.join(",", cacheIds);
 
         connect(cacheSubscriptionURI, latch, eventData, events, connectionReady);
 
@@ -61,7 +62,7 @@ public class SSEStreamingHelper implements StreamingHelper{
         CompletableFuture<List<CacheUpdateEvent>> eventData = new CompletableFuture<>();
 
         var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
-                + backend.getSsePort() + STREAMING_HYDRATION_API_PREFIX + cacheId;
+                + backend.getSsePort() + endpointsProvider.getStreamingHydrateApiPrefix() + cacheId;
 
         connect(cacheSubscriptionURI, latch, eventData, events, connectionReady);
 
@@ -75,7 +76,7 @@ public class SSEStreamingHelper implements StreamingHelper{
         CompletableFuture<List<CacheUpdateEvent>> eventData = new CompletableFuture<>();
 
         var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
-                + backend.getSsePort() + STREAMING_MULTI_CACHE_HYDRATION_API_PREFIX + String.join(",", cacheIds);
+                + backend.getSsePort() + endpointsProvider.getStreamingMultiCacheHydrateApiPrefix() + String.join(",", cacheIds);
 
         connect(cacheSubscriptionURI, latch, eventData, events, connectionReady);
 

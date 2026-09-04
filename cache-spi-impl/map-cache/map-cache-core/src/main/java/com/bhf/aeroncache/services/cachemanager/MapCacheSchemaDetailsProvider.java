@@ -58,4 +58,69 @@ public class MapCacheSchemaDetailsProvider implements CacheSchemaDetailsProvider
     public int getBulkCacheOpsRequestId() {
         return BulkOperationRequestEncoder.TEMPLATE_ID;
     }
+
+    @Override
+    public int getCreateCounterCacheId() {
+        return CreateCounterCacheEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getAddCounterCacheEntryId() {
+        return AddCounterRequestEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getGetCounterCacheEntryId() {
+        return GetCounterCacheEntryEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getRemoveCounterCacheEntryId() {
+        return RemoveCounterRequestEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getClearCounterCacheId() {
+        return ClearCounterCacheRequestEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getDeleteCounterCacheId() {
+        return DeleteCounterCacheEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getGetAllCounterCacheEntriesId() {
+        return GetAllCounterCacheEntriesEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getCounterCacheSubscriptionRequestId() {
+        return CounterCacheSubscriptionRequestEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getCounterCacheUnsubscribeRequestId() {
+        return CounterCacheUnsubscribeRequestEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getCounterIncrementRequestId() {
+        return IncrementCounterRequestEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getCounterDecrementRequestId() {
+        return DecrementCounterRequestEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getSetCounterRequestId() {
+        return SetCounterRequestEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getGetCounterStatsId() {
+        return GetCounterStatsEncoder.TEMPLATE_ID;
+    }
 }

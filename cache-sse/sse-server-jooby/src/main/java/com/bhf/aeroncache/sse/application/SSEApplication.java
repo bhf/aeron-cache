@@ -6,6 +6,7 @@ import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
+import com.bhf.aeroncache.services.cache.impl.RBCountersRequestPublisher;
 import com.bhf.aeroncache.services.cacheclient.CacheClientFactory;
 import com.bhf.aeroncache.services.cluster.ClusterClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
@@ -47,13 +48,16 @@ public class SSEApplication extends Jooby {
 
     @Setter
     private static int DEFAULT_SSE_PORT = 7072;
-    private static final String API_PREFIX = "/api/sse/v1/cache/";
+    private static final String CACHE_API_PREFIX = "/api/sse/v1/cache/";
+    private static final String CACHE_MULTI_SUB_API_PREFIX = "/api/sse/v1/caches/";
+    private static final String COUNTERS_API_PREFIX = "/api/sse/v1/counter/";
+    private static final String COUNTERS_MULTI_SUB_API_PREFIX = "/api/sse/v1/counters/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
-    private static final String MULTI_SUB_API_PREFIX = "/api/sse/v1/caches/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
     private static AeronCacheClusterListener client;
     private static CacheSubscriptionRequestPublisher subscriptionService;
+    private static CacheSubscriptionRequestPublisher countersSubscriptionService;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     private static String tracingServiceName;
@@ -84,10 +88,16 @@ public class SSEApplication extends Jooby {
                 "http://localhost:3003",
                 "http://localhost:3004",
                 "http://localhost:3005")));
-        sse(API_PREFIX + "hydrate/{cacheId}", SSEApplication::handleSingleCacheSSEWithHydration);
-        sse(MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", SSEApplication::handleMultiCacheSSEWithHydration);
-        sse(API_PREFIX + "{cacheId}", SSEApplication::handleSingleCacheSSE);
-        sse(MULTI_SUB_API_PREFIX + "{cacheIds}", SSEApplication::handleMultiCacheSSE);
+        sse(CACHE_API_PREFIX + "hydrate/{cacheId}", SSEApplication::handleSingleCacheSSEWithHydration);
+        sse(CACHE_MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", SSEApplication::handleMultiCacheSSEWithHydration);
+        sse(CACHE_API_PREFIX + "{cacheId}", SSEApplication::handleSingleCacheSSE);
+        sse(CACHE_MULTI_SUB_API_PREFIX + "{cacheIds}", SSEApplication::handleMultiCacheSSE);
+
+        sse(COUNTERS_API_PREFIX + "hydrate/{cacheId}", SSEApplication::handleSingleCountersCacheSSEWithHydration);
+        sse(COUNTERS_MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", SSEApplication::handleMultiCountersCacheSSEWithHydration);
+        sse(COUNTERS_API_PREFIX + "{cacheId}", SSEApplication::handleSingleCountersCacheSSE);
+        sse(COUNTERS_MULTI_SUB_API_PREFIX + "{cacheIds}", SSEApplication::handleMultiCountersCacheSSE);
+
         get(LIVENESS, SSEApplication::handleGetLiveness);
         get(READINESS, SSEApplication::handleGetReadiness);
     }
@@ -142,6 +152,40 @@ public class SSEApplication extends Jooby {
         }
     }
 
+    private static void handleSingleCountersCacheSSE(ServerSentEmitter serverSentEmitter) {
+        try {
+            var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
+            var requestId = getRequestId(serverSentEmitter.getContext());
+            log.info("Subscription request for counters cacheId: {} on SSE sessionId: {}", cacheId, serverSentEmitter.getId());
+
+            serverSentEmitter.onClose(() -> {
+                log.warn("Closed on " + serverSentEmitter.getId());
+                if (CLUSTERED_MODE) {
+                    subscriptionService.handleSSEClosed(cache, requestId, serverSentEmitter.getId());
+                }
+            });
+
+            serverSentEmitter.keepAlive(60, TimeUnit.DAYS);
+
+            final Consumer<Void> subscriptionFailureHandler = _ ->
+                    serverSentEmitter.close();
+
+            final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
+                try {
+                    final var res = writer.writeValueAsString(cacheUpdateEvent);
+                    serverSentEmitter.send("message", res);
+                } catch (JsonProcessingException e) {
+                    log.error("Error trying to convert counters cache update event to JSON", e);
+                }
+            };
+
+            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), serverSentEmitter.getId(),
+                    requestId, false, consumer);
+        } catch (TypeMismatchException e) {
+            log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
+        }
+    }
+
     private static void handleSingleCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
         try {
             var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
@@ -176,6 +220,40 @@ public class SSEApplication extends Jooby {
         }
     }
 
+    private static void handleSingleCountersCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
+        try {
+            var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
+            var requestId = getRequestId(serverSentEmitter.getContext());
+            log.info("Subscription request for counters cacheId: {} on SSE sessionId: {}", cacheId, serverSentEmitter.getId());
+
+            serverSentEmitter.onClose(() -> {
+                log.warn("Closed on " + serverSentEmitter.getId());
+                if (CLUSTERED_MODE) {
+                    countersSubscriptionService.handleSSEClosed(cache, requestId, serverSentEmitter.getId());
+                }
+            });
+
+            serverSentEmitter.keepAlive(60, TimeUnit.DAYS);
+
+            final Consumer<Void> subscriptionFailureHandler = _ ->
+                    serverSentEmitter.close();
+
+            final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
+                try {
+                    final var res = writer.writeValueAsString(cacheUpdateEvent);
+                    serverSentEmitter.send("message", res);
+                } catch (JsonProcessingException e) {
+                    log.error("Error trying to convert counters cache update event to JSON", e);
+                }
+            };
+
+            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), serverSentEmitter.getId(),
+                    requestId, true, consumer);
+        } catch (TypeMismatchException e) {
+            log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
+        }
+    }
+
 
     private static void handleMultiCacheSSE(ServerSentEmitter serverSentEmitter) {
         var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
@@ -201,6 +279,30 @@ public class SSEApplication extends Jooby {
                 requestId, false, consumer);
     }
 
+    private static void handleMultiCountersCacheSSE(ServerSentEmitter serverSentEmitter) {
+        var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
+        log.info("Got cache Ids: "+cacheIds);
+        List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
+
+        var requestId = UUID.randomUUID().toString();
+        log.info("Subscription request for counters cacheId: {} on SSE sessionId: {}", caches,
+                serverSentEmitter.getId());
+        final Consumer<Void> subscriptionFailureHandler = _ ->
+                serverSentEmitter.close();
+
+        final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
+            try {
+                final var res = writer.writeValueAsString(cacheUpdateEvent);
+                serverSentEmitter.send("message", res);
+            } catch (JsonProcessingException e) {
+                log.error("Error trying to convert counters cache update event to JSON", e);
+            }
+        };
+
+        countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, caches, serverSentEmitter.getId(),
+                requestId, false, consumer);
+    }
+
     private static void handleMultiCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
         var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
         log.info("Got cache Ids: "+cacheIds);
@@ -222,6 +324,30 @@ public class SSEApplication extends Jooby {
         };
 
         subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, caches, serverSentEmitter.getId(),
+                requestId, true, consumer);
+    }
+
+    private static void handleMultiCountersCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
+        var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
+        log.info("Got cache Ids: "+cacheIds);
+        List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
+
+        var requestId = UUID.randomUUID().toString();
+        log.info("Subscription request for counters cacheId: {} on SSE sessionId: {}", caches,
+                serverSentEmitter.getId());
+        final Consumer<Void> subscriptionFailureHandler = _ ->
+                serverSentEmitter.close();
+
+        final Consumer<CacheUpdateEvent> consumer = cacheUpdateEvent -> {
+            try {
+                final var res = writer.writeValueAsString(cacheUpdateEvent);
+                serverSentEmitter.send("message", res);
+            } catch (JsonProcessingException e) {
+                log.error("Error trying to convert counters cache update event to JSON", e);
+            }
+        };
+
+        countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, caches, serverSentEmitter.getId(),
                 requestId, true, consumer);
     }
 
@@ -309,6 +435,8 @@ public class SSEApplication extends Jooby {
             var indexSupplier = clientFactory.getIndexSupplier();
             var keySupplier = clientFactory.getKeySupplier();
             var valueSupplier = clientFactory.getValueSupplier();
+            var countersResponseDecoder = clientFactory.getCountersResponseDecoder();
+            var countersRequestEncoder = clientFactory.getCountersRequestEncoder();
 
             if (PRE_ENCODE_CACHE_REQUESTS) {
                 // We encode the SBE messages before dropping them onto an Agrona RB for
@@ -321,10 +449,15 @@ public class SSEApplication extends Jooby {
                 // to SBE on the Agent thread
                 CacheRequestPublisher rbPublisher = new RBCacheRequestPublisher(rb);
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
+
+                CacheRequestPublisher<String, String, Long> countersRbPublisher = new RBCountersRequestPublisher(rb);
+                countersSubscriptionService = new CacheSubscriptionRequestPublisher(countersRbPublisher);
             }
 
             client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);
             client.setCacheResultsCallbacks(subscriptionService);
+            client.setCountersResultsCallbacks(countersSubscriptionService);
+            client.setCountersCacheResponseDecoder(countersResponseDecoder);
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
             System.out.println("CLUSTER_ADDRESSES=" + allHosts);
@@ -371,11 +504,14 @@ public class SSEApplication extends Jooby {
             System.out.println("Building cluster agent for SSE service");
             var clusterClientAgentIdleStrategy = SSEIdleStrategies.clusterClientAgentIdleStrategy.get();
             var clusterMessagePublisherIdleStrategy = SSEIdleStrategies.clusterMessagePublisherIdleStrategy.get();
+
+            var countersProtocolPublisher = new ClusterMessagePublisher<>(cache, clusterMessagePublisherIdleStrategy, countersRequestEncoder);
+
             var agent = PRE_ENCODE_CACHE_REQUESTS ?
                     new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
                             clusterMessagePublisherIdleStrategy, cacheRequestEncoder), "AeronCache-CacheClient-Agent") :
                     new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, cacheRequestEncoder), "AeronCache-CacheClient-Agent");
+                            clusterMessagePublisherIdleStrategy, cacheRequestEncoder), countersProtocolPublisher, "AeronCache-CacheClient-Agent");
 
             var errorHandler = new RethrowingErrorHandler();
             var errorCounter = (org.agrona.concurrent.status.AtomicCounter) null;

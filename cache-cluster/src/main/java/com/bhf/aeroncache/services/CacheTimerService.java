@@ -7,7 +7,7 @@ import io.aeron.Image;
 import io.aeron.cluster.service.Cluster;
 import org.agrona.MutableDirectBuffer;
 
-public interface CacheTimerService<I extends Reusable,K extends Reusable,V extends Reusable> {
+public interface CacheTimerService<I extends Reusable,K extends Reusable> {
 
     /**
      * Schedule an item for removal.
@@ -16,7 +16,7 @@ public interface CacheTimerService<I extends Reusable,K extends Reusable,V exten
      * @param cache
      * @param deadline
      */
-    void scheduleItemRemoval(I cacheId, K key, Cache<I, K, V> cache, long deadline);
+    <CT extends Reusable> void scheduleItemRemoval(I cacheId, K key, Cache<I, K, CT> cache, long deadline);
 
     /**
      * Take a snapshot of the timers and related metadata.

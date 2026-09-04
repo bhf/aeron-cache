@@ -1,13 +1,20 @@
 package com.bhf.aeroncache.integration.multistream;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.SSECacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.WSCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.*;
 
 @BackendTestConfig(dynamicCacheCreationEnabled = true, httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = true, useTestContainersEnvironment = true)
-class ClusteredMultiStreamDynamicCacheCreationTests extends AbstractMultiStreamDynamicCacheTests {
+class ClusteredMultiStreamDynamicCacheCreationTests extends AbstractMultiStreamDynamicCacheTests<String> {
 
     public ClusteredMultiStreamDynamicCacheCreationTests() {
-        super(new WSStreamingHelper(), new SSEStreamingHelper());
+        super(new CacheTestEndpoints(), new WSStreamingHelper(new WSCacheTestEndpoints()), new SSEStreamingHelper(new SSECacheTestEndpoints()));
     }
 
+    @Override
+    protected String getKnownValue() {
+        return "ClusteredMultiStreamDynamicCacheCreationTests";
+    }
 }

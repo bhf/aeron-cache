@@ -1,12 +1,18 @@
 package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.annotations.HappyPath;
+import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
+import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
+import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.ReusableLong;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.CacheTimerService;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cachemanager.CacheSchemaDetailsProvider;
+import com.bhf.aeroncache.services.cachemanager.CountersCacheManager;
+import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.types.ReusableString;
 import io.aeron.ExclusivePublication;
@@ -39,13 +45,19 @@ class AbstractCacheClusterServiceTest {
     private CacheManagerFactory<ReusableString, ReusableString, ReusableString> cacheManagerFactory;
 
     @Mock
+    private CountersCacheManager<ReusableString, ReusableString, ReusableLong> countersCacheManager;
+
+    @Mock
     private CacheManager<ReusableString, ReusableString, ReusableString> cacheManager;
 
     @Mock
     private CacheTracingService tracingService;
 
     @Mock
-    private CacheTimerService<ReusableString, ReusableString, ReusableString> cacheTimerService;
+    private CacheTimerService<ReusableString, ReusableString> cacheTimerService;
+
+    @Mock
+    private CacheTimerService<ReusableString, ReusableString> cacheCountersTimerService;
 
     @Mock
     private ExclusivePublication snapshotPublication;
@@ -55,7 +67,7 @@ class AbstractCacheClusterServiceTest {
 
     @Mock
     private Cluster cluster;
-    
+
     @Mock
     private CacheSchemaDetailsProvider schemaDetailsProvider;
 
@@ -64,13 +76,15 @@ class AbstractCacheClusterServiceTest {
         Supplier<ReusableString> stringSupplier = ReusableString::new;
         when(cacheManagerFactory.getIndexSupplier()).thenReturn(stringSupplier);
         when(cacheManagerFactory.getKeySupplier()).thenReturn(stringSupplier);
-        when(cacheManagerFactory.getValueSupplier()).thenReturn(stringSupplier);
+        when(cacheManagerFactory.getValueSupplier()).thenReturn(ReusableString::new);
         when(cacheManagerFactory.getCacheManager()).thenReturn(cacheManager);
         when(cacheManagerFactory.getSchemaDetailsProvider()).thenReturn(schemaDetailsProvider);
+        when(cacheManagerFactory.getCountersCacheManager()).thenReturn(countersCacheManager);
 
         sut = new TestCacheClusterService("test-node", tracingService, cacheManagerFactory);
 
         setTimerServiceWithReflection();
+        setCountersTimerServiceWithReflection();
     }
 
     /**
@@ -84,6 +98,12 @@ class AbstractCacheClusterServiceTest {
         Field timerField = AbstractCacheClusterService.class.getDeclaredField("cacheTimerService");
         timerField.setAccessible(true);
         timerField.set(sut, cacheTimerService);
+    }
+
+    private void setCountersTimerServiceWithReflection() throws NoSuchFieldException, IllegalAccessException {
+        Field timerField = AbstractCacheClusterService.class.getDeclaredField("cacheCountersTimerService");
+        timerField.setAccessible(true);
+        timerField.set(sut, cacheCountersTimerService);
     }
 
     @Test
@@ -122,28 +142,59 @@ class AbstractCacheClusterServiceTest {
             super(nodeId, tracingService, cacheManagerFactory);
         }
 
-        @Override protected CreateCacheRequestDetails<ReusableString> getCreateCacheRequestDetails(ClientSession s, DirectBuffer b, int o) { return null; }
-        @Override protected ClearCacheRequestDetails<ReusableString> getClearCacheRequestDetails(ClientSession s, DirectBuffer b, int o) { return null; }
-        @Override protected RemoveCacheEntryRequestDetails<ReusableString, ReusableString> getRemoveCacheEntryRequestDetails(ClientSession s, DirectBuffer b, int o) { return null; }
-        @Override protected AddCacheEntryRequestDetails<ReusableString, ReusableString, ReusableString> getAddCacheEntryRequestDetails(ClientSession s, DirectBuffer b, int o) { return null; }
-        @Override protected GetCacheEntryRequestDetails<ReusableString, ReusableString> getCacheEntryRequestDetails(ClientSession s, DirectBuffer b, int o) { return null; }
-        @Override protected GetAllCacheEntriesRequestDetails<ReusableString> getAllCacheEntriesRequestDetails(ClientSession s, DirectBuffer b, int o) { return null; }
-        @Override protected DeleteCacheRequestDetails<ReusableString> getDeleteCacheRequestDetails(ClientSession s, DirectBuffer b, int o) { return null; }
-        @Override protected GetCacheStatsRequestDetails getCacheStatsRequestDetails(ClientSession s, DirectBuffer b, int o) { return null; }
-        @Override protected CacheSubscriptionRequestDetails<ReusableString> getCacheSubscriptionRequest(ClientSession s, DirectBuffer b, int o) { return null; }
-        @Override protected CacheUnsubscribeRequestDetails<ReusableString> getCacheUnsubscribeRequest(ClientSession s, DirectBuffer b, int o) { return null; }
-        @Override protected BulkCacheOpsRequestDetails<ReusableString, ReusableString, ReusableString> getBulkOpsRequest(ClientSession s, DirectBuffer b, int o) { return null; }
-        @Override protected void handlePostCreateCache(ReusableString c, CreateCacheResult<ReusableString> r, ClientSession s) {}
-        @Override protected void handlePostAddCacheEntry(ReusableString c, ReusableString k, ReusableString v, AddCacheEntryResult<ReusableString, ReusableString> r, ClientSession s) {}
-        @Override protected void handlePostGetCacheEntry(ReusableString c, ReusableString k, GetCacheEntryResult<ReusableString, ReusableString, ReusableString> r, ClientSession s) {}
-        @Override protected void handlePostGetAllCacheEntries(ReusableString c, GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString> r, ClientSession s) {}
-        @Override protected void handlePostRemoveCacheEntry(ReusableString c, ReusableString k, RemoveCacheEntryResult<ReusableString, ReusableString> r, ClientSession s) {}
-        @Override protected void handlePostRemoveTimerCacheEntry(ReusableString c, ReusableString k, RemoveCacheEntryResult<ReusableString, ReusableString> r) {}
-        @Override protected void handlePostClearCache(ReusableString c, ClearCacheResult<ReusableString> r, ClientSession s) {}
-        @Override protected void handlePostDeleteCache(ReusableString c, DeleteCacheResult<ReusableString> r, ClientSession s) {}
-        @Override protected void handlePostGetCacheStats(CacheStatsResult<ReusableString> r, ClientSession s) {}
-        @Override protected void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<ReusableString, ReusableString, ReusableString> r, ClientSession s) {}
-        @Override protected void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<ReusableString> r, ClientSession s) {}
-        @Override protected void handlePostBulkOpsRequest(BulkCacheOpsResult<ReusableString, ReusableString, ReusableString> r, ClientSession s) {}
+        @Override
+        protected <VT extends Reusable> GetAllCacheEntriesRequestDetails<ReusableString> getAllCacheEntriesRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<ReusableString, ReusableString, VT> decoder, GetAllCacheEntriesRequestDetails<ReusableString> getAllCacheEntriesRequestDetails) {return null;}
+
+        @Override
+        protected <VT extends Reusable> ClearCacheRequestDetails<ReusableString> getClearCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<ReusableString, ReusableString, VT> decoder, ClearCacheRequestDetails<ReusableString> clearCacheRequestDetails) {
+            return null;
+        }
+
+        @Override
+        protected <VT extends Reusable> RemoveCacheEntryRequestDetails<ReusableString, ReusableString> getRemoveCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<ReusableString, ReusableString, VT> decoder, RemoveCacheEntryRequestDetails<ReusableString, ReusableString> removeCacheEntryRequestDetails) {
+            return null;
+        }
+
+        @Override
+        protected <VT extends Reusable> GetCacheEntryRequestDetails<ReusableString, ReusableString> getCacheEntryRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<ReusableString, ReusableString, VT> decoder, GetCacheEntryRequestDetails<ReusableString, ReusableString> getCacheEntryRequestDetails) {
+            return null;
+        }
+
+
+        @Override
+        protected <VT extends Reusable> DeleteCacheRequestDetails<ReusableString> getDeleteCacheRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<ReusableString, ReusableString, VT> decoder, DeleteCacheRequestDetails<ReusableString> deleteCacheRequestDetails) {
+            return null;
+        }
+
+        @Override
+        protected <VT extends Reusable> GetCacheStatsRequestDetails getCacheStatsRequestDetails(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<ReusableString, ReusableString, VT> decoder, GetCacheStatsRequestDetails getCacheStatsRequestDetails) {
+            return null;
+        }
+
+        @Override
+        protected <VT extends Reusable> CacheSubscriptionRequestDetails<ReusableString> getCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<ReusableString, ReusableString, VT> decoder, CacheSubscriptionRequestDetails<ReusableString> cacheSubscribeRequestDetails) {
+            return null;
+        }
+
+        @Override
+        protected <VT extends Reusable> CacheUnsubscribeRequestDetails<ReusableString> getCacheUnsubscribeRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<ReusableString, ReusableString, VT> decoder, CacheUnsubscribeRequestDetails<ReusableString> cacheUnsubscribeRequestDetails) {
+            return null;
+        }
+
+
+        @Override protected <VT extends Reusable> AddCacheEntryRequestDetails<ReusableString, ReusableString, VT> getAddCacheEntryRequestDetails(ClientSession s, DirectBuffer b, int o, CacheRequestDecoder<ReusableString,ReusableString,VT> decoder, AddCacheEntryRequestDetails<ReusableString, ReusableString, VT> addCacheEntryRequestDetails) { return null; }
+        @Override protected <VT extends Reusable> BulkCacheOpsRequestDetails<ReusableString, ReusableString, VT> getBulkOpsRequest(ClientSession s, DirectBuffer b, int o, BulkCacheOpsRequestDetails<ReusableString, ReusableString, VT> bulkCacheOpsRequestDetails_) { return null; }
+        @Override protected <VT extends Reusable> void handlePostCreateCache(ReusableString cacheId, CreateCacheResult<ReusableString> cacheCreationResult, ClientSession session, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder) {}
+        @Override protected <VT extends Reusable> void handlePostAddCacheEntry(ReusableString cacheId, ReusableString key, VT value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, ClientSession session, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder, CacheSubscriptionService<ReusableString, ReusableString, VT> subscriptionService) {}
+        @Override protected <VT extends Reusable> void handlePostGetCacheEntry(ReusableString cacheId, ReusableString key, GetCacheEntryResult<ReusableString, ReusableString, VT> getCacheEntryResult, ClientSession session, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder) {}
+        @Override protected <VT extends Reusable> void handlePostGetAllCacheEntries(ReusableString cacheId, GetAllCacheEntriesResult<ReusableString, ReusableString, VT> getCacheEntryResult, ClientSession session, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder) {}
+        @Override protected <VT extends Reusable> void handlePostRemoveCacheEntry(ReusableString c, ReusableString k, RemoveCacheEntryResult<ReusableString, ReusableString> r, ClientSession s, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder, CacheSubscriptionService<ReusableString, ReusableString, VT> subscriptionService) {}
+        @Override protected <VT extends Reusable> void handlePostRemoveTimerCacheEntry(ReusableString c, ReusableString k, RemoveCacheEntryResult<ReusableString, ReusableString> r, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder, CacheSubscriptionService<ReusableString, ReusableString, VT> subscriptionService) {}
+        @Override protected <VT extends Reusable> void handlePostClearCache(ReusableString c, ClearCacheResult<ReusableString> r, ClientSession s, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder, CacheSubscriptionService<ReusableString, ReusableString, VT> subscriptionService) {}
+        @Override protected <VT extends Reusable> void handlePostDeleteCache(ReusableString c, DeleteCacheResult<ReusableString> r, ClientSession s, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder, CacheSubscriptionService<ReusableString, ReusableString, VT> subscriptionService) {}
+        @Override protected <VT extends Reusable> void handlePostGetCacheStats(CacheStatsResult<ReusableString> r, ClientSession s, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder) {}
+        @Override protected <VT extends Reusable> void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<ReusableString, ReusableString, VT> subscriptionRequestResult, ClientSession session, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder) {}
+        @Override protected <VT extends Reusable> void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<ReusableString> r, ClientSession s, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder) {}
+        @Override protected void handlePostBulkOpsRequest(BulkCacheOpsResult<ReusableString, ReusableString, ReusableString> r, ClientSession s, CacheResponseEncoder<ReusableString, ReusableString, ReusableString> encoder) {}
     }
 }

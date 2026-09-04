@@ -24,7 +24,10 @@ public abstract class AbstractClientAgent implements Agent {
     final IdleStrategy idleStrategy;
 
     @Getter
-    final ClusterMessagePublisher publisher;
+    final ClusterMessagePublisher<String, String, String> cachePublisher;
+    @Getter
+    final ClusterMessagePublisher<String, String, Long> counterOpsPublisher;
+
     final String roleName;
     volatile boolean isEnabled = true;
 

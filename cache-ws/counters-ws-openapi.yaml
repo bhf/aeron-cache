@@ -1,0 +1,180 @@
+openapi: 3.0.3
+info:
+  title: Aeron Cache Counters WebSocket API
+  description: WebSocket API for subscribing to Aeron Cache counter cache updates.
+  termsOfService: https://www.github.com/bhf
+  contact:
+    name: Sanjeev
+    url: https://www.sanjeev.pages.dev
+    email: na@na.com
+  version: 1.1.0
+servers:
+  - url: ws://localhost:7071
+    description: Local WebSocket server
+paths:
+  /api/ws/v1/counter/{cacheId}:
+    get:
+      summary: Subscribe to a single counter cache
+      description: |
+        Establish a WebSocket connection to subscribe to updates for a single counter cache.
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          description: The ID of the counter cache to subscribe to.
+          schema:
+            type: string
+      responses:
+        101:
+          description: Switching Protocols - WebSocket connection established.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterUpdateEvent'
+        400:
+          description: Bad Request - Invalid cache ID.
+        503:
+          description: Service Unavailable - Cluster not connected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestErrorResponse'
+
+  /api/ws/v1/counters/{cacheIds}:
+    get:
+      summary: Subscribe to multiple counter caches
+      description: |
+        Establish a WebSocket connection to subscribe to updates for multiple counter caches.
+      parameters:
+        - name: cacheIds
+          in: path
+          required: true
+          description: Comma-separated list of counter cache IDs to subscribe to.
+          schema:
+            type: string
+      responses:
+        101:
+          description: Switching Protocols - WebSocket connection established.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterUpdateEvent'
+        400:
+          description: Bad Request - Invalid cache IDs.
+        503:
+          description: Service Unavailable - Cluster not connected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestErrorResponse'
+
+  /api/ws/v1/counter/hydrate/{cacheId}:
+    get:
+      summary: Subscribe to a single counter cache with hydration
+      description: |
+        Establish a WebSocket connection to subscribe to updates for a single counter cache, with initial state hydration.
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          description: The ID of the counter cache to subscribe to.
+          schema:
+            type: string
+      responses:
+        101:
+          description: Switching Protocols - WebSocket connection established.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterUpdateEvent'
+        400:
+          description: Bad Request - Invalid cache ID.
+        503:
+          description: Service Unavailable - Cluster not connected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestErrorResponse'
+
+  /api/ws/v1/counters/hydrate/{cacheIds}:
+    get:
+      summary: Subscribe to multiple counter caches with hydration
+      description: |
+        Establish a WebSocket connection to subscribe to updates for multiple counter caches, with initial state hydration.
+      parameters:
+        - name: cacheIds
+          in: path
+          required: true
+          description: Comma-separated list of counter cache IDs to subscribe to.
+          schema:
+            type: string
+      responses:
+        101:
+          description: Switching Protocols - WebSocket connection established.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterUpdateEvent'
+        400:
+          description: Bad Request - Invalid cache IDs.
+        503:
+          description: Service Unavailable - Cluster not connected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestErrorResponse'
+
+components:
+  schemas:
+    CounterUpdateEvent:
+      type: object
+      description: A counter cache update event published over the WebSocket connection.
+      properties:
+        cacheId:
+          type: string
+          description: The ID of the counter cache.
+        eventType:
+          type: string
+          description: The type of event.
+          enum:
+            - ADD_ITEM
+            - DELETE_CACHE
+            - REMOVE_ITEM
+            - CLEAR_CACHE
+        itemKey:
+          type: string
+          nullable: true
+          description: The key of the counter.
+        itemValue:
+          type: integer
+          format: int64
+          nullable: true
+          description: The value of the counter.
+        requestId:
+          type: string
+          description: The request ID associated with the event.
+      required:
+        - cacheId
+        - eventType
+        - requestId
+    RequestErrorResponse:
+      type: object
+      properties:
+        errorMsg:
+          type: string
+        helpMsg:
+          type: string
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    CacheOperationStatus:
+      type: string
+      enum:
+        - NONE
+        - SUCCESS
+        - ERROR
+        - UNKNOWN_CACHE
+        - UNKNOWN_KEY
+        - CACHE_EXISTS
+        - DUPLICATE_SUBSCRIPTION
+        - UNKNOWN_SUBSCRIPTION
+        - NULL_VAL

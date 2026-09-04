@@ -3,6 +3,7 @@ package com.bhf.aeroncache.integration.http;
 import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -10,30 +11,37 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
-abstract class GetItemTests {
+abstract class GetItemTests<V> {
 
     //static String GET_ENDPOINT = "/api/v1/cache/";
     private static final String KNOWN_CACHE_ID = "1";
     private static final String UNKNOWN_CACHE_ID = "123";
     private static final String KNOWN_KEY = "SomeKey";
-    private static final String KNOWN_VALUE = "SomeValue";
     private static final String UNKNOWN_KEY = "UNKNOWN_KEY";
 
     private final String GET_ENDPOINT;
+    private final TestEndpointsProvider getEndpointsProvider;
 
-    GetItemTests(String getEndpoint) {
-        GET_ENDPOINT = getEndpoint;
+    GetItemTests(TestEndpointsProvider getEndpoint) {
+        GET_ENDPOINT = getEndpoint.getItemEndpoint();
+        getEndpointsProvider = getEndpoint;
     }
 
+    abstract V getKnownValue();
+    abstract V getNotFoundValue();
+    abstract V getUnknownCacheValue();
+
     @BeforeAll
-    static void setup(BackendTestResource backend) {
+    void setup(BackendTestResource backend) {
 
         // seed the cache with a single cache and a known key-value pair
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, getEndpointsProvider);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, getKnownValue(), backend, getEndpointsProvider);
     }
 
     @Test
@@ -51,14 +59,14 @@ abstract class GetItemTests {
                 // Assert
                 .then().assertThat()
                 .statusCode(200)
-                .body("value", Matchers.comparesEqualTo(KNOWN_VALUE));
+                .body("value", Matchers.equalTo(getKnownValue()));
     }
 
     @Test
     @DisplayName("Should get a blank value back on an unknown key")
     void shouldGetBlankValueOnUnknownKey(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.removeItem(KNOWN_CACHE_ID, UNKNOWN_KEY, backend);
+        CacheTestUtils.removeItem(KNOWN_CACHE_ID, UNKNOWN_KEY, backend, getEndpointsProvider);
 
         RestAssured.given().port(getHttpPort(backend)).baseUri(getHttpUri(backend))
                 .contentType(ContentType.JSON)
@@ -70,7 +78,7 @@ abstract class GetItemTests {
                 // Assert
                 .then().assertThat()
                 .statusCode(404)
-                .body("value", Matchers.comparesEqualTo(""));
+                .body("value", Matchers.equalTo(getNotFoundValue()));
     }
 
     @Test
@@ -89,7 +97,7 @@ abstract class GetItemTests {
                 .statusCode(404)
                 .body("cacheId", Matchers.comparesEqualTo("0"))
                 .body("key", Matchers.comparesEqualTo("NA"))
-                .body("value", Matchers.comparesEqualTo("NA"));
+                .body("value", Matchers.equalTo(getUnknownCacheValue()));
     }
 
     String getHttpUri(BackendTestResource backend) {

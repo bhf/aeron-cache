@@ -4,6 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import com.bhf.aeroncache.integration.utils.ContainerRestartUtils;
 import org.awaitility.Awaitility;
@@ -12,29 +13,31 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.concurrent.TimeUnit;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
-public abstract class MultiStreamRestartTests {
+public abstract class MultiStreamRestartTests<V> {
 
     private static final String KNOWN_CACHE_ID = "1";
     private static final String KNOWN_KEY = "SomeKey";
-    private static final String KNOWN_VALUE = "SomeValue";
-    private static final String ANOTHER_KNOWN_VALUE = "SomeOtherValue";
 
     private final SSEStreamingHelper sseStreamingHelper;
     private final WSStreamingHelper wsStreamingHelper;
+    private TestEndpointsProvider multiStreamRestartEndpoints;
 
-    public MultiStreamRestartTests(SSEStreamingHelper sseStreamingHelper, WSStreamingHelper wsStreamingHelper) {
+    public MultiStreamRestartTests(SSEStreamingHelper sseStreamingHelper, WSStreamingHelper wsStreamingHelper, TestEndpointsProvider endpointsProvider) {
         this.sseStreamingHelper = sseStreamingHelper;
         this.wsStreamingHelper = wsStreamingHelper;
+        multiStreamRestartEndpoints = endpointsProvider;
     }
 
     @BeforeAll
-    static void setup(BackendTestResource backend) {
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
+    void setup(BackendTestResource backend) {
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, multiStreamRestartEndpoints);
     }
 
     @Test
@@ -70,7 +73,7 @@ public abstract class MultiStreamRestartTests {
         ContainerRestartUtils.stopWebsocketContainer(backend);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"-sse", KNOWN_VALUE, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"-sse", getKnownValue(), backend, multiStreamRestartEndpoints);
 
         // Assert
         try {
@@ -86,7 +89,7 @@ public abstract class MultiStreamRestartTests {
                 MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
                 MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
                 MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY+"-sse"));
-                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(getKnownValue()));
             }
         } finally {
             perStreamingSourceEvents.forEach(f -> f.cancel(true));
@@ -102,7 +105,7 @@ public abstract class MultiStreamRestartTests {
         ContainerRestartUtils.stopSSEContainer(backend);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"-ws", KNOWN_VALUE, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY+"-ws", getKnownValue(), backend, multiStreamRestartEndpoints);
 
         // Assert
         try {
@@ -118,7 +121,7 @@ public abstract class MultiStreamRestartTests {
                 MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
                 MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
                 MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY+"-ws"));
-                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(KNOWN_VALUE));
+                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(getKnownValue()));
             }
         } finally {
             perStreamingSourceEvents.forEach(f -> f.cancel(true));
@@ -133,7 +136,7 @@ public abstract class MultiStreamRestartTests {
         var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(sseHelper, backend, KNOWN_CACHE_ID, 1);
 
         // Act
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, ANOTHER_KNOWN_VALUE, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, getAnotherKnownValue(), backend, multiStreamRestartEndpoints);
 
         // Assert
         try {
@@ -149,11 +152,14 @@ public abstract class MultiStreamRestartTests {
                 MatcherAssert.assertThat(updateEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
                 MatcherAssert.assertThat(updateEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
                 MatcherAssert.assertThat(updateEvent.itemKey(), Matchers.is(KNOWN_KEY));
-                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(ANOTHER_KNOWN_VALUE));
+                MatcherAssert.assertThat(updateEvent.itemValue(), Matchers.is(getAnotherKnownValue()));
             }
         } finally {
             perStreamingSourceEvents.forEach(f -> f.cancel(true));
         }
     }
+
+    protected abstract V getKnownValue();
+    protected abstract V getAnotherKnownValue();
 
 }

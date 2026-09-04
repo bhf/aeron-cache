@@ -4,7 +4,7 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
-import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.*;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 import com.bhf.aeroncache.integration.streaming.StreamingHelper;
 import com.bhf.aeroncache.integration.streaming.StreamingHelperUtil;
@@ -30,13 +30,14 @@ class SseClientEphemeralRestartTests {
     static final String KNOWN_CACHE_ID = "SSERestartCache★";
     static final String KNOWN_KEY = "SSERestartKey★★★";
     static final String KNOWN_VALUE = "SSERestartValue★★★";
+    private final TestEndpointsProvider endpointsProvider = new CacheTestEndpoints();
 
     @Test
     @DisplayName("Should get streaming updates via SSE after ephemeral cache restart")
     @HappyPath
     void shouldHandleClusterRestart(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, endpointsProvider);
 
         // Act
         ContainerRestartUtils.stopEphemeralContainers(backend);
@@ -45,10 +46,10 @@ class SseClientEphemeralRestartTests {
         // Use readiness endpoint to wait for the SSE interface to detect the reconnection to the cluster
         ContainerRestartUtils.awaitSSEReadiness(backend);
 
-        var streamingHelpers = new StreamingHelper[]{new SSEStreamingHelper()};
+        var streamingHelpers = new StreamingHelper[]{new SSEStreamingHelper(new SSECacheTestEndpoints())};
         var postRestartEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, 1);
 
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, endpointsProvider);
 
         // Assert
         for (var streamingSourceEventsFuture : postRestartEvents) {

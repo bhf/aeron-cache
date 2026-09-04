@@ -2,6 +2,11 @@ openapi: 3.0.3
 info:
   title: Aeron Cache WebSocket API
   description: WebSocket API for subscribing to Aeron Cache updates.
+  termsOfService: https://www.github.com/bhf
+  contact:
+    name: Sanjeev
+    url: https://www.sanjeev.pages.dev
+    email: na@na.com
   version: 1.1.0
 servers:
   - url: ws://localhost:7071

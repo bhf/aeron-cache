@@ -4,6 +4,9 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.CounterTestEndpoints;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import com.bhf.aeroncache.integration.utils.ContainerRestartUtils;
 import io.restassured.RestAssured;
@@ -23,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 class ClusterRestartTests {
 
     private static final String GET_ENDPOINT = "/api/v1/cache/";
+    private static final String GET_COUNTERS_ENDPOINT = "/api/v1/counters/";
     static final String KNOWN_CACHE_ID = "1★";
     static final String KNOWN_KEY = "SomeKey★★★";
     static final String KNOWN_VALUE = "SomeValue★★★";
@@ -33,16 +37,25 @@ class ClusterRestartTests {
     static final long TTL_MS = 2000L;
     static final long LONG_TTL_MS = 3600000L;
     static final long SHORT_TTL_MS = 1000L;
+    static final TestEndpointsProvider clusterRestartEndpointsProvider = new CacheTestEndpoints();
+    static final TestEndpointsProvider countersEndpoints = new CounterTestEndpoints();
+
+    static final String KNOWN_COUNTERS_CACHE_ID = "1★";
+    static final String KNOWN_COUNTERS_KEY = "SomeKey★★★";
+    static final Integer KNOWN_COUNTER_VALUE = 12;
 
     @Test
     @DisplayName("Should get known non-expired value we added post restart")
     @HappyPath
     void shouldGetKnownItemPostRestart(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, TTL_KEY, TTL_VALUE, TTL_MS, backend);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, LONG_TTL_KEY, LONG_TTL_VALUE, LONG_TTL_MS, backend);
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, clusterRestartEndpointsProvider);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, clusterRestartEndpointsProvider);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, TTL_KEY, TTL_VALUE, TTL_MS, backend, clusterRestartEndpointsProvider);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, LONG_TTL_KEY, LONG_TTL_VALUE, LONG_TTL_MS, backend, clusterRestartEndpointsProvider);
+
+        CacheTestUtils.createCache(KNOWN_COUNTERS_CACHE_ID, backend, countersEndpoints);
+        CacheTestUtils.addItem(KNOWN_COUNTERS_CACHE_ID, KNOWN_COUNTERS_KEY, KNOWN_COUNTER_VALUE, backend, countersEndpoints);
 
         // Act
         ContainerRestartUtils.stopHTTPInterface(backend);
@@ -88,6 +101,15 @@ class ClusterRestartTests {
                 .statusCode(200)
                 .body("value", Matchers.comparesEqualTo(LONG_TTL_VALUE));
 
+        RestAssured.given().port(mappedPort)
+                .baseUri(mappedHost)
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .when().get(GET_COUNTERS_ENDPOINT + KNOWN_CACHE_ID + "/" + KNOWN_KEY)
+                .then().assertThat()
+                .statusCode(200)
+                .body("value", Matchers.comparesEqualTo(KNOWN_COUNTER_VALUE));
+
         canModifyTtlPostRestart(backend, mappedPort, mappedHost);
     }
 
@@ -100,7 +122,7 @@ class ClusterRestartTests {
      */
     private static void canModifyTtlPostRestart(BackendTestResource backend, Integer mappedPort, String mappedHost) {
         // Arrange - modify the LONG_TTL to now become the SHORT_TTL so the item expires
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, LONG_TTL_KEY, LONG_TTL_VALUE, SHORT_TTL_MS, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, LONG_TTL_KEY, LONG_TTL_VALUE, SHORT_TTL_MS, backend, clusterRestartEndpointsProvider);
 
         // Act - sleep for the same time as the TTL of the item just to be sure
         try {

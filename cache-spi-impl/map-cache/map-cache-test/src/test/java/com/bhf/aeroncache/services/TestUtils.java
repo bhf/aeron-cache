@@ -5,9 +5,12 @@ import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.request.RegularStringCacheRequestEncoder;
 import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseEncoder;
+import com.bhf.aeroncache.codecs.request.ReusableStringCountersCacheRequestDecoder;
+import com.bhf.aeroncache.codecs.response.ReusableStringCountersCacheResponseEncoder;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
 import com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest;
 import com.bhf.aeroncache.models.results.CacheOperationResultDetails;
+import com.bhf.aeroncache.services.cache.snapshot.CountersCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
 import com.bhf.aeroncache.services.cachemanager.MapCacheManagerFactory;
@@ -107,13 +110,16 @@ public class TestUtils {
         var encoder = new ReusableStringCacheResponseEncoder();
         var decoder = new ReusableStringCacheRequestDecoder();
         var timersCodec = new ReusableStringTimersCodec(new NoOpMultiTypeStreamingHasher<>());
+        var responseEncoder = new ReusableStringCountersCacheResponseEncoder();
+        var requestDecoder = new ReusableStringCountersCacheRequestDecoder();
         return new MapCacheManagerFactory<>(SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
                 new ReusableStringCacheIdSnapshotCodec(new NoOpStreamingHasher<>()),
                 new ReusableStringCacheEntrySnapshotCodec(new NoOpStreamingHasher<>()),
+                new CountersCacheEntrySnapshotCodec(new NoOpStreamingHasher<>()),
                 encoder,
                 decoder,
-                timersCodec);
+                timersCodec, responseEncoder, requestDecoder);
     }
 
     public static void assertRequestIdCacheIdMatch(List<CacheOperationRequest> ops, List<CacheOperationResultDetails<ReusableString, ReusableString, ReusableString>> opResults, int i) {
@@ -123,6 +129,6 @@ public class TestUtils {
 
     public static CacheOperationRequest getCacheOperation(BulkOperationType opType, String cacheId, String key, String value, long ttl) {
         String opRequestId = UUID.randomUUID().toString();
-        return new CacheOperationRequest(opType, ttl, opRequestId, cacheId, key, value);
+        return new CacheOperationRequest(opType, ttl, 0, opRequestId, cacheId, key, value);
     }
 }

@@ -58,4 +58,10 @@ public class ReusableString implements Reusable<String> {
     public void append(char c) {
         sb.append(c);
     }
+
+    public static ReusableString build(String value){
+        ReusableString val = new ReusableString();
+        val.copyFrom(value);
+        return val;
+    }
 }

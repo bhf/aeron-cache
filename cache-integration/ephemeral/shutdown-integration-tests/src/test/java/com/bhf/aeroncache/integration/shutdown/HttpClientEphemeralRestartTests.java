@@ -4,6 +4,8 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import com.bhf.aeroncache.integration.utils.ContainerRestartUtils;
 import io.restassured.RestAssured;
@@ -25,14 +27,15 @@ class HttpClientEphemeralRestartTests {
     static final String KNOWN_CACHE_ID = "HttpRestart★";
     static final String KNOWN_KEY = "HttpRestartKey★★★";
     static final String KNOWN_VALUE = "HttpRestartValue★★★";
+    static final TestEndpointsProvider clientRestartEndpointsProvider = new CacheTestEndpoints();
 
     @Test
     @DisplayName("Should perform operations via HTTP interface after ephemeral cache restart")
     @HappyPath
     void shouldHandleClusterRestart(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, clientRestartEndpointsProvider);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, clientRestartEndpointsProvider);
 
         // Act
         ContainerRestartUtils.stopEphemeralContainers(backend);
@@ -56,8 +59,8 @@ class HttpClientEphemeralRestartTests {
         // Assert - new operations
         var newKey = "NewKeyPostRestart";
         var newValue = "NewValuePostRestart";
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, newKey, newValue, backend);
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, clientRestartEndpointsProvider);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, newKey, newValue, backend, clientRestartEndpointsProvider);
 
         RestAssured.given().port(mappedPort)
                 .baseUri(mappedHost)

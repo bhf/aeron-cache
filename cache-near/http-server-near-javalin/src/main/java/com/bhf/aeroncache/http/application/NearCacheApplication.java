@@ -176,7 +176,7 @@ public class NearCacheApplication {
                     new ClusterClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
                             clusterMessagePublisherIdleStrategy, cacheRequestEncoder), "AeronCache-ClusterClient-Agent") :
                     new CacheClientAgent(cache, rb, clusterClientAgentIdleStrategy, new ClusterMessagePublisher(cache,
-                            clusterMessagePublisherIdleStrategy, cacheRequestEncoder), "AeronCache-CacheClient-Agent");
+                            clusterMessagePublisherIdleStrategy, cacheRequestEncoder), null, "AeronCache-CacheClient-Agent");
 
             var errorHandler = new RethrowingErrorHandler();
             var errorCounter = (org.agrona.concurrent.status.AtomicCounter) null;

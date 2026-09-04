@@ -55,6 +55,7 @@ class BulkOpsUnknownCacheTest {
         tracingService = Mockito.mock(CacheTracingService.class);
         sut = new SBEDecodingCacheClusterService("node0", tracingService, TestUtils.getCacheManagerFactory());
         sut.subscriptionService = Mockito.mock(CacheSubscriptionService.class);
+        sut.countersSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
         responseBuffer = new ExpandableArrayBuffer();
         requestBuffer = new ExpandableArrayBuffer();
         result = new BulkCacheOpsResult<>(SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier);

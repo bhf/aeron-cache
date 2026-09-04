@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cluster.impl;
 
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
@@ -13,47 +14,48 @@ import java.util.List;
  * to support blocking operations.
  */
 @Log4j2
-public class ObservingClusterRequestPublisher extends ObservingCacheRequestPublisher implements BlockingClusterRequestPublisher {
+public class ObservingClusterRequestPublisher<I extends Reusable, K extends Reusable, V extends Reusable, BI, BK, BV>
+        extends ObservingCacheRequestPublisher<I,K,V,BI,BK,BV> implements BlockingClusterRequestPublisher<BI, BK, BV> {
 
-    private final BlockingClusterRequestPublisher blockingPublisher;
+    private final BlockingClusterRequestPublisher<BI,BK,BV> blockingPublisher;
 
-    public ObservingClusterRequestPublisher(CacheRequestPublisher rbPublisher, BlockingClusterRequestPublisher blockingPublisher) {
+    public ObservingClusterRequestPublisher(CacheRequestPublisher<BI,BK,BV> rbPublisher, BlockingClusterRequestPublisher<BI,BK,BV> blockingPublisher) {
         super(rbPublisher);
         this.blockingPublisher = blockingPublisher;
     }
 
     @Override
-    public void sendCreateCacheBlocking(String requestId, String cacheId) {
+    public void sendCreateCacheBlocking(String requestId, BI cacheId) {
         blockingPublisher.sendCreateCacheBlocking(requestId, cacheId);
     }
 
     @Override
-    public void addCacheEntryBlocking(String requestId, String cacheId, String key, String value, long ttl) {
+    public void addCacheEntryBlocking(String requestId, BI cacheId, BK key, BV value, long ttl) {
         blockingPublisher.addCacheEntryBlocking(requestId, cacheId, key, value, ttl);
     }
 
     @Override
-    public void getCacheEntryBlocking(String requestId, String cacheId, String key) {
+    public void getCacheEntryBlocking(String requestId, BI cacheId, BK key) {
         blockingPublisher.getCacheEntryBlocking(requestId, cacheId, key);
     }
 
     @Override
-    public void clearCacheBlocking(String requestId, String cacheId) {
+    public void clearCacheBlocking(String requestId, BI cacheId) {
         blockingPublisher.clearCacheBlocking(requestId, cacheId);
     }
 
     @Override
-    public void deleteCacheBlocking(String requestId, String cacheId) {
+    public void deleteCacheBlocking(String requestId, BI cacheId) {
         blockingPublisher.deleteCacheBlocking(requestId, cacheId);
     }
 
     @Override
-    public void removeCacheEntryBlocking(String requestId, String cacheId, String key) {
+    public void removeCacheEntryBlocking(String requestId, BI cacheId, BK key) {
         blockingPublisher.removeCacheEntryBlocking(requestId, cacheId, key);
     }
 
     @Override
-    public void getCacheEntriesBlocking(String requestId, String cacheId) {
+    public void getCacheEntriesBlocking(String requestId, BI cacheId) {
         blockingPublisher.getCacheEntriesBlocking(requestId, cacheId);
     }
 
@@ -68,12 +70,12 @@ public class ObservingClusterRequestPublisher extends ObservingCacheRequestPubli
     }
 
     @Override
-    public void sendCacheSubscribeBlocking(String requestId, List<String> cacheId, boolean sendSnapshot) {
+    public void sendCacheSubscribeBlocking(String requestId, List<BI> cacheId, boolean sendSnapshot) {
         blockingPublisher.sendCacheSubscribeBlocking(requestId, cacheId, sendSnapshot);
     }
 
     @Override
-    public void sendCacheUnsubscribeBlocking(String requestId, String cacheId) {
+    public void sendCacheUnsubscribeBlocking(String requestId, BI cacheId) {
         blockingPublisher.sendCacheUnsubscribeBlocking(requestId, cacheId);
     }
 

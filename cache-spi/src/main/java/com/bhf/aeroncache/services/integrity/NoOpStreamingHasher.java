@@ -12,6 +12,11 @@ public class NoOpStreamingHasher<CT> implements StreamingHasher<CT>{
     }
 
     @Override
+    public StreamingHasher<CT> addToHash(long item) {
+        return this;
+    }
+
+    @Override
     public void reset() {
 
     }

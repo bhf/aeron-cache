@@ -2,6 +2,7 @@ package com.bhf.aeroncache.integration.streaming;
 
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import org.awaitility.Awaitility;
 
 import java.util.ArrayList;
@@ -35,7 +36,8 @@ public class StreamingHelperUtil {
     }
 
     public static List<CompletableFuture<List<CacheUpdateEvent>>> getPerStreamEventsMultipleCaches(StreamingHelper[] streamingHelpers,
-                                                                                                   BackendTestResource backend, List<String> cacheIds, int eventCount) {
+                                                                                                   BackendTestResource backend,
+                                                                                                   List<String> cacheIds, int eventCount) {
         List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
         var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
                 .map(helper -> {
@@ -56,7 +58,8 @@ public class StreamingHelperUtil {
     }
 
     public static List<CompletableFuture<List<CacheUpdateEvent>>> getPerStreamEventsWithHydration(StreamingHelper[] streamingHelpers,
-                                                                                                  BackendTestResource backend, String cacheId, int eventCount) {
+                                                                                                  BackendTestResource backend,
+                                                                                                  String cacheId, int eventCount) {
         List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
         var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
                 .map(helper -> {

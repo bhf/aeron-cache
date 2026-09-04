@@ -5,7 +5,7 @@ import com.bhf.aeroncache.models.results.*;
 
 import java.util.function.Consumer;
 
-public interface ConsumingResponseHandler<I extends Reusable, K extends Reusable, V extends Reusable> extends CacheRequestConsumingPublisher<I, K, V>, CacheResponseHandler<I, K, V> {
+public interface ConsumingResponseHandler<I extends Reusable, K extends Reusable, V extends Reusable, BI, BK, BV> extends CacheRequestConsumingPublisher<I, K, V, BI, BK, BV>, CacheResponseHandler<I, K, V> {
     void setCreateCacheConsumer(Consumer<CreateCacheResult<I>> c);
 
     void setAddCacheEntryConsumer(Consumer<AddCacheEntryResult<I, K>> c);

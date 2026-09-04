@@ -56,14 +56,16 @@ public class BulkCacheOpsRequestDetails <I extends Reusable, K extends Reusable,
         return this;
     }
 
-    public void addOperation(BulkOperationType opType, long ttl, String requestId, I cacheId, K key, V value) {
+    public void addOperation(BulkOperationType opType, long ttl, long counterValue, String requestId, I cacheId, K key, V value) {
         var details = new CacheOperationRequestDetails(indexSupplier, keySupplier, valueSupplier);
         details.operationType = opType;
         details.ttl = ttl;
+        details.counterValue = counterValue;
         details.setRequestId(requestId);
         details.getCacheId().copyFrom(cacheId);
         details.getKey().copyFrom(key);
         details.getValue().copyFrom(value);
         operations.add(details);
     }
+
 }

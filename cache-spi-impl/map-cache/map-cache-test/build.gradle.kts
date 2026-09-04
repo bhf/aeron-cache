@@ -10,6 +10,13 @@ dependencies {
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
 
+    implementation(platform(libs.junit.bom))
+    implementation(libs.junit)
+    implementation(libs.junit.params)
+    implementation(libs.junit.platform.launcher)
+    implementation(libs.mockito)
+    implementation(libs.mockito.junit)
+
     implementation(project(":cache-common"))
     implementation(project(":cache-client"))
     implementation(project(":cache-cluster"))

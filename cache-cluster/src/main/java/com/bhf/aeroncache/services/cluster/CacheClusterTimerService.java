@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @Log4j2
-public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V extends Reusable> implements CacheTimerService<I,K,V> {
+public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V extends Reusable> implements CacheTimerService<I,K> {
 
     private final Cluster cluster;
     private final Supplier<I> indexSupplier;
@@ -55,7 +55,7 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
      * @param deadline The epoch time at which to remove the item.
      */
     @Override
-    public void scheduleItemRemoval(I cacheId, K key, Cache<I, K, V> cache, long deadline) {
+    public <CT extends Reusable> void scheduleItemRemoval(I cacheId, K key, Cache<I, K, CT> cache, long deadline) {
         lookupKey.clear();
         lookupKey.getCacheId().copyFrom(cacheId);
         lookupKey.getKey().copyFrom(key);
@@ -68,7 +68,9 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
         }
 
         var timerCorrelationId = this.timerCorrelationIdProvider.getNextId();
-        boolean success = cluster.scheduleTimer(timerCorrelationId, deadline);
+        while(!cluster.scheduleTimer(timerCorrelationId, deadline)){
+
+        }
         log.info("Scheduled timer for {} to remove key {} from cache {} correlationId {}", deadline, key, cacheId, timerCorrelationId);
 
         final var keyToRemove = keySupplier.get();
@@ -140,6 +142,8 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
     public void onTimerEvent(final long correlationId, final long timestamp) {
         var pendingRemove = pendingRemoves.remove(correlationId);
 
+        log.info("Timer event received for correlationId {} at timestamp {}, pendingRemove: {}", correlationId, timestamp, pendingRemove);
+
         if (pendingRemove != null) {
             I cache = pendingRemove.getCacheToRemoveOn();
             K key = pendingRemove.getKeyToRemove();
@@ -155,6 +159,9 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
                 timerDetailsFlyweight.setCorrelationId(correlationId);
                 removeConsumer.accept(timerDetailsFlyweight);
             }
+        }
+        else{
+            log.warn("No pending remove on timer event found for correlationId {}", correlationId);
         }
     }
 

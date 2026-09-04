@@ -16,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 @Log4j2
-public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reusable, V extends Reusable> extends ObservingCacheRequestPublisher<I,K,V> implements WebsocketStatusHandler, CacheSubscriptions  {
+public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reusable, V extends Reusable> extends ObservingCacheRequestPublisher<I,K,V, String, String, String> implements WebsocketStatusHandler, CacheSubscriptions  {
 
     private final Map<String, List<IdentifiableConsumer<String, CacheUpdateEvent>>> cacheSubscriptions = new ConcurrentHashMap<>();
 
@@ -100,7 +100,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                 subscriptionResult.getEntries().forEach((k, v) -> {
                     CacheUpdateEvent.EventType eventType = CacheUpdateEvent.EventType.ADD_ITEM;
                     var ik = String.valueOf(k.value());
-                    var iv = String.valueOf(v.value());
+                    var iv = (v.value());
                     streamingEventConsumer.accept(new CacheUpdateEvent(subscriptionResult.getCacheId().toString(), eventType, ik, iv, requestId));
                 });
             }
@@ -168,7 +168,13 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         if (subscribers != null) {
             var cacheId = String.valueOf(clearCacheResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.CLEAR_CACHE;
-            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, clearCacheResult.getRequestId())));
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, clearCacheResult.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
         }
     }
 
@@ -180,38 +186,113 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         if (subscribers != null) {
             var cacheId = String.valueOf(deleteCacheResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.DELETE_CACHE;
-            subscribers.forEach(c -> c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, deleteCacheResult.getRequestId())));
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, deleteCacheResult.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
         }
     }
 
     @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult) {
-        log.info("Got cache entry removed to send to ws");
+        log.info("Got cache entry removed to send to ws on requestId {}", removeCacheEntryResult.getRequestId());
         var subscribers = cacheSubscriptions.get(removeCacheEntryResult.getCacheId().value());
 
         if (subscribers != null) {
             var cacheId = String.valueOf(removeCacheEntryResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.REMOVE_ITEM;
             var key = removeCacheEntryResult.getKey().value().toString();
-            subscribers.forEach(c -> c.accept(
-                    new CacheUpdateEvent(cacheId, eventType, key, null, removeCacheEntryResult.getRequestId())));
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(new CacheUpdateEvent(cacheId, eventType, key, null, removeCacheEntryResult.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
         }
     }
 
     @Override
     public void handleCacheEntryUpdated(CacheEntryUpdateResult<I, K, V> cacheEntryUpdateResult) {
-        log.info("Got cache entry updated to send to ws");
+        log.info("Got cache entry updated to send to ws on cacheId {}", cacheEntryUpdateResult.getCacheId().value());
         var subscribers = cacheSubscriptions.get(cacheEntryUpdateResult.getCacheId().value());
 
         if (subscribers != null) {
+            log.info("Subscribers is not null, sending cache update event to {} subscribers", subscribers.size());
             var cacheId = String.valueOf(cacheEntryUpdateResult.getCacheId());
             var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
             var key = cacheEntryUpdateResult.getKey().value().toString();
-            var value = cacheEntryUpdateResult.getValue().value().toString();
+            var value = cacheEntryUpdateResult.getValue().value();
             subscribers.forEach(c -> {
                 try {
                     c.accept(
                             new CacheUpdateEvent(cacheId, eventType, key, value, cacheEntryUpdateResult.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
+        }
+    }
+
+    @Override
+    public void handleCounterIncremented(IncrementCounterResult<I, K> result) {
+        log.info("Got counter incremented to send to ws on cacheId {}", result.getCacheId().value());
+        var subscribers = cacheSubscriptions.get(result.getCacheId().value());
+
+        if (subscribers != null) {
+            log.info("Subscribers is not null, sending counter increment event to {} subscribers", subscribers.size());
+            var cacheId = String.valueOf(result.getCacheId());
+            var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
+            var key = result.getKey().value().toString();
+            var value = result.getCounterValue();
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, result.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
+        }
+    }
+
+    @Override
+    public void handleCounterDecremented(DecrementCounterResult<I, K> result) {
+        log.info("Got counter decremented to send to ws on cacheId {}", result.getCacheId().value());
+        var subscribers = cacheSubscriptions.get(result.getCacheId().value());
+
+        if (subscribers != null) {
+            log.info("Subscribers is not null, sending counter decrement event to {} subscribers", subscribers.size());
+            var cacheId = String.valueOf(result.getCacheId());
+            var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
+            var key = result.getKey().value().toString();
+            var value = result.getCounterValue();
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, result.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
+        }
+    }
+
+    @Override
+    public void handleCounterSet(SetCounterResult<I, K> result) {
+        log.info("Got counter set to send to ws on cacheId {}", result.getCacheId().value());
+        var subscribers = cacheSubscriptions.get(result.getCacheId().value());
+
+        if (subscribers != null) {
+            log.info("Subscribers is not null, sending counter set event to {} subscribers", subscribers.size());
+            var cacheId = String.valueOf(result.getCacheId());
+            var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
+            var key = result.getKey().value().toString();
+            var value = result.getCounterValue();
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, result.getRequestId()));
                 } catch (Exception e) {
 
                 }

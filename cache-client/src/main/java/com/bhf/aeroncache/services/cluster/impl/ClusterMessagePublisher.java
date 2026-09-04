@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
+import com.bhf.aeroncache.codecs.request.CountersCacheRequestEncoder;
 import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
 import com.bhf.aeroncache.handlers.PublicationFailureHandler;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
@@ -22,126 +23,147 @@ import java.util.List;
 @Setter
 @Log4j2
 @RequiredArgsConstructor
-public class ClusterMessagePublisher implements CacheRequestPublisher, BlockingClusterRequestPublisher {
+public class ClusterMessagePublisher<BI, BK, BV> implements CacheRequestPublisher<BI, BK, BV>, BlockingClusterRequestPublisher<BI, BK, BV> {
 
     private final MutableDirectBuffer msgBuffer = new ExpandableDirectByteBuffer();
     private final AeronCache cluster;
     private final IdleStrategy idleStrategy;
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
-    private final CacheRequestEncoder cacheRequestEncoder;
+    private final CacheRequestEncoder<BI, BK, BV> cacheRequestEncoder;
 
     @Override
-    public void sendCreateCacheBlocking(String requestId, String cacheId) {
+    public void sendCreateCacheBlocking(String requestId, BI cacheId) {
         sendCreateCache(requestId, cacheId);
         waitForResult(cluster);
     }
 
     @Override
-    public void sendCreateCache(String requestId, String cacheId) {
+    public void sendCreateCache(String requestId, BI cacheId) {
         var length = cacheRequestEncoder.encodeCreateCacheRequest(requestId, cacheId, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent create cache request on cache {} with request Id {}", cacheId, requestId);
     }
 
     @Override
-    public void addCacheEntryBlocking(String requestId, String cacheId, String key, String value, long ttl) {
+    public void addCacheEntryBlocking(String requestId, BI cacheId, BK key, BV value, long ttl) {
         addCacheEntry(requestId, cacheId, key, value, ttl);
         waitForResult(cluster);
     }
 
     @Override
-    public void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl) {
+    public void addCacheEntry(String requestId, BI cacheId, BK key, BV value, long ttl) {
         var length = cacheRequestEncoder.encodeAddCacheEntry(requestId, cacheId, key, value, ttl, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent add cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
 
     @Override
-    public void getCacheEntryBlocking(String requestId, String cacheId, String key) {
+    public void getCacheEntryBlocking(String requestId, BI cacheId, BK key) {
         getCacheEntry(requestId, cacheId, key);
         waitForResult(cluster);
     }
 
     @Override
-    public void getCacheEntry(String requestId, String cacheId, String key) {
+    public void getCacheEntry(String requestId, BI cacheId, BK key) {
         var length = cacheRequestEncoder.encodeGetCacheEntry(requestId, cacheId, key, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent get cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
 
     @Override
-    public void clearCacheBlocking(String requestId, String cacheId) {
+    public void clearCacheBlocking(String requestId, BI cacheId) {
         clearCache(requestId, cacheId);
         waitForResult(cluster);
     }
 
     @Override
-    public void clearCache(String requestId, String cacheId) {
+    public void clearCache(String requestId, BI cacheId) {
         var length = cacheRequestEncoder.encodeClearCache(requestId, cacheId, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent clear cache request on cache {} with request Id {}", cacheId, requestId);
     }
 
     @Override
-    public void deleteCacheBlocking(String requestId, String cacheId) {
+    public void deleteCacheBlocking(String requestId, BI cacheId) {
         deleteCache(requestId, cacheId);
         waitForResult(cluster);
     }
 
     @Override
-    public void deleteCache(String requestId, String cacheId) {
+    public void deleteCache(String requestId, BI cacheId) {
         var length = cacheRequestEncoder.encodeDeleteCache(requestId, cacheId, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent delete cache request on cache {} with request Id {}", cacheId, requestId);
     }
 
     @Override
-    public void removeCacheEntryBlocking(String requestId, String cacheId, String key) {
+    public void removeCacheEntryBlocking(String requestId, BI cacheId, BK key) {
         removeCacheEntry(requestId, cacheId, key);
         waitForResult(cluster);
     }
 
     @Override
-    public void removeCacheEntry(String requestId, String cacheId, String key) {
+    public void removeCacheEntry(String requestId, BI cacheId, BK key) {
         var length = cacheRequestEncoder.encodeRemoveCacheEntry(requestId, cacheId, key, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent remove cache entry request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
     }
 
     @Override
-    public void getCacheEntriesBlocking(String requestId, String cacheId) {
+    public void incrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl) {
+        var length = ((CountersCacheRequestEncoder<BI, BK, BV>) cacheRequestEncoder).encodeIncrementCounterRequest(requestId, cacheId, key, amount, ttl, msgBuffer);
+        publishToCache(msgBuffer, 0, length);
+        log.info("Sent increment counter request on cache {}, key {}, amount {}, with request Id {}", cacheId, key, amount, requestId);
+    }
+
+    @Override
+    public void decrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl) {
+        var length = ((CountersCacheRequestEncoder<BI, BK, BV>) cacheRequestEncoder).encodeDecrementCounterRequest(requestId, cacheId, key, amount, ttl, msgBuffer);
+        publishToCache(msgBuffer, 0, length);
+        log.info("Sent decrement counter request on cache {}, key {}, amount {}, with request Id {}", cacheId, key, amount, requestId);
+    }
+
+    @Override
+    public void setCounter(String requestId, BI cacheId, BK key, long value, long ttl) {
+        var length = ((CountersCacheRequestEncoder<BI, BK, BV>) cacheRequestEncoder).encodeSetCounterRequest(requestId, cacheId, key, value, ttl, msgBuffer);
+        publishToCache(msgBuffer, 0, length);
+        log.info("Sent set counter request on cache {}, key {}, value {}, with request Id {}", cacheId, key, value, requestId);
+    }
+
+    @Override
+    public void getCacheEntriesBlocking(String requestId, BI cacheId) {
         getCacheEntries(requestId, cacheId);
         waitForResult(cluster);
     }
 
     @Override
-    public void getCacheEntries(String requestId, String cacheId) {
+    public void getCacheEntries(String requestId, BI cacheId) {
         var length = cacheRequestEncoder.encodeGetCacheEntries(requestId, cacheId, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent get cache content request on cache {} with request Id {}", cacheId, requestId);
     }
 
     @Override
-    public void sendCacheSubscribeBlocking(String requestId, List<String> cacheId, boolean sendSnapshot) {
+    public void sendCacheSubscribeBlocking(String requestId, List<BI> cacheId, boolean sendSnapshot) {
         sendCacheSubscribe(requestId, cacheId, sendSnapshot);
         waitForResult(cluster);
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot) {
+    public void sendCacheSubscribe(String requestId, List<BI> cacheId, boolean sendSnapshot) {
         var length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, sendSnapshot, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent cache subscription request on cache {} with request Id {}", cacheId, requestId);
     }
 
     @Override
-    public void sendCacheUnsubscribeBlocking(String requestId, String cacheId) {
+    public void sendCacheUnsubscribeBlocking(String requestId, BI cacheId) {
         sendCacheUnsubscribe(requestId, cacheId);
         waitForResult(cluster);
     }
 
     @Override
-    public void sendCacheUnsubscribe(String requestId, String cacheId) {
+    public void sendCacheUnsubscribe(String requestId, BI cacheId) {
         var length = cacheRequestEncoder.encodeCacheUnsubscribe(requestId, cacheId, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent cache unsubscribe request on cache {} with request Id {}", cacheId, requestId);

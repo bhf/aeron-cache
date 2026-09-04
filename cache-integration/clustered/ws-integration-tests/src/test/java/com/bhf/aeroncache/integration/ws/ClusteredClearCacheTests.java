@@ -1,15 +1,25 @@
 package com.bhf.aeroncache.integration.ws;
 
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.WSCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamClearCacheTest;
-import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamRemoveItemTest;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
 @BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
-class ClusteredClearCacheTests extends AbstractMultiStreamClearCacheTest {
+class ClusteredClearCacheTests extends AbstractMultiStreamClearCacheTest<String> {
 
     public ClusteredClearCacheTests() {
-        super(new WSStreamingHelper());
+        super(new CacheTestEndpoints(), new WSStreamingHelper(new WSCacheTestEndpoints()));
     }
 
+    @Override
+    protected String getKnownCacheId() {
+        return "ClusteredClearCacheTests-WS";
+    }
+
+    @Override
+    public String getKnownValue() {
+        return "ClusteredClearCacheTests";
+    }
 }

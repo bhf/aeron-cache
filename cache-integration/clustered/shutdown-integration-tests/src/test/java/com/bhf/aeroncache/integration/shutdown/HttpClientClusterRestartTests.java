@@ -4,6 +4,8 @@ import com.bhf.aeroncache.annotations.HappyPath;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.CacheTestEndpoints;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
 import com.bhf.aeroncache.integration.utils.CacheTestUtils;
 import com.bhf.aeroncache.integration.utils.ContainerRestartUtils;
 import io.restassured.RestAssured;
@@ -25,14 +27,15 @@ class HttpClientClusterRestartTests {
     static final String KNOWN_CACHE_ID = "HttpRestart★";
     static final String KNOWN_KEY = "HttpRestartKey★★★";
     static final String KNOWN_VALUE = "HttpRestartValue★★★";
+    private final TestEndpointsProvider endpointsProvider = new CacheTestEndpoints();
 
     @Test
     @DisplayName("Should perform operations via HTTP interface after cluster restart")
     @HappyPath
     void shouldHandleClusterRestart(BackendTestResource backend) {
         // Arrange
-        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend);
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend);
+        CacheTestUtils.createCache(KNOWN_CACHE_ID, backend, endpointsProvider);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, KNOWN_KEY, KNOWN_VALUE, backend, endpointsProvider);
 
         // Act
         ContainerRestartUtils.stopClusterContainers(backend);
@@ -57,7 +60,7 @@ class HttpClientClusterRestartTests {
         // Assert - new operations
         var newKey = "NewKeyPostRestart";
         var newValue = "NewValuePostRestart";
-        CacheTestUtils.addItem(KNOWN_CACHE_ID, newKey, newValue, backend);
+        CacheTestUtils.addItem(KNOWN_CACHE_ID, newKey, newValue, backend, endpointsProvider);
 
         RestAssured.given().port(mappedPort)
                 .baseUri(mappedHost)

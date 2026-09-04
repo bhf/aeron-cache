@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.codecs.request;
 
-import com.bhf.aeroncache.codecs.AppendableFlyweight;
 import com.bhf.aeroncache.messages.*;
+import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.types.ReusableString;
 import org.agrona.DirectBuffer;
@@ -20,22 +20,13 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
     private final GetCacheStatsDecoder getCacheStatsDecoder = new GetCacheStatsDecoder();
     private final CacheUnsubscribeRequestDecoder cacheUnsubscribeRequestDecoder = new CacheUnsubscribeRequestDecoder();
     private final BulkOperationRequestDecoder bulkOperationRequestDecoder = new BulkOperationRequestDecoder();
-    private final AppendableFlyweight appendable = new AppendableFlyweight();
-    private boolean useAppendable = false;
 
     @Override
     public void decodeGetCreateCacheRequestDetails(DirectBuffer buffer, int offset, CreateCacheRequestDetails<ReusableString> createCacheRequestDetails) {
         createCacheRequestDetails.clear();
         createCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-
-        if(useAppendable) {
-            appendable.setReusable(createCacheRequestDetails.getCacheId());
-            createCacheDecoder.cacheId(appendable);
-        }
-        else{
-            var cacheId = createCacheDecoder.cacheId();
-            createCacheRequestDetails.getCacheId().copyFrom(cacheId);
-        }
+        var cacheId = createCacheDecoder.cacheId();
+        createCacheRequestDetails.getCacheId().copyFrom(cacheId);
 
         var requestId = createCacheDecoder.requestId();
         createCacheRequestDetails.setRequestId(requestId);
@@ -88,23 +79,7 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
     }
 
     @Override
-    public void decodeAddCacheEntryRequest(DirectBuffer buffer, int offset, AddCacheEntryRequestDetails<ReusableString, ReusableString, ReusableString> addCacheEntryRequestDetails) {
-
-        if(useAppendable) {
-            addCacheEntryRequestDetails.clear();
-            addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-            var ttl = addCacheEntryDecoder.ttl();
-            appendable.setReusable(addCacheEntryRequestDetails.getCacheId());
-            addCacheEntryDecoder.cacheId(appendable);
-            var requestID = addCacheEntryDecoder.requestId();
-            addCacheEntryRequestDetails.setRequestId(requestID);
-            appendable.setReusable(addCacheEntryRequestDetails.getKey());
-            addCacheEntryDecoder.key(appendable);
-            appendable.setReusable(addCacheEntryRequestDetails.getValue());
-            addCacheEntryDecoder.entryValue(appendable);
-            addCacheEntryRequestDetails.setTtl(ttl);
-        }
-        else{
+    public <VT extends Reusable> void decodeAddCacheEntryRequest(DirectBuffer buffer, int offset, AddCacheEntryRequestDetails<ReusableString, ReusableString, VT> addCacheEntryRequestDetails) {
             addCacheEntryRequestDetails.clear();
             addCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
             var ttl = addCacheEntryDecoder.ttl();
@@ -117,7 +92,6 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
             addCacheEntryRequestDetails.getValue().copyFrom(value);
             addCacheEntryRequestDetails.setRequestId(requestID);
             addCacheEntryRequestDetails.setTtl(ttl);
-        }
     }
 
     @Override
@@ -175,11 +149,19 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
     public void decodeBulkCacheOperationsRequest(DirectBuffer buffer, int offset, BulkCacheOpsRequestDetails<ReusableString, ReusableString, ReusableString> bulkCacheOpsRequestDetails) {
         bulkCacheOpsRequestDetails.clear();
         bulkOperationRequestDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
-        var itemsDecoder = bulkOperationRequestDecoder.items();
 
+        var itemsDecoder = bulkOperationRequestDecoder.items();
+        decodeCacheOperations(bulkCacheOpsRequestDetails, itemsDecoder);
+
+        var requestId = bulkOperationRequestDecoder.requestId();
+        bulkCacheOpsRequestDetails.setRequestId(requestId);
+    }
+
+    private static void decodeCacheOperations(BulkCacheOpsRequestDetails<ReusableString, ReusableString, ReusableString> bulkCacheOpsRequestDetails, BulkOperationRequestDecoder.ItemsDecoder itemsDecoder) {
         for(var op: itemsDecoder) {
             var opType = op.operationType();
             var ttl = op.ttl();
+            var counterValue = op.counterValue();
             var requestId = op.requestId();
             var cacheId = op.cacheId();
             var key = op.key();
@@ -193,11 +175,8 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
 
             bulkCacheOpsRequestDetails.addOperation(
                     com.bhf.aeroncache.models.bulk.requests.BulkOperationType.valueOf(opType.toString()),
-                    ttl, requestId, reusableCacheId, reusableKey, reusableValue);
+                    ttl, counterValue, requestId, reusableCacheId, reusableKey, reusableValue);
         }
-
-        var requestId = bulkOperationRequestDecoder.requestId();
-        bulkCacheOpsRequestDetails.setRequestId(requestId);
     }
 
 }

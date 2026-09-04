@@ -20,116 +20,116 @@ import java.util.function.Consumer;
  */
 @RequiredArgsConstructor
 @Log4j2
-public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusable, V extends Reusable> implements CacheRequestPublisher, CacheRequestConsumingPublisher<I,K,V>, CacheResponseHandler<I,K,V> {
+public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusable, V extends Reusable, BI, BK, BV> implements CacheRequestPublisher<BI, BK, BV>, CacheRequestConsumingPublisher<I,K,V, BI, BK, BV>, CacheResponseHandler<I,K,V> {
 
-    private final CacheRequestPublisher rbPublisher;
-    private final ConsumingResponseHandler<I,K,V> cacheResponseObservers = new CacheResponseMapObservers();
-    private final CacheResponseCallbackHandler<I,K,V> cacheResponseHandler = new CacheResponseCallbackHandler(cacheResponseObservers);
+    private final CacheRequestPublisher<BI, BK, BV> rbPublisher;
+    private final ConsumingResponseHandler<I,K,V, BI, BK, BV> cacheResponseObservers = new CacheResponseMapObservers<>();
+    private final CacheResponseCallbackHandler<I,K,V> cacheResponseHandler = new CacheResponseCallbackHandler<>(cacheResponseObservers);
 
-    public ObservingCacheRequestPublisher<I,K,V> onCreateCache(Consumer<CreateCacheResult<I>> c) {
+    public ObservingCacheRequestPublisher<I,K,V, BI, BK, BV> onCreateCache(Consumer<CreateCacheResult<I>> c) {
         cacheResponseObservers.setCreateCacheConsumer(c);
         return this;
     }
 
-    public ObservingCacheRequestPublisher<I,K,V> onAddCacheEntry(Consumer<AddCacheEntryResult<I, K>> c) {
+    public ObservingCacheRequestPublisher<I,K,V, BI, BK, BV> onAddCacheEntry(Consumer<AddCacheEntryResult<I, K>> c) {
         cacheResponseObservers.setAddCacheEntryConsumer(c);
         return this;
     }
 
-    public ObservingCacheRequestPublisher<I,K,V> onClearCache(Consumer<ClearCacheResult<I>> c) {
+    public ObservingCacheRequestPublisher<I,K,V, BI, BK, BV> onClearCache(Consumer<ClearCacheResult<I>> c) {
         cacheResponseObservers.setClearCacheConsumer(c);
         return this;
     }
 
-    public ObservingCacheRequestPublisher<I,K,V> onDeleteCache(Consumer<DeleteCacheResult<I>> c) {
+    public ObservingCacheRequestPublisher<I,K,V, BI, BK, BV> onDeleteCache(Consumer<DeleteCacheResult<I>> c) {
         cacheResponseObservers.setDeleteCacheConsumer(c);
         return this;
     }
 
-    public ObservingCacheRequestPublisher<I,K,V> onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<I, K>> c) {
+    public ObservingCacheRequestPublisher<I,K,V, BI, BK, BV> onRemoveCacheEntry(Consumer<RemoveCacheEntryResult<I, K>> c) {
         cacheResponseObservers.setRemoveCacheEntryConsumer(c);
         return this;
     }
 
-    public ObservingCacheRequestPublisher<I,K,V> onGetCacheEntry(Consumer<GetCacheEntryResult<I, K, V>> c) {
+    public ObservingCacheRequestPublisher<I,K,V, BI, BK, BV> onGetCacheEntry(Consumer<GetCacheEntryResult<I, K, V>> c) {
         cacheResponseObservers.setGetCacheEntryConsumer(c);
         return this;
     }
 
     @Override
-    public void sendCreateCache(String requestId, String cacheId) {
+    public void sendCreateCache(String requestId, BI cacheId) {
         rbPublisher.sendCreateCache(requestId, cacheId);
     }
 
     @Override
-    public void sendCreateCache(String requestId, String cacheId, Consumer<CreateCacheResult<I>> consumer) {
+    public void sendCreateCache(String requestId, BI cacheId, Consumer<CreateCacheResult<I>> consumer) {
         cacheResponseObservers.sendCreateCache(requestId, cacheId, consumer);
         rbPublisher.sendCreateCache(requestId, cacheId);
     }
 
 
     @Override
-    public void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl) {
+    public void addCacheEntry(String requestId, BI cacheId, BK key, BV value, long ttl) {
         rbPublisher.addCacheEntry(requestId, cacheId, key, value, ttl);
     }
 
     @Override
-    public void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl, Consumer<AddCacheEntryResult<I, K>> c) {
+    public void addCacheEntry(String requestId, BI cacheId, BK key, BV value, long ttl, Consumer<AddCacheEntryResult<I, K>> c) {
         cacheResponseObservers.addCacheEntry(requestId, cacheId, key, value, ttl, c);
         rbPublisher.addCacheEntry(requestId, cacheId, key, value, ttl);
     }
 
     @Override
-    public void getCacheEntry(String requestId, String cacheId, String key) {
+    public void getCacheEntry(String requestId, BI cacheId, BK key) {
         rbPublisher.getCacheEntry(requestId, cacheId, key);
     }
 
     @Override
-    public void getCacheEntry(String requestId, String cacheId, String key, Consumer<GetCacheEntryResult<I, K, V>> c) {
+    public void getCacheEntry(String requestId, BI cacheId, BK key, Consumer<GetCacheEntryResult<I, K, V>> c) {
         cacheResponseObservers.getCacheEntry(requestId, cacheId, key, c);
         rbPublisher.getCacheEntry(requestId, cacheId, key);
     }
 
     @Override
-    public void clearCache(String requestId, String cacheId) {
+    public void clearCache(String requestId, BI cacheId) {
         rbPublisher.clearCache(requestId, cacheId);
     }
 
     @Override
-    public void clearCache(String requestId, String cacheId, Consumer<ClearCacheResult<I>> c) {
+    public void clearCache(String requestId, BI cacheId, Consumer<ClearCacheResult<I>> c) {
         cacheResponseObservers.clearCache(requestId, cacheId, c);
         rbPublisher.clearCache(requestId, cacheId);
     }
 
     @Override
-    public void deleteCache(String requestId, String cacheId) {
+    public void deleteCache(String requestId, BI cacheId) {
         rbPublisher.deleteCache(requestId, cacheId);
     }
 
     @Override
-    public void deleteCache(String requestId, String cacheId, Consumer<DeleteCacheResult<I>> consumer) {
+    public void deleteCache(String requestId, BI cacheId, Consumer<DeleteCacheResult<I>> consumer) {
         cacheResponseObservers.deleteCache(requestId, cacheId, consumer);
         rbPublisher.deleteCache(requestId, cacheId);
     }
 
     @Override
-    public void removeCacheEntry(String requestId, String cacheId, String key) {
+    public void removeCacheEntry(String requestId, BI cacheId, BK key) {
         rbPublisher.removeCacheEntry(requestId, cacheId, key);
     }
 
     @Override
-    public void removeCacheEntry(String requestId, String cacheId, String key, Consumer<RemoveCacheEntryResult<I, K>> c) {
+    public void removeCacheEntry(String requestId, BI cacheId, BK key, Consumer<RemoveCacheEntryResult<I, K>> c) {
         cacheResponseObservers.removeCacheEntry(requestId, cacheId, key, c);
         rbPublisher.removeCacheEntry(requestId, cacheId, key);
     }
 
     @Override
-    public void getCacheEntries(String requestId, String cacheId) {
+    public void getCacheEntries(String requestId, BI cacheId) {
         rbPublisher.getCacheEntries(requestId, cacheId);
     }
 
     @Override
-    public void getCacheEntries(String requestId, String cacheId, Consumer<GetAllCacheEntriesResult<I, K, V>> c) {
+    public void getCacheEntries(String requestId, BI cacheId, Consumer<GetAllCacheEntriesResult<I, K, V>> c) {
         cacheResponseObservers.getCacheEntries(requestId, cacheId, c);
         rbPublisher.getCacheEntries(requestId, cacheId);
     }
@@ -146,23 +146,23 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot) {
+    public void sendCacheSubscribe(String requestId, List<BI> cacheId, boolean sendSnapshot) {
         rbPublisher.sendCacheSubscribe(requestId, cacheId, sendSnapshot);
     }
 
     @Override
-    public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
+    public void sendCacheSubscribe(String requestId, List<BI> cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
         cacheResponseObservers.sendCacheSubscribe(requestId, cacheId, sendSnapshot, c);
         rbPublisher.sendCacheSubscribe(requestId, cacheId, sendSnapshot);
     }
 
     @Override
-    public void sendCacheUnsubscribe(String requestId, String cacheId) {
+    public void sendCacheUnsubscribe(String requestId, BI cacheId) {
         rbPublisher.sendCacheUnsubscribe(requestId, cacheId);
     }
 
     @Override
-    public void sendCacheUnsubscribe(String requestId, String cacheId, Consumer<CacheUnsubscribeResult<I>> c) {
+    public void sendCacheUnsubscribe(String requestId, BI cacheId, Consumer<CacheUnsubscribeResult<I>> c) {
         cacheResponseObservers.sendCacheUnsubscribe(requestId, cacheId, c);
         rbPublisher.sendCacheUnsubscribe(requestId, cacheId);
     }
@@ -176,6 +176,39 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request, Consumer<BulkCacheOpsResult<I,K,V>> consumer) {
         cacheResponseObservers.sendBulkOperationsRequest(requestId, request, consumer);
         rbPublisher.sendBulkOperationsRequest(requestId, request);
+    }
+
+    @Override
+    public void incrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl) {
+        rbPublisher.incrementCounter(requestId, cacheId, key, amount, ttl);
+    }
+
+    @Override
+    public void incrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl, Consumer<IncrementCounterResult<I, K>> c) {
+        cacheResponseObservers.incrementCounter(requestId, cacheId, key, amount, ttl, c);
+        rbPublisher.incrementCounter(requestId, cacheId, key, amount, ttl);
+    }
+
+    @Override
+    public void decrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl) {
+        rbPublisher.decrementCounter(requestId, cacheId, key, amount, ttl);
+    }
+
+    @Override
+    public void decrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl, Consumer<DecrementCounterResult<I, K>> c) {
+        cacheResponseObservers.decrementCounter(requestId, cacheId, key, amount, ttl, c);
+        rbPublisher.decrementCounter(requestId, cacheId, key, amount, ttl);
+    }
+
+    @Override
+    public void setCounter(String requestId, BI cacheId, BK key, long value, long ttl) {
+        rbPublisher.setCounter(requestId, cacheId, key, value, ttl);
+    }
+
+    @Override
+    public void setCounter(String requestId, BI cacheId, BK key, long value, long ttl, Consumer<SetCounterResult<I, K>> c) {
+        cacheResponseObservers.setCounter(requestId, cacheId, key, value, ttl, c);
+        rbPublisher.setCounter(requestId, cacheId, key, value, ttl);
     }
 
     @Override
@@ -236,5 +269,20 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     @Override
     public void handleBulkOperationsResult(BulkCacheOpsResult<I, K, V> bulkCacheOpsResult) {
         cacheResponseHandler.handleBulkOperationsResult(bulkCacheOpsResult);
+    }
+
+    @Override
+    public void handleCounterIncremented(IncrementCounterResult<I, K> result) {
+        cacheResponseHandler.handleCounterIncremented(result);
+    }
+
+    @Override
+    public void handleCounterDecremented(DecrementCounterResult<I, K> result) {
+        cacheResponseHandler.handleCounterDecremented(result);
+    }
+
+    @Override
+    public void handleCounterSet(SetCounterResult<I, K> result) {
+        cacheResponseHandler.handleCounterSet(result);
     }
 }
