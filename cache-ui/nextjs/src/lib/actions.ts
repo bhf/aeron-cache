@@ -14,8 +14,10 @@ const headers = {
     'Content-Type': 'application/json'
 };
 
+const AERON_CACHE_API = process.env.AERON_CACHE_API ? process.env.AERON_CACHE_API : "http://localhost:7070";
+
 export async function getCacheAPIURI() {
-    return process.env.AERON_CACHE_API
+    return AERON_CACHE_API
 }
 
 export async function getJaegerURL() {
@@ -58,7 +60,7 @@ export async function createCacheRequest(currentState: { message: string, error:
 
     logger.info("Creating cache request with id", cacheId)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/', {
+        const rawResponse = await fetch(AERON_CACHE_API + '/cache/', {
             method: 'POST',
             headers,
             body: JSON.stringify({cacheId}),
@@ -87,7 +89,7 @@ export async function createCacheRequest(currentState: { message: string, error:
 export async function deleteCacheRequest(cacheId: string) {
     logger.info("Delete cache request with id", cacheId)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + cacheId, {
+        const rawResponse = await fetch(AERON_CACHE_API + '/cache/' + cacheId, {
                 method: 'DELETE',
                 headers,
                 cache: "no-cache"
@@ -111,7 +113,7 @@ export async function deleteCacheRequest(cacheId: string) {
 export async function clearCacheRequest(cacheId: string) {
     logger.info("Clear cache request with id", cacheId)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + cacheId, {
+        const rawResponse = await fetch(AERON_CACHE_API + '/cache/' + cacheId, {
                 method: 'PATCH',
                 headers,
                 cache: "no-cache"
@@ -138,7 +140,7 @@ export async function addItemToCacheRequest(formState: { message: string; error:
     const value = formData.get('value')
     logger.info("Add item request for cache with id: " + cacheId + ", on key: " + key + " with value: " + value)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + cacheId, {
+        const rawResponse = await fetch(AERON_CACHE_API + '/cache/' + cacheId, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({key, value}),
@@ -170,7 +172,7 @@ export async function addItemToCacheRequest(formState: { message: string; error:
 export async function removeItemFromCacheRequest(props: { cacheId: number, key: string }) {
     logger.info("Remove item request for cache with id " + props.cacheId + "on key " + props.key)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/cache/' + props.cacheId + "/" + props.key, {
+        const rawResponse = await fetch(AERON_CACHE_API + '/cache/' + props.cacheId + "/" + props.key, {
                 method: 'DELETE',
                 headers,
                 body: JSON.stringify(props),
@@ -202,7 +204,7 @@ export async function createCounterCacheRequest(currentState: { message: string,
 
     logger.info("Creating counter cache request with id", cacheId)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/counters/', {
+        const rawResponse = await fetch(AERON_CACHE_API + '/counters/', {
             method: 'POST',
             headers,
             body: JSON.stringify({cacheId}),
@@ -231,7 +233,7 @@ export async function createCounterCacheRequest(currentState: { message: string,
 export async function deleteCounterCacheRequest(cacheId: string) {
     logger.info("Delete counter cache request with id", cacheId)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/counters/' + cacheId, {
+        const rawResponse = await fetch(AERON_CACHE_API + '/counters/' + cacheId, {
                 method: 'DELETE',
                 headers,
                 cache: "no-cache"
@@ -255,7 +257,7 @@ export async function deleteCounterCacheRequest(cacheId: string) {
 export async function clearCounterCacheRequest(cacheId: string) {
     logger.info("Clear counter cache request with id", cacheId)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/counters/' + cacheId, {
+        const rawResponse = await fetch(AERON_CACHE_API + '/counters/' + cacheId, {
                 method: 'PATCH',
                 headers,
                 cache: "no-cache"
@@ -282,7 +284,7 @@ export async function addCounterRequest(formState: { message: string; error: boo
     const value = Number(formData.get('value'))
     logger.info("Add counter request for cache with id: " + cacheId + ", on key: " + key + " with value: " + value)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/counters/' + cacheId, {
+        const rawResponse = await fetch(AERON_CACHE_API + '/counters/' + cacheId, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({key, value}),
@@ -313,7 +315,7 @@ export async function addCounterRequest(formState: { message: string; error: boo
 export async function removeCounterRequest(props: { cacheId: number, key: string }) {
     logger.info("Remove counter request for cache with id " + props.cacheId + " on key " + props.key)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/counters/' + props.cacheId + "/" + props.key, {
+        const rawResponse = await fetch(AERON_CACHE_API + '/counters/' + props.cacheId + "/" + props.key, {
                 method: 'DELETE',
                 headers,
                 cache: "no-cache"
@@ -336,7 +338,7 @@ export async function removeCounterRequest(props: { cacheId: number, key: string
 export async function incrementCounterRequest(props: { cacheId: number, key: string, amount: number }) {
     logger.info("Increment counter request for cache " + props.cacheId + " on key " + props.key + " by " + props.amount)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/counters/increment/' + props.cacheId, {
+        const rawResponse = await fetch(AERON_CACHE_API + '/counters/increment/' + props.cacheId, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({key: props.key, amount: props.amount}),
@@ -360,7 +362,7 @@ export async function incrementCounterRequest(props: { cacheId: number, key: str
 export async function decrementCounterRequest(props: { cacheId: number, key: string, amount: number }) {
     logger.info("Decrement counter request for cache " + props.cacheId + " on key " + props.key + " by " + props.amount)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/counters/decrement/' + props.cacheId, {
+        const rawResponse = await fetch(AERON_CACHE_API + '/counters/decrement/' + props.cacheId, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({key: props.key, amount: props.amount}),
@@ -384,7 +386,7 @@ export async function decrementCounterRequest(props: { cacheId: number, key: str
 export async function setCounterRequest(props: { cacheId: number, key: string, value: number }) {
     logger.info("Set counter request for cache " + props.cacheId + " on key " + props.key + " to " + props.value)
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/counters/set/' + props.cacheId, {
+        const rawResponse = await fetch(AERON_CACHE_API + '/counters/set/' + props.cacheId, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({key: props.key, value: props.value}),
@@ -407,7 +409,7 @@ export async function setCounterRequest(props: { cacheId: number, key: string, v
 export async function snapshotCacheRequest() {
     logger.info("Snapshot request")
     try {
-        const rawResponse = await fetch(process.env.AERON_CACHE_API + '/snapshot', {
+        const rawResponse = await fetch(AERON_CACHE_API + '/snapshot', {
             method: 'POST',
             headers,
             cache: "no-cache"
