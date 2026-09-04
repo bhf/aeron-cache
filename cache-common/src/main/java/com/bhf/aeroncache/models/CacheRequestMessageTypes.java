@@ -32,4 +32,5 @@ public class CacheRequestMessageTypes {
     public static final int REMOVE_COUNTER_ENTRY_MSG_ID = 110;
     public static final int INCREMENT_COUNTER_ENTRY_MSG_ID = 111;
     public static final int DECREMENT_COUNTER_ENTRY_MSG_ID = 112;
+    public static final int SET_COUNTER_ENTRY_MSG_ID = 113;
 }

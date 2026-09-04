@@ -124,6 +124,13 @@ public class ClusterMessagePublisher<BI, BK, BV> implements CacheRequestPublishe
     }
 
     @Override
+    public void setCounter(String requestId, BI cacheId, BK key, long value, long ttl) {
+        var length = ((CountersCacheRequestEncoder<BI, BK, BV>) cacheRequestEncoder).encodeSetCounterRequest(requestId, cacheId, key, value, ttl, msgBuffer);
+        publishToCache(msgBuffer, 0, length);
+        log.info("Sent set counter request on cache {}, key {}, value {}, with request Id {}", cacheId, key, value, requestId);
+    }
+
+    @Override
     public void getCacheEntriesBlocking(String requestId, BI cacheId) {
         getCacheEntries(requestId, cacheId);
         waitForResult(cluster);

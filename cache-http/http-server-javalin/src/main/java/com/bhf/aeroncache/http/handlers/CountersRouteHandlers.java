@@ -6,6 +6,7 @@ import com.bhf.aeroncache.http.requests.DecrementCounterRequest;
 import com.bhf.aeroncache.http.requests.IncrementCounterRequest;
 import com.bhf.aeroncache.http.requests.PutCounterRequest;
 import com.bhf.aeroncache.http.requests.PutTimedCounterRequest;
+import com.bhf.aeroncache.http.requests.SetCounterRequest;
 import com.bhf.aeroncache.http.responses.*;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.ReusableLong;
@@ -188,6 +189,41 @@ public class CountersRouteHandlers extends AbstractRouteHandlers<ReusableLong, L
             ctx.json(response);
         } catch (Exception e) {
             var errorMsg = "Badly formed request to decrement counter from request: " + ctx.body();
+            log.warn(errorMsg);
+            HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
+    public void handleSetItemRequest(Context ctx) {
+        try {
+            var cacheId = ctx.pathParam("cacheId");
+            var request = ctx.bodyAsClass(SetCounterRequest.class);
+            log.info("Got set counter request on cacheId {}, key {}, value {}", cacheId, request.key(), request.value());
+
+            var requestId = getRequestId(ctx);
+            CompletableFuture<SetCounterResponse> future = new CompletableFuture<>();
+            Consumer<SetCounterResult<ReusableString, ReusableString>> consumer = c -> {
+                log.info("Set counter response from cluster on cacheId {}, key {}, value {}", c.getCacheId(),
+                        c.getKey(), c.getCounterValue());
+                var noCache = c.getStatus() == CacheOperationStatus.UNKNOWN_CACHE;
+                var response = noCache ?
+                        new SetCounterResponse("0", "NA", 0L, c.getStatus()) :
+                        new SetCounterResponse(c.getCacheId().value().toString(), c.getKey().value().toString(),
+                                c.getCounterValue(), c.getStatus());
+                future.complete(response);
+            };
+            long ttl = 0;
+            CompletableFuture.runAsync(() -> publisher.setCounter(requestId, cacheId,
+                    request.key(), request.value(), ttl, consumer));
+
+            var response = future.get();
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to set counter from request: " + ctx.body();
             log.warn(errorMsg);
             HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);

@@ -130,4 +130,17 @@ public interface CacheRequestPublisher<BI,BK,BV> {
     default void decrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl) {
         throw new UnsupportedOperationException("Decrement counter is only supported for counter caches");
     }
+
+    /**
+     * Send a message to set a counter to a given value.
+     *
+     * @param requestId The Id of this request.
+     * @param cacheId   The ID of the counter cache.
+     * @param key       The key of the counter to set.
+     * @param value     The value to set the counter to.
+     * @param ttl       The time to live for the counter entry.
+     */
+    default void setCounter(String requestId, BI cacheId, BK key, long value, long ttl) {
+        throw new UnsupportedOperationException("Set counter is only supported for counter caches");
+    }
 }

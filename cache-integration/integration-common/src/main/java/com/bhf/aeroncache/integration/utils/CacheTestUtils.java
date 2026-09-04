@@ -113,6 +113,26 @@ public class CacheTestUtils {
     }
 
     /**
+     * Set a counter in a cache to a given value as part of setting up a test scenario.
+     *
+     * @param cacheId The ID of the counter cache holding the counter.
+     * @param key     The key of the counter to set.
+     * @param value   The value to set the counter to.
+     */
+    public static void setCounter(String cacheId, String key, long value, BackendTestResource backend, TestEndpointsProvider endpointsProvider) {
+        JSONObject jsonObj = new JSONObject()
+                .put("key", key)
+                .put("value", value);
+
+        var endpoint = endpointsProvider.getPutItemEndpointCache() + "set/" + cacheId;
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .body(jsonObj.toString())
+                .request(Method.POST, endpoint);
+    }
+
+    /**
      * Remove an item from a cache as part of setting up a test scenario.
      *
      * @param cacheId The cache from which to remove the item.
