@@ -22,6 +22,7 @@ public class ReusableStringCountersCacheResponseDecoder implements CountersCache
     private final SetCounterResponseDecoder setCounterResponseDecoder = new SetCounterResponseDecoder();
     private final CounterCacheSubscriptionResponseDecoder cacheSubscriptionResponseDecoder = new CounterCacheSubscriptionResponseDecoder();
     private final CounterCacheUnsubscribeResponseDecoder cacheUnsubscribeResponseDecoder = new CounterCacheUnsubscribeResponseDecoder();
+    private final AllCounterCacheStatsResultDecoder allCacheStatsResultDecoder = new AllCounterCacheStatsResultDecoder();
 
     @Override
     public void decodeIncrementCounterResponse(DirectBuffer buffer, int offset, IncrementCounterResult<ReusableString, ReusableString> result) {
@@ -251,6 +252,29 @@ public class ReusableStringCountersCacheResponseDecoder implements CountersCache
 
     @Override
     public void decodeAllCacheStatsResult(DirectBuffer buffer, int offset, CacheStatsResult<ReusableString> cacheStatsResult) {
+        allCacheStatsResultDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var status = getOperationStatus(allCacheStatsResultDecoder.status());
+        cacheStatsResult.clear();
+        cacheStatsResult.setOperationStatus(status);
+
+        for (AllCounterCacheStatsResultDecoder.StatsDecoder item : allCacheStatsResultDecoder.stats()) {
+            var added = item.added();
+            var removed = item.removed();
+            var cleared = item.cleared();
+            var size = item.size();
+            var cacheId = item.cacheId();
+            var id = new ReusableString();
+            id.copyFrom(cacheId);
+            var stats = new CacheStats<>(id);
+            stats.addedCount = added;
+            stats.removedCount = removed;
+            stats.clearedCount = cleared;
+            stats.size = size;
+            cacheStatsResult.getStats().add(stats);
+        }
+
+        var requestId = allCacheStatsResultDecoder.requestId();
+        cacheStatsResult.setRequestId(requestId);
     }
 
 

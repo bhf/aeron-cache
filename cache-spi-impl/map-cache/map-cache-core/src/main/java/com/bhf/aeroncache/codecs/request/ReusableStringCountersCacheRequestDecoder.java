@@ -18,7 +18,7 @@ public class ReusableStringCountersCacheRequestDecoder implements CountersCacheR
     private final GetCounterCacheEntryDecoder getCacheEntryDecoder = new GetCounterCacheEntryDecoder();
     private final GetAllCounterCacheEntriesDecoder getAllCacheEntriesDecoder = new GetAllCounterCacheEntriesDecoder();
     private final DeleteCounterCacheDecoder deleteCacheDecoder = new DeleteCounterCacheDecoder();
-    private final GetCacheStatsDecoder getCacheStatsDecoder = new GetCacheStatsDecoder();
+    private final GetCounterStatsDecoder getCacheStatsDecoder = new GetCounterStatsDecoder();
     private final CounterCacheUnsubscribeRequestDecoder cacheUnsubscribeRequestDecoder = new CounterCacheUnsubscribeRequestDecoder();
     private final BulkOperationRequestDecoder bulkOperationRequestDecoder = new BulkOperationRequestDecoder();
     private final IncrementCounterRequestDecoder incrementCounterRequestDecoder = new IncrementCounterRequestDecoder();
@@ -133,7 +133,10 @@ public class ReusableStringCountersCacheRequestDecoder implements CountersCacheR
 
     @Override
     public void decodeGetCacheStatsRequest(DirectBuffer buffer, int offset, GetCacheStatsRequestDetails getCacheStatsRequestDetails) {
-
+        getCacheStatsRequestDetails.clear();
+        getCacheStatsDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var requestId = getCacheStatsDecoder.requestId();
+        getCacheStatsRequestDetails.setRequestId(requestId);
     }
 
     @Override

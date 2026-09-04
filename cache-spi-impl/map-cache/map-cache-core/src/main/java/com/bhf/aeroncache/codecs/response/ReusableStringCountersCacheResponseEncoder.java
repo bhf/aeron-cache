@@ -28,6 +28,7 @@ public class ReusableStringCountersCacheResponseEncoder implements CountersCache
     private final IncrementCounterResponseEncoder incrementEncoder = new IncrementCounterResponseEncoder();
     private final DecrementCounterResponseEncoder decrementEncoder = new DecrementCounterResponseEncoder();
     private final SetCounterResponseEncoder setEncoder = new SetCounterResponseEncoder();
+    private final AllCounterCacheStatsResultEncoder cacheStatsResultEncoder = new AllCounterCacheStatsResultEncoder();
 
 
     @Override
@@ -171,7 +172,24 @@ public class ReusableStringCountersCacheResponseEncoder implements CountersCache
 
     @Override
     public int encodeCacheStatsResult(CacheStatsResult<ReusableString> cacheStatsResult, MutableDirectBuffer egressBuffer) {
-        return 0;
+        cacheStatsResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        cacheStatsResultEncoder.status(com.bhf.aeroncache.messages.OperationStatus.SUCCESS);
+
+        var values = cacheStatsResult.getStats();
+        int size = values.size();
+        var itemsEncoder = cacheStatsResultEncoder.statsCount(size);
+        values.forEach(v -> {
+            itemsEncoder.next();
+            itemsEncoder.added(v.addedCount);
+            itemsEncoder.removed(v.removedCount);
+            itemsEncoder.cleared(v.clearedCount);
+            itemsEncoder.size(v.size);
+            itemsEncoder.cacheId(v.getCacheId().value());
+        });
+
+        cacheStatsResultEncoder.requestId(cacheStatsResult.getRequestId());
+
+        return cacheStatsResultEncoder.encodedLength() + headerEncoder.encodedLength();
     }
 
     @Override

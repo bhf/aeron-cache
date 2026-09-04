@@ -255,4 +255,22 @@
         <data name="requestId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
+    <sbe:message name="GetCounterStats" id="49" semanticType="GetCounterStats"
+                 description="Get stats on all counter caches">
+        <data name="requestId" id="1" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="AllCounterCacheStatsResult" id="50" semanticType="AllCounterCacheStatsResult"
+                 description="All of the counter cache stats">
+        <field name="status" id="1" type="OperationStatus"/>
+        <group name="stats" id="20" dimensionType="groupSizeEncoding">
+            <field name="added" id="21" type="int64"/>
+            <field name="removed" id="22" type="int64"/>
+            <field name="cleared" id="23" type="int64"/>
+            <field name="size" id="24" type="int64"/>
+            <data name="cacheId" id="25" type="varStringEncoding"/>
+        </group>
+        <data name="requestId" id="3" type="varStringEncoding"/>
+    </sbe:message>
+
 </sbe:messageSchema>

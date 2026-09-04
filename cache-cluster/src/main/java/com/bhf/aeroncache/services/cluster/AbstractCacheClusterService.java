@@ -208,6 +208,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
             handleDecrementCounterRequest(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersSubscriptionService, countersCacheManager);
         } else if (templateId == schemaDetails.getSetCounterRequestId()) {
             handleSetCounterRequest(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersSubscriptionService, countersCacheManager);
+        } else if (templateId == schemaDetails.getGetCounterStatsId()) {
+            handleGetCacheStats(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersCacheManager);
         }
         else {
             log.warn("Unexpected message with ID: {}", templateId);
@@ -659,7 +661,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param decoder                   The request decoder to use.
      * @param encoder                   The response encoder to use.
      */
-    <VT extends Reusable> void handleGetCacheStats(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, V> encoder, CacheManager<I, K, VT> cacheManager) {
+    <VT extends Reusable> void handleGetCacheStats(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, VT> encoder, CacheManager<I, K, VT> cacheManager) {
         GetCacheStatsRequestDetails requestDetails = getCacheStatsRequestDetails(session, buffer, offset, decoder, getCacheStatsRequestDetails);
         tracingService.startGetAllStatsRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
@@ -1212,7 +1214,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session          The client session.
      * @param encoder
      */
-    protected void handlePostGetCacheStats(CacheStatsResult<I> cacheStatsResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
+    protected <VT extends Reusable> void handlePostGetCacheStats(CacheStatsResult<I> cacheStatsResult, ClientSession session, CacheResponseEncoder<I, K, VT> encoder) {
         var length = encoder.encodeCacheStatsResult(cacheStatsResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
     }

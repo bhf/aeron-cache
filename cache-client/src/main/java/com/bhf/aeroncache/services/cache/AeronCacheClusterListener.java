@@ -154,6 +154,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
             handleSetCounterResult(buffer, offset, countersCacheResponseDecoder);
         } else if (templateId == schemaDetails.getCounterCacheEntryUpdateId()) {
             handleCacheEntryUpdated(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks, counterCacheEntryUpdateResult);
+        } else if (templateId == schemaDetails.getAllCounterCacheStatsResultId()) {
+            handleAllCounterCacheStatsResult(buffer, offset, countersCacheResponseDecoder);
         }
         else {
             log.warn("Got unknown message with TID {}", templateId);
@@ -306,6 +308,22 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleAllCacheStats(cacheStatsResult);
+        }
+    }
+
+    /**
+     * Handle the result of getting all counter cache stats.
+     *
+     * @param buffer  The buffer to decode from.
+     * @param offset  The offset at which to start decoding.
+     * @param decoder The decoder to use.
+     */
+    private void handleAllCounterCacheStatsResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ReusableLong> decoder) {
+        decoder.decodeAllCacheStatsResult(buffer, offset, cacheStatsResult);
+        log.debug("Got counter cache stats result, requestId: {}", cacheStatsResult.getRequestId());
+
+        if (countersResultsCallbacks != null) {
+            countersResultsCallbacks.handleAllCacheStats(cacheStatsResult);
         }
     }
 

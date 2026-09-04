@@ -23,6 +23,7 @@ public class ReusableStringCountersCacheRequestEncoder implements CountersCacheR
     private final GetAllCounterCacheEntriesEncoder getAllCacheEntriesEncoder = new GetAllCounterCacheEntriesEncoder();
     private final CounterCacheSubscriptionRequestEncoder cacheSubscriptionRequestEncoder = new CounterCacheSubscriptionRequestEncoder();
     private final CounterCacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder = new CounterCacheUnsubscribeRequestEncoder();
+    private final GetCounterStatsEncoder getCacheStatsEncoder = new GetCounterStatsEncoder();
 
 
     @Override
@@ -145,7 +146,9 @@ public class ReusableStringCountersCacheRequestEncoder implements CountersCacheR
 
     @Override
     public int encodeGetAllCacheStats(String requestId, MutableDirectBuffer msgBuffer) {
-        return 0;
+        getCacheStatsEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .requestId(requestId);
+        return getCacheStatsEncoder.encodedLength() + headerEncoder.encodedLength();
     }
 
     @Override

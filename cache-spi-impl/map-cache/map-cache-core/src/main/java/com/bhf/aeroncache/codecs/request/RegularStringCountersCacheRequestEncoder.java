@@ -21,6 +21,7 @@ public class RegularStringCountersCacheRequestEncoder implements CountersCacheRe
     private final IncrementCounterRequestEncoder incrementCounterRequestEncoder = new IncrementCounterRequestEncoder();
     private final DecrementCounterRequestEncoder decrementCounterRequestEncoder = new DecrementCounterRequestEncoder();
     private final SetCounterRequestEncoder setCounterRequestEncoder = new SetCounterRequestEncoder();
+    private final GetCounterStatsEncoder getCacheStatsEncoder = new GetCounterStatsEncoder();
 
     @Override
     public int encodeIncrementCounterRequest(String requestId, String cacheId, String counterId, long amount, long ttl, MutableDirectBuffer msgBuffer) {
@@ -141,7 +142,9 @@ public class RegularStringCountersCacheRequestEncoder implements CountersCacheRe
 
     @Override
     public int encodeGetAllCacheStats(String requestId, MutableDirectBuffer msgBuffer) {
-        return 0;
+        getCacheStatsEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .requestId(requestId);
+        return getCacheStatsEncoder.encodedLength() + headerEncoder.encodedLength();
     }
 
     @Override

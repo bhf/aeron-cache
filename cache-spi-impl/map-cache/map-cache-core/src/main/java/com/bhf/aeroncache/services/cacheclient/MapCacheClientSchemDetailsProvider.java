@@ -128,4 +128,9 @@ public class MapCacheClientSchemDetailsProvider implements CacheClientSchemDetai
     public int getCounterCacheEntryUpdateId() {
         return CounterCacheEntryUpdateDecoder.TEMPLATE_ID;
     }
+
+    @Override
+    public int getAllCounterCacheStatsResultId() {
+        return AllCounterCacheStatsResultDecoder.TEMPLATE_ID;
+    }
 }

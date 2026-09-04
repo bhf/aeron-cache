@@ -101,6 +101,8 @@ public class HttpApplication {
     public static final CacheStatsTracker statsTracker = new CacheStatsTracker();
     public static final Set<String> allCaches = new ConcurrentSkipListSet<>();
     public static final Map<String, Long> cacheToSize = new ConcurrentHashMap<>();
+    public static final Set<String> allCounterCaches = new ConcurrentSkipListSet<>();
+    public static final Map<String, Long> counterCacheToSize = new ConcurrentHashMap<>();
 
     public static String tracingServiceName;
     private static AgentRunner agentRunner;

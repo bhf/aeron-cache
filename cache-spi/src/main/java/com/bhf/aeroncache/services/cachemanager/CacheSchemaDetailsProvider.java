@@ -51,4 +51,6 @@ public interface CacheSchemaDetailsProvider {
     int getCounterDecrementRequestId();
 
     int getSetCounterRequestId();
+
+    int getGetCounterStatsId();
 }

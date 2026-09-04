@@ -118,4 +118,9 @@ public class MapCacheSchemaDetailsProvider implements CacheSchemaDetailsProvider
     public int getSetCounterRequestId() {
         return SetCounterRequestEncoder.TEMPLATE_ID;
     }
+
+    @Override
+    public int getGetCounterStatsId() {
+        return GetCounterStatsEncoder.TEMPLATE_ID;
+    }
 }

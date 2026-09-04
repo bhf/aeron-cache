@@ -53,4 +53,6 @@ public interface CacheClientSchemDetailsProvider {
     int getSetCounterResponseId();
 
     int getCounterCacheEntryUpdateId();
+
+    int getAllCounterCacheStatsResultId();
 }

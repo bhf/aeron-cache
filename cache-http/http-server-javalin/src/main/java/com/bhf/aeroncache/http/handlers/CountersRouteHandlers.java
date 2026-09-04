@@ -33,6 +33,63 @@ public class CountersRouteHandlers extends AbstractRouteHandlers<ReusableLong, L
     }
 
     @Override
+    protected void onCreateSuccess(CreateCacheResponse response) {
+        HttpApplication.allCounterCaches.add(response.cacheId());
+    }
+
+    @Override
+    protected void onDeleteCacheSuccess(DeleteCacheResponse response) {
+        HttpApplication.allCounterCaches.remove(response.cacheId());
+    }
+
+    /**
+     * Handle getting details of available counter caches.
+     *
+     * @param context The context.
+     */
+    @Override
+    public void handleGetCachesRequest(Context context) {
+        log.info("Got request to get all counter cache details");
+        List<CacheDetails> cacheDetails = new ArrayList<>();
+        for (var l : HttpApplication.allCounterCaches) {
+            var itemCount = HttpApplication.counterCacheToSize.getOrDefault(l, 0L);
+            cacheDetails.add(new CacheDetails(l, itemCount));
+        }
+        context.json(cacheDetails);
+    }
+
+    /**
+     * Handle a request to get counter cache stats. Reconciles the tracked
+     * counter caches against the counter cluster's view, keeping them
+     * separate from the regular cache tracking.
+     *
+     * @param ctx The context.
+     */
+    @Override
+    public void handleGetStatsRequest(Context ctx) {
+        log.info("Got request to get counter cache stats");
+
+        try {
+            var requestId = getRequestId(ctx);
+            CompletableFuture<com.bhf.aeroncache.http.responses.CacheStats> future = new CompletableFuture<>();
+            Consumer<CacheStatsResult<ReusableString>> consumer = HTTPConsumerUtils.getCacheStatsResultConsumer(future, HttpApplication.statsTracker, HttpApplication.counterCacheToSize, HttpApplication.allCounterCaches);
+
+            CompletableFuture.runAsync(() -> publisher.getAllCacheStats(requestId, consumer));
+            var response = future.get();
+
+            ctx.status(HTTPStatusUtils.OK);
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to get counter cache stats";
+            log.warn(errorMsg);
+            HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
+    @Override
     public void handleGetItemRequest(Context ctx) {
         try {
             var cacheId = ctx.pathParam("cacheId");
