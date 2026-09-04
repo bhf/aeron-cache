@@ -93,6 +93,26 @@ public class CacheTestUtils {
     }
 
     /**
+     * Decrement a counter in a cache as part of setting up a test scenario.
+     *
+     * @param cacheId The ID of the counter cache holding the counter.
+     * @param key     The key of the counter to decrement.
+     * @param amount  The amount to decrement the counter by.
+     */
+    public static void decrementCounter(String cacheId, String key, long amount, BackendTestResource backend, TestEndpointsProvider endpointsProvider) {
+        JSONObject jsonObj = new JSONObject()
+                .put("key", key)
+                .put("amount", amount);
+
+        var endpoint = endpointsProvider.getPutItemEndpointCache() + "decrement/" + cacheId;
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .body(jsonObj.toString())
+                .request(Method.POST, endpoint);
+    }
+
+    /**
      * Remove an item from a cache as part of setting up a test scenario.
      *
      * @param cacheId The cache from which to remove the item.

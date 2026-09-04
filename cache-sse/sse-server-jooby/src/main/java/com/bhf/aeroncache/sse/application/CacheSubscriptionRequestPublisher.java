@@ -254,4 +254,24 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             });
         }
     }
+
+    @Override
+    public void handleCounterDecremented(DecrementCounterResult<I, K> result) {
+        log.info("Got counter decremented to send to sse");
+        var subscribers = cacheSubscriptions.get(result.getCacheId().value());
+
+        if (subscribers != null) {
+            var cacheId = String.valueOf(result.getCacheId());
+            var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
+            var key = result.getKey().value().toString();
+            var value = result.getCounterValue();
+            subscribers.forEach(c -> {
+                try {
+                    c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, result.getRequestId()));
+                } catch (Exception e) {
+
+                }
+            });
+        }
+    }
 }

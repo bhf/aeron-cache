@@ -117,6 +117,13 @@ public class ClusterMessagePublisher<BI, BK, BV> implements CacheRequestPublishe
     }
 
     @Override
+    public void decrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl) {
+        var length = ((CountersCacheRequestEncoder<BI, BK, BV>) cacheRequestEncoder).encodeDecrementCounterRequest(requestId, cacheId, key, amount, ttl, msgBuffer);
+        publishToCache(msgBuffer, 0, length);
+        log.info("Sent decrement counter request on cache {}, key {}, amount {}, with request Id {}", cacheId, key, amount, requestId);
+    }
+
+    @Override
     public void getCacheEntriesBlocking(String requestId, BI cacheId) {
         getCacheEntries(requestId, cacheId);
         waitForResult(cluster);

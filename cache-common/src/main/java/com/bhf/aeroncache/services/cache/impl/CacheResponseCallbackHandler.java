@@ -75,4 +75,9 @@ public class CacheResponseCallbackHandler<I extends Reusable, K extends Reusable
     public void handleCounterIncremented(IncrementCounterResult<I, K> result) {
         observerGroup.handleCounterIncremented(result);
     }
+
+    @Override
+    public void handleCounterDecremented(DecrementCounterResult<I, K> result) {
+        observerGroup.handleCounterDecremented(result);
+    }
 }

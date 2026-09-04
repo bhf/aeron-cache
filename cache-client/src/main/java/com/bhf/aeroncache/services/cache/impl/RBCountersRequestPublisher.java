@@ -35,7 +35,7 @@ public class RBCountersRequestPublisher extends AbstractRBRequestPublisher<Long>
         byte[] requestIdBytes = requestId.getBytes(StandardCharsets.UTF_8);
         byte[] cacheIdBytes = cacheId.getBytes(StandardCharsets.UTF_8);
         byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
-        // Value is a Long: 8 bytes instead of length-prefixed string
+        
         var desiredLength = (requestIdBytes.length + 4) + (cacheIdBytes.length + 4) + (keyBytes.length + 4) + 8 + 8;
         log.trace("DESIRED LENGTH=" + desiredLength);
 
@@ -85,7 +85,7 @@ public class RBCountersRequestPublisher extends AbstractRBRequestPublisher<Long>
         byte[] requestIdBytes = requestId.getBytes(StandardCharsets.UTF_8);
         byte[] cacheIdBytes = cacheId.getBytes(StandardCharsets.UTF_8);
         byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
-        // amount and ttl are longs: 8 bytes each
+
         var desiredLength = (requestIdBytes.length + 4) + (cacheIdBytes.length + 4) + (keyBytes.length + 4) + 8 + 8;
         log.trace("DESIRED LENGTH=" + desiredLength);
 
@@ -122,6 +122,51 @@ public class RBCountersRequestPublisher extends AbstractRBRequestPublisher<Long>
         } catch (Exception e) {
             rb.abort(claimIndex);
             log.error("Error whilst trying to write increment counter entry to RingBuffer", e);
+        }
+    }
+
+    @Override
+    public void decrementCounter(String requestId, String cacheId, String key, long amount, long ttl) {
+        byte[] requestIdBytes = requestId.getBytes(StandardCharsets.UTF_8);
+        byte[] cacheIdBytes = cacheId.getBytes(StandardCharsets.UTF_8);
+        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+
+        var desiredLength = (requestIdBytes.length + 4) + (cacheIdBytes.length + 4) + (keyBytes.length + 4) + 8 + 8;
+        log.trace("DESIRED LENGTH=" + desiredLength);
+
+        var claimIndex = -1;
+        while ((claimIndex = rb.tryClaim(CacheRequestMessageTypes.DECREMENT_COUNTER_ENTRY_MSG_ID, desiredLength)) < 0) {
+        }
+
+        try {
+            var buffer = rb.buffer();
+            int writeCursor = claimIndex;
+
+            buffer.putInt(writeCursor, requestIdBytes.length);
+            writeCursor += 4;
+            buffer.putBytes(writeCursor, requestIdBytes);
+            writeCursor += requestIdBytes.length;
+
+            buffer.putInt(writeCursor, cacheIdBytes.length);
+            writeCursor += 4;
+            buffer.putBytes(writeCursor, cacheIdBytes);
+            writeCursor += cacheIdBytes.length;
+
+            buffer.putInt(writeCursor, keyBytes.length);
+            writeCursor += 4;
+            buffer.putBytes(writeCursor, keyBytes);
+            writeCursor += keyBytes.length;
+
+            buffer.putLong(writeCursor, amount);
+            writeCursor += 8;
+
+            buffer.putLong(writeCursor, ttl);
+            writeCursor += 8;
+            log.trace("TOTAL WRITTEN BYTES=" + (writeCursor - claimIndex));
+            rb.commit(claimIndex);
+        } catch (Exception e) {
+            rb.abort(claimIndex);
+            log.error("Error whilst trying to write decrement counter entry to RingBuffer", e);
         }
     }
 }

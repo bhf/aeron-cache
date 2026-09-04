@@ -190,6 +190,17 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     }
 
     @Override
+    public void decrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl) {
+        rbPublisher.decrementCounter(requestId, cacheId, key, amount, ttl);
+    }
+
+    @Override
+    public void decrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl, Consumer<DecrementCounterResult<I, K>> c) {
+        cacheResponseObservers.decrementCounter(requestId, cacheId, key, amount, ttl, c);
+        rbPublisher.decrementCounter(requestId, cacheId, key, amount, ttl);
+    }
+
+    @Override
     public void handleCacheEntryResult(GetCacheEntryResult<I, K, V> getCacheEntryResult) {
         cacheResponseHandler.handleCacheEntryResult(getCacheEntryResult);
     }
@@ -252,5 +263,10 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     @Override
     public void handleCounterIncremented(IncrementCounterResult<I, K> result) {
         cacheResponseHandler.handleCounterIncremented(result);
+    }
+
+    @Override
+    public void handleCounterDecremented(DecrementCounterResult<I, K> result) {
+        cacheResponseHandler.handleCounterDecremented(result);
     }
 }

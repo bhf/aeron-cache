@@ -36,6 +36,7 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     final Map<String, Consumer<CacheUnsubscribeResult<I>>> cacheUnsubscribeObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<BulkCacheOpsResult<I,K,V>>> bulkOpsObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<IncrementCounterResult<I, K>>> incrementCounterObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<DecrementCounterResult<I, K>>> decrementCounterObservers = new ConcurrentHashMap<>();
 
     Consumer<CreateCacheResult<I>> createCacheConsumer;
     Consumer<AddCacheEntryResult<I, K>> addCacheEntryConsumer;
@@ -106,6 +107,11 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     @Override
     public void incrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl, Consumer<IncrementCounterResult<I, K>> c) {
         incrementCounterObservers.put(requestId, c);
+    }
+
+    @Override
+    public void decrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl, Consumer<DecrementCounterResult<I, K>> c) {
+        decrementCounterObservers.put(requestId, c);
     }
 
     @Override
@@ -249,6 +255,16 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
         var targetId = result.getRequestId();
         log.info("Got counter increment response on requestId {}", targetId);
         var observer = incrementCounterObservers.remove(targetId);
+        if (observer != null) {
+            observer.accept(result);
+        }
+    }
+
+    @Override
+    public void handleCounterDecremented(DecrementCounterResult<I, K> result) {
+        var targetId = result.getRequestId();
+        log.info("Got counter decrement response on requestId {}", targetId);
+        var observer = decrementCounterObservers.remove(targetId);
         if (observer != null) {
             observer.accept(result);
         }

@@ -127,4 +127,18 @@ public interface CacheRequestConsumingPublisher<RI extends Reusable, RK extends 
     default void incrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl, Consumer<IncrementCounterResult<RI, RK>> c) {
         throw new UnsupportedOperationException("Increment counter is only supported for counter caches");
     }
+
+    /**
+     * Send a message to decrement a counter and handle the result via a consumer.
+     *
+     * @param requestId The request ID.
+     * @param cacheId   The ID of the counter cache.
+     * @param key       The key of the counter to decrement.
+     * @param amount    The amount to decrement the counter by.
+     * @param ttl       The time to live for the counter entry.
+     * @param c         The consumer that will handle the result.
+     */
+    default void decrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl, Consumer<DecrementCounterResult<RI, RK>> c) {
+        throw new UnsupportedOperationException("Decrement counter is only supported for counter caches");
+    }
 }
