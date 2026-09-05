@@ -1,5 +1,6 @@
 plugins {
     `java-library`
+    application
 }
 
 val sbeToolConfig by configurations.creating
@@ -52,4 +53,13 @@ tasks.test {
     useJUnitPlatform()
     jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED")
     jvmArgs("--add-opens", "java.base/java.util.zip=ALL-UNNAMED")
+}
+
+application {
+    // Local manual test driver: creates a random cache and publishes random key/values on an interval.
+    mainClass.set("com.bhf.aeroncache.gateway.client.Main")
+    applicationDefaultJvmArgs = listOf(
+        "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
+        "--add-opens", "java.base/java.util.zip=ALL-UNNAMED"
+    )
 }
