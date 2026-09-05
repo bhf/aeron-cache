@@ -1,17 +1,17 @@
-install-backend: install-cluster install-http install-ws install-sse install-http-near
-uninstall-backend: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near
+install-backend: install-cluster install-http install-ws install-sse install-gateway install-http-near
+uninstall-backend: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-gateway uninstall-http-near
 
 install-frontend: install-ui
 uninstall-frontend: uninstall-ui
 
-install-all: install-cluster install-http install-ws install-sse install-http-near install-ui
-uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-http-near uninstall-ui
+install-all: install-cluster install-http install-ws install-sse install-gateway install-http-near install-ui
+uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-gateway uninstall-http-near uninstall-ui
 
-install-all-ephemeral: install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral install-ui
-uninstall-all-ephemeral: uninstall-ephemeral uninstall-http uninstall-ws uninstall-sse uninstall-ui
+install-all-ephemeral: install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral install-gateway-ephemeral install-ui
+uninstall-all-ephemeral: uninstall-ephemeral uninstall-http uninstall-ws uninstall-sse uninstall-gateway uninstall-ui
 
-install-backend-ephemeral: install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral
-uninstall-backend-ephemeral: uninstall-ephemeral uninstall-http uninstall-ws uninstall-sse
+install-backend-ephemeral: install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral install-gateway-ephemeral
+uninstall-backend-ephemeral: uninstall-ephemeral uninstall-http uninstall-ws uninstall-sse uninstall-gateway
 
 install-cluster:
 	$(MAKE) -C aeroncache-cluster install
@@ -51,6 +51,15 @@ install-sse-ephemeral:
 
 uninstall-sse:
 	$(MAKE) -C aeroncache-sse uninstall
+
+install-gateway:
+	$(MAKE) -C aeroncache-gateway install
+
+install-gateway-ephemeral:
+	$(MAKE) -C aeroncache-gateway install-ephemeral
+
+uninstall-gateway:
+	$(MAKE) -C aeroncache-gateway uninstall
 
 install-http-near:
 	$(MAKE) -C aeroncache-http-near install

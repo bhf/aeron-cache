@@ -15,6 +15,7 @@ dependencies {
     implementation(project(":cache-http:http-clustertools"))
     implementation(project(":cache-ws:ws-server-javalin"))
     implementation(project(":cache-sse:sse-server-jooby"))
+    implementation(project(":cache-aeron-gateway:aeron-gateway-server"))
     runtimeOnly(project(":cache-spi-impl:map-cache:map-cache-core"))
 
     implementation(libs.aeron)
@@ -25,6 +26,10 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.compileJava {
+    options.compilerArgs.add("--enable-preview")
 }
 
 tasks.test {

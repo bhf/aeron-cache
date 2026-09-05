@@ -37,6 +37,7 @@ jobs:
           kind load docker-image aeroncache-ws:latest --name kind
           kind load docker-image aeroncache-sse:latest --name kind
           kind load docker-image aeroncache-http-near:latest --name kind
+          kind load docker-image aeroncache-gateway:latest --name kind
 
       - name: Install Backend Helm Charts
         working-directory: ./k8s/helm
