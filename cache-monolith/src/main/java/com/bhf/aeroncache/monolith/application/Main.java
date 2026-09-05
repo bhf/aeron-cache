@@ -16,6 +16,8 @@ import java.nio.file.Paths;
 public class Main {
     static void main(String[] args) {
         String aeronDirectory = System.getProperty("aeron.dir", System.getenv().getOrDefault("AERON_DIR", "aeron"));
+        boolean gatewayEnabled = Boolean.parseBoolean(
+                System.getProperty("aeron.transport.gateway.enabled", System.getenv().getOrDefault("AERON_TRANSPORT_GATEWAY_ENABLED", "false")));
 
         int toolsPort = 0;
         int httpInterfacePort = 0;
@@ -59,8 +61,12 @@ public class Main {
             int ssePort = SSEApplication.BOUND_PORT;
 
             System.out.println("Launching Aeron Gateway");
-            int gatewayHealthPort = GatewayApplication.start(0);
-            System.out.println("Aeron Gateway HTTP health server bound to port " + gatewayHealthPort);
+            if (gatewayEnabled) {
+                int gatewayHealthPort = GatewayApplication.start(0);
+                System.out.println("Aeron Gateway HTTP health server bound to port " + gatewayHealthPort);
+            } else {
+                System.out.println("Aeron Gateway disabled");
+            }
 
             generateUIConfig(httpPort, clusterToolsPort, wsPort, ssePort);
             barrier.await();
