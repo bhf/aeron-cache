@@ -7,6 +7,7 @@ import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
 import com.bhf.aeroncache.services.tracing.impl.OtelTracingService;
+import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.CommonContext;
@@ -55,7 +56,7 @@ public class CacheNodeApplication {
     private static final int LOG_PORT_OFFSET = 4;
     private static final int TRANSFER_PORT_OFFSET = 5;
     private static final int LOG_CONTROL_PORT_OFFSET = 6;
-    private static final int TERM_LENGTH = 64 * 1024;
+    private static final int TERM_LENGTH = ClusterUtils.getConfiguredTermLength(64 * 1024);
     private static final boolean USE_BUSY_SPIN_IDLE_FOR_CLUSTER_SERVICE = false;
     private static final long RESTART_ATTEMPT_INTERVAL = 10000;
 
@@ -220,7 +221,7 @@ public class CacheNodeApplication {
                 .archiveDir(new File(baseDir, "archive"))
                 .controlChannel(udpChannel(nodeId, hostname, ARCHIVE_CONTROL_PORT_OFFSET))
                 .archiveClientContext(replicationArchiveContext)
-                .localControlChannel("aeron:ipc?term-length=64k|alias=AeronCache-Archive-LocalControl")
+                .localControlChannel("aeron:ipc?term-length=" + TERM_LENGTH + "|alias=AeronCache-Archive-LocalControl")
                 .recordingEventsEnabled(false)
                 .threadingMode(ArchiveThreadingMode.SHARED)
                 .replicationChannel("aeron:udp?endpoint=" + hostname + ":0|alias=AeronCache-Archive-Replication-" + nodeId);
@@ -237,7 +238,8 @@ public class CacheNodeApplication {
                 .clusterMemberId(nodeId)
                 .clusterMembers(clusterMembers(Arrays.asList(hostnames)))
                 .clusterDir(new File(baseDir, "cluster"))
-                .ingressChannel("aeron:udp?term-length=64k|alias=AeronCache-Concensus-Ingress-" + nodeId)
+                .ingressChannel("aeron:udp?term-length=" + TERM_LENGTH + "|alias=AeronCache-Concensus-Ingress-" + nodeId)
+                .logChannel("aeron:udp?term-length=" + ClusterUtils.getConfiguredTermLength(64 * 1024 * 1024))
                 .replicationChannel(logReplicationChannel(hostname))
                 .archiveContext(aeronArchiveContext.clone());
 
@@ -275,6 +277,7 @@ public class CacheNodeApplication {
                     .multicastFlowControlSupplier(new MinMulticastFlowControlSupplier())
                     .terminationHook(barrier::signal)
                     .errorHandler(CacheNodeApplication.errorHandler("Media Driver"));
+            ClusterUtils.applyConfiguredTermLength(mediaDriverContext);
 
             try (var mediaDriver = useExternalMediaDriver ? null : MediaDriver.launch(mediaDriverContext);
                  var archive = Archive.launch(archiveContext);

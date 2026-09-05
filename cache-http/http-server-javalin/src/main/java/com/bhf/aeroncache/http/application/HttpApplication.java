@@ -35,6 +35,7 @@ import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aeron.Aeron;
+import io.aeron.FragmentAssembler;
 import io.aeron.RethrowingErrorHandler;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.FragmentHandler;
@@ -91,6 +92,7 @@ public class HttpApplication {
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
+    private static final long MAX_REQUEST_SIZE_BYTES = 16L * 1024 * 1024;
 
     private static AeronCacheClusterListener<ReusableString, ReusableString, ReusableString> client;
     @Getter
@@ -130,7 +132,7 @@ public class HttpApplication {
         var app = startHTTPServer(port);
 
         try {
-            final ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
+            final ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(ClusterUtils.getConfiguredTermLength(16777216));
             System.out.println("Starting AeronCache Cluster Interface");
 
             CacheClientFactory clientFactory = getCacheClientFactory();
@@ -293,11 +295,14 @@ public class HttpApplication {
                 -> egressListener.onMessage(header.sessionId(),
                 System.currentTimeMillis(),
                 buffer, offset, length, header);
+        // Reassemble multi-fragment egress messages so responses larger than a single MTU
+        // (e.g. large cache values) are delivered as a complete message.
+        final FragmentAssembler egressAssembler = new FragmentAssembler(egressFragmentHandler);
 
         Agent serverAgent = new Agent() {
             @Override
             public int doWork() throws Exception {
-                return responseSubscription.poll(egressFragmentHandler, Integer.MAX_VALUE);
+                return responseSubscription.poll(egressAssembler, Integer.MAX_VALUE);
             }
 
             @Override
@@ -537,6 +542,7 @@ public class HttpApplication {
     private static Consumer<JavalinConfig> getHTTPConfig(MicrometerPlugin micrometerPlugin) {
         return config -> {
             config.showJavalinBanner = false;
+            config.http.maxRequestSize = MAX_REQUEST_SIZE_BYTES;
             config.bundledPlugins.enableCors(cors -> {
                 cors.addRule(it -> {
                     it.allowHost("http://localhost:3000",
