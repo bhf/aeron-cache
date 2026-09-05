@@ -38,6 +38,11 @@ tasks.test {
     systemProperty("aeron.dir.delete.on.shutdown", "true")
     systemProperty("aeron.cluster.message.timeout", "30000000000")
 
+    // Each gateway test class stands up its own static GatewayApplication + in-process cluster bound
+    // to fixed endpoints (7075/7076) that live for the JVM's lifetime. Fork a fresh JVM per class so
+    // classes cannot collide on those ports or on the gateway's static singleton state.
+    setForkEvery(1)
+
     // Surface each test's outcome in the console/CI log, and fail loudly if none are discovered,
     // so a green build unambiguously proves the e2e tests actually executed.
     failOnNoDiscoveredTests = true
@@ -67,7 +72,10 @@ tasks.register<Delete>("cleanTestNodes") {
     delete(
         "gateway_e2e_0",
         "gateway_e2e_1",
-        "gateway_e2e_2"
+        "gateway_e2e_2",
+        "gateway_multiclient_0",
+        "gateway_multiclient_1",
+        "gateway_multiclient_2"
     )
 }
 
