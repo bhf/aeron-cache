@@ -3,6 +3,7 @@ package com.bhf.aeroncache.monolith.application;
 
 import com.bhf.aeroncache.application.ClusterLauncher;
 import com.bhf.aeroncache.clustertools.application.ClusterToolsHTTPApplication;
+import com.bhf.aeroncache.gateway.application.GatewayApplication;
 import com.bhf.aeroncache.http.application.HttpApplication;
 import com.bhf.aeroncache.sse.application.SSEApplication;
 import com.bhf.aeroncache.utils.ClusterUtils;
@@ -56,6 +57,10 @@ public class Main {
             SSEApplication.setDEFAULT_SSE_PORT(sseInterfacePort);
             SSEApplication.main(null);
             int ssePort = SSEApplication.BOUND_PORT;
+
+            System.out.println("Launching Aeron Gateway");
+            int gatewayHealthPort = GatewayApplication.start(0);
+            System.out.println("Aeron Gateway HTTP health server bound to port " + gatewayHealthPort);
 
             generateUIConfig(httpPort, clusterToolsPort, wsPort, ssePort);
             barrier.await();

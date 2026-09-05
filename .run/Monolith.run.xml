@@ -7,6 +7,7 @@
     </option>
     <option name="MAIN_CLASS_NAME" value="com.bhf.aeroncache.monolith.application.Main" />
     <module name="aeron-cache.cache-monolith.main" />
+    <option name="PROGRAM_PARAMETERS" value="7080 7070 7071 7072" />
     <option name="VM_PARAMETERS" value="--add-opens java.base/jdk.internal.misc=ALL-UNNAMED" />
     <extension name="coverage">
       <pattern>

@@ -10,6 +10,7 @@ dependencies {
     api(libs.aeron)
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
+    implementation(libs.lmax.disruptor)
 
     sbeToolConfig(libs.sbetool)
     implementation(libs.sbetool)
