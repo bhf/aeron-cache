@@ -1,3 +1,7 @@
+import org.gradle.api.tasks.testing.TestDescriptor
+import org.gradle.api.tasks.testing.TestListener
+import org.gradle.api.tasks.testing.TestResult
+
 plugins {
     id("java")
 }
@@ -33,6 +37,27 @@ tasks.test {
     jvmArgs("--add-opens", "java.base/java.util.zip=ALL-UNNAMED")
     systemProperty("aeron.dir.delete.on.shutdown", "true")
     systemProperty("aeron.cluster.message.timeout", "30000000000")
+
+    // Surface each test's outcome in the console/CI log, and fail loudly if none are discovered,
+    // so a green build unambiguously proves the e2e tests actually executed.
+    failOnNoDiscoveredTests = true
+    testLogging {
+        events("passed", "skipped", "failed")
+    }
+    addTestListener(object : TestListener {
+        override fun beforeSuite(suite: TestDescriptor) {}
+        override fun beforeTest(testDescriptor: TestDescriptor) {}
+        override fun afterTest(testDescriptor: TestDescriptor, result: TestResult) {}
+        override fun afterSuite(suite: TestDescriptor, result: TestResult) {
+            if (suite.parent == null) {
+                logger.lifecycle(
+                    "Gateway e2e test summary: ${result.testCount} executed, " +
+                        "${result.successfulTestCount} passed, ${result.failedTestCount} failed, " +
+                        "${result.skippedTestCount} skipped"
+                )
+            }
+        }
+    })
 
     environment(loadTestEnv())
     finalizedBy("cleanTestNodes")
