@@ -175,6 +175,31 @@ services:
       - OTEL_JAVAAGENT_LOGGING=none
       - CACHE_MODE=RAFT
       - REQUEST_PUB_HOST=node0
+  cache-gateway-client:
+    shm_size: '1gb'
+    build:
+      context: cache-aeron-gateway/aeron-gateway-server
+      dockerfile: ./Dockerfile
+    depends_on:
+      - node0
+      - node1
+      - node2
+    networks:
+      internal_bus:
+        ipv4_address: 172.16.202.13
+    ports:
+      - 7073:7073
+      - 7075:7075/udp
+      - 7076:7076/udp
+    environment:
+      - CLUSTER_ADDRESSES=node0,node1,node2
+      - EGRESS_IP=172.16.202.5
+      - OTEL_SERVICE_NAME=aeron-cache-gateway
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_JAVAAGENT_LOGGING=none
+      - CACHE_MODE=RAFT
+      - GATEWAY_REQUEST_ENDPOINT=0.0.0.0:7075
+      - GATEWAY_RESPONSE_CONTROL_ENDPOINT=172.16.202.13:7076
   cache-ui:
     build:
       context: cache-ui/nextjs

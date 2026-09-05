@@ -78,6 +78,7 @@ public class ReusableStringCountersCacheResponseDecoder implements CountersCache
 
         getCacheEntriesResult.clear();
         getCacheEntriesResult.setStatus(status);
+        getCacheEntriesResult.setEndOfBatch(eob == BooleanType.T);
 
         for (AllCounterCacheEntriesResultDecoder.ItemsDecoder entry : allCacheEntriesResultDecoder.items()) {
             var valLong = entry.counterValue();

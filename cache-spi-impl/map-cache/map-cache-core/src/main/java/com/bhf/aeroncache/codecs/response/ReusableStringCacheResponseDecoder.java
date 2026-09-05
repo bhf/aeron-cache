@@ -79,6 +79,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
 
         getCacheEntriesResult.clear();
         getCacheEntriesResult.setStatus(status);
+        getCacheEntriesResult.setEndOfBatch(eob == BooleanType.T);
 
         // process group of key-value from the decoder directly into the flyweight
 

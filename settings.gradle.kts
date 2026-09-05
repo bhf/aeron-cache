@@ -14,6 +14,8 @@ include("cache-http:http-server-javalin")
 include("cache-near:http-server-near-javalin")
 include("cache-ws:ws-server-javalin")
 include("cache-sse:sse-server-jooby")
+include("cache-aeron-gateway:aeron-gateway-server")
+include("cache-aeron-gateway:aeron-gateway-client")
 include("cache-http:http-clustertools")
 include("cache-monolith")
 
@@ -34,5 +36,7 @@ include("cache-integration:clustered:shutdown-integration-tests")
 include("cache-integration:ephemeral:core-integration-tests")
 include("cache-integration:ephemeral:dynamic-integration-tests")
 include("cache-integration:ephemeral:shutdown-integration-tests")
+
+include("cache-integration:gateway-integration-tests")
 
 include("cache-integration:microbenchmarks")

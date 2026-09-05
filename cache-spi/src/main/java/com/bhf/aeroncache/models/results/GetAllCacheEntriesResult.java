@@ -20,6 +20,7 @@ public class GetAllCacheEntriesResult<I extends Reusable, K extends Reusable, V 
     final Map<K,V> values=new HashMap<>();
     final RequestId requestId = new RequestId();
     CacheOperationStatus status = CacheOperationStatus.NONE;
+    boolean endOfBatch = true;
 
     public String getRequestId() {
         return requestId.getRequestId();
@@ -35,6 +36,7 @@ public class GetAllCacheEntriesResult<I extends Reusable, K extends Reusable, V 
         values.clear();
         requestId.clear();
         status = CacheOperationStatus.NONE;
+        endOfBatch = true;
     }
 
     @Override
@@ -43,6 +45,7 @@ public class GetAllCacheEntriesResult<I extends Reusable, K extends Reusable, V 
         this.values.putAll(source.values);
         this.requestId.copyFrom(source.requestId);
         this.status = source.status;
+        this.endOfBatch = source.endOfBatch;
     }
 
     @Override

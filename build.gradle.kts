@@ -53,7 +53,8 @@ subprojects {
         }
 
         if (project.path.startsWith(":cache-integration:clustered:") ||
-            project.path.startsWith(":cache-integration:ephemeral:")) {
+            project.path.startsWith(":cache-integration:ephemeral:") ||
+            project.path == ":cache-integration:gateway-integration-tests") {
             maxParallelForks = 1
             usesService(testLock)
         }
