@@ -91,6 +91,7 @@ public class HttpApplication {
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
+    private static final long MAX_REQUEST_SIZE_BYTES = 16L * 1024 * 1024;
 
     private static AeronCacheClusterListener<ReusableString, ReusableString, ReusableString> client;
     @Getter
@@ -130,7 +131,7 @@ public class HttpApplication {
         var app = startHTTPServer(port);
 
         try {
-            final ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
+            final ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(ClusterUtils.getConfiguredTermLength(16777216));
             System.out.println("Starting AeronCache Cluster Interface");
 
             CacheClientFactory clientFactory = getCacheClientFactory();
@@ -537,6 +538,7 @@ public class HttpApplication {
     private static Consumer<JavalinConfig> getHTTPConfig(MicrometerPlugin micrometerPlugin) {
         return config -> {
             config.showJavalinBanner = false;
+            config.http.maxRequestSize = MAX_REQUEST_SIZE_BYTES;
             config.bundledPlugins.enableCors(cors -> {
                 cors.addRule(it -> {
                     it.allowHost("http://localhost:3000",

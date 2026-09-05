@@ -3,6 +3,7 @@ package com.bhf.aeroncache.application.ephemeral;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
+import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import io.aeron.Aeron;
 import io.aeron.DirectBufferVector;
@@ -30,10 +31,10 @@ public class EphemeralCacheApplication {
 
     public static void main(String[] args) {
 
-        final MediaDriver.Context mediaDriverCtx = new MediaDriver.Context()
+        final MediaDriver.Context mediaDriverCtx = ClusterUtils.applyConfiguredTermLength(new MediaDriver.Context()
                 .dirDeleteOnStart(true)
                 .dirDeleteOnShutdown(true)
-                .threadingMode(ThreadingMode.SHARED);
+                .threadingMode(ThreadingMode.SHARED));
         final MediaDriver mediaDriver = MediaDriver.launchEmbedded(mediaDriverCtx);
 
         final Aeron.Context aeronCtx = new Aeron.Context()

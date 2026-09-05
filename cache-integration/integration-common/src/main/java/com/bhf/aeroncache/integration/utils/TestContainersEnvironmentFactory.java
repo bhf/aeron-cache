@@ -20,6 +20,15 @@ public class TestContainersEnvironmentFactory {
 
     public static final long SHM_SIZE_MBS = 512L;
 
+    /**
+     * Aeron term buffer length applied to every backend container. The maximum Aeron and ring
+     * buffer message length is {@code termLength / 8}, so {@code 128m} is required to carry the
+     * large (~16MB) payloads exercised by the large item tests.
+     */
+    public static final String AERON_CACHE_TERM_LENGTH = "128m";
+    private static final String JAVA_TOOL_OPTIONS =
+            "-Daeron.debug.timeout=60s -Daeron.cache.term.length=" + AERON_CACHE_TERM_LENGTH;
+
     public static String getImageName(String imageName) {
         String registry = System.getProperty("aeroncache.image.registry", "");
         String tag = System.getProperty("aeroncache.image.tag", "latest");
@@ -53,7 +62,7 @@ public class TestContainersEnvironmentFactory {
                             .withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
                             .withFileSystemBind(hostPath, "/tmp/data", BindMode.READ_WRITE)
                             .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
-                            .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                            .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                             .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                             .withEnv("CLUSTER_NODE", String.valueOf(i))
                             .withEnv("CLUSTER_PORT_BASE", "9000")
@@ -92,7 +101,7 @@ public class TestContainersEnvironmentFactory {
                             .withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
                             .withFileSystemBind(hostPath, "/tmp/data", BindMode.READ_WRITE)
                             .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
-                            .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                            .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                             .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                             .withEnv("CLUSTER_NODE", String.valueOf(i))
                             .withEnv("CLUSTER_PORT_BASE", "9000")
@@ -121,7 +130,7 @@ public class TestContainersEnvironmentFactory {
                 .withNetworkAliases("cache-http-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7070)
-                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
                 .withEnv("CACHE_MODE", "RAFT")
@@ -143,7 +152,7 @@ public class TestContainersEnvironmentFactory {
                 .withNetworkAliases("cache-http-near-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7073)
-                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
                 .withEnv("CACHE_MODE", "RAFT")
@@ -165,7 +174,7 @@ public class TestContainersEnvironmentFactory {
                 .withNetworkAliases("cache-ws-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7071)
-                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
                 .withEnv("CACHE_MODE", "RAFT")
@@ -187,7 +196,7 @@ public class TestContainersEnvironmentFactory {
                 .withNetworkAliases("cache-sse-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7072)
-                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
                 .withEnv("CACHE_MODE", "RAFT")
@@ -212,7 +221,7 @@ public class TestContainersEnvironmentFactory {
                 .withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
                 .withFileSystemBind(hostPath, "/tmp/data", BindMode.READ_WRITE)
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
-                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_NODE", "0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("CACHE_DATA_DIR", "/tmp/data")
@@ -238,7 +247,7 @@ public class TestContainersEnvironmentFactory {
                 .withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
                 .withFileSystemBind(hostPath, "/tmp/data", BindMode.READ_WRITE)
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
-                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_NODE", "0")
                 .withEnv("DYNAMIC_CACHE_CREATION", "true")
                 .withEnv("CACHE_MODE", "SINGLE")
@@ -260,7 +269,7 @@ public class TestContainersEnvironmentFactory {
                 .withNetworkAliases("cache-http-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7070)
-                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
@@ -279,7 +288,7 @@ public class TestContainersEnvironmentFactory {
                 .withNetworkAliases("cache-http-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7070)
-                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
@@ -298,7 +307,7 @@ public class TestContainersEnvironmentFactory {
                 .withNetworkAliases("cache-ws-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7071)
-                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
@@ -317,7 +326,7 @@ public class TestContainersEnvironmentFactory {
                 .withNetworkAliases("cache-sse-client")
                 .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
                 .withExposedPorts(7072)
-                .withEnv("JAVA_TOOL_OPTIONS", "-Daeron.debug.timeout=60s")
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("REQUEST_PUB_HOST", "node0")
