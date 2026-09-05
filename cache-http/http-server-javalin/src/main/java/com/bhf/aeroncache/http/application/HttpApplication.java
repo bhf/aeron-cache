@@ -35,6 +35,7 @@ import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aeron.Aeron;
+import io.aeron.FragmentAssembler;
 import io.aeron.RethrowingErrorHandler;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.FragmentHandler;
@@ -294,11 +295,14 @@ public class HttpApplication {
                 -> egressListener.onMessage(header.sessionId(),
                 System.currentTimeMillis(),
                 buffer, offset, length, header);
+        // Reassemble multi-fragment egress messages so responses larger than a single MTU
+        // (e.g. large cache values) are delivered as a complete message.
+        final FragmentAssembler egressAssembler = new FragmentAssembler(egressFragmentHandler);
 
         Agent serverAgent = new Agent() {
             @Override
             public int doWork() throws Exception {
-                return responseSubscription.poll(egressFragmentHandler, Integer.MAX_VALUE);
+                return responseSubscription.poll(egressAssembler, Integer.MAX_VALUE);
             }
 
             @Override
