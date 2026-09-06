@@ -16,6 +16,7 @@ public class EphemeralCacheServiceAgent implements Agent {
 
     private final Aeron aeron;
     private final SBEDecodingCacheClusterService service;
+    private final EphemeralTimerService timerService;
 
     private final String httpRequestsChannel;
     private final String wsRequestsChannel;
@@ -169,22 +170,24 @@ public class EphemeralCacheServiceAgent implements Agent {
 
         int res = 0;
 
+        res += timerService.poll(System.currentTimeMillis());
+
         if (wsRequestsSubscription.isConnected()) {
             currentlyPollingSubscription = wsRequestsSubscription;
             matchingResponsePublication = wsResponsePublication;
-            res = wsRequestsSubscription.poll(assembler, 10);
+            res += wsRequestsSubscription.poll(assembler, 10);
         }
 
         if (httpRequestsSubscription.isConnected()) {
             currentlyPollingSubscription = httpRequestsSubscription;
             matchingResponsePublication = httpResponsePublication;
-            res = httpRequestsSubscription.poll(assembler, 10);
+            res += httpRequestsSubscription.poll(assembler, 10);
         }
 
         if (sseRequestsSubscription.isConnected()) {
             currentlyPollingSubscription = sseRequestsSubscription;
             matchingResponsePublication = sseResponsePublication;
-            res = sseRequestsSubscription.poll(assembler, 10);
+            res += sseRequestsSubscription.poll(assembler, 10);
         }
 
         return res;
