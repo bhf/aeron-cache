@@ -13,7 +13,8 @@ import java.util.List;
  * Encodes gateway request frames (command / subscribe / unsubscribe) into a buffer.
  * <p>
  * Not thread safe: a single instance reuses its encoders, so access must be externally
- * serialised. {@link GatewayClient} guards all encoding behind its own send lock.
+ * serialised. {@link GatewayClient} holds one instance per calling thread (thread-local) so each
+ * writer is only ever touched by a single thread.
  */
 class GatewayRequestWriter {
 

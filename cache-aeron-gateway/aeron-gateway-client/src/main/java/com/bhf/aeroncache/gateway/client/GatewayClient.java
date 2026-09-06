@@ -19,7 +19,12 @@ import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.ControlledMessageHandler;
+import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
+import org.agrona.concurrent.ringbuffer.RingBufferDescriptor;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,15 +40,19 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * {@code gateway-schema.xml} contract.
  * <p>
  * Drive {@link #doWork()} from a single agent thread (e.g. an {@link org.agrona.concurrent.AgentRunner}).
- * Command send methods are safe to call from other threads; they are serialised internally and the
- * request {@link ExclusivePublication} is only ever offered to under that lock. All listener callbacks
- * fire on the agent thread.
+ * Command send methods are thread-safe: each caller encodes the request into thread-local scratch buffers
+ * and hands the finished frame to the agent thread through a {@link ManyToOneRingBuffer}. The agent drains
+ * that ring buffer in {@link #doWork()} and is the only thread that ever offers to the request
+ * {@link ExclusivePublication}, giving natural FIFO backpressure. All listener callbacks fire on the agent
+ * thread.
  */
 @Log4j2
 public class GatewayClient implements Agent, AutoCloseable {
 
     private static final int FRAGMENT_LIMIT = 10;
-    private static final int MAX_OFFER_ATTEMPTS = 1000;
+    private static final int COMMAND_LIMIT = 10;
+    private static final int COMMAND_MSG_TYPE_ID = 1;
+    private static final int COMMAND_BUFFER_CAPACITY = 1 << 20;
 
     private final Aeron aeron;
     private final int requestStreamId;
@@ -53,9 +62,13 @@ public class GatewayClient implements Agent, AutoCloseable {
 
     private final List<GatewayClientListener> listeners = new CopyOnWriteArrayList<>();
 
-    private final Object sendLock = new Object();
-    private final MutableDirectBuffer sendBuffer = new ExpandableArrayBuffer(4096);
-    private final GatewayRequestWriter requestWriter = new GatewayRequestWriter();
+    private final ManyToOneRingBuffer commandRingBuffer = new ManyToOneRingBuffer(new UnsafeBuffer(
+            ByteBuffer.allocateDirect(COMMAND_BUFFER_CAPACITY + RingBufferDescriptor.TRAILER_LENGTH)));
+    private final ThreadLocal<GatewayRequestWriter> requestWriter =
+            ThreadLocal.withInitial(GatewayRequestWriter::new);
+    private final ThreadLocal<MutableDirectBuffer> encodeBuffer =
+            ThreadLocal.withInitial(() -> new ExpandableArrayBuffer(4096));
+    private final ControlledMessageHandler commandHandler = this::onCommand;
 
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final GatewayCommandResponseDecoder commandResponseDecoder = new GatewayCommandResponseDecoder();
@@ -65,7 +78,7 @@ public class GatewayClient implements Agent, AutoCloseable {
     private final GatewayErrorDecoder errorDecoder = new GatewayErrorDecoder();
     private final FragmentAssembler fragmentAssembler = new FragmentAssembler(this::onFragment);
 
-    private volatile ExclusivePublication publication;
+    private ExclusivePublication publication;
     private Subscription subscription;
 
     /**
@@ -122,6 +135,7 @@ public class GatewayClient implements Agent, AutoCloseable {
             work++;
         }
 
+        work += commandRingBuffer.controlledRead(commandHandler, COMMAND_LIMIT);
         work += subscription.poll(fragmentAssembler, FRAGMENT_LIMIT);
         return work;
     }
@@ -243,10 +257,9 @@ public class GatewayClient implements Agent, AutoCloseable {
      * @param counters {@code true} to subscribe to counter caches, {@code false} for regular caches.
      */
     public long subscribe(String correlationId, List<String> cacheIds, boolean sendSnapshot, boolean counters) {
-        synchronized (sendLock) {
-            final int length = requestWriter.encodeSubscribe(sendBuffer, correlationId, cacheIds, sendSnapshot, counters);
-            return offer(length);
-        }
+        final MutableDirectBuffer buffer = encodeBuffer.get();
+        final int length = requestWriter.get().encodeSubscribe(buffer, correlationId, cacheIds, sendSnapshot, counters);
+        return enqueue(buffer, length);
     }
 
     /**
@@ -255,41 +268,51 @@ public class GatewayClient implements Agent, AutoCloseable {
      * @param counters {@code true} to unsubscribe from a counter cache, {@code false} for a regular cache.
      */
     public long unsubscribe(String correlationId, String cacheId, boolean counters) {
-        synchronized (sendLock) {
-            final int length = requestWriter.encodeUnsubscribe(sendBuffer, correlationId, cacheId, counters);
-            return offer(length);
-        }
+        final MutableDirectBuffer buffer = encodeBuffer.get();
+        final int length = requestWriter.get().encodeUnsubscribe(buffer, correlationId, cacheId, counters);
+        return enqueue(buffer, length);
     }
 
     // ------------------------------------------------------------------ internals
 
     private long sendCommand(int msgType, long ttl, long counterValue,
                              String correlationId, String cacheId, String key, String value) {
-        synchronized (sendLock) {
-            final int length = requestWriter.encodeCommand(sendBuffer, msgType, ttl, counterValue, correlationId, cacheId, key, value);
-            return offer(length);
-        }
+        final MutableDirectBuffer buffer = encodeBuffer.get();
+        final int length = requestWriter.get().encodeCommand(buffer, msgType, ttl, counterValue, correlationId, cacheId, key, value);
+        return enqueue(buffer, length);
     }
 
-    private long offer(int length) {
+    /**
+     * Copy an already encoded request frame into the command ring buffer for the agent thread to offer.
+     * Callable from any thread.
+     *
+     * @return a positive value if the frame was accepted, or {@link Aeron#NULL_VALUE} if the ring buffer
+     * is full (backpressure) and the caller should retry.
+     */
+    private long enqueue(MutableDirectBuffer buffer, int length) {
+        return commandRingBuffer.write(COMMAND_MSG_TYPE_ID, buffer, 0, length) ? 1L : Aeron.NULL_VALUE;
+    }
+
+    /**
+     * Drains a single encoded request frame from the command ring buffer and offers it to the request
+     * publication. Runs on the agent thread only. Returns {@link ControlledMessageHandler.Action#ABORT}
+     * to leave the frame in place (preserving FIFO order) when the publication is not yet ready or is
+     * backpressured, so it is retried on the next duty cycle.
+     */
+    private ControlledMessageHandler.Action onCommand(int msgTypeId, MutableDirectBuffer buffer, int index, int length) {
         final ExclusivePublication pub = publication;
         if (pub == null) {
-            return Aeron.NULL_VALUE;
+            return ControlledMessageHandler.Action.ABORT;
         }
-        long result = 0;
-        for (int attempt = 0; attempt < MAX_OFFER_ATTEMPTS; attempt++) {
-            result = pub.offer(sendBuffer, 0, length);
-            if (result > 0) {
-                return result;
-            }
-            if (result == ExclusivePublication.CLOSED
-                    || result == ExclusivePublication.NOT_CONNECTED
-                    || result == ExclusivePublication.MAX_POSITION_EXCEEDED) {
-                return result;
-            }
+        final long result = pub.offer(buffer, index, length);
+        if (result > 0) {
+            return ControlledMessageHandler.Action.CONTINUE;
         }
-        log.warn("Gave up offering request frame of length {} after {} attempts", length, MAX_OFFER_ATTEMPTS);
-        return result;
+        if (result == ExclusivePublication.CLOSED || result == ExclusivePublication.MAX_POSITION_EXCEEDED) {
+            log.warn("Dropping request frame of length {}; publication offer result {}", length, result);
+            return ControlledMessageHandler.Action.CONTINUE;
+        }
+        return ControlledMessageHandler.Action.ABORT;
     }
 
     private void onFragment(DirectBuffer buffer, int offset, int length, Header header) {
