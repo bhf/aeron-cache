@@ -55,7 +55,8 @@ public class EphemeralCacheApplication {
 
         final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0",
                 new NoOpTracingService(), cacheManagerFactory, dynamicCacheCreation);
-        Cluster cluster = getCluster(aeron);
+        final EphemeralTimerService timerService = new EphemeralTimerService(service::onTimerEvent);
+        Cluster cluster = getCluster(aeron, timerService);
         service.onStart(cluster, null);
 
         var hostname = DNSUtils.getThisHostName();
@@ -87,8 +88,8 @@ public class EphemeralCacheApplication {
         final var sseResponses = "aeron:udp?endpoint="+sseResponseHost+":6007|alias=AC-unclustered-sse-responses";
         final int responsesStream = 2;
 
-        final EphemeralCacheServiceAgent serverAgent = new EphemeralCacheServiceAgent(aeron, service, httpRequests,
-                wsRequests, sseRequests, requestStream,
+        final EphemeralCacheServiceAgent serverAgent = new EphemeralCacheServiceAgent(aeron, service, timerService,
+                httpRequests, wsRequests, sseRequests, requestStream,
                 httpResponses, wsResponses, sseResponses, responsesStream);
         final IdleStrategy idleStrategy = EphemeralCacheIdleStrategies.unclusteredAgentIdleStrategy.get();
         final AgentRunner serverAgentRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace,
@@ -107,7 +108,7 @@ public class EphemeralCacheApplication {
         }
     }
 
-    private static Cluster getCluster(Aeron aeron) {
+    private static Cluster getCluster(Aeron aeron, EphemeralTimerService timerService) {
         Cluster cluster = new Cluster() {
             @Override
             public int memberId() {
@@ -156,22 +157,22 @@ public class EphemeralCacheApplication {
 
             @Override
             public long time() {
-                return 0;
+                return System.currentTimeMillis();
             }
 
             @Override
             public TimeUnit timeUnit() {
-                return null;
+                return TimeUnit.MILLISECONDS;
             }
 
             @Override
             public boolean scheduleTimer(long correlationId, long deadline) {
-                return false;
+                return timerService.scheduleTimer(correlationId, deadline);
             }
 
             @Override
             public boolean cancelTimer(long correlationId) {
-                return false;
+                return timerService.cancelTimer(correlationId);
             }
 
             @Override
