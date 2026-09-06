@@ -531,6 +531,9 @@ components:
         ttl:
           type: integer
           format: int64
+        counterValue:
+          type: integer
+          format: int64
         requestId:
           type: string
         cacheId:
@@ -549,6 +552,15 @@ components:
         - CLEAR_CACHE
         - GET_ITEM
         - DELETE_CACHE
+        - CREATE_COUNTER_CACHE
+        - ADD_COUNTER
+        - REMOVE_COUNTER
+        - CLEAR_COUNTER_CACHE
+        - GET_COUNTER
+        - DELETE_COUNTER_CACHE
+        - INCREMENT_COUNTER
+        - DECREMENT_COUNTER
+        - SET_COUNTER
     BulkCacheOpsResponse:
       type: object
       properties:
