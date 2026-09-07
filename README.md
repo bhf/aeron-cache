@@ -6,20 +6,21 @@
 [![Helm CI](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci.yaml)
 [![Microbenchmarks](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks.yml)
 
-*__Written and designed without LLMs or AI Agents.__*
+*__Written and designed without LLMs or AI Agents before commit 881.__*
 
-A key value store built using Aeron, Agrona and SBE. RAFT clustered and fast by default. UI with NextJS, Shadcn and Tailwind. 
-Includes HTTP, WS and SSE interfaces with support for multi-cache joins over WS and SSE. 
-Prometheus+cAdvisor and tracing with Jaeger+OTEL. 
+A key value store with counters built using Aeron, Agrona and SBE. RAFT clustered or single node - fast by default. UI with NextJS, Shadcn and Tailwind. 
+Includes HTTP, WS and SSE interfaces with support for multi-cache joins over WS and SSE.
 Containerized and deployable with ```docker compose``` or on Kubernetes via ```helm``` or ```kubectl```.
 
 Features:
 
+* Key-value and counter caches with item level TTL support
+* Bulk atomic operations across caches and counters
 * Clustered and single node modes
-* Bulk atomic operations across caches
-* Item level TTL (timed expiry)
 * Near cache implementation (read ahead)
-* Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded) in Java, Rust, Typescript and Python
+* Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded):
+  * Aeron Transport (BIDI) - Java and Rust
+  * HTTP and WS - Java, Rust, Typescript and Python
 * Rust based [CLI](https://github.com/bhf/aeron-cache-cli)
 
 
