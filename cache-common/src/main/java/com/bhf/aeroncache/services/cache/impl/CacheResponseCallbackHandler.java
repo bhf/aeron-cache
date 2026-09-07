@@ -37,6 +37,11 @@ public class CacheResponseCallbackHandler<I extends Reusable, K extends Reusable
     }
 
     @Override
+    public void handleCacheEntryPatched(PatchValueResult<I, K, V> patchValueResult) {
+        observerGroup.handleCacheEntryPatched(patchValueResult);
+    }
+
+    @Override
     public void handleCacheCleared(ClearCacheResult<I> clearCacheResult) {
         observerGroup.handleCacheCleared(clearCacheResult);
     }

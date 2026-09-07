@@ -65,6 +65,18 @@ public interface CacheRequestPublisher<BI,BK,BV> {
      */
     void removeCacheEntry(String requestId, BI cacheId, BK key);
 
+    /**
+     * Send a message to patch (deep-merge) the value of a cache entry.
+     *
+     * @param requestId The Id of this request.
+     * @param cacheId   The ID of the cache holding the entry.
+     * @param key       The key of the entry to patch.
+     * @param value     The patch to merge into the existing value.
+     */
+    default void patchValue(String requestId, BI cacheId, BK key, BV value) {
+        throw new UnsupportedOperationException("Patch value is not supported for this cache type");
+    }
+
     /**List<String>
      * Send a message to get all cache entries.
      *

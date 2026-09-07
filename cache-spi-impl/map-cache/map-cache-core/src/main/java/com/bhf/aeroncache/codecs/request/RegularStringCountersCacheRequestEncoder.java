@@ -8,8 +8,7 @@ import java.util.List;
 
 public class RegularStringCountersCacheRequestEncoder implements CountersCacheRequestEncoder<String, String, Long> {
 
-    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final CreateCounterCacheEncoder createCacheEncoder = new CreateCounterCacheEncoder();
+    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();    private final CreateCounterCacheEncoder createCacheEncoder = new CreateCounterCacheEncoder();
     private final AddCounterRequestEncoder addCacheEntryEncoder = new AddCounterRequestEncoder();
     private final GetCounterCacheEntryEncoder getCacheEntryEncoder = new GetCounterCacheEntryEncoder();
     private final ClearCounterCacheRequestEncoder clearCacheEncoder = new ClearCounterCacheRequestEncoder();
@@ -22,6 +21,11 @@ public class RegularStringCountersCacheRequestEncoder implements CountersCacheRe
     private final DecrementCounterRequestEncoder decrementCounterRequestEncoder = new DecrementCounterRequestEncoder();
     private final SetCounterRequestEncoder setCounterRequestEncoder = new SetCounterRequestEncoder();
     private final GetCounterStatsEncoder getCacheStatsEncoder = new GetCounterStatsEncoder();
+
+    @Override
+    public int encodePatchValue(String requestId, String cacheId, String key, Long value, MutableDirectBuffer msgBuffer) {
+        throw new UnsupportedOperationException("Patch value is not supported for counter caches");
+    }
 
     @Override
     public int encodeIncrementCounterRequest(String requestId, String cacheId, String counterId, long amount, long ttl, MutableDirectBuffer msgBuffer) {

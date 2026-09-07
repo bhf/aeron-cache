@@ -72,6 +72,18 @@ public interface CacheManager<I extends Reusable, K extends Reusable, V extends 
     RemoveCacheEntryResult<I, K> removeCacheEntry(I cacheId, K key);
 
     /**
+     * Patch the value of a specific cache entry. The current value and the
+     * supplied patch are both treated as JSON, and the patch is merged into the
+     * current value.
+     *
+     * @param cacheId The id of the cache containing the entry to patch.
+     * @param key     The key for the entry we want to patch.
+     * @param patch   The JSON patch to merge into the current value.
+     * @return The result of patching the entry, including a reference to the updated value.
+     */
+    PatchValueResult<I, K, V> patchValue(I cacheId, K key, V patch);
+
+    /**
      * Get a specific cache entry.
      *
      * @param cacheId The id of the cache we want to get the value from.

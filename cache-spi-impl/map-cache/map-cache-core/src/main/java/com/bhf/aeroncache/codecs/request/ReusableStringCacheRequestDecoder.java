@@ -14,6 +14,7 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
     private final ClearCacheDecoder clearCacheDecoder = new ClearCacheDecoder();
     private final RemoveCacheEntryDecoder removeCacheEntryDecoder = new RemoveCacheEntryDecoder();
     private final AddCacheEntryDecoder addCacheEntryDecoder = new AddCacheEntryDecoder();
+    private final PatchCacheEntryDecoder patchCacheEntryDecoder = new PatchCacheEntryDecoder();
     private final GetCacheEntryDecoder getCacheEntryDecoder = new GetCacheEntryDecoder();
     private final GetAllCacheEntriesDecoder getAllCacheEntriesDecoder = new GetAllCacheEntriesDecoder();
     private final DeleteCacheDecoder deleteCacheDecoder = new DeleteCacheDecoder();
@@ -92,6 +93,20 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
             addCacheEntryRequestDetails.getValue().copyFrom(value);
             addCacheEntryRequestDetails.setRequestId(requestID);
             addCacheEntryRequestDetails.setTtl(ttl);
+    }
+
+    @Override
+    public <VT extends Reusable> void decodePatchValueRequest(DirectBuffer buffer, int offset, PatchValueRequestDetails<ReusableString, ReusableString, VT> patchValueRequestDetails) {
+        patchValueRequestDetails.clear();
+        patchCacheEntryDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheId = patchCacheEntryDecoder.cacheId();
+        var requestId = patchCacheEntryDecoder.requestId();
+        var key = patchCacheEntryDecoder.key();
+        var value = patchCacheEntryDecoder.entryValue();
+        patchValueRequestDetails.getCacheId().copyFrom(cacheId);
+        patchValueRequestDetails.getKey().copyFrom(key);
+        patchValueRequestDetails.getValue().copyFrom(value);
+        patchValueRequestDetails.setRequestId(requestId);
     }
 
     @Override

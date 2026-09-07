@@ -74,7 +74,8 @@ class BulkOpsUnknownCacheTest {
                 getCacheOperation(BulkOperationType.GET_ITEM, UNKNOWN_CACHE_ID, "key", "", 0),
                 getCacheOperation(BulkOperationType.REMOVE_ITEM, UNKNOWN_CACHE_ID, "key", "", 0),
                 getCacheOperation(BulkOperationType.CLEAR_CACHE, UNKNOWN_CACHE_ID, "", "", 0),
-                getCacheOperation(BulkOperationType.DELETE_CACHE, UNKNOWN_CACHE_ID, "", "", 0)
+                getCacheOperation(BulkOperationType.DELETE_CACHE, UNKNOWN_CACHE_ID, "", "", 0),
+                getCacheOperation(BulkOperationType.PATCH_ITEM, UNKNOWN_CACHE_ID, "key", "{\"b\":3}", 0)
         );
 
         BulkCacheOpsRequest bulkRequest = new BulkCacheOpsRequest(requestId, ops);
@@ -87,7 +88,7 @@ class BulkOpsUnknownCacheTest {
 
         // Assert
         assertEquals(requestId, result.getRequestId());
-        assertEquals(5, opResults.size());
+        assertEquals(6, opResults.size());
 
         // Add item assertions
         assertEquals(CacheOperationStatus.UNKNOWN_CACHE, opResults.get(0).getOperationStatus());
@@ -110,6 +111,11 @@ class BulkOpsUnknownCacheTest {
         // Delete cache assertions
         assertEquals(CacheOperationStatus.UNKNOWN_CACHE, opResults.get(4).getOperationStatus());
         assertRequestIdCacheIdMatch(ops, opResults, 4);
+        verifyNoInteractions(sut.subscriptionService);
+
+        // Patch item assertions
+        assertEquals(CacheOperationStatus.UNKNOWN_CACHE, opResults.get(5).getOperationStatus());
+        assertRequestIdCacheIdMatch(ops, opResults, 5);
         verifyNoInteractions(sut.subscriptionService);
 
 

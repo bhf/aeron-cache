@@ -179,6 +179,10 @@ public class GatewayClient implements Agent, AutoCloseable {
         return sendCommand(CacheRequestMessageTypes.ADD_CACHE_ENTRY_MSG_ID, ttl, 0L, correlationId, cacheId, key, value);
     }
 
+    public long patchEntry(String correlationId, String cacheId, String key, String value) {
+        return sendCommand(CacheRequestMessageTypes.PATCH_CACHE_ENTRY_MSG_ID, 0L, 0L, correlationId, cacheId, key, value);
+    }
+
     public long getEntry(String correlationId, String cacheId, String key) {
         return sendCommand(CacheRequestMessageTypes.GET_CACHE_ENTRY_MSG_ID, 0L, 0L, correlationId, cacheId, key, null);
     }

@@ -190,4 +190,75 @@ class MapCacheTest {
         assertEquals(0, cache.getAllEntries().size());
     }
 
+    @Test
+    @DisplayName("Should merge patch into an existing JSON value")
+    void testPatchValueMergesFields() {
+        // Arrange
+        seedCache("key1", "{\"a\":1,\"b\":2}");
+        var reusableKey = new ReusableString();
+        reusableKey.copyFrom("key1");
+        var patch = new ReusableString();
+        patch.copyFrom("{\"b\":3,\"c\":4}");
+
+        // Act
+        var result = cache.patchValue(reusableKey, patch);
+
+        // Assert
+        assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
+        assertEquals("key1", result.getEntryKey().value());
+        assertEquals("{\"a\":1,\"b\":3,\"c\":4}", result.getEntryValue().value());
+        assertEquals("{\"a\":1,\"b\":3,\"c\":4}", cache.cache.get(reusableKey).value());
+    }
+
+    @Test
+    @DisplayName("Should deep merge nested JSON objects when patching")
+    void testPatchValueDeepMerge() {
+        // Arrange
+        seedCache("key1", "{\"a\":{\"x\":1}}");
+        var reusableKey = new ReusableString();
+        reusableKey.copyFrom("key1");
+        var patch = new ReusableString();
+        patch.copyFrom("{\"a\":{\"y\":2}}");
+
+        // Act
+        var result = cache.patchValue(reusableKey, patch);
+
+        // Assert
+        assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
+        assertEquals("{\"a\":{\"x\":1,\"y\":2}}", result.getEntryValue().value());
+    }
+
+    @Test
+    @DisplayName("Should return unknown key status when patching a missing key")
+    void testPatchValueUnknownKey() {
+        // Arrange
+        var reusableKey = new ReusableString();
+        reusableKey.copyFrom("unknownKey");
+        var patch = new ReusableString();
+        patch.copyFrom("{\"a\":1}");
+
+        // Act
+        var result = cache.patchValue(reusableKey, patch);
+
+        // Assert
+        assertEquals(CacheOperationStatus.UNKNOWN_KEY, result.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should return error status when patch is not valid JSON")
+    void testPatchValueInvalidJson() {
+        // Arrange
+        seedCache("key1", "{\"a\":1}");
+        var reusableKey = new ReusableString();
+        reusableKey.copyFrom("key1");
+        var patch = new ReusableString();
+        patch.copyFrom("not-json");
+
+        // Act
+        var result = cache.patchValue(reusableKey, patch);
+
+        // Assert
+        assertEquals(CacheOperationStatus.ERROR, result.getStatus());
+    }
+
 }

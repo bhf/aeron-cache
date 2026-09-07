@@ -8,6 +8,7 @@ public enum BulkOperationType {
     CLEAR_CACHE,
     GET_ITEM,
     DELETE_CACHE,
+    PATCH_ITEM,
 
     CREATE_COUNTER_CACHE,
     ADD_COUNTER,

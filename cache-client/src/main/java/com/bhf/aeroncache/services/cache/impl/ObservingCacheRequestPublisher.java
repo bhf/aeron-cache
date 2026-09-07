@@ -124,6 +124,17 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     }
 
     @Override
+    public void patchValue(String requestId, BI cacheId, BK key, BV value) {
+        rbPublisher.patchValue(requestId, cacheId, key, value);
+    }
+
+    @Override
+    public void patchValue(String requestId, BI cacheId, BK key, BV value, Consumer<PatchValueResult<I, K, V>> c) {
+        cacheResponseObservers.patchValue(requestId, cacheId, key, value, c);
+        rbPublisher.patchValue(requestId, cacheId, key, value);
+    }
+
+    @Override
     public void getCacheEntries(String requestId, BI cacheId) {
         rbPublisher.getCacheEntries(requestId, cacheId);
     }
@@ -234,6 +245,11 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult) {
         cacheResponseHandler.handleCacheEntryRemoved(removeCacheEntryResult);
+    }
+
+    @Override
+    public void handleCacheEntryPatched(PatchValueResult<I, K, V> patchValueResult) {
+        cacheResponseHandler.handleCacheEntryPatched(patchValueResult);
     }
 
     @Override

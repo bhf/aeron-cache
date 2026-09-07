@@ -17,6 +17,7 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     private final CacheEntryCreatedEncoder entryCreatedEncoder = new CacheEntryCreatedEncoder();
     private final CacheEntryUpdateEncoder entryUpdateEncoder = new CacheEntryUpdateEncoder();
     private final CacheEntryResultEncoder cacheEntryResultEncoder = new CacheEntryResultEncoder();
+    private final CacheEntryPatchedEncoder cacheEntryPatchedEncoder = new CacheEntryPatchedEncoder();
     private final AllCacheEntriesResultEncoder allCacheEntriesResultEncoder = new AllCacheEntriesResultEncoder();
     private final CacheEntryRemovedEncoder entryRemovedEncoder = new CacheEntryRemovedEncoder();
     private final CacheClearedEncoder cacheClearedEncoder = new CacheClearedEncoder();
@@ -76,6 +77,19 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
         cacheEntryResultEncoder.requestId(getCacheEntryResult.getRequestId());
 
         return cacheEntryResultEncoder.encodedLength() + headerEncoder.encodedLength();
+    }
+
+    @Override
+    public <VT extends Reusable> int encodePatchValueResult(ReusableString cacheId, PatchValueResult<ReusableString, ReusableString, VT> patchValueResult, MutableDirectBuffer egressBuffer) {
+        cacheEntryPatchedEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        cacheEntryPatchedEncoder
+                .status(getOperationStatus(patchValueResult.getStatus()))
+                .cacheId(cacheId.value())
+                .key(patchValueResult.getEntryKey().value());
+
+        cacheEntryPatchedEncoder.requestId(patchValueResult.getRequestId());
+
+        return cacheEntryPatchedEncoder.encodedLength() + headerEncoder.encodedLength();
     }
 
     @Override

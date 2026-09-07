@@ -10,6 +10,7 @@ dependencies {
     implementation(libs.aeron)
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
+    implementation(libs.jackson.core)
 
     implementation(project(":cache-spi"))
     implementation(project(":cache-common"))

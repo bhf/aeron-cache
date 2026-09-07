@@ -47,6 +47,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     private final ClearCacheResult<I> clearCacheResult;
     private final DeleteCacheResult<I> deleteCacheResult;
     private final RemoveCacheEntryResult<I, K> removeCacheEntryResult;
+    private final PatchValueResult<I, K, V> patchValueResult;
     private final GetCacheEntryResult<I, K, V> getCacheEntryResult;
     private final GetAllCacheEntriesResult<I, K, V> getCacheEntriesResult;
     private final CacheSubscriptionResult<I,K,V> cacheSubscriptionResult;
@@ -72,6 +73,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         clearCacheResult = new ClearCacheResult<>(indexSupplier.get());
         deleteCacheResult = new DeleteCacheResult<>(indexSupplier.get());
         removeCacheEntryResult = new RemoveCacheEntryResult<>(indexSupplier.get(), keySupplier.get());
+        patchValueResult = new PatchValueResult<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
         getCacheEntryResult = new GetCacheEntryResult<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
         getCacheEntriesResult = new GetAllCacheEntriesResult<>(indexSupplier.get());
         cacheSubscriptionResult = new CacheSubscriptionResult<>(indexSupplier.get());
@@ -114,6 +116,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
             handleCacheDeleted(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheEntryRemovedId()) {
             handleCacheEntryRemoved(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
+        } else if (templateId == schemaDetails.getCacheEntryPatchedId()) {
+            handleCacheEntryPatched(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getAllCacheEntriesResultId()) {
             handleAllCacheEntriesResult(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getAllCacheStatsResultId()) {
@@ -255,6 +259,25 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryRemoved(removeCacheEntryResult);
+        }
+    }
+
+    /**
+     * Handle a cache entry being patched by decoding it and delegating the result to the consumer.
+     *
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
+     */
+    private void handleCacheEntryPatched(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, V> decoder, CacheResponseHandler<I, K, V> cacheResultsCallbacks) {
+        decoder.decodePatchValueResult(buffer, offset, patchValueResult);
+        log.info("Got cache entry patched for cache {} with key {}, requestId: {}, status {}",
+                patchValueResult.getCacheId(), patchValueResult.getEntryKey(),
+                patchValueResult.getRequestId(), patchValueResult.getStatus());
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleCacheEntryPatched(patchValueResult);
         }
     }
 

@@ -14,6 +14,8 @@ public interface CacheClientSchemDetailsProvider {
 
     int getCacheEntryRemovedId();
 
+    int getCacheEntryPatchedId();
+
     int getAllCacheEntriesResultId();
 
     int getAllCacheStatsResultId();

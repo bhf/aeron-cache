@@ -19,6 +19,7 @@ public class ReusableStringCacheRequestEncoder implements CacheRequestEncoder<Re
     private final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
     private final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
     private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
+    private final PatchCacheEntryEncoder patchCacheEntryEncoder = new PatchCacheEntryEncoder();
     private final GetAllCacheEntriesEncoder getAllCacheEntriesEncoder = new GetAllCacheEntriesEncoder();
     private final CacheSubscriptionRequestEncoder cacheSubscriptionRequestEncoder = new CacheSubscriptionRequestEncoder();
     private final CacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder = new CacheUnsubscribeRequestEncoder();
@@ -70,6 +71,16 @@ public class ReusableStringCacheRequestEncoder implements CacheRequestEncoder<Re
         removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId.value()).key(key.value()).requestId(requestId);
         return removeCacheEntryEncoder.encodedLength()+ headerEncoder.encodedLength();
+    }
+
+    @Override
+    public int encodePatchValue(String requestId, ReusableString cacheId, ReusableString key, ReusableString value, MutableDirectBuffer msgBuffer) {
+        patchCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId.value())
+                .requestId(requestId)
+                .key(key.value())
+                .entryValue(value.value());
+        return patchCacheEntryEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
     @Override

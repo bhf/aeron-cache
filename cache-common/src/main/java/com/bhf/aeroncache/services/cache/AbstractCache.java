@@ -17,6 +17,7 @@ public abstract class AbstractCache<I extends Reusable, K extends Reusable, V ex
     final RemoveCacheEntryResult<I, K> removeCacheEntryResult;
     final ClearCacheResult<I> clearCacheResult;
     final GetCacheEntryResult<I, K, V> getCacheEntryResult;
+    final PatchValueResult<I, K, V> patchValueResult;
     final Supplier<I> indexSupplier;
     final Supplier<K> keySupplier;
     final Supplier<V> valueSupplier;
@@ -27,6 +28,7 @@ public abstract class AbstractCache<I extends Reusable, K extends Reusable, V ex
         this.removeCacheEntryResult = new RemoveCacheEntryResult<>(indexSupplier.get(), keySupplier.get());
         this.clearCacheResult = new ClearCacheResult<>(indexSupplier.get());
         this.getCacheEntryResult = new GetCacheEntryResult<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
+        this.patchValueResult = new PatchValueResult<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
         this.stats = new CacheStats<>(indexSupplier.get());
         this.indexSupplier = indexSupplier;
         this.keySupplier = keySupplier;

@@ -228,4 +228,20 @@
         <data name="requestId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
+    <sbe:message name="PatchCacheEntry" id="44" semanticType="PatchCacheEntry"
+                 description="Patch the value of a cache entry">
+        <data name="cacheId" id="1" type="varStringEncoding"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
+        <data name="key" id="3" type="varStringEncoding"/>
+        <data name="entryValue" id="4" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="CacheEntryPatched" id="45" semanticType="CacheEntryPatched"
+                 description="The result of patching a cache entry">
+        <field name="status" id="1" type="OperationStatus"/>
+        <data name="cacheId" id="2" type="varStringEncoding"/>
+        <data name="key" id="3" type="varStringEncoding"/>
+        <data name="requestId" id="4" type="varStringEncoding"/>
+    </sbe:message>
+
 </sbe:messageSchema>

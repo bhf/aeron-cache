@@ -184,6 +184,43 @@ class GatewayEndToEndTest {
     }
 
     @Test
+    @DisplayName("Should patch an entry, deep-merging the value and streaming the merged value to subscribers")
+    void shouldPatchEntryAndReceiveStreamingUpdate() {
+        // Arrange
+        var cacheId = uniqueCache("patch");
+        var createCorr = correlationId();
+        var addCorr = correlationId();
+        var subCorr = correlationId();
+        var patchCorr = correlationId();
+        var getCorr = correlationId();
+
+        client.createCache(createCorr, cacheId);
+        awaitCommandSuccess(createCorr);
+
+        client.addEntry(addCorr, cacheId, "patchKey", "{\"a\":1,\"b\":2}", TTL_NONE);
+        awaitCommandSuccess(addCorr);
+
+        client.subscribe(subCorr, List.of(cacheId), false, false);
+
+        // Act
+        client.patchEntry(patchCorr, cacheId, "patchKey", "{\"b\":3,\"c\":4}");
+        awaitCommandSuccess(patchCorr);
+
+        // Assert: a subscribed client receives the merged value as an ADD_ITEM stream update.
+        await().atMost(30, SECONDS).until(() -> listener.streamUpdates.stream()
+                .anyMatch(u -> u.eventType() == UpdateEventType.ADD_ITEM
+                        && u.cacheId().equals(cacheId)
+                        && u.key().equals("patchKey")
+                        && u.value().equals("{\"a\":1,\"b\":3,\"c\":4}")));
+
+        // Assert: the stored value was merged, not replaced.
+        client.getEntries(getCorr, cacheId);
+        await().atMost(30, SECONDS).until(() -> listener.entriesComplete.containsKey(getCorr));
+        assertEquals(OperationStatus.SUCCESS, listener.entriesStatus.get(getCorr));
+        assertEquals(Map.of("patchKey", "{\"a\":1,\"b\":3,\"c\":4}"), listener.entriesAccumulated.get(getCorr));
+    }
+
+    @Test
     @DisplayName("Should create a counter cache, add a counter entry and read it back")
     void shouldCreateCounterCacheAddAndReadEntry() {
         // Arrange

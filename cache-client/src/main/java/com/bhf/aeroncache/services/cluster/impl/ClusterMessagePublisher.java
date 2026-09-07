@@ -110,6 +110,13 @@ public class ClusterMessagePublisher<BI, BK, BV> implements CacheRequestPublishe
     }
 
     @Override
+    public void patchValue(String requestId, BI cacheId, BK key, BV value) {
+        var length = cacheRequestEncoder.encodePatchValue(requestId, cacheId, key, value, msgBuffer);
+        publishToCache(msgBuffer, 0, length);
+        log.info("Sent patch value request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
+    }
+
+    @Override
     public void incrementCounter(String requestId, BI cacheId, BK key, long amount, long ttl) {
         var length = ((CountersCacheRequestEncoder<BI, BK, BV>) cacheRequestEncoder).encodeIncrementCounterRequest(requestId, cacheId, key, amount, ttl, msgBuffer);
         publishToCache(msgBuffer, 0, length);

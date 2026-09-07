@@ -14,4 +14,5 @@ class ClusteredPutCounterItemTests extends PutItemTests<Integer> {
     Integer getKnownValue() {
         return 123;
     }
+
 }

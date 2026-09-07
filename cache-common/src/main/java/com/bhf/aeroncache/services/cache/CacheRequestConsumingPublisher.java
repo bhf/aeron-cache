@@ -61,6 +61,19 @@ public interface CacheRequestConsumingPublisher<RI extends Reusable, RK extends 
     void removeCacheEntry(String requestId, BI cacheId, BK key, Consumer<RemoveCacheEntryResult<RI, RK>> c);
 
     /**
+     * Send a message to patch (deep-merge) the value of a cache entry.
+     *
+     * @param requestId The request ID.
+     * @param cacheId   The ID of the cache holding the entry.
+     * @param key       The key of the entry to patch.
+     * @param value     The patch to merge into the existing value.
+     * @param c         The consumer that will handle the result.
+     */
+    default void patchValue(String requestId, BI cacheId, BK key, BV value, Consumer<PatchValueResult<RI, RK, RV>> c) {
+        throw new UnsupportedOperationException("Patch value is not supported for this cache type");
+    }
+
+    /**
      * Send a message to clear a cache.
      *
      * @param requestId The request ID.

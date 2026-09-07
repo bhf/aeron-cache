@@ -29,6 +29,7 @@ public class RBCountersRequestPublisher extends AbstractRBRequestPublisher<Long>
     @Override protected int subscribeToCacheMsgId() { return CacheRequestMessageTypes.SUBSCRIBE_TO_COUNTER_CACHE_MSG_ID; }
     @Override protected int unsubscribeToCacheMsgId() { return CacheRequestMessageTypes.UNSUBSCRIBE_TO_COUNTER_CACHE_MSG_ID; }
     @Override protected int addCacheEntryMsgId() { return CacheRequestMessageTypes.ADD_COUNTER_ENTRY_MSG_ID; }
+    @Override protected int patchValueMsgId() { throw new UnsupportedOperationException("Patch value is not supported for counter caches"); }
 
     @Override
     public void addCacheEntry(String requestId, String cacheId, String key, Long value, long ttl) {

@@ -35,6 +35,11 @@ public class MapCacheClientSchemDetailsProvider implements CacheClientSchemDetai
     }
 
     @Override
+    public int getCacheEntryPatchedId() {
+        return CacheEntryPatchedDecoder.TEMPLATE_ID;
+    }
+
+    @Override
     public int getAllCacheEntriesResultId() {
         return AllCacheEntriesResultDecoder.TEMPLATE_ID;
     }

@@ -11,6 +11,7 @@ public class CacheTestEndpoints implements TestEndpointsProvider{
     final String BULK_ITEM_ENDPOINT_CACHE = "/api/v1/cache/bulkops/";
     final String REMOVE_ITEM_ENDPOINT = "/api/v1/cache/";
     final String GET_ITEM_ENDPOINT = "/api/v1/cache/";
+    final String PATCH_ITEM_ENDPOINT_CACHE = "/api/v1/cache/";
 
     @Override
     public String getCreateEndpointCache() {
@@ -45,5 +46,10 @@ public class CacheTestEndpoints implements TestEndpointsProvider{
     @Override
     public String getItemEndpoint() {
         return GET_ITEM_ENDPOINT;
+    }
+
+    @Override
+    public String getPatchItemEndpointCache() {
+        return PATCH_ITEM_ENDPOINT_CACHE;
     }
 }

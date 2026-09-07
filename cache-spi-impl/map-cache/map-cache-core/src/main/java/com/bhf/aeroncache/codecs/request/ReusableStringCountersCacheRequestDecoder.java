@@ -26,6 +26,11 @@ public class ReusableStringCountersCacheRequestDecoder implements CountersCacheR
     private final SetCounterRequestDecoder setCounterRequestDecoder = new SetCounterRequestDecoder();
 
     @Override
+    public <VT extends Reusable> void decodePatchValueRequest(DirectBuffer buffer, int offset, PatchValueRequestDetails<ReusableString, ReusableString, VT> patchValueRequestDetails) {
+        throw new UnsupportedOperationException("Patch value is not supported for counter caches");
+    }
+
+    @Override
     public void decodeGetCreateCacheRequestDetails(DirectBuffer buffer, int offset, CreateCacheRequestDetails<ReusableString> createCacheRequestDetails) {
         createCacheRequestDetails.clear();
         createCacheDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);

@@ -172,6 +172,24 @@ public class CacheTestUtils {
                 .request(Method.PATCH, endpointsProvider.getClearEndpointCache() + cacheId);
     }
 
+    /**
+     * Patch (deep-merge) an item in a cache as part of setting up a test scenario.
+     *
+     * @param cacheId The ID of the cache holding the item to patch.
+     * @param key     The key of the item to patch.
+     * @param patch   The JSON patch to merge into the existing value.
+     */
+    public static void patchItem(String cacheId, String key, String patch, BackendTestResource backend, TestEndpointsProvider endpointsProvider) {
+        JSONObject jsonObj = new JSONObject().put("value", patch);
+
+        var endpoint = endpointsProvider.getPatchItemEndpointCache() + cacheId + "/" + key;
+        given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .body(jsonObj.toString())
+                .request(Method.PATCH, endpoint);
+    }
+
     public static void sendBulkRequest(BulkCacheOpsRequest request, BackendTestResource backend, TestEndpointsProvider endpointsProvider){
         var allOps = new JSONArray();
         for(var op : request.operations()){

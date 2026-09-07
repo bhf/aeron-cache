@@ -60,6 +60,7 @@ public class CacheClientAgent extends AbstractClientAgent {
                 case UNSUBSCRIBE_TO_CACHE_MSG_ID -> handleUnsubscribeToCache(buffer, index, cacheOpsPublisher);
                 case GET_CACHE_STATS_MSG_ID -> handleGetCacheStats(buffer, index, cacheOpsPublisher);
                 case REMOVE_CACHE_ENTRY_MSG_ID -> handleRemoveCacheEntry(buffer, index, cacheOpsPublisher);
+                case PATCH_CACHE_ENTRY_MSG_ID -> handlePatchValue(buffer, index, cacheOpsPublisher);
                 case BULK_OPS_MSG_ID -> handleBulkOps(buffer, index, cacheOpsPublisher);
 
                 case CREATE_COUNTER_CACHE_MSG_ID -> handleCreateCache(buffer, index, counterOpsPublisher);
@@ -206,6 +207,18 @@ public class CacheClientAgent extends AbstractClientAgent {
         var ttl = buffer.getLong(cumulativeReadPosition);
         log.debug("ADD CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", key=" + key + ", value=" + value+", ttl="+ttl);
         cacheOpsPublisher.addCacheEntry(requestId, cacheId, key, value, ttl);
+    }
+
+    private void handlePatchValue(MutableDirectBuffer buffer, int index, ClusterMessagePublisher<String, String, String> cacheOpsPublisher) {
+        var requestId = buffer.getStringUtf8(index);
+        var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
+        var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
+        cumulativeReadPosition += buffer.getInt(cumulativeReadPosition) + 4;
+        var key = buffer.getStringUtf8(cumulativeReadPosition);
+        cumulativeReadPosition += buffer.getInt(cumulativeReadPosition) + 4;
+        var value = buffer.getStringUtf8(cumulativeReadPosition);
+        log.debug("PATCH CACHE ENTRY Request has ID " + requestId + ", on cache ID " + cacheId + ", key=" + key + ", value=" + value);
+        cacheOpsPublisher.patchValue(requestId, cacheId, key, value);
     }
 
     private <BV> void handleCreateCache(MutableDirectBuffer buffer, int index, ClusterMessagePublisher<String, String, BV> cacheOpsPublisher) {
