@@ -6,8 +6,6 @@
 [![Helm CI](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci.yaml)
 [![Microbenchmarks](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks.yml)
 
-*__Written and designed without LLMs or AI Agents before commit 881.__*
-
 A key value store with counters built using Aeron, Agrona and SBE. RAFT clustered or single node - fast by default. UI with NextJS, Shadcn and Tailwind. 
 Includes HTTP, WS and SSE interfaces with support for multi-cache joins over WS and SSE.
 Containerized and deployable with ```docker compose``` or on Kubernetes via ```helm``` or ```kubectl```.
