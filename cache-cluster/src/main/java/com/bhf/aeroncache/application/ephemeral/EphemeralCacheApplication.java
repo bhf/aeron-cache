@@ -31,41 +31,10 @@ public class EphemeralCacheApplication {
 
     public static void main(String[] args) {
 
-        final MediaDriver.Context mediaDriverCtx = ClusterUtils.applyConfiguredTermLength(new MediaDriver.Context()
-                .dirDeleteOnStart(true)
-                .dirDeleteOnShutdown(true)
-                .threadingMode(ThreadingMode.SHARED));
-        final MediaDriver mediaDriver = MediaDriver.launchEmbedded(mediaDriverCtx);
-
-        final Aeron.Context aeronCtx = new Aeron.Context()
-                .aeronDirectoryName(mediaDriver.aeronDirectoryName());
-        final Aeron aeron = Aeron.connect(aeronCtx);
-
-        final var cacheManagerFactory = getCacheManagerFactory();
-
-        boolean dynamicCacheCreation = false;
-        var useDynamicCacheCreation = System.getenv("DYNAMIC_CACHE_CREATION");
-        if (useDynamicCacheCreation != null) {
-            try {
-                dynamicCacheCreation = Boolean.parseBoolean(useDynamicCacheCreation);
-            } catch (Exception e) {
-                System.out.println("Couldn't parse value of DYNAMIC_CACHE_CREATION as boolean");
-            }
-        }
-
-        final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0",
-                new NoOpTracingService(), cacheManagerFactory, dynamicCacheCreation);
-        final EphemeralTimerService timerService = new EphemeralTimerService(service::onTimerEvent);
-        Cluster cluster = getCluster(aeron, timerService);
-        service.onStart(cluster, null);
+        boolean dynamicCacheCreation = parseDynamicCacheCreation();
 
         var hostname = DNSUtils.getThisHostName();
         System.out.println("Single node cache hostname: "+hostname);
-
-        final var httpRequests = "aeron:udp?endpoint="+hostname+":8008|alias=AC-unclustered-http-requests";
-        final var wsRequests = "aeron:udp?endpoint="+hostname+":7008|alias=AC-unclustered-ws-requests";
-        final var sseRequests = "aeron:udp?endpoint="+hostname+":6008|alias=AC-unclustered-sse-requests";
-        final int requestStream = 1;
 
         var httpResponseHost = System.getenv("HTTP_RESPONSE_PUB_HOST");
         var wsResponseHost = System.getenv("WS_RESPONSE_PUB_HOST");
@@ -83,6 +52,53 @@ public class EphemeralCacheApplication {
 
         System.out.println("Finished DNS resolution on "+hostAddresses);
 
+        start(hostname, httpResponseHost, wsResponseHost, sseResponseHost, dynamicCacheCreation);
+    }
+
+    /**
+     * Launch an unclustered (ephemeral) cache in-process, launching a dedicated embedded media driver
+     * and starting the service agent on its own thread.
+     * <p>
+     * The request subscriptions are bound to {@code bindHost} and the response publications are sent to
+     * the supplied per-interface response hosts. The agent's {@code onStart} blocks (on the agent thread)
+     * until at least one response publication connects, so this method returns promptly to the caller.
+     *
+     * @param bindHost            host the request subscriptions bind to (typically this node's hostname).
+     * @param httpResponseHost    host the HTTP response publication targets.
+     * @param wsResponseHost      host the websocket/gateway response publication targets.
+     * @param sseResponseHost     host the SSE response publication targets.
+     * @param dynamicCacheCreation whether caches may be created dynamically on first write.
+     * @return the {@link AgentRunner} driving the cache service agent.
+     */
+    public static AgentRunner start(String bindHost,
+                                    String httpResponseHost,
+                                    String wsResponseHost,
+                                    String sseResponseHost,
+                                    boolean dynamicCacheCreation) {
+
+        final MediaDriver.Context mediaDriverCtx = ClusterUtils.applyConfiguredTermLength(new MediaDriver.Context()
+                .dirDeleteOnStart(true)
+                .dirDeleteOnShutdown(true)
+                .threadingMode(ThreadingMode.SHARED));
+        final MediaDriver mediaDriver = MediaDriver.launchEmbedded(mediaDriverCtx);
+
+        final Aeron.Context aeronCtx = new Aeron.Context()
+                .aeronDirectoryName(mediaDriver.aeronDirectoryName());
+        final Aeron aeron = Aeron.connect(aeronCtx);
+
+        final var cacheManagerFactory = getCacheManagerFactory();
+
+        final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0",
+                new NoOpTracingService(), cacheManagerFactory, dynamicCacheCreation);
+        final EphemeralTimerService timerService = new EphemeralTimerService(service::onTimerEvent);
+        Cluster cluster = getCluster(aeron, timerService);
+        service.onStart(cluster, null);
+
+        final var httpRequests = "aeron:udp?endpoint="+bindHost+":8008|alias=AC-unclustered-http-requests";
+        final var wsRequests = "aeron:udp?endpoint="+bindHost+":7008|alias=AC-unclustered-ws-requests";
+        final var sseRequests = "aeron:udp?endpoint="+bindHost+":6008|alias=AC-unclustered-sse-requests";
+        final int requestStream = 1;
+
         final var httpResponses = "aeron:udp?endpoint="+httpResponseHost+":8007|alias=AC-unclustered-http-responses";
         final var wsResponses = "aeron:udp?endpoint="+wsResponseHost+":7007|alias=AC-unclustered-ws-responses";
         final var sseResponses = "aeron:udp?endpoint="+sseResponseHost+":6007|alias=AC-unclustered-sse-responses";
@@ -95,6 +111,19 @@ public class EphemeralCacheApplication {
         final AgentRunner serverAgentRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace,
                 null, serverAgent);
         AgentRunner.startOnThread(serverAgentRunner);
+        return serverAgentRunner;
+    }
+
+    private static boolean parseDynamicCacheCreation() {
+        var useDynamicCacheCreation = System.getenv("DYNAMIC_CACHE_CREATION");
+        if (useDynamicCacheCreation != null) {
+            try {
+                return Boolean.parseBoolean(useDynamicCacheCreation);
+            } catch (Exception e) {
+                System.out.println("Couldn't parse value of DYNAMIC_CACHE_CREATION as boolean");
+            }
+        }
+        return false;
     }
 
     private static CacheManagerFactory getCacheManagerFactory() {
