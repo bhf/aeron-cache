@@ -15,6 +15,7 @@ import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
 import io.aeron.Aeron;
+import io.aeron.FragmentAssembler;
 import io.aeron.RethrowingErrorHandler;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.FragmentHandler;
@@ -80,7 +81,32 @@ public class GatewayApplication {
         BOUND_PORT = start(DEFAULT_HTTP_PORT);
     }
 
+    /**
+     * Start the gateway, resolving the clustered/unclustered mode from the {@code CACHE_MODE}
+     * environment variable ({@code RAFT} or unset => clustered, anything else => ephemeral).
+     *
+     * @param httpPort the HTTP health server port (0 to bind an ephemeral port).
+     * @return the bound HTTP health server port.
+     */
     public static int start(int httpPort) {
+        var cacheMode = System.getenv("CACHE_MODE");
+        boolean useClusteredMode = cacheMode == null || cacheMode.equalsIgnoreCase("RAFT");
+        log.info("Cache mode: {}, clustered: {}", cacheMode, useClusteredMode);
+        return start(httpPort, useClusteredMode);
+    }
+
+    /**
+     * Start the gateway against either a RAFT cluster or an unclustered (ephemeral) cache.
+     * <p>
+     * Mirrors {@code HttpApplication.startHTTPInterface(int, boolean)}: when {@code useClusteredMode}
+     * is {@code false} the gateway connects directly to an ephemeral cache over the unclustered
+     * request/response Aeron channels instead of joining the cluster.
+     *
+     * @param httpPort         the HTTP health server port (0 to bind an ephemeral port).
+     * @param useClusteredMode {@code true} to connect to a RAFT cluster, {@code false} for an ephemeral cache.
+     * @return the bound HTTP health server port.
+     */
+    public static int start(int httpPort, boolean useClusteredMode) {
         log.info("Starting Aeron gateway");
 
         var app = startHTTPServer(httpPort);
@@ -138,15 +164,17 @@ public class GatewayApplication {
                 aeronCtx.aeronDirectoryName(aeronDir);
             }
 
-            var cacheMode = System.getenv("CACHE_MODE");
-            clusteredMode = cacheMode == null || cacheMode.equalsIgnoreCase("RAFT");
-            log.info("Cache mode: {}, clustered: {}", cacheMode, clusteredMode);
+            clusteredMode = useClusteredMode;
+            log.info("Clustered mode: {}", clusteredMode);
 
             if (clusteredMode) {
                 buildClusterConnection(egressIP, ingressEndpoints, aeronCtx.aeronDirectoryName());
             } else {
                 final Aeron aeron = Aeron.connect(new Aeron.Context().aeronDirectoryName(aeronCtx.aeronDirectoryName()));
-                buildUnclusteredConnection(aeron, System.getenv("REQUEST_PUB_HOST"));
+                // Default the request publication host to this node's hostname, which is where a
+                // co-located ephemeral cache binds its request subscription.
+                var requestPubHost = envOrDefault("REQUEST_PUB_HOST", DNSUtils.getThisHostName());
+                buildUnclusteredConnection(aeron, requestPubHost);
             }
 
             var clusterClientAgentIdleStrategy = clusteredMode ? GatewayIdleStrategies.clusterClientAgentIdleStrategy.get() : GatewayIdleStrategies.unclusteredIdleStrategy.get();
@@ -236,11 +264,14 @@ public class GatewayApplication {
         AeronCacheClusterListener egressListener = client;
         FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
                 -> egressListener.onMessage(header.sessionId(), System.currentTimeMillis(), buffer, offset, length, header);
+        // Reassemble multi-fragment egress messages so responses larger than a single MTU
+        // (e.g. large cache values or batched entries) are delivered as a complete message.
+        final FragmentAssembler egressAssembler = new FragmentAssembler(egressFragmentHandler);
 
         Agent serverAgent = new Agent() {
             @Override
             public int doWork() {
-                return responseSubscription.poll(egressFragmentHandler, 10);
+                return responseSubscription.poll(egressAssembler, Integer.MAX_VALUE);
             }
 
             @Override
