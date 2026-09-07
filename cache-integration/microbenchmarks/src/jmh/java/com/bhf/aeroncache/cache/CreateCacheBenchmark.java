@@ -26,6 +26,16 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.SECONDS)
 public class CreateCacheBenchmark {
 
+    /**
+     * This benchmark measures pure create throughput and therefore never deletes the caches it
+     * creates, so every invocation retains a fresh cache in the manager. Left unbounded, a single
+     * measurement iteration accumulates hundreds of thousands of caches and exhausts the heap
+     * (OutOfMemoryError in CI). We periodically discard the accumulated state to keep retained
+     * caches bounded; the reset is amortized over many thousands of invocations, so its impact on
+     * the measured throughput is negligible.
+     */
+    private static final int RESET_INTERVAL = 50_000;
+
     SBEDecodingCacheClusterService<ReusableString,ReusableString,ReusableString> sut;
     private CacheManagerFactory<ReusableString, ReusableString, ReusableString> cacheManagerFactory;
     private ReusableStringCacheRequestEncoder requestEncoder;
@@ -38,11 +48,13 @@ public class CreateCacheBenchmark {
     private long seq;
     private ReusableString reusableCacheId;
     private long tsCounter;
+    private String nodeId;
+    private NoOpTracingService tracingService;
 
     @Setup(Level.Trial)
     public void setup() {
-        var nodeId = "jmh-test-node";
-        var tracingService = new NoOpTracingService();
+        nodeId = "jmh-test-node";
+        tracingService = new NoOpTracingService();
         cacheManagerFactory = BenchmarkUtils.getCacheManagerFactory();
         sut = new SBEDecodingCacheClusterService<>(nodeId, tracingService, cacheManagerFactory);
 
@@ -61,6 +73,11 @@ public class CreateCacheBenchmark {
     @Benchmark
     public void createCache(Blackhole bh) {
         seq++;
+        if (seq % RESET_INTERVAL == 0) {
+            // Discard the accumulated caches so retained state (and heap usage) stays bounded.
+            cacheManagerFactory = BenchmarkUtils.getCacheManagerFactory();
+            sut = new SBEDecodingCacheClusterService<>(nodeId, tracingService, cacheManagerFactory);
+        }
         reusableCacheId.clear();
         reusableCacheId.copyFrom("cache-" + seq);
         var requestId = "req-" + seq;
