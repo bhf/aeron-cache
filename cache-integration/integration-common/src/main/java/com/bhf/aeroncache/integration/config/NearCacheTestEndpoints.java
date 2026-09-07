@@ -39,4 +39,9 @@ public class NearCacheTestEndpoints implements TestEndpointsProvider {
     public String getItemEndpoint() {
         return NEAR_CACHE_PREFIX;
     }
+
+    @Override
+    public String getPatchItemEndpointCache() {
+        return REGULAR_CACHE_PREFIX;
+    }
 }

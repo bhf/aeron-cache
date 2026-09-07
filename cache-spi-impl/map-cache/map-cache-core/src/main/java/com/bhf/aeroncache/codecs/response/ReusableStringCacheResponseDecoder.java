@@ -14,6 +14,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     private final CacheCreatedDecoder cacheCreatedDecoder = new CacheCreatedDecoder();
     private final AllCacheEntriesResultDecoder allCacheEntriesResultDecoder = new AllCacheEntriesResultDecoder();
     private final CacheEntryResultDecoder getCacheEntryDecoder = new CacheEntryResultDecoder();
+    private final CacheEntryPatchedDecoder cacheEntryPatchedDecoder = new CacheEntryPatchedDecoder();
     private final CacheEntryCreatedDecoder addCacheEntryDecoder = new CacheEntryCreatedDecoder();
     private final CacheEntryRemovedDecoder cacheEntryRemovedDecoder = new CacheEntryRemovedDecoder();
     private final CacheClearedDecoder cacheClearedDecoder = new CacheClearedDecoder();
@@ -130,6 +131,21 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
         addCacheEntryResult.getCacheId().copyFrom(cacheId);
         addCacheEntryResult.setRequestId(requestId);
         addCacheEntryResult.setStatus(status);
+    }
+
+    @Override
+    public void decodePatchValueResult(DirectBuffer buffer, int offset, PatchValueResult<ReusableString, ReusableString, ReusableString> patchValueResult) {
+        cacheEntryPatchedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var status = getOperationStatus(cacheEntryPatchedDecoder.status());
+        var cacheID = cacheEntryPatchedDecoder.cacheId();
+        var key = cacheEntryPatchedDecoder.key();
+        var requestId = cacheEntryPatchedDecoder.requestId();
+
+        patchValueResult.clear();
+        patchValueResult.getCacheId().copyFrom(cacheID);
+        patchValueResult.getEntryKey().copyFrom(key);
+        patchValueResult.setRequestId(requestId);
+        patchValueResult.setStatus(status);
     }
 
     @Override

@@ -105,6 +105,16 @@ public class HTTPConsumerUtils {
     }
 
     @NotNull
+    public static Consumer<PatchValueResult<ReusableString, ReusableString, ReusableString>> getPatchValueResultConsumer(String key, CompletableFuture<PatchItemResponse> future) {
+        return c -> {
+            var cacheId = c.getCacheId();
+            log.info("Got patch item response from cluster on cacheId {}, key {}", cacheId, key);
+            var response = new PatchItemResponse(cacheId.value().toString(), key, c.getStatus());
+            future.complete(response);
+        };
+    }
+
+    @NotNull
     public static Consumer<BulkCacheOpsResult<ReusableString, ReusableString, ReusableString>> getBulkCacheOpsResultConsumer(CompletableFuture<BulkCacheOpsResponse> future, String requestId) {
         return c -> {
             List<CacheOperationResponse> operationResponses = new ArrayList<>();

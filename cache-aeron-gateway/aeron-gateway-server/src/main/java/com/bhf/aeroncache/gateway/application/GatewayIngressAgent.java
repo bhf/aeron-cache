@@ -20,6 +20,7 @@ import com.bhf.aeroncache.models.results.DeleteCacheResult;
 import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
 import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.models.results.IncrementCounterResult;
+import com.bhf.aeroncache.models.results.PatchValueResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.models.results.SetCounterResult;
 import io.aeron.Aeron;
@@ -200,6 +201,8 @@ public class GatewayIngressAgent implements Agent {
                     (Consumer<CreateCacheResult>) o -> respondStatus(responsePublication, correlationId, ((CreateCacheResult) o).getStatus(), cacheId));
             case ADD_CACHE_ENTRY_MSG_ID -> cacheSubs.addCacheEntry(correlationId, cacheId, key, value, ttl,
                     (Consumer<AddCacheEntryResult>) o -> respondStatus(responsePublication, correlationId, ((AddCacheEntryResult) o).getStatus(), cacheId, key, null));
+            case PATCH_CACHE_ENTRY_MSG_ID -> cacheSubs.patchValue(correlationId, cacheId, key, value,
+                    (Consumer<PatchValueResult>) o -> respondStatus(responsePublication, correlationId, ((PatchValueResult) o).getStatus(), cacheId, key, null));
             case GET_CACHE_ENTRY_MSG_ID -> cacheSubs.getCacheEntry(correlationId, cacheId, key,
                     (Consumer<GetCacheEntryResult>) o -> respondEntry(responsePublication, correlationId, (GetCacheEntryResult) o));
             case CLEAR_CACHE_MSG_ID -> cacheSubs.clearCache(correlationId, cacheId,

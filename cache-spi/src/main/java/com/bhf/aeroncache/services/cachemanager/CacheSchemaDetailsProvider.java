@@ -12,6 +12,8 @@ public interface CacheSchemaDetailsProvider {
 
     int getRemoveCacheEntryId();
 
+    int getPatchCacheEntryId();
+
     int getClearCacheId();
 
     int getDeleteCacheId();

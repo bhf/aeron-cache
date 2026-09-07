@@ -104,6 +104,11 @@ public class ReusableStringCountersCacheRequestEncoder implements CountersCacheR
     }
 
     @Override
+    public int encodePatchValue(String requestId, ReusableString cacheId, ReusableString key, ReusableLong value, MutableDirectBuffer msgBuffer) {
+        throw new UnsupportedOperationException("Patch value is not supported for counter caches");
+    }
+
+    @Override
     public int encodeRemoveCacheEntry(String requestId, ReusableString cacheId, ReusableString key, MutableDirectBuffer msgBuffer) {
         removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId.value())

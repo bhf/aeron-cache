@@ -179,6 +179,45 @@ public abstract class AbstractMultiStreamPutItemTests<V> {
     }
 
 
+    @Test
+    @DisplayName("Should get a streaming update carrying the merged value when patching an item")
+    @HappyPath
+    protected void shouldGetStreamingUpdateWhenPatchingItem(BackendTestResource backend) {
+        // Arrange
+        var patchKey = KNOWN_KEY + "patch";
+        var initialValue = "{\"a\":1,\"b\":2}";
+        var patch = "{\"b\":3,\"c\":4}";
+        var mergedValue = "{\"a\":1,\"b\":3,\"c\":4}";
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, getKnownCacheId(), 2);
+
+        // Act
+        CacheTestUtils.addItem(getKnownCacheId(), patchKey, initialValue, backend, putItemsEndpoints);
+        CacheTestUtils.patchItem(getKnownCacheId(), patchKey, patch, backend, putItemsEndpoints);
+
+        // Assert
+        for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
+            Awaitility.await()
+                    .atMost(60, TimeUnit.SECONDS)
+                    .until(streamingSourceEventsFuture::isDone);
+
+            var streamingSoureEvents = streamingSourceEventsFuture.join();
+
+            // The initial add is streamed as an ADD_ITEM with the original value.
+            var addEvent = streamingSoureEvents.get(0);
+            MatcherAssert.assertThat(addEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(addEvent.cacheId(), Matchers.is(getKnownCacheId()));
+            MatcherAssert.assertThat(addEvent.itemKey(), Matchers.is(patchKey));
+            MatcherAssert.assertThat(addEvent.itemValue(), Matchers.is(initialValue));
+
+            // The patch is streamed as an ADD_ITEM carrying the merged value.
+            var patchEvent = streamingSoureEvents.get(1);
+            MatcherAssert.assertThat(patchEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(patchEvent.cacheId(), Matchers.is(getKnownCacheId()));
+            MatcherAssert.assertThat(patchEvent.itemKey(), Matchers.is(patchKey));
+            MatcherAssert.assertThat(patchEvent.itemValue(), Matchers.is(mergedValue));
+        }
+    }
+
     protected abstract V getKnownValue();
     protected abstract V getAnotherKnownValue();
 

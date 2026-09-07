@@ -49,4 +49,9 @@ public class CounterTestEndpoints implements TestEndpointsProvider{
     public String getItemEndpoint() {
         return GET_ITEM_ENDPOINT;
     }
+
+    @Override
+    public String getPatchItemEndpointCache() {
+        return PUT_ITEM_ENDPOINT_COUNTER;
+    }
 }

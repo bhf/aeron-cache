@@ -34,6 +34,17 @@ public interface Cache<I extends Reusable, K extends Reusable, V extends Reusabl
     RemoveCacheEntryResult<I, K> remove(K key);
 
     /**
+     * Patch the value of an existing entry. The current value and the supplied
+     * patch are both treated as JSON, and the patch is merged into the current
+     * value.
+     *
+     * @param key   The key of the entry to patch.
+     * @param patch The JSON patch to merge into the current value.
+     * @return The result of patching the value, including a reference to the updated value.
+     */
+    PatchValueResult<I, K, V> patchValue(K key, V patch);
+
+    /**
      * Clear all entries from this cache.
      *
      * @return The result of clearing all entries.

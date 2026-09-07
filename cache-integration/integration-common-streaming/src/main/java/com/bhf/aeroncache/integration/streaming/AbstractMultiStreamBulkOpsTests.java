@@ -143,6 +143,52 @@ public abstract class AbstractMultiStreamBulkOpsTests {
     }
 
     @Test
+    @DisplayName("Should get a streaming update carrying the merged value on a PATCH_ITEM bulk op")
+    @HappyPath
+    void shouldGetStreamingUpdatesOnPatchItemInBulk(BackendTestResource backend) {
+        // Arrange
+        var patchKey = "bulk-patch-key";
+        var initialValue = "{\"a\":1,\"b\":2}";
+        var patch = "{\"b\":3,\"c\":4}";
+        var mergedValue = "{\"a\":1,\"b\":3,\"c\":4}";
+        int numExpectedEvents = 2;
+        var perStreamingSourceEvents = StreamingHelperUtil.getPerStreamEvents(streamingHelpers, backend, KNOWN_CACHE_ID, numExpectedEvents);
+
+        var operations = List.of(
+                new CacheOperationRequest(BulkOperationType.ADD_ITEM, 0, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, patchKey, initialValue),
+                new CacheOperationRequest(BulkOperationType.PATCH_ITEM, 0, 0, UUID.randomUUID().toString(), KNOWN_CACHE_ID, patchKey, patch)
+        );
+        var bulkRequest = new BulkCacheOpsRequest("bulk-request-patch", operations);
+
+        // Act
+        CacheTestUtils.sendBulkRequest(bulkRequest, backend, bulkOpsEndpoints);
+
+        // Assert
+        for (var streamingSourceEventsFuture : perStreamingSourceEvents) {
+            Awaitility.await()
+                    .atMost(60, TimeUnit.SECONDS)
+                    .until(streamingSourceEventsFuture::isDone);
+
+            var streamingSourceEvents = streamingSourceEventsFuture.join();
+            MatcherAssert.assertThat(streamingSourceEvents, Matchers.hasSize(numExpectedEvents));
+
+            // The initial add is streamed as an ADD_ITEM with the original value.
+            var addEvent = streamingSourceEvents.get(0);
+            MatcherAssert.assertThat(addEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(addEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+            MatcherAssert.assertThat(addEvent.itemKey(), Matchers.is(patchKey));
+            MatcherAssert.assertThat(addEvent.itemValue(), Matchers.is(initialValue));
+
+            // The patch is streamed as an ADD_ITEM carrying the merged value.
+            var patchEvent = streamingSourceEvents.get(1);
+            MatcherAssert.assertThat(patchEvent.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(patchEvent.cacheId(), Matchers.is(KNOWN_CACHE_ID));
+            MatcherAssert.assertThat(patchEvent.itemKey(), Matchers.is(patchKey));
+            MatcherAssert.assertThat(patchEvent.itemValue(), Matchers.is(mergedValue));
+        }
+    }
+
+    @Test
     @DisplayName("Should get remove event when item with ttl expires")
     @HappyPath
     void shouldGetRemoveEventWhenItemWithTtlExpires(BackendTestResource backend) {

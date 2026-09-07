@@ -2,6 +2,7 @@ package com.bhf.aeroncache.http.handlers;
 
 import com.bhf.aeroncache.http.application.HttpApplication;
 import com.bhf.aeroncache.http.requests.CreateCacheRequest;
+import com.bhf.aeroncache.http.requests.PatchItemRequest;
 import com.bhf.aeroncache.http.requests.PutItemRequest;
 import com.bhf.aeroncache.http.requests.PutTimedItemRequest;
 import com.bhf.aeroncache.http.responses.*;
@@ -145,6 +146,33 @@ public class CacheRouteHandlers extends AbstractRouteHandlers<ReusableString, St
             ctx.json(response);
         } catch (Exception e) {
             var errorMsg = "Badly formed request to put item from request: " + ctx.body();
+            log.warn(errorMsg);
+            HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
+    public void handlePatchItemRequest(Context ctx) {
+        try {
+            var cacheId = ctx.pathParam("cacheId");
+            var key = ctx.pathParam("key");
+            var request = ctx.bodyAsClass(PatchItemRequest.class);
+            log.info("Got patch item request on cacheId {}, key {}, value {}",
+                    cacheId, key, request.value());
+
+            var requestId = getRequestId(ctx);
+            CompletableFuture<PatchItemResponse> future = new CompletableFuture<>();
+            var consumer = HTTPConsumerUtils.getPatchValueResultConsumer(key, future);
+            CompletableFuture.runAsync(() -> publisher.patchValue(requestId, cacheId,
+                    key, request.value(), consumer));
+
+            var response = future.get();
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to patch item from request: " + ctx.body();
             log.warn(errorMsg);
             HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);

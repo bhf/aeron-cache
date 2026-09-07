@@ -276,6 +276,44 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+        - PatchItem
+      summary: Patch an item in a cache
+      description: Deep-merge the supplied value into an existing item in the specified cache
+      operationId: patchItem
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the cache
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The key of the item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchItemRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PatchItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/caches:
     get:
       tags:
@@ -471,6 +509,23 @@ components:
           format: int64
           example: 60000
     PutItemResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCacheID"
+        key:
+          type: string
+          example: 'SomeRandomKey'
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    PatchItemRequest:
+      type: object
+      properties:
+        value:
+          type: string
+          example: '{"field":"newValue"}'
+    PatchItemResponse:
       type: object
       properties:
         cacheId:

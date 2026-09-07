@@ -9,4 +9,5 @@ public interface TestEndpointsProvider {
     String getBulkItemEndpointCache();
     String getRemoveItemEndpoint();
     String getItemEndpoint();
+    String getPatchItemEndpointCache();
 }

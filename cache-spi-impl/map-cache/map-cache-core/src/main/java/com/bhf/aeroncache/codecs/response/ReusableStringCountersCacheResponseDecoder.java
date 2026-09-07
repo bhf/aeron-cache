@@ -137,6 +137,11 @@ public class ReusableStringCountersCacheResponseDecoder implements CountersCache
     }
 
     @Override
+    public void decodePatchValueResult(DirectBuffer buffer, int offset, PatchValueResult<ReusableString, ReusableString, ReusableLong> patchValueResult) {
+        throw new UnsupportedOperationException("Patch value is not supported for counter caches");
+    }
+
+    @Override
     public void decodeCacheEntryRemoved(DirectBuffer buffer, int offset, RemoveCacheEntryResult<ReusableString, ReusableString> removeCacheEntryResult) {
         cacheEntryRemovedDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 

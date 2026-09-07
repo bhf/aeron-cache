@@ -32,6 +32,11 @@ public class ReusableStringCountersCacheResponseEncoder implements CountersCache
 
 
     @Override
+    public <VT extends Reusable> int encodePatchValueResult(ReusableString cacheId, PatchValueResult<ReusableString, ReusableString, VT> patchValueResult, MutableDirectBuffer egressBuffer) {
+        throw new UnsupportedOperationException("Patch value is not supported for counter caches");
+    }
+
+    @Override
     public int encodeIncrementResult(ReusableString cacheId, IncrementCounterResult<ReusableString, ReusableString> result, MutableDirectBuffer egressBuffer) {
         incrementEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder)
                 .counterValue(result.getCounterValue())

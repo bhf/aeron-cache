@@ -4,6 +4,10 @@ import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
+import com.bhf.aeroncache.types.ReusableString;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aeron.ExclusivePublication;
 import io.aeron.Publication;
 import lombok.extern.log4j.Log4j2;
@@ -29,6 +33,7 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
     private final CacheIdSnapshotCodec<I> cacheIdSnapshotCodec;
     private final MutableDirectBuffer buffer = new ExpandableArrayBuffer();
     private final CacheEntrySnapshotCodec<K, V> cacheEntrySnapshotCodec;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public MapCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier,
                     Supplier<Map<K, V>> mapSupplier, CacheIdSnapshotCodec<I> cacheIdSnapshotCodec,
@@ -70,6 +75,37 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
         }
 
         return getCacheEntryResult;
+    }
+
+    @Override
+    public PatchValueResult<I, K, V> patchValue(K key, V patch) {
+        patchValueResult.clear();
+        patchValueResult.getEntryKey().copyFrom(key);
+
+        if (!cache.containsKey(key)) {
+            patchValueResult.setStatus(CacheOperationStatus.UNKNOWN_KEY);
+            return patchValueResult;
+        }
+
+        V existingValue = cache.get(key);
+        try {
+            String existingJson = existingValue.value().toString();
+            String patchJson = patch.value().toString();
+            JsonNode mergedNode = objectMapper.readerForUpdating(objectMapper.readTree(existingJson)).readValue(patchJson);
+            String mergedJson = objectMapper.writeValueAsString(mergedNode);
+
+            existingValue.clear();
+            existingValue.copyFrom(mergedJson);
+
+            patchValueResult.getEntryValue().copyFrom(existingValue);
+            patchValueResult.setStatus(CacheOperationStatus.SUCCESS);
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to patch value for key {}, reason: {}", key, e.getMessage());
+            patchValueResult.getEntryValue().copyFrom(existingValue);
+            patchValueResult.setStatus(CacheOperationStatus.ERROR);
+        }
+
+        return patchValueResult;
     }
 
     @Override

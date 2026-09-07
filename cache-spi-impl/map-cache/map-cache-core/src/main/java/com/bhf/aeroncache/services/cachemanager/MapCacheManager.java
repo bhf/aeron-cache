@@ -153,6 +153,22 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
     }
 
     @Override
+    public PatchValueResult<I, K, V> patchValue(I cacheId, K key, V patch) {
+        patchValueResult.clear();
+        patchValueResult.getCacheId().copyFrom(cacheId);
+        var cache = getCache(cacheId);
+        if (cache != null) {
+            var result = cache.patchValue(key, patch);
+            patchValueResult.getEntryKey().copyFrom(result.getEntryKey());
+            patchValueResult.getEntryValue().copyFrom(result.getEntryValue());
+            patchValueResult.setStatus(result.getStatus());
+        } else {
+            patchValueResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
+        }
+        return patchValueResult;
+    }
+
+    @Override
     public GetCacheEntryResult<I, K, V> getCacheEntry(I cacheId, K key) {
         getCacheEntryResult.clear();
         getCacheEntryResult.getCacheId().copyFrom(cacheId);

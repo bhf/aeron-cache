@@ -49,6 +49,14 @@ public interface CacheResponseHandler<I extends Reusable, K extends Reusable, V 
     void handleCacheEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult);
 
     /**
+     * Handle a message indicating a cache entry has been patched and delegate it
+     * to any relevant consumer.
+     *
+     * @param patchValueResult The result of patching a cache entry.
+     */
+    default void handleCacheEntryPatched(PatchValueResult<I, K, V> patchValueResult) {}
+
+    /**
      * Handle a message indicating a cache has been cleared and delegate it
      * to any relevant consumer.
      *

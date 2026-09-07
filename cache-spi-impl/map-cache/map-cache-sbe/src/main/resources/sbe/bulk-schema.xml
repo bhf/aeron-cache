@@ -67,6 +67,7 @@
             <validValue name="INCREMENT_COUNTER">12</validValue>
             <validValue name="DECREMENT_COUNTER">13</validValue>
             <validValue name="SET_COUNTER">14</validValue>
+            <validValue name="PATCH_ITEM">15</validValue>
         </enum>
     </types>
 

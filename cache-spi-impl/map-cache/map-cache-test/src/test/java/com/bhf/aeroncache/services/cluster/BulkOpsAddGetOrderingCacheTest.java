@@ -127,4 +127,53 @@ class BulkOpsAddGetOrderingCacheTest {
         verify(tracingService, times(1)).endBulkOpsRequest(any(BulkCacheOpsRequestDetails.class));
     }
 
+    @Test
+    @DisplayName("Should merge a patch into an existing entry within a bulk operation")
+    @HappyPath
+    void shouldHandlePatchItemInBulk() {
+        // Arrange
+        ClientSession session = TestUtils.getMockedSession(responseBuffer);
+
+        var requestId = UUID.randomUUID().toString();
+        List<CacheOperationRequest> ops = List.of(
+            getCacheOperation(BulkOperationType.CREATE_CACHE, CACHE_ID, "", "", 0),
+            getCacheOperation(BulkOperationType.ADD_ITEM, CACHE_ID, "key", "{\"a\":1,\"b\":2}", 0),
+            getCacheOperation(BulkOperationType.PATCH_ITEM, CACHE_ID, "key", "{\"b\":3,\"c\":4}", 0),
+            getCacheOperation(BulkOperationType.GET_ITEM, CACHE_ID, "key", "", 0)
+        );
+
+        BulkCacheOpsRequest bulkRequest = new BulkCacheOpsRequest(requestId, ops);
+        int length = cacheRequestEncoder.encodeBulkOperations(requestId, bulkRequest, requestBuffer);
+
+        // Act
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+        cacheResponseDecoder.decodeBulkCacheOpsResult(responseBuffer, 0, result);
+        var opResults = result.getOperations();
+
+        // Assert
+        assertEquals(requestId, result.getRequestId());
+        assertEquals(4, opResults.size());
+
+        // Create cache assertions
+        assertEquals(CacheOperationStatus.SUCCESS, opResults.get(0).getOperationStatus());
+        assertRequestIdCacheIdMatch(ops, opResults, 0);
+
+        // Add item assertions
+        assertEquals(CacheOperationStatus.SUCCESS, opResults.get(1).getOperationStatus());
+        assertRequestIdCacheIdMatch(ops, opResults, 1);
+
+        // Patch item assertions - the response carries only the status, not the merged value
+        assertEquals(CacheOperationStatus.SUCCESS, opResults.get(2).getOperationStatus());
+        assertRequestIdCacheIdMatch(ops, opResults, 2);
+
+        // Get item assertions - the merged value proves the patch was applied
+        assertEquals(CacheOperationStatus.SUCCESS, opResults.get(3).getOperationStatus());
+        assertRequestIdCacheIdMatch(ops, opResults, 3);
+        assertEquals("{\"a\":1,\"b\":3,\"c\":4}", opResults.get(3).getValue().value());
+
+        // Calling the tracing service is part of the public API of the SUT
+        verify(tracingService, times(1)).startBulkOpsRequest(any(BulkCacheOpsRequestDetails.class));
+        verify(tracingService, times(1)).endBulkOpsRequest(any(BulkCacheOpsRequestDetails.class));
+    }
+
 }

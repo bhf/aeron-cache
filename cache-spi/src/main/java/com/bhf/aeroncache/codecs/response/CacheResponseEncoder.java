@@ -16,6 +16,8 @@ public interface CacheResponseEncoder<I extends Reusable, K extends Reusable, V 
 
     <VT extends Reusable> int encodeCacheEntryResult(I cacheId, GetCacheEntryResult<I, K, VT> getCacheEntryResult, MutableDirectBuffer egressBuffer);
 
+    <VT extends Reusable> int encodePatchValueResult(I cacheId, PatchValueResult<I, K, VT> patchValueResult, MutableDirectBuffer egressBuffer);
+
     <VT extends Reusable> int encodeAllCacheEntriesResult(I cacheId, GetAllCacheEntriesResult<I, K, VT> getAllCacheEntriesResult, MutableDirectBuffer egressBuffer);
 
     int encodeRemoveCacheEntryResult(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, MutableDirectBuffer egressBuffer);

@@ -29,6 +29,7 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     final Map<String, Consumer<GetCacheEntryResult<I, K, V>>> getCacheEntryObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<DeleteCacheResult<I>>> deleteCacheObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<RemoveCacheEntryResult<I, K>>> removeCacheEntryObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<PatchValueResult<I, K, V>>> patchValueObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<ClearCacheResult<I>>> clearCacheObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<GetAllCacheEntriesResult<I, K, V>>> getCacheEntriesObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<CacheStatsResult<I>>> allCacheStatsObservers = new ConcurrentHashMap<>();
@@ -73,6 +74,11 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     @Override
     public void removeCacheEntry(String requestId, BI cacheId, BK key, Consumer<RemoveCacheEntryResult<I, K>> c) {
         removeCacheEntryObservers.put(requestId, c);
+    }
+
+    @Override
+    public void patchValue(String requestId, BI cacheId, BK key, BV value, Consumer<PatchValueResult<I, K, V>> c) {
+        patchValueObservers.put(requestId, c);
     }
 
     @Override
@@ -182,6 +188,15 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
 
         if (removeCacheEntryConsumer != null) {
             removeCacheEntryConsumer.accept(removeCacheEntryResult);
+        }
+    }
+
+    @Override
+    public void handleCacheEntryPatched(PatchValueResult<I, K, V> patchValueResult) {
+        var targetId = patchValueResult.getRequestId();
+        var observer = patchValueObservers.remove(targetId);
+        if (observer != null) {
+            observer.accept(patchValueResult);
         }
     }
 

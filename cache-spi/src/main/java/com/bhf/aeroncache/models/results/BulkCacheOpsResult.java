@@ -131,6 +131,15 @@ public class BulkCacheOpsResult <I extends Reusable, K extends Reusable, V exten
         operations.add(cacheOpResult);
     }
 
+    public <VT extends Reusable> void addResult(PatchValueResult<I, K, VT> result) {
+        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
+        cacheOpResult.requestId.copyFrom(result.requestId);
+        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
+        cacheOpResult.operationStatus = result.status;
+        cacheOpResult.getKey().copyFrom(result.getEntryKey());
+        operations.add(cacheOpResult);
+    }
+
     public void addOperationResult(CacheOperationStatus cacheOperationStatus, String requestId, I cacheId, K key, V value) {
         var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
         cacheOpResult.requestId.setRequestId(requestId);

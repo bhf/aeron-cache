@@ -25,6 +25,11 @@ public class MapCacheSchemaDetailsProvider implements CacheSchemaDetailsProvider
     }
 
     @Override
+    public int getPatchCacheEntryId() {
+        return PatchCacheEntryEncoder.TEMPLATE_ID;
+    }
+
+    @Override
     public int getClearCacheId() {
         return ClearCacheEncoder.TEMPLATE_ID;
     }

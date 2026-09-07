@@ -170,6 +170,57 @@ abstract class BulkItemsTests {
     }
 
     @Test
+    @DisplayName("Should deep-merge an item via a PATCH_ITEM operation in bulk")
+    @HappyPath
+    void shouldPatchItemInBulk(BackendTestResource backend) {
+        // Arrange
+        var key = KNOWN_KEY + "-bulk-patch-test";
+        var initialValue = "{\"a\":1,\"b\":2}";
+        var patchValue = "{\"b\":3,\"c\":4}";
+        var mergedValue = "{\"a\":1,\"b\":3,\"c\":4}";
+        var requestId = "bulk-request-patch";
+
+        var allOps = new JSONArray();
+        allOps.put(CacheTestUtils.getCacheOperation("addRequestId", "ADD_ITEM", KNOWN_CACHE_ID, key, initialValue, 0, 0));
+        allOps.put(CacheTestUtils.getCacheOperation("patchRequestId", "PATCH_ITEM", KNOWN_CACHE_ID, key, patchValue, 0, 0));
+        allOps.put(CacheTestUtils.getCacheOperation("getRequestId", "GET_ITEM", KNOWN_CACHE_ID, key, "", 0, 0));
+
+        JSONObject requestBody = new JSONObject()
+                .put("requestId", requestId)
+                .put("operations", allOps);
+
+        RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .body(requestBody.toString())
+
+                // Act
+                .when().post(BULK_ITEM_ENDPOINT)
+
+                // Assert
+                .then().assertThat()
+                .statusCode(200)
+                .body("requestId", Matchers.equalTo(requestId))
+                .body("operationResponses", Matchers.hasSize(3))
+
+                // Add item response
+                .body("operationResponses[0].status", Matchers.equalTo("SUCCESS"))
+                .body("operationResponses[0].requestId", Matchers.equalTo("addRequestId"))
+                .body("operationResponses[0].key", Matchers.equalTo(key))
+
+                // Patch item response
+                .body("operationResponses[1].status", Matchers.equalTo("SUCCESS"))
+                .body("operationResponses[1].requestId", Matchers.equalTo("patchRequestId"))
+                .body("operationResponses[1].key", Matchers.equalTo(key))
+
+                // Get item response confirms the value was merged, not replaced
+                .body("operationResponses[2].status", Matchers.equalTo("SUCCESS"))
+                .body("operationResponses[2].requestId", Matchers.equalTo("getRequestId"))
+                .body("operationResponses[2].key", Matchers.equalTo(key))
+                .body("operationResponses[2].value", Matchers.equalTo(mergedValue));
+    }
+
+    @Test
     @DisplayName("Should handle bulk request for unknown cache")
     @HappyPath
     void shouldHandleBulkRequestToUnknownCache(BackendTestResource backend) {

@@ -391,6 +391,7 @@ public class HttpApplication {
                 .post(CACHE_API_PREFIX + "<cacheId>", handlers::handlePutItemRequest)
                 .delete(CACHE_API_PREFIX + "<cacheId>/<key>", handlers::handleDeleteItemRequest)
                 .delete(CACHE_API_PREFIX + "<cacheId>", handlers::handleDeleteCacheRequest)
+                .patch(CACHE_API_PREFIX + "<cacheId>/<key>", handlers::handlePatchItemRequest)
                 .patch(CACHE_API_PREFIX + "<cacheId>", handlers::handleClearCacheRequest)
                 .get("/api/v1/caches", handlers::handleGetCachesRequest)
                 .get("/api/v1/stats", handlers::handleGetStatsRequest);
