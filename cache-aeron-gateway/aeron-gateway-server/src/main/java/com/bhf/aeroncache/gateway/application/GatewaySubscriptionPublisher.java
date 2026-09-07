@@ -148,6 +148,9 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
 
     @Override
     public void handleCacheCleared(ClearCacheResult<I> clearCacheResult) {
+        // Fire the request/response command callback (drives the gateway command response) before
+        // dispatching streaming events to subscribers.
+        super.handleCacheCleared(clearCacheResult);
         var subscribers = cacheSubscriptions.get(clearCacheResult.getCacheId().value());
         if (subscribers != null) {
             var cacheId = String.valueOf(clearCacheResult.getCacheId());
@@ -164,6 +167,9 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
 
     @Override
     public void handleCacheDeleted(DeleteCacheResult<I> deleteCacheResult) {
+        // Fire the request/response command callback (drives the gateway command response) before
+        // dispatching streaming events to subscribers.
+        super.handleCacheDeleted(deleteCacheResult);
         var subscribers = cacheSubscriptions.get(deleteCacheResult.getCacheId().value());
         if (subscribers != null) {
             var cacheId = String.valueOf(deleteCacheResult.getCacheId());
@@ -180,6 +186,9 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
 
     @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult) {
+        // Fire the request/response command callback (drives the gateway command response) before
+        // dispatching streaming events to subscribers.
+        super.handleCacheEntryRemoved(removeCacheEntryResult);
         var subscribers = cacheSubscriptions.get(removeCacheEntryResult.getCacheId().value());
         if (subscribers != null) {
             var cacheId = String.valueOf(removeCacheEntryResult.getCacheId());
@@ -215,16 +224,19 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
 
     @Override
     public void handleCounterIncremented(IncrementCounterResult<I, K> result) {
+        super.handleCounterIncremented(result);
         dispatchCounterEvent(result.getCacheId(), result.getKey(), result.getCounterValue(), result.getRequestId());
     }
 
     @Override
     public void handleCounterDecremented(DecrementCounterResult<I, K> result) {
+        super.handleCounterDecremented(result);
         dispatchCounterEvent(result.getCacheId(), result.getKey(), result.getCounterValue(), result.getRequestId());
     }
 
     @Override
     public void handleCounterSet(SetCounterResult<I, K> result) {
+        super.handleCounterSet(result);
         dispatchCounterEvent(result.getCacheId(), result.getKey(), result.getCounterValue(), result.getRequestId());
     }
 
