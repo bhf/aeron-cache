@@ -55,6 +55,11 @@ public class ObservingClusterRequestPublisher<I extends Reusable, K extends Reus
     }
 
     @Override
+    public void cancelItemRemovalBlocking(String requestId, BI cacheId, BK key) {
+        blockingPublisher.cancelItemRemovalBlocking(requestId, cacheId, key);
+    }
+
+    @Override
     public void getCacheEntriesBlocking(String requestId, BI cacheId) {
         blockingPublisher.getCacheEntriesBlocking(requestId, cacheId);
     }

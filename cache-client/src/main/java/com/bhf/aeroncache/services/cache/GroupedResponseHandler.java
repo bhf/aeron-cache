@@ -47,6 +47,13 @@ public class GroupedResponseHandler<I extends Reusable, K extends Reusable, V ex
     }
 
     @Override
+    public void handleItemRemovalCancelled(CancelItemRemovalResult<I, K> cancelItemRemovalResult) {
+        for(CacheResponseHandler handler : handlers){
+            handler.handleItemRemovalCancelled(cancelItemRemovalResult);
+        }
+    }
+
+    @Override
     public void handleCacheEntryPatched(PatchValueResult<I, K, V> patchValueResult) {
         for(CacheResponseHandler handler : handlers){
             handler.handleCacheEntryPatched(patchValueResult);

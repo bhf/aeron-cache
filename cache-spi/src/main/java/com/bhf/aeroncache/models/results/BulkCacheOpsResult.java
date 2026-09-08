@@ -85,6 +85,15 @@ public class BulkCacheOpsResult <I extends Reusable, K extends Reusable, V exten
         operations.add(cacheOpResult);
     }
 
+    public void addResult(CancelItemRemovalResult<I, K> result) {
+        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
+        cacheOpResult.requestId.copyFrom(result.requestId);
+        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
+        cacheOpResult.operationStatus = result.status;
+        cacheOpResult.key.copyFrom(result.getKey());
+        operations.add(cacheOpResult);
+    }
+
     public void addResult(IncrementCounterResult<I, K> result) {
         var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
         cacheOpResult.requestId.copyFrom(result.requestId);

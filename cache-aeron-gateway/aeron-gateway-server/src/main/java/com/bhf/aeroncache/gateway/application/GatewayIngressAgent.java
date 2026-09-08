@@ -13,6 +13,7 @@ import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.CacheStats;
 import com.bhf.aeroncache.models.results.CacheStatsResult;
+import com.bhf.aeroncache.models.results.CancelItemRemovalResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
 import com.bhf.aeroncache.models.results.DecrementCounterResult;
@@ -211,6 +212,8 @@ public class GatewayIngressAgent implements Agent {
                     (Consumer<DeleteCacheResult>) o -> respondStatus(responsePublication, correlationId, ((DeleteCacheResult) o).getStatus(), cacheId));
             case REMOVE_CACHE_ENTRY_MSG_ID -> cacheSubs.removeCacheEntry(correlationId, cacheId, key,
                     (Consumer<RemoveCacheEntryResult>) o -> respondStatus(responsePublication, correlationId, ((RemoveCacheEntryResult) o).getStatus(), cacheId, key, null));
+            case CANCEL_CACHE_ITEM_REMOVAL_MSG_ID -> cacheSubs.cancelItemRemoval(correlationId, cacheId, key,
+                    (Consumer<CancelItemRemovalResult>) o -> respondStatus(responsePublication, correlationId, ((CancelItemRemovalResult) o).getStatus(), cacheId, key, null));
             case GET_CACHE_ENTRIES_MSG_ID -> cacheSubs.getCacheEntries(correlationId, cacheId,
                     (Consumer<GetAllCacheEntriesResult>) o -> streamEntries(responsePublication, correlationId, (GetAllCacheEntriesResult) o));
             case GET_CACHE_STATS_MSG_ID -> cacheSubs.getAllCacheStats(correlationId,
@@ -232,6 +235,8 @@ public class GatewayIngressAgent implements Agent {
                     (Consumer<CacheStatsResult>) o -> streamStats(responsePublication, correlationId, (CacheStatsResult) o));
             case REMOVE_COUNTER_ENTRY_MSG_ID -> countersSubs.removeCacheEntry(correlationId, cacheId, key,
                     (Consumer<RemoveCacheEntryResult>) o -> respondStatus(responsePublication, correlationId, ((RemoveCacheEntryResult) o).getStatus(), cacheId, key, null));
+            case CANCEL_COUNTER_ITEM_REMOVAL_MSG_ID -> countersSubs.cancelItemRemoval(correlationId, cacheId, key,
+                    (Consumer<CancelItemRemovalResult>) o -> respondStatus(responsePublication, correlationId, ((CancelItemRemovalResult) o).getStatus(), cacheId, key, null));
             case INCREMENT_COUNTER_ENTRY_MSG_ID -> countersSubs.incrementCounter(correlationId, cacheId, key, counterValue, ttl,
                     (Consumer<IncrementCounterResult>) o -> respondCounter(responsePublication, correlationId, ((IncrementCounterResult) o).getStatus(), cacheId, key, ((IncrementCounterResult) o).getCounterValue()));
             case DECREMENT_COUNTER_ENTRY_MSG_ID -> countersSubs.decrementCounter(correlationId, cacheId, key, counterValue, ttl,

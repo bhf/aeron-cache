@@ -115,6 +115,15 @@ public class HTTPConsumerUtils {
     }
 
     @NotNull
+    public static Consumer<CancelItemRemovalResult<ReusableString, ReusableString>> getCancelItemRemovalResultConsumer(CompletableFuture<CancelItemRemovalResponse> future) {
+        return c -> {
+            log.info("Got cancel item removal response from cluster on cacheId {}, key {}", c.getCacheId(), c.getKey());
+            var response = new CancelItemRemovalResponse(c.getCacheId().value().toString(), c.getKey().value().toString(), c.getStatus());
+            future.complete(response);
+        };
+    }
+
+    @NotNull
     public static Consumer<BulkCacheOpsResult<ReusableString, ReusableString, ReusableString>> getBulkCacheOpsResultConsumer(CompletableFuture<BulkCacheOpsResponse> future, String requestId) {
         return c -> {
             List<CacheOperationResponse> operationResponses = new ArrayList<>();

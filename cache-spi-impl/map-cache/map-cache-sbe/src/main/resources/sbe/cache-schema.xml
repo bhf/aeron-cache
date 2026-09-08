@@ -244,4 +244,19 @@
         <data name="requestId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
+    <sbe:message name="CancelCacheItemRemoval" id="51" semanticType="CancelCacheItemRemoval"
+                 description="Cancel a previously scheduled removal (TTL expiry) of a cache entry">
+        <data name="cacheId" id="1" type="varStringEncoding"/>
+        <data name="requestId" id="2" type="varStringEncoding"/>
+        <data name="key" id="3" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="CacheItemRemovalCancelled" id="53" semanticType="CacheItemRemovalCancelled"
+                 description="The result of cancelling a scheduled removal of a cache entry">
+        <field name="status" id="1" type="OperationStatus"/>
+        <data name="cacheId" id="2" type="varStringEncoding"/>
+        <data name="key" id="3" type="varStringEncoding"/>
+        <data name="requestId" id="4" type="varStringEncoding"/>
+    </sbe:message>
+
 </sbe:messageSchema>

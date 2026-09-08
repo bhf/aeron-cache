@@ -19,6 +19,14 @@ public interface CacheTimerService<I extends Reusable,K extends Reusable> {
     <CT extends Reusable> void scheduleItemRemoval(I cacheId, K key, Cache<I, K, CT> cache, long deadline);
 
     /**
+     * Cancel a scheduled item removal.
+     * @param cacheId
+     * @param key
+     * @return true if the item removal was cancelled, false if it was not found or already removed.
+     */
+    boolean cancelItemRemoval(I cacheId, K key);
+
+    /**
      * Take a snapshot of the timers and related metadata.
      * @param snapshotPublication
      */

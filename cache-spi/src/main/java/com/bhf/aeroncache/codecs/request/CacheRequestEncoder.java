@@ -18,6 +18,8 @@ public interface CacheRequestEncoder<I, K, V> {
 
     int encodeRemoveCacheEntry(String requestId, I cacheId, K key, MutableDirectBuffer msgBuffer);
 
+    int encodeCancelItemRemoval(String requestId, I cacheId, K key, MutableDirectBuffer msgBuffer);
+
     int encodePatchValue(String requestId, I cacheId, K key, V value, MutableDirectBuffer msgBuffer);
 
     int encodeGetCacheEntries(String requestId, I cacheId, MutableDirectBuffer msgBuffer);

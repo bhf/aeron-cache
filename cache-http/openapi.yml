@@ -314,6 +314,39 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/cache/{cacheId}/{key}/cancel-removal:
+    post:
+      tags:
+        - CancelItemRemoval
+      summary: Cancel a scheduled removal of an item from a cache
+      description: Cancel a previously scheduled TTL/expiry removal of an item in the specified cache
+      operationId: cancelItemRemoval
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the cache
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The key of the item
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CancelItemRemovalResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/caches:
     get:
       tags:
@@ -559,6 +592,17 @@ components:
         operationStatus:
           $ref: '#/components/schemas/CacheOperationStatus'
     DeleteItemResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCacheID"
+        key:
+          type: string
+          example: 'SomeRandomKey'
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    CancelItemRemovalResponse:
       type: object
       properties:
         cacheId:

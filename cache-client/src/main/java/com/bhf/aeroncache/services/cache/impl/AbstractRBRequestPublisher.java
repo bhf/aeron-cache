@@ -33,6 +33,7 @@ public abstract class AbstractRBRequestPublisher<BV> implements CacheRequestPubl
     protected abstract int unsubscribeToCacheMsgId();
     protected abstract int addCacheEntryMsgId();
     protected abstract int patchValueMsgId();
+    protected abstract int cancelItemRemovalMsgId();
 
     @Override
     public void sendCreateCache(String requestId, String cacheId) {
@@ -208,6 +209,45 @@ public abstract class AbstractRBRequestPublisher<BV> implements CacheRequestPubl
         } catch (Exception e) {
             rb.abort(claimIndex);
             log.error("Error whilst trying to write remove cache entry to RingBuffer", e);
+        }
+    }
+
+    @Override
+    public void cancelItemRemoval(String requestId, String cacheId, String key) {
+        byte[] requestIdBytes = requestId.getBytes(StandardCharsets.UTF_8);
+        byte[] cacheIdBytes = cacheId.getBytes(StandardCharsets.UTF_8);
+        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+        var desiredLength = (requestIdBytes.length + 4) + (cacheIdBytes.length + 4) + (keyBytes.length + 4);
+        log.trace("DESIRED LENGTH=" + desiredLength);
+
+        var claimIndex = -1;
+        while ((claimIndex = rb.tryClaim(cancelItemRemovalMsgId(), desiredLength)) < 0) {
+        }
+
+        try {
+            var buffer = rb.buffer();
+            int writeCursor = claimIndex;
+
+            buffer.putInt(writeCursor, requestIdBytes.length);
+            writeCursor += 4;
+            buffer.putBytes(writeCursor, requestIdBytes);
+            writeCursor += requestIdBytes.length;
+
+            buffer.putInt(writeCursor, cacheIdBytes.length);
+            writeCursor += 4;
+            buffer.putBytes(writeCursor, cacheIdBytes);
+            writeCursor += cacheIdBytes.length;
+
+            buffer.putInt(writeCursor, keyBytes.length);
+            writeCursor += 4;
+            buffer.putBytes(writeCursor, keyBytes);
+            writeCursor += keyBytes.length;
+
+            log.trace("TOTAL WRITTEN BYTES=" + (writeCursor - claimIndex));
+            rb.commit(claimIndex);
+        } catch (Exception e) {
+            rb.abort(claimIndex);
+            log.error("Error whilst trying to write cancel item removal to RingBuffer", e);
         }
     }
 

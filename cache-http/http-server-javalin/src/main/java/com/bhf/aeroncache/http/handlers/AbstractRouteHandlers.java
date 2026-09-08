@@ -210,6 +210,40 @@ public abstract class AbstractRouteHandlers<V extends Reusable, BV> {
         }
     }
 
+    /**
+     * Handle a request to cancel a scheduled removal of an item from a cache.
+     *
+     * @param ctx The context.
+     */
+    public void handleCancelItemRemovalRequest(Context ctx) {
+        try {
+            var cacheId = ctx.pathParam("cacheId");
+            var key = ctx.pathParam("key");
+            log.info("Got cancel item removal request on cacheId {}, key {}",
+                    cacheId, key);
+
+            var requestId = getRequestId(ctx);
+
+            CompletableFuture<CancelItemRemovalResponse> future = new CompletableFuture<>();
+            Consumer<CancelItemRemovalResult<ReusableString, ReusableString>> consumer = HTTPConsumerUtils.getCancelItemRemovalResultConsumer(future);
+            CompletableFuture.runAsync(() -> publisher.cancelItemRemoval(requestId, cacheId, key, consumer));
+
+            var response = future.get();
+
+            ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg =
+                    "Badly formed request to cancel removal of item with key " + ctx.pathParam("key") + " from cache with Id: " + ctx.pathParam("cacheId");
+            log.warn(errorMsg);
+            HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
+                    CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
     protected boolean isCreateRequestValid(CreateCacheRequest request, Context ctx) {
         return true;
     }

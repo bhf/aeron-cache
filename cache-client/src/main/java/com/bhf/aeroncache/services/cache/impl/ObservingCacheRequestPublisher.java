@@ -51,6 +51,11 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
         return this;
     }
 
+    public ObservingCacheRequestPublisher<I,K,V, BI, BK, BV> onItemRemovalCancelled(Consumer<CancelItemRemovalResult<I, K>> c) {
+        cacheResponseObservers.setItemRemovalCancelledConsumer(c);
+        return this;
+    }
+
     public ObservingCacheRequestPublisher<I,K,V, BI, BK, BV> onGetCacheEntry(Consumer<GetCacheEntryResult<I, K, V>> c) {
         cacheResponseObservers.setGetCacheEntryConsumer(c);
         return this;
@@ -121,6 +126,17 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     public void removeCacheEntry(String requestId, BI cacheId, BK key, Consumer<RemoveCacheEntryResult<I, K>> c) {
         cacheResponseObservers.removeCacheEntry(requestId, cacheId, key, c);
         rbPublisher.removeCacheEntry(requestId, cacheId, key);
+    }
+
+    @Override
+    public void cancelItemRemoval(String requestId, BI cacheId, BK key) {
+        rbPublisher.cancelItemRemoval(requestId, cacheId, key);
+    }
+
+    @Override
+    public void cancelItemRemoval(String requestId, BI cacheId, BK key, Consumer<CancelItemRemovalResult<I, K>> c) {
+        cacheResponseObservers.cancelItemRemoval(requestId, cacheId, key, c);
+        rbPublisher.cancelItemRemoval(requestId, cacheId, key);
     }
 
     @Override
@@ -245,6 +261,11 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult) {
         cacheResponseHandler.handleCacheEntryRemoved(removeCacheEntryResult);
+    }
+
+    @Override
+    public void handleItemRemovalCancelled(CancelItemRemovalResult<I, K> cancelItemRemovalResult) {
+        cacheResponseHandler.handleItemRemovalCancelled(cancelItemRemovalResult);
     }
 
     @Override

@@ -35,6 +35,11 @@ public class MapCacheClientSchemDetailsProvider implements CacheClientSchemDetai
     }
 
     @Override
+    public int getCacheItemRemovalCancelledId() {
+        return CacheItemRemovalCancelledDecoder.TEMPLATE_ID;
+    }
+
+    @Override
     public int getCacheEntryPatchedId() {
         return CacheEntryPatchedDecoder.TEMPLATE_ID;
     }
@@ -97,6 +102,11 @@ public class MapCacheClientSchemDetailsProvider implements CacheClientSchemDetai
     @Override
     public int getCounterCacheEntryRemovedId() {
         return RemoveCounterResponseDecoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getCounterItemRemovalCancelledId() {
+        return CounterItemRemovalCancelledDecoder.TEMPLATE_ID;
     }
 
     @Override

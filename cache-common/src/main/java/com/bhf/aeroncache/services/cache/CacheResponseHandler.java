@@ -49,6 +49,14 @@ public interface CacheResponseHandler<I extends Reusable, K extends Reusable, V 
     void handleCacheEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult);
 
     /**
+     * Handle a message indicating a scheduled cache entry removal has been cancelled and
+     * delegate it to any relevant consumer.
+     *
+     * @param cancelItemRemovalResult The result of a cancel item removal request.
+     */
+    default void handleItemRemovalCancelled(CancelItemRemovalResult<I, K> cancelItemRemovalResult) {}
+
+    /**
      * Handle a message indicating a cache entry has been patched and delegate it
      * to any relevant consumer.
      *

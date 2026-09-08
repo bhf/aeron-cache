@@ -34,6 +34,7 @@ public class RBCacheRequestPublisher extends AbstractRBRequestPublisher<String> 
     @Override protected int unsubscribeToCacheMsgId() { return CacheRequestMessageTypes.UNSUBSCRIBE_TO_CACHE_MSG_ID; }
     @Override protected int addCacheEntryMsgId() { return CacheRequestMessageTypes.ADD_CACHE_ENTRY_MSG_ID; }
     @Override protected int patchValueMsgId() { return CacheRequestMessageTypes.PATCH_CACHE_ENTRY_MSG_ID; }
+    @Override protected int cancelItemRemovalMsgId() { return CacheRequestMessageTypes.CANCEL_CACHE_ITEM_REMOVAL_MSG_ID; }
 
     @Override
     public void addCacheEntry(String requestId, String cacheId, String key, String value, long ttl) {

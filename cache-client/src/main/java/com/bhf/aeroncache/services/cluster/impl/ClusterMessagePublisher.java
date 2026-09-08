@@ -110,6 +110,19 @@ public class ClusterMessagePublisher<BI, BK, BV> implements CacheRequestPublishe
     }
 
     @Override
+    public void cancelItemRemovalBlocking(String requestId, BI cacheId, BK key) {
+        cancelItemRemoval(requestId, cacheId, key);
+        waitForResult(cluster);
+    }
+
+    @Override
+    public void cancelItemRemoval(String requestId, BI cacheId, BK key) {
+        var length = cacheRequestEncoder.encodeCancelItemRemoval(requestId, cacheId, key, msgBuffer);
+        publishToCache(msgBuffer, 0, length);
+        log.info("Sent cancel item removal request on cache {}, key {}, with request Id {}", cacheId, key, requestId);
+    }
+
+    @Override
     public void patchValue(String requestId, BI cacheId, BK key, BV value) {
         var length = cacheRequestEncoder.encodePatchValue(requestId, cacheId, key, value, msgBuffer);
         publishToCache(msgBuffer, 0, length);

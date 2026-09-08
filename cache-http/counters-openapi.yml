@@ -209,6 +209,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/counters/{cacheId}/{key}/cancel-removal:
+    post:
+      tags:
+        - CancelCounterItemRemoval
+      summary: Cancel a scheduled removal of a counter
+      description: Cancel a previously scheduled TTL/expiry removal of a counter by cache Id and key
+      operationId: cancelCounterItemRemoval
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelItemRemovalResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/counters/timed/{cacheId}:
     post:
       tags:
@@ -572,6 +603,17 @@ components:
         cacheId:
           type: string
           example: "SomeCounterCacheID"
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    CancelItemRemovalResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCounterCacheID"
+        key:
+          type: string
+          example: 'SomeCounterKey'
         operationStatus:
           $ref: '#/components/schemas/CacheOperationStatus'
     CacheDetails:

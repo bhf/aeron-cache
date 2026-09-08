@@ -47,6 +47,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     private final ClearCacheResult<I> clearCacheResult;
     private final DeleteCacheResult<I> deleteCacheResult;
     private final RemoveCacheEntryResult<I, K> removeCacheEntryResult;
+    private final CancelItemRemovalResult<I, K> itemRemovalCancelledResult;
     private final PatchValueResult<I, K, V> patchValueResult;
     private final GetCacheEntryResult<I, K, V> getCacheEntryResult;
     private final GetAllCacheEntriesResult<I, K, V> getCacheEntriesResult;
@@ -73,6 +74,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
         clearCacheResult = new ClearCacheResult<>(indexSupplier.get());
         deleteCacheResult = new DeleteCacheResult<>(indexSupplier.get());
         removeCacheEntryResult = new RemoveCacheEntryResult<>(indexSupplier.get(), keySupplier.get());
+        itemRemovalCancelledResult = new CancelItemRemovalResult<>(indexSupplier.get(), keySupplier.get());
         patchValueResult = new PatchValueResult<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
         getCacheEntryResult = new GetCacheEntryResult<>(indexSupplier.get(), keySupplier.get(), valueSupplier.get());
         getCacheEntriesResult = new GetAllCacheEntriesResult<>(indexSupplier.get());
@@ -116,6 +118,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
             handleCacheDeleted(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheEntryRemovedId()) {
             handleCacheEntryRemoved(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
+        } else if (templateId == schemaDetails.getCacheItemRemovalCancelledId()) {
+            handleItemRemovalCancelled(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheEntryPatchedId()) {
             handleCacheEntryPatched(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getAllCacheEntriesResultId()) {
@@ -142,6 +146,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
             handleCacheDeleted(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks);
         } else if (templateId == schemaDetails.getCounterCacheEntryRemovedId()) {
             handleCacheEntryRemoved(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks);
+        } else if (templateId == schemaDetails.getCounterItemRemovalCancelledId()) {
+            handleItemRemovalCancelled(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks);
         } else if (templateId == schemaDetails.getCounterCacheUnsubscribeResponseId()) {
             handleCacheUnsubscribeResult(buffer, offset, countersCacheResponseDecoder, countersResultsCallbacks);
         } else if (templateId == schemaDetails.getCounterCacheEntryResultId()) {
@@ -259,6 +265,26 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleCacheEntryRemoved(removeCacheEntryResult);
+        }
+    }
+
+    /**
+     * Handle a scheduled cache entry removal being cancelled by decoding it and delegating the result to the consumer.
+     *
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks     Callbacks for the cache results.
+     */
+    private <BV extends Reusable> void handleItemRemovalCancelled(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder, CacheResponseHandler<I, K, BV> cacheResultsCallbacks) {
+        decoder.decodeItemRemovalCancelled(buffer, offset, itemRemovalCancelledResult);
+        log.info("Got item removal cancelled for cache {} with key {}, requestId: {}, cancelled {}, status {}",
+                itemRemovalCancelledResult.getCacheId(), itemRemovalCancelledResult.getKey(),
+                itemRemovalCancelledResult.getRequestId(), itemRemovalCancelledResult.isCancelled(),
+                itemRemovalCancelledResult.getStatus());
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleItemRemovalCancelled(itemRemovalCancelledResult);
         }
     }
 

@@ -66,6 +66,15 @@ public interface CacheRequestPublisher<BI,BK,BV> {
     void removeCacheEntry(String requestId, BI cacheId, BK key);
 
     /**
+     * Send a message to cancel a previously scheduled removal (TTL expiry) of a cache entry.
+     *
+     * @param requestId The Id of this request.
+     * @param cacheId   The ID of the cache holding the entry.
+     * @param key       The key of the entry whose scheduled removal we're cancelling.
+     */
+    void cancelItemRemoval(String requestId, BI cacheId, BK key);
+
+    /**
      * Send a message to patch (deep-merge) the value of a cache entry.
      *
      * @param requestId The Id of this request.
