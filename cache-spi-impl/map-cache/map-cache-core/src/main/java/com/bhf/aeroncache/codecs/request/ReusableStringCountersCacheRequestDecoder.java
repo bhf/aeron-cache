@@ -14,6 +14,7 @@ public class ReusableStringCountersCacheRequestDecoder implements CountersCacheR
     private final CounterCacheSubscriptionRequestDecoder cacheSubscriptionRequestDecoder = new CounterCacheSubscriptionRequestDecoder();
     private final ClearCounterCacheRequestDecoder clearCacheDecoder = new ClearCounterCacheRequestDecoder();
     private final RemoveCounterRequestDecoder removeCacheEntryDecoder = new RemoveCounterRequestDecoder();
+    private final CancelCounterItemRemovalDecoder cancelItemRemovalDecoder = new CancelCounterItemRemovalDecoder();
     private final AddCounterRequestDecoder addCacheEntryDecoder = new AddCounterRequestDecoder();
     private final GetCounterCacheEntryDecoder getCacheEntryDecoder = new GetCounterCacheEntryDecoder();
     private final GetAllCounterCacheEntriesDecoder getAllCacheEntriesDecoder = new GetAllCounterCacheEntriesDecoder();
@@ -85,6 +86,18 @@ public class ReusableStringCountersCacheRequestDecoder implements CountersCacheR
         removeCacheEntryRequestDetails.getCacheId().copyFrom(cacheId);
         removeCacheEntryRequestDetails.getKey().copyFrom(key);
         removeCacheEntryRequestDetails.setRequestId(requestId);
+    }
+
+    @Override
+    public void decodeCancelItemRemovalRequest(DirectBuffer buffer, int offset, CancelItemRemovalRequestDetails<ReusableString, ReusableString> cancelItemRemovalRequestDetails) {
+        cancelItemRemovalRequestDetails.clear();
+        cancelItemRemovalDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var cacheId = cancelItemRemovalDecoder.cacheId();
+        var key = cancelItemRemovalDecoder.counterId();
+        var requestId = cancelItemRemovalDecoder.requestId();
+        cancelItemRemovalRequestDetails.getCacheId().copyFrom(cacheId);
+        cancelItemRemovalRequestDetails.getKey().copyFrom(key);
+        cancelItemRemovalRequestDetails.setRequestId(requestId);
     }
 
     @Override

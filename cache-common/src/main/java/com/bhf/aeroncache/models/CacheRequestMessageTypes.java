@@ -20,6 +20,7 @@ public class CacheRequestMessageTypes {
     public static final int REMOVE_CACHE_ENTRY_MSG_ID = 10;
     public static final int BULK_OPS_MSG_ID = 11;
     public static final int PATCH_CACHE_ENTRY_MSG_ID = 12;
+    public static final int CANCEL_CACHE_ITEM_REMOVAL_MSG_ID = 13;
 
     public static final int CREATE_COUNTER_CACHE_MSG_ID = 101;
     public static final int ADD_COUNTER_ENTRY_MSG_ID = 102;
@@ -34,4 +35,5 @@ public class CacheRequestMessageTypes {
     public static final int INCREMENT_COUNTER_ENTRY_MSG_ID = 111;
     public static final int DECREMENT_COUNTER_ENTRY_MSG_ID = 112;
     public static final int SET_COUNTER_ENTRY_MSG_ID = 113;
+    public static final int CANCEL_COUNTER_ITEM_REMOVAL_MSG_ID = 114;
 }

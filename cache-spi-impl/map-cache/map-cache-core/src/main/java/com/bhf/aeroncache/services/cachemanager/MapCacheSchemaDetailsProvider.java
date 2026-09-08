@@ -25,6 +25,11 @@ public class MapCacheSchemaDetailsProvider implements CacheSchemaDetailsProvider
     }
 
     @Override
+    public int getCancelCacheItemRemovalId() {
+        return CancelCacheItemRemovalEncoder.TEMPLATE_ID;
+    }
+
+    @Override
     public int getPatchCacheEntryId() {
         return PatchCacheEntryEncoder.TEMPLATE_ID;
     }
@@ -82,6 +87,11 @@ public class MapCacheSchemaDetailsProvider implements CacheSchemaDetailsProvider
     @Override
     public int getRemoveCounterCacheEntryId() {
         return RemoveCounterRequestEncoder.TEMPLATE_ID;
+    }
+
+    @Override
+    public int getCancelCounterItemRemovalId() {
+        return CancelCounterItemRemovalEncoder.TEMPLATE_ID;
     }
 
     @Override

@@ -20,6 +20,7 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     private final CacheEntryPatchedEncoder cacheEntryPatchedEncoder = new CacheEntryPatchedEncoder();
     private final AllCacheEntriesResultEncoder allCacheEntriesResultEncoder = new AllCacheEntriesResultEncoder();
     private final CacheEntryRemovedEncoder entryRemovedEncoder = new CacheEntryRemovedEncoder();
+    private final CacheItemRemovalCancelledEncoder itemRemovalCancelledEncoder = new CacheItemRemovalCancelledEncoder();
     private final CacheClearedEncoder cacheClearedEncoder = new CacheClearedEncoder();
     private final CacheDeletedEncoder cacheDeletedEncoder = new CacheDeletedEncoder();
     private final AllCacheStatsResultEncoder cacheStatsResultEncoder = new AllCacheStatsResultEncoder();
@@ -125,6 +126,18 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
                 .requestId(removeCacheEntryResult.getRequestId());
 
         return entryRemovedEncoder.encodedLength() + headerEncoder.encodedLength();
+    }
+
+    @Override
+    public int encodeItemRemovalCancelled(ReusableString cacheId, ReusableString key, CancelItemRemovalResult<ReusableString, ReusableString> cancelItemRemovalResult, MutableDirectBuffer egressBuffer) {
+        itemRemovalCancelledEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        itemRemovalCancelledEncoder
+                .status(getOperationStatus(cancelItemRemovalResult.getStatus()))
+                .cacheId(cacheId.value())
+                .key(key.value())
+                .requestId(cancelItemRemovalResult.getRequestId());
+
+        return itemRemovalCancelledEncoder.encodedLength() + headerEncoder.encodedLength();
     }
 
     @Override

@@ -57,6 +57,7 @@ class GatewayEndToEndTest {
 
     private static final int CLUSTER_NODES = 3;
     private static final long TTL_NONE = 0L;
+    private static final long TTL_SCHEDULED = 60_000L;
 
     private static MediaDriver clientMediaDriver;
     private static Aeron clientAeron;
@@ -423,6 +424,83 @@ class GatewayEndToEndTest {
         await().atMost(30, SECONDS).until(() -> listener.statsComplete.containsKey(statsCorr));
         assertTrue(statFor(statsCorr, cacheId).isEmpty(),
                 "expected deleted counter cache " + cacheId + " to be absent from stats");
+    }
+
+    @Test
+    @DisplayName("Should cancel a scheduled item removal so the entry is not evicted")
+    void shouldCancelScheduledItemRemoval() {
+        // Arrange
+        var cacheId = uniqueCache("cancel-removal");
+        var createCorr = correlationId();
+        var addCorr = correlationId();
+        var cancelCorr = correlationId();
+        var getCorr = correlationId();
+
+        client.createCache(createCorr, cacheId);
+        awaitCommandSuccess(createCorr);
+        // Add with a ttl so a removal timer is scheduled for the key.
+        client.addEntry(addCorr, cacheId, "k1", "v1", TTL_SCHEDULED);
+        awaitCommandSuccess(addCorr);
+
+        // Act
+        client.cancelItemRemoval(cancelCorr, cacheId, "k1");
+        awaitCommandSuccess(cancelCorr);
+
+        // Assert: the entry is still present because its scheduled removal was cancelled.
+        client.getEntries(getCorr, cacheId);
+        await().atMost(30, SECONDS).until(() -> listener.entriesComplete.containsKey(getCorr));
+        assertEquals(OperationStatus.SUCCESS, listener.entriesStatus.get(getCorr));
+        assertEquals(Map.of("k1", "v1"), listener.entriesAccumulated.get(getCorr));
+    }
+
+    @Test
+    @DisplayName("Should report UNKNOWN_KEY when cancelling a removal that was never scheduled")
+    void shouldReportUnknownKeyWhenNoRemovalScheduled() {
+        // Arrange
+        var cacheId = uniqueCache("cancel-removal-none");
+        var createCorr = correlationId();
+        var addCorr = correlationId();
+        var cancelCorr = correlationId();
+
+        client.createCache(createCorr, cacheId);
+        awaitCommandSuccess(createCorr);
+        // Add without a ttl, so no removal timer is scheduled.
+        client.addEntry(addCorr, cacheId, "k1", "v1", TTL_NONE);
+        awaitCommandSuccess(addCorr);
+
+        // Act
+        client.cancelItemRemoval(cancelCorr, cacheId, "k1");
+        await().atMost(30, SECONDS).until(() -> listener.commandResponses.containsKey(cancelCorr));
+
+        // Assert
+        assertEquals(OperationStatus.UNKNOWN_KEY, listener.commandResponses.get(cancelCorr).status(),
+                "cancelling a removal that was never scheduled should report UNKNOWN_KEY");
+    }
+
+    @Test
+    @DisplayName("Should cancel a scheduled counter item removal so the counter is not evicted")
+    void shouldCancelScheduledCounterItemRemoval() {
+        // Arrange
+        var cacheId = uniqueCache("cancel-counter-removal");
+        var createCorr = correlationId();
+        var addCorr = correlationId();
+        var cancelCorr = correlationId();
+        var getCorr = correlationId();
+
+        client.createCounterCache(createCorr, cacheId);
+        awaitCommandSuccess(createCorr);
+        // Add with a ttl so a removal timer is scheduled for the counter.
+        client.addCounterEntry(addCorr, cacheId, "hits", 5L, TTL_SCHEDULED);
+        awaitCommandSuccess(addCorr);
+
+        // Act
+        client.cancelCounterItemRemoval(cancelCorr, cacheId, "hits");
+        awaitCommandSuccess(cancelCorr);
+
+        // Assert: the counter is still present because its scheduled removal was cancelled.
+        client.getCounterEntry(getCorr, cacheId, "hits");
+        await().atMost(30, SECONDS).until(() -> listener.commandResponses.containsKey(getCorr));
+        assertEquals("5", listener.commandResponses.get(getCorr).value());
     }
 
     // ------------------------------------------------------------------ helpers

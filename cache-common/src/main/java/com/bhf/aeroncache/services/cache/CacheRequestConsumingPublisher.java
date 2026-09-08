@@ -61,6 +61,16 @@ public interface CacheRequestConsumingPublisher<RI extends Reusable, RK extends 
     void removeCacheEntry(String requestId, BI cacheId, BK key, Consumer<RemoveCacheEntryResult<RI, RK>> c);
 
     /**
+     * Send a message to cancel a previously scheduled removal (TTL expiry) of a cache entry.
+     *
+     * @param requestId The request ID.
+     * @param cacheId   The ID of the cache holding the entry.
+     * @param key       The key of the entry whose scheduled removal we're cancelling.
+     * @param c         The consumer that will handle the result.
+     */
+    void cancelItemRemoval(String requestId, BI cacheId, BK key, Consumer<CancelItemRemovalResult<RI, RK>> c);
+
+    /**
      * Send a message to patch (deep-merge) the value of a cache entry.
      *
      * @param requestId The request ID.

@@ -24,6 +24,7 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     final List<IdentifiableConsumer<String, GetCacheEntryResult<I, K, V>>> getCacheEntryObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, DeleteCacheResult<I>>> deleteCacheObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, RemoveCacheEntryResult<I, K>>> removeCacheEntryObservers = new CopyOnWriteArrayList<>();
+    final List<IdentifiableConsumer<String, CancelItemRemovalResult<I, K>>> itemRemovalCancelledObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, ClearCacheResult<I>>> clearCacheObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, GetAllCacheEntriesResult<I, K, V>>> getCacheEntriesObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, CacheStatsResult<I>>> allCacheStatsObservers = new CopyOnWriteArrayList<>();
@@ -35,6 +36,7 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     Consumer<ClearCacheResult<I>> clearCacheConsumer;
     Consumer<DeleteCacheResult<I>> deleteCacheConsumer;
     Consumer<RemoveCacheEntryResult<I, K>> removeCacheEntryConsumer;
+    Consumer<CancelItemRemovalResult<I, K>> itemRemovalCancelledConsumer;
     Consumer<GetCacheEntryResult<I, K, V>> getCacheEntryConsumer;
     Consumer<GetAllCacheEntriesResult<I, K, V>> getCacheEntriesConsumer;
 
@@ -113,6 +115,21 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
             @Override
             public void accept(RemoveCacheEntryResult<I, K> removeCacheEntryResult) {
                 c.accept(removeCacheEntryResult);
+            }
+        });
+    }
+
+    @Override
+    public void cancelItemRemoval(String requestId, String cacheId, String key, Consumer<CancelItemRemovalResult<I, K>> c) {
+        itemRemovalCancelledObservers.add(new IdentifiableConsumer<>() {
+            @Override
+            public String getId() {
+                return requestId;
+            }
+
+            @Override
+            public void accept(CancelItemRemovalResult<I, K> cancelItemRemovalResult) {
+                c.accept(cancelItemRemovalResult);
             }
         });
     }
@@ -254,6 +271,16 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
         removeCacheEntryObservers.removeIf(p -> p.getId().equals(targetId));
         if (removeCacheEntryConsumer != null) {
             removeCacheEntryConsumer.accept(removeCacheEntryResult);
+        }
+    }
+
+    @Override
+    public void handleItemRemovalCancelled(CancelItemRemovalResult<I, K> cancelItemRemovalResult) {
+        var targetId = cancelItemRemovalResult.getRequestId();
+        itemRemovalCancelledObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(cancelItemRemovalResult));
+        itemRemovalCancelledObservers.removeIf(p -> p.getId().equals(targetId));
+        if (itemRemovalCancelledConsumer != null) {
+            itemRemovalCancelledConsumer.accept(cancelItemRemovalResult);
         }
     }
 

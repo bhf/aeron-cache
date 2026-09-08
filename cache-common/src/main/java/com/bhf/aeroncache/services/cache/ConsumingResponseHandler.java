@@ -16,5 +16,7 @@ public interface ConsumingResponseHandler<I extends Reusable, K extends Reusable
 
     void setRemoveCacheEntryConsumer(Consumer<RemoveCacheEntryResult<I, K>> c);
 
+    void setItemRemovalCancelledConsumer(Consumer<CancelItemRemovalResult<I, K>> c);
+
     void setGetCacheEntryConsumer(Consumer<GetCacheEntryResult<I, K, V>> c);
 }

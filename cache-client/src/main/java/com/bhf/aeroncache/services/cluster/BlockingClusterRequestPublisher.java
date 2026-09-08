@@ -64,6 +64,15 @@ public interface BlockingClusterRequestPublisher<BI, BK, BV> {
     void removeCacheEntryBlocking(String requestId, BI cacheId, BK key);
 
     /**
+     * Send a message to cancel a previously scheduled removal of a cache entry in a blocking manner.
+     *
+     * @param requestId The Id of this request.
+     * @param cacheId   The ID of the cache holding the entry.
+     * @param key       The key of the entry whose scheduled removal we're cancelling.
+     */
+    void cancelItemRemovalBlocking(String requestId, BI cacheId, BK key);
+
+    /**
      * Send a message to get all cache entries in a blocking manner.
      *
      * @param requestId The Id of this request.

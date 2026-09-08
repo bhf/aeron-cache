@@ -85,6 +85,24 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
     }
 
     @Override
+    public boolean cancelItemRemoval(I cacheId, K key) {
+        lookupKey.clear();
+        lookupKey.getCacheId().copyFrom(cacheId);
+        lookupKey.getKey().copyFrom(key);
+
+        var correlationId = cacheKeyToTimerId.get(lookupKey);
+
+        if (correlationId != null) {
+            while(!cluster.cancelTimer(correlationId)){
+
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
     public int onTakeSnapshot(final ExclusivePublication snapshotPublication, MutableDirectBuffer timersBuffer) {
         log.info("Got request to take snapshot");
 

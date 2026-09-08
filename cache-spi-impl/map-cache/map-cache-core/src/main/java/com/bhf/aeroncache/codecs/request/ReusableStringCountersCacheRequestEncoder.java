@@ -20,6 +20,7 @@ public class ReusableStringCountersCacheRequestEncoder implements CountersCacheR
     private final ClearCounterCacheRequestEncoder clearCacheEncoder = new ClearCounterCacheRequestEncoder();
     private final DeleteCounterCacheEncoder deleteCacheEncoder = new DeleteCounterCacheEncoder();
     private final RemoveCounterRequestEncoder removeCacheEntryEncoder = new RemoveCounterRequestEncoder();
+    private final CancelCounterItemRemovalEncoder cancelItemRemovalEncoder = new CancelCounterItemRemovalEncoder();
     private final GetAllCounterCacheEntriesEncoder getAllCacheEntriesEncoder = new GetAllCounterCacheEntriesEncoder();
     private final CounterCacheSubscriptionRequestEncoder cacheSubscriptionRequestEncoder = new CounterCacheSubscriptionRequestEncoder();
     private final CounterCacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder = new CounterCacheUnsubscribeRequestEncoder();
@@ -115,6 +116,15 @@ public class ReusableStringCountersCacheRequestEncoder implements CountersCacheR
                 .counterId(key.value())
                 .requestId(requestId);
         return removeCacheEntryEncoder.encodedLength() + headerEncoder.encodedLength();
+    }
+
+    @Override
+    public int encodeCancelItemRemoval(String requestId, ReusableString cacheId, ReusableString key, MutableDirectBuffer msgBuffer) {
+        cancelItemRemovalEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId.value())
+                .counterId(key.value())
+                .requestId(requestId);
+        return cancelItemRemovalEncoder.encodedLength() + headerEncoder.encodedLength();
     }
 
     @Override

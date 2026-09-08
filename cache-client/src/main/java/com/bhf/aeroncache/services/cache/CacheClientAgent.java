@@ -60,6 +60,7 @@ public class CacheClientAgent extends AbstractClientAgent {
                 case UNSUBSCRIBE_TO_CACHE_MSG_ID -> handleUnsubscribeToCache(buffer, index, cacheOpsPublisher);
                 case GET_CACHE_STATS_MSG_ID -> handleGetCacheStats(buffer, index, cacheOpsPublisher);
                 case REMOVE_CACHE_ENTRY_MSG_ID -> handleRemoveCacheEntry(buffer, index, cacheOpsPublisher);
+                case CANCEL_CACHE_ITEM_REMOVAL_MSG_ID -> handleCancelItemRemoval(buffer, index, cacheOpsPublisher);
                 case PATCH_CACHE_ENTRY_MSG_ID -> handlePatchValue(buffer, index, cacheOpsPublisher);
                 case BULK_OPS_MSG_ID -> handleBulkOps(buffer, index, cacheOpsPublisher);
 
@@ -73,6 +74,7 @@ public class CacheClientAgent extends AbstractClientAgent {
                 case UNSUBSCRIBE_TO_COUNTER_CACHE_MSG_ID -> handleUnsubscribeToCache(buffer, index, counterOpsPublisher);
                 case GET_COUNTER_STATS_MSG_ID -> handleGetCacheStats(buffer, index, counterOpsPublisher);
                 case REMOVE_COUNTER_ENTRY_MSG_ID -> handleRemoveCacheEntry(buffer, index, counterOpsPublisher);
+                case CANCEL_COUNTER_ITEM_REMOVAL_MSG_ID -> handleCancelItemRemoval(buffer, index, counterOpsPublisher);
                 case INCREMENT_COUNTER_ENTRY_MSG_ID -> handleIncrementCounter(buffer, index, counterOpsPublisher);
                 case DECREMENT_COUNTER_ENTRY_MSG_ID -> handleDecrementCounter(buffer, index, counterOpsPublisher);
                 case SET_COUNTER_ENTRY_MSG_ID -> handleSetCounter(buffer, index, counterOpsPublisher);
@@ -127,6 +129,16 @@ public class CacheClientAgent extends AbstractClientAgent {
         var key = buffer.getStringUtf8(cumulativeReadPosition);
         log.debug("REMOVE CACHE ENTRY Request has ID " + requestId + ", cache ID " + cacheId + ", remove key=" + key);
         cacheOpsPublisher.removeCacheEntry(requestId, cacheId, key);
+    }
+
+    private <BV> void handleCancelItemRemoval(MutableDirectBuffer buffer, int index, ClusterMessagePublisher<String, String, BV> cacheOpsPublisher) {
+        var requestId = buffer.getStringUtf8(index);
+        var cumulativeReadPosition = index + (buffer.getInt(index) + 4);
+        var cacheId = buffer.getStringUtf8(cumulativeReadPosition);
+        cumulativeReadPosition += buffer.getInt(cumulativeReadPosition) + 4;
+        var key = buffer.getStringUtf8(cumulativeReadPosition);
+        log.debug("CANCEL ITEM REMOVAL Request has ID " + requestId + ", cache ID " + cacheId + ", key=" + key);
+        cacheOpsPublisher.cancelItemRemoval(requestId, cacheId, key);
     }
 
     private <BV> void handleGetCacheStats(MutableDirectBuffer buffer, int index, ClusterMessagePublisher<String, String, BV> cacheOpsPublisher) {

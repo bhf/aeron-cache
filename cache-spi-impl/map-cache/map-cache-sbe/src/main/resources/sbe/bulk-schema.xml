@@ -68,6 +68,8 @@
             <validValue name="DECREMENT_COUNTER">13</validValue>
             <validValue name="SET_COUNTER">14</validValue>
             <validValue name="PATCH_ITEM">15</validValue>
+            <validValue name="CANCEL_ITEM">16</validValue>
+            <validValue name="CANCEL_COUNTER">17</validValue>
         </enum>
     </types>
 

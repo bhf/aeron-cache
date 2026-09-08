@@ -14,6 +14,8 @@ public interface CacheClientSchemDetailsProvider {
 
     int getCacheEntryRemovedId();
 
+    int getCacheItemRemovalCancelledId();
+
     int getCacheEntryPatchedId();
 
     int getAllCacheEntriesResultId();
@@ -41,6 +43,8 @@ public interface CacheClientSchemDetailsProvider {
     int getCounterCacheDeletedId();
 
     int getCounterCacheEntryRemovedId();
+
+    int getCounterItemRemovalCancelledId();
 
     int getAllCounterCacheEntriesResultId();
 

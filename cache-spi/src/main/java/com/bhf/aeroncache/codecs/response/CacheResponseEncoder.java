@@ -22,6 +22,8 @@ public interface CacheResponseEncoder<I extends Reusable, K extends Reusable, V 
 
     int encodeRemoveCacheEntryResult(I cacheId, K key, RemoveCacheEntryResult<I, K> removeCacheEntryResult, MutableDirectBuffer egressBuffer);
 
+    int encodeItemRemovalCancelled(I cacheId, K key, CancelItemRemovalResult<I, K> cancelItemRemovalResult, MutableDirectBuffer egressBuffer);
+
     int encodeCacheCleared(I cacheId, ClearCacheResult<I> clearCacheResult, MutableDirectBuffer egressBuffer);
 
     int encodeDeleteCache(I cacheId, DeleteCacheResult<I> deleteCacheResult, MutableDirectBuffer egressBuffer);

@@ -19,6 +19,7 @@ public class ReusableStringCacheRequestEncoder implements CacheRequestEncoder<Re
     private final ClearCacheEncoder clearCacheEncoder = new ClearCacheEncoder();
     private final DeleteCacheEncoder deleteCacheEncoder = new DeleteCacheEncoder();
     private final RemoveCacheEntryEncoder removeCacheEntryEncoder = new RemoveCacheEntryEncoder();
+    private final CancelCacheItemRemovalEncoder cancelCacheItemRemovalEncoder = new CancelCacheItemRemovalEncoder();
     private final PatchCacheEntryEncoder patchCacheEntryEncoder = new PatchCacheEntryEncoder();
     private final GetAllCacheEntriesEncoder getAllCacheEntriesEncoder = new GetAllCacheEntriesEncoder();
     private final CacheSubscriptionRequestEncoder cacheSubscriptionRequestEncoder = new CacheSubscriptionRequestEncoder();
@@ -71,6 +72,13 @@ public class ReusableStringCacheRequestEncoder implements CacheRequestEncoder<Re
         removeCacheEntryEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .cacheId(cacheId.value()).key(key.value()).requestId(requestId);
         return removeCacheEntryEncoder.encodedLength()+ headerEncoder.encodedLength();
+    }
+
+    @Override
+    public int encodeCancelItemRemoval(String requestId, ReusableString cacheId, ReusableString key, MutableDirectBuffer msgBuffer) {
+        cancelCacheItemRemovalEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .cacheId(cacheId.value()).key(key.value()).requestId(requestId);
+        return cancelCacheItemRemovalEncoder.encodedLength()+ headerEncoder.encodedLength();
     }
 
     @Override

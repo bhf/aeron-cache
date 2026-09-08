@@ -203,6 +203,10 @@ public class GatewayClient implements Agent, AutoCloseable {
         return sendCommand(CacheRequestMessageTypes.REMOVE_CACHE_ENTRY_MSG_ID, 0L, 0L, correlationId, cacheId, key, null);
     }
 
+    public long cancelItemRemoval(String correlationId, String cacheId, String key) {
+        return sendCommand(CacheRequestMessageTypes.CANCEL_CACHE_ITEM_REMOVAL_MSG_ID, 0L, 0L, correlationId, cacheId, key, null);
+    }
+
     public long getStats(String correlationId) {
         return sendCommand(CacheRequestMessageTypes.GET_CACHE_STATS_MSG_ID, 0L, 0L, correlationId, null, null, null);
     }
@@ -235,6 +239,10 @@ public class GatewayClient implements Agent, AutoCloseable {
 
     public long removeCounterEntry(String correlationId, String cacheId, String key) {
         return sendCommand(CacheRequestMessageTypes.REMOVE_COUNTER_ENTRY_MSG_ID, 0L, 0L, correlationId, cacheId, key, null);
+    }
+
+    public long cancelCounterItemRemoval(String correlationId, String cacheId, String key) {
+        return sendCommand(CacheRequestMessageTypes.CANCEL_COUNTER_ITEM_REMOVAL_MSG_ID, 0L, 0L, correlationId, cacheId, key, null);
     }
 
     public long getCounterStats(String correlationId) {

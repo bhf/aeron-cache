@@ -12,6 +12,8 @@ public interface CacheSchemaDetailsProvider {
 
     int getRemoveCacheEntryId();
 
+    int getCancelCacheItemRemovalId();
+
     int getPatchCacheEntryId();
 
     int getClearCacheId();
@@ -37,6 +39,8 @@ public interface CacheSchemaDetailsProvider {
     int getGetCounterCacheEntryId();
 
     int getRemoveCounterCacheEntryId();
+
+    int getCancelCounterItemRemovalId();
 
     int getClearCounterCacheId();
 

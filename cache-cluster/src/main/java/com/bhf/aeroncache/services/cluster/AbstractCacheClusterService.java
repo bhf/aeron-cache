@@ -61,6 +61,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     final CreateCacheRequestDetails<I> createCacheRequestDetails;
     final ClearCacheRequestDetails<I> clearCacheRequestDetails;
     final RemoveCacheEntryRequestDetails<I, K> removeCacheEntryRequestDetails;
+    final CancelItemRemovalRequestDetails<I, K> cancelItemRemovalRequestDetails;
+    final CancelItemRemovalResult<I, K> cancelItemRemovalResult;
     final PatchValueRequestDetails<I, K, V> patchValueRequestDetails;
     final AddCacheEntryRequestDetails<I, K, V> addCacheEntryRequestDetails;
     final DeleteCacheRequestDetails<I> deleteCacheRequestDetails;
@@ -109,6 +111,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.clearCacheRequestDetails = new ClearCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        this.cancelItemRemovalRequestDetails = new CancelItemRemovalRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        this.cancelItemRemovalResult = new CancelItemRemovalResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
         this.patchValueRequestDetails = new PatchValueRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get(), cacheManagerFactory.getValueSupplier().get());
         this.addCacheEntryRequestDetails = new AddCacheEntryRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get(), cacheManagerFactory.getValueSupplier().get());
         this.deleteCacheRequestDetails = new DeleteCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
@@ -171,6 +175,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
             handleGetCacheEntry(session, buffer, offset, decoder, encoder, cacheManager);
         } else if (templateId == schemaDetails.getRemoveCacheEntryId()) {
             handleRemoveCacheEntry(session, buffer, offset, decoder, encoder, cacheManager, subscriptionService);
+        } else if (templateId == schemaDetails.getCancelCacheItemRemovalId()) {
+            handleCancelItemRemoval(session, buffer, offset, decoder, encoder, cacheTimerService);
         } else if (templateId == schemaDetails.getPatchCacheEntryId()) {
             handlePatchValue(session, buffer, offset, decoder, encoder, patchValueRequestDetails, cacheManager, subscriptionService);
         } else if (templateId == schemaDetails.getClearCacheId()) {
@@ -198,6 +204,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
             handleGetCacheEntry(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersCacheManager);
         } else if (templateId == schemaDetails.getRemoveCounterCacheEntryId()) {
             handleRemoveCacheEntry(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersCacheManager, countersSubscriptionService);
+        } else if (templateId == schemaDetails.getCancelCounterItemRemovalId()) {
+            handleCancelItemRemoval(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, cacheCountersTimerService);
         } else if (templateId == schemaDetails.getClearCounterCacheId()) {
             handleClearCache(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersCacheManager, countersSubscriptionService);
         } else if (templateId == schemaDetails.getDeleteCounterCacheId()) {
@@ -501,6 +509,28 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         var removeCacheEntryResult = cacheManager.removeCacheEntry(cacheId, key);
         removeCacheEntryResult.setRequestId(requestId);
         return removeCacheEntryResult;
+    }
+
+    <VT extends Reusable> void handleCancelItemRemoval(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, VT> responseEncoder, CacheTimerService<I, K> timerService) {
+        decoder.decodeCancelItemRemovalRequest(buffer, offset, cancelItemRemovalRequestDetails);
+        I cacheId = cancelItemRemovalRequestDetails.getCacheId();
+        K key = cancelItemRemovalRequestDetails.getKey();
+        var requestId = cancelItemRemovalRequestDetails.getRequestId();
+        var result = processCancelItemRemoval(cacheId, key, requestId, timerService);
+        var length = responseEncoder.encodeItemRemovalCancelled(cacheId, key, result, egressBuffer);
+        sendMessage(session, egressBuffer, length);
+    }
+
+    private CancelItemRemovalResult<I, K> processCancelItemRemoval(I cacheId, K key, String requestId, CacheTimerService<I, K> timerService) {
+        log.info("Got cancel item removal request for cache id {}, key {}, request Id: {}", cacheId, key, requestId);
+        cancelItemRemovalResult.clear();
+        cancelItemRemovalResult.getCacheId().copyFrom(cacheId);
+        cancelItemRemovalResult.getKey().copyFrom(key);
+        cancelItemRemovalResult.setRequestId(requestId);
+        boolean cancelled = timerService.cancelItemRemoval(cacheId, key);
+        cancelItemRemovalResult.setCancelled(cancelled);
+        cancelItemRemovalResult.setStatus(cancelled ? CacheOperationStatus.SUCCESS : CacheOperationStatus.UNKNOWN_KEY);
+        return cancelItemRemovalResult;
     }
 
     /**
@@ -826,6 +856,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
                 case GET_ITEM -> handleBulkOpGetItem(op, bulkOpsResult, cacheManager, cacheValueSupplier);
                 case DELETE_CACHE -> handleBulkOpDeleteCache(op, bulkOpsResult, cacheManager, encoder_, subscriptionService);
                 case REMOVE_ITEM -> handleBulkOpRemoveItem(op, bulkOpsResult, cacheManager, encoder_, subscriptionService);
+                case CANCEL_ITEM -> handleBulkOpCancelItem(op, bulkOpsResult, cacheTimerService_);
                 case PATCH_ITEM -> handleBulkOpPatchItem(op, bulkOpsResult, op.getValue(), cacheManager, encoder_, subscriptionService, cacheValueSupplier);
 
                 case CREATE_COUNTER_CACHE -> handleBulkOpCreateCache(op, bulkOpsResult, countersCacheManager);
@@ -834,6 +865,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
                 case GET_COUNTER -> handleBulkOpGetItem(op, bulkOpsResult, countersCacheManager, counterCacheValueSupplier);
                 case DELETE_COUNTER_CACHE -> handleBulkOpDeleteCache(op, bulkOpsResult, countersCacheManager, countersEncoder, countersSubscriptionService);
                 case REMOVE_COUNTER -> handleBulkOpRemoveItem(op, bulkOpsResult, countersCacheManager, countersEncoder, countersSubscriptionService);
+                case CANCEL_COUNTER -> handleBulkOpCancelItem(op, bulkOpsResult, cacheCountersTimerService_);
 
                 case INCREMENT_COUNTER -> handleBulkOpIncrementCounter(op, bulkOpsResult, countersCacheManager);
                 case DECREMENT_COUNTER -> handleBulkOpDecrementCounter(op, bulkOpsResult, countersCacheManager);
@@ -885,6 +917,17 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
             // update the subscription service
             handlePostRemoveCacheEntry(cacheId, key, result, null, encoder_, subscriptionService);
         }
+    }
+
+    private void handleBulkOpCancelItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheTimerService<I, K> timerService) {
+        I cacheId = op.getCacheId();
+        K key = op.getKey();
+        var requestId = op.getRequestId();
+        var result = processCancelItemRemoval(cacheId, key, requestId, timerService);
+        CancelItemRemovalResult<I, K> bulkResult = new CancelItemRemovalResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        bulkResult.copyFrom(result);
+        log.debug("Bulk request, cancel item removal result: {}", bulkResult);
+        bulkOpsResult.addResult(bulkResult);
     }
 
     private void handleBulkOpSetCounter(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CountersCacheManager<I, K, ReusableLong> countersCacheManager) {
