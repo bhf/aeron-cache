@@ -7,7 +7,7 @@ info:
     name: Sanjeev
     url: https://www.sanjeev.pages.dev
     email: na@na.com
-  version: 1.1.0
+  version: 1.2.0
 servers:
   - url: ws://localhost:7071
     description: Local WebSocket server
@@ -24,6 +24,7 @@ paths:
           description: The ID of the counter cache to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
       responses:
         101:
           description: Switching Protocols - WebSocket connection established.
@@ -52,6 +53,7 @@ paths:
           description: Comma-separated list of counter cache IDs to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
       responses:
         101:
           description: Switching Protocols - WebSocket connection established.
@@ -80,6 +82,7 @@ paths:
           description: The ID of the counter cache to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
       responses:
         101:
           description: Switching Protocols - WebSocket connection established.
@@ -108,6 +111,7 @@ paths:
           description: Comma-separated list of counter cache IDs to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
       responses:
         101:
           description: Switching Protocols - WebSocket connection established.
@@ -125,6 +129,17 @@ paths:
                 $ref: '#/components/schemas/RequestErrorResponse'
 
 components:
+  parameters:
+    KeysQueryParam:
+      name: keys
+      in: query
+      required: false
+      description: |
+        Optional comma-separated list of key filters that restrict the subscription to specific counters. Each token
+        is either `cacheId:key` (targets that counter within that cache) or a bare `key` (applies to every counter
+        cache in the route). When omitted, the subscription covers the whole counter cache.
+      schema:
+        type: string
   schemas:
     CounterUpdateEvent:
       type: object
