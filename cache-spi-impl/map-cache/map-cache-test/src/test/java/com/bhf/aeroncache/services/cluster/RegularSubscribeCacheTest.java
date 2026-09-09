@@ -39,7 +39,7 @@ public class RegularSubscribeCacheTest extends AbstractSubscribeCacheTest<Reusab
         CacheSubscriptionResult<ReusableString, ReusableString, ReusableString> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
         CacheUnsubscribeResult<ReusableString> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableString());
         Supplier<ReusableString> indexSupplier = ReusableString::new;
-        sut.subscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult, indexSupplier);
+        sut.subscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult, indexSupplier, ReusableString::new);
     }
 
     @Override

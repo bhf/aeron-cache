@@ -176,6 +176,7 @@ public class GatewayResponseWriter {
     private static UpdateEventType mapEventType(CacheUpdateEvent.EventType eventType) {
         return switch (eventType) {
             case ADD_ITEM -> UpdateEventType.ADD_ITEM;
+            case PATCH_ITEM -> UpdateEventType.PATCH_ITEM;
             case REMOVE_ITEM -> UpdateEventType.REMOVE_ITEM;
             case CLEAR_CACHE -> UpdateEventType.CLEAR_CACHE;
             case DELETE_CACHE -> UpdateEventType.DELETE_CACHE;

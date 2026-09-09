@@ -102,7 +102,9 @@ class GatewayRequestWriterTest {
         List<String> decodedIds = new ArrayList<>();
         while (group.hasNext()) {
             group.next();
+            group.mode();
             decodedIds.add(group.cacheId());
+            group.key();
         }
         assertEquals(cacheIds, decodedIds);
 

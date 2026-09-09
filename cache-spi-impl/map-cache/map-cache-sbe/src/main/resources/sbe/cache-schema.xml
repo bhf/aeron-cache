@@ -60,6 +60,18 @@
             <validValue name="DELETE_CACHE">5</validValue>
         </enum>
 
+        <enum name="SubscriptionMode" encodingType="uint8"
+              description="Whether a subscription receives full entry values or patch deltas.">
+            <validValue name="FULL">0</validValue>
+            <validValue name="PATCH">1</validValue>
+        </enum>
+
+        <enum name="UpdateEventType" encodingType="uint8"
+              description="Discriminates the kind of change carried by a CacheEntryUpdate.">
+            <validValue name="ADD_ITEM">0</validValue>
+            <validValue name="PATCH_ITEM">1</validValue>
+        </enum>
+
     </types>
 
     <sbe:message name="CreateCache" id="1" semanticType="CreateCache"
@@ -189,7 +201,9 @@
                  description="Subscribe to cache updates">
         <field name="sendSnapshot" id="1" type="BooleanType"/>
         <group name="cacheIds" id="20" dimensionType="groupSizeEncoding">
+            <field name="mode" id="22" type="SubscriptionMode"/>
             <data name="cacheId" id="21" type="varStringEncoding"/>
+            <data name="key" id="23" type="varStringEncoding"/>
         </group>
         <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
@@ -222,6 +236,7 @@
 
     <sbe:message name="CacheEntryUpdate" id="21" semanticType="CacheEntryUpdate"
                  description="An update to a cache entry">
+        <field name="eventType" id="5" type="UpdateEventType"/>
         <data name="cacheId" id="1" type="varStringEncoding"/>
         <data name="key" id="2" type="varStringEncoding"/>
         <data name="value" id="3" type="varStringEncoding"/>

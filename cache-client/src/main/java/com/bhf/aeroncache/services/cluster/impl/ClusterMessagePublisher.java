@@ -6,6 +6,7 @@ import com.bhf.aeroncache.codecs.request.CountersCacheRequestEncoder;
 import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
 import com.bhf.aeroncache.handlers.PublicationFailureHandler;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
 import lombok.RequiredArgsConstructor;
@@ -174,6 +175,13 @@ public class ClusterMessagePublisher<BI, BK, BV> implements CacheRequestPublishe
         var length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, sendSnapshot, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent cache subscription request on cache {} with request Id {}", cacheId, requestId);
+    }
+
+    @Override
+    public void sendCacheSubscribe(String requestId, List<BI> cacheId, List<BK> keys, List<SubscriptionMode> modes, boolean sendSnapshot) {
+        var length = cacheRequestEncoder.encodeCacheSubscribe(requestId, cacheId, keys, modes, sendSnapshot, msgBuffer);
+        publishToCache(msgBuffer, 0, length);
+        log.info("Sent cache subscription request on cache {}, keys {}, modes {} with request Id {}", cacheId, keys, modes, requestId);
     }
 
     @Override

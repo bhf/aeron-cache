@@ -52,7 +52,17 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
 
     @Override
     public <VT extends Reusable> int encodeEntryUpdated(ReusableString key, VT value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, MutableDirectBuffer egressBuffer) {
+        return encodeEntryUpdate(key, value, addCacheEntryResult, UpdateEventType.ADD_ITEM, egressBuffer);
+    }
+
+    @Override
+    public <VT extends Reusable> int encodeEntryPatched(ReusableString key, VT value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, MutableDirectBuffer egressBuffer) {
+        return encodeEntryUpdate(key, value, addCacheEntryResult, UpdateEventType.PATCH_ITEM, egressBuffer);
+    }
+
+    private <VT extends Reusable> int encodeEntryUpdate(ReusableString key, VT value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, UpdateEventType eventType, MutableDirectBuffer egressBuffer) {
         entryUpdateEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        entryUpdateEncoder.eventType(eventType);
         entryUpdateEncoder.cacheId((String) addCacheEntryResult.getCacheId().value())
                 .key(key.value())
                 .value(value.value().toString())

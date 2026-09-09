@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services.cache;
 
 
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.requests.SubscriptionMode;
 
 import java.util.List;
 
@@ -109,6 +110,19 @@ public interface CacheRequestPublisher<BI,BK,BV> {
      * @param sendSnapshot Whether to return a snapshot of the cache for initial hydration.
      */
     void sendCacheSubscribe(String requestId, List<BI> cacheId, boolean sendSnapshot);
+
+    /**
+     * Send a request to subscribe to cache updates with per-cache subscription key and mode.
+     *
+     * @param requestId    The Id of this request.
+     * @param cacheId      The caches to subscribe too.
+     * @param keys         Parallel list of subscription keys; a {@code null} entry (or {@code null} list) means whole-cache.
+     * @param modes        Parallel list of subscription modes; a {@code null} list means {@link SubscriptionMode#FULL}.
+     * @param sendSnapshot Whether to return a snapshot of the cache for initial hydration.
+     */
+    default void sendCacheSubscribe(String requestId, List<BI> cacheId, List<BK> keys, List<SubscriptionMode> modes, boolean sendSnapshot) {
+        sendCacheSubscribe(requestId, cacheId, sendSnapshot);
+    }
 
     /**
      * Send a request to unsubscribe to cache updates.

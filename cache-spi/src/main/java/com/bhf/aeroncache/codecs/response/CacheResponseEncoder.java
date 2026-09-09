@@ -14,6 +14,14 @@ public interface CacheResponseEncoder<I extends Reusable, K extends Reusable, V 
 
     <VT extends Reusable> int encodeEntryUpdated(K key, VT value, AddCacheEntryResult<I, K> addCacheEntryResult, MutableDirectBuffer egressBuffer);
 
+    /**
+     * Encode an entry update message tagged as a patch (PATCH_ITEM) rather than a full add (ADD_ITEM).
+     * Used to notify patch-mode subscribers.
+     */
+    default <VT extends Reusable> int encodeEntryPatched(K key, VT value, AddCacheEntryResult<I, K> addCacheEntryResult, MutableDirectBuffer egressBuffer) {
+        throw new UnsupportedOperationException("Patch subscriptions are not supported for this cache type");
+    }
+
     <VT extends Reusable> int encodeCacheEntryResult(I cacheId, GetCacheEntryResult<I, K, VT> getCacheEntryResult, MutableDirectBuffer egressBuffer);
 
     <VT extends Reusable> int encodePatchValueResult(I cacheId, PatchValueResult<I, K, VT> patchValueResult, MutableDirectBuffer egressBuffer);

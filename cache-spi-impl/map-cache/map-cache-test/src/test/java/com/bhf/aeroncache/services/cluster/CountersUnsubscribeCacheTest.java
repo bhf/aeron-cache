@@ -43,7 +43,7 @@ public class CountersUnsubscribeCacheTest extends AbstractUnsubscribeCacheTest<R
         CacheSubscriptionResult<ReusableString, ReusableString, ReusableLong> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
         CacheUnsubscribeResult<ReusableString> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableString());
         Supplier<ReusableString> indexSupplier = ReusableString::new;
-        sut.countersSubscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult, indexSupplier);
+        sut.countersSubscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult, indexSupplier, ReusableString::new);
     }
 
     @Override

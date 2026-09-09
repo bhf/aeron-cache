@@ -43,6 +43,13 @@
             <validValue name="REMOVE_ITEM">1</validValue>
             <validValue name="CLEAR_CACHE">2</validValue>
             <validValue name="DELETE_CACHE">3</validValue>
+            <validValue name="PATCH_ITEM">4</validValue>
+        </enum>
+
+        <enum name="SubscriptionMode" encodingType="uint8"
+              description="Whether a subscription receives full entry values or patch deltas.">
+            <validValue name="FULL">0</validValue>
+            <validValue name="PATCH">1</validValue>
         </enum>
     </types>
 
@@ -64,7 +71,9 @@
         <field name="sendSnapshot" id="1" type="BooleanType"/>
         <field name="counters" id="2" type="BooleanType"/>
         <group name="cacheIds" id="10" dimensionType="groupSizeEncoding">
+            <field name="mode" id="12" type="SubscriptionMode"/>
             <data name="cacheId" id="11" type="varStringEncoding"/>
+            <data name="key" id="13" type="varStringEncoding"/>
         </group>
         <data name="correlationId" id="3" type="varStringEncoding"/>
     </sbe:message>

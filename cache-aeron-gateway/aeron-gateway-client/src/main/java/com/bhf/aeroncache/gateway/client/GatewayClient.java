@@ -275,6 +275,21 @@ public class GatewayClient implements Agent, AutoCloseable {
     }
 
     /**
+     * Subscribe to streaming updates for specific keys within the given caches.
+     *
+     * @param keys     The keys parallel to {@code cacheIds}; a {@code null} entry (or {@code null} list) denotes a
+     *                 whole-cache subscription for that cache.
+     * @param patch    {@code true} to subscribe in patch mode, {@code false} for full mode.
+     * @param counters {@code true} to subscribe to counter caches, {@code false} for regular caches.
+     */
+    public long subscribe(String correlationId, List<String> cacheIds, List<String> keys,
+                          boolean patch, boolean sendSnapshot, boolean counters) {
+        final MutableDirectBuffer buffer = encodeBuffer.get();
+        final int length = requestWriter.get().encodeSubscribe(buffer, correlationId, cacheIds, keys, patch, sendSnapshot, counters);
+        return enqueue(buffer, length);
+    }
+
+    /**
      * Unsubscribe from streaming updates for a cache.
      *
      * @param counters {@code true} to unsubscribe from a counter cache, {@code false} for a regular cache.

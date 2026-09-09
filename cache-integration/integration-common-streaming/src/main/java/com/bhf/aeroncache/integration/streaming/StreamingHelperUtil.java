@@ -90,4 +90,48 @@ public class StreamingHelperUtil {
         return perStreamingSourceEvents;
     }
 
+    public static List<CompletableFuture<List<CacheUpdateEvent>>> getPerStreamEventsForKeys(StreamingHelper[] streamingHelpers,
+                                                                                            BackendTestResource backend,
+                                                                                            String cacheId, List<String> keys, int eventCount) {
+        List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
+        var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
+                .map(helper -> {
+                    CompletableFuture<Void> ready = new CompletableFuture<>();
+                    readyFutures.add(ready);
+                    return helper.getEventsForKeys(backend, cacheId, keys, eventCount, ready);
+                })
+                .collect(Collectors.toList());
+
+        readyFutures.forEach(f -> Awaitility.await().atMost(60, TimeUnit.SECONDS).until(f::isDone));
+
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return perStreamingSourceEvents;
+    }
+
+    public static List<CompletableFuture<List<CacheUpdateEvent>>> getPerStreamPatchEvents(StreamingHelper[] streamingHelpers,
+                                                                                          BackendTestResource backend,
+                                                                                          String cacheId, int eventCount) {
+        List<CompletableFuture<Void>> readyFutures = new ArrayList<>();
+        var perStreamingSourceEvents = Arrays.stream(streamingHelpers)
+                .map(helper -> {
+                    CompletableFuture<Void> ready = new CompletableFuture<>();
+                    readyFutures.add(ready);
+                    return helper.getPatchEvents(backend, cacheId, eventCount, ready);
+                })
+                .collect(Collectors.toList());
+
+        readyFutures.forEach(f -> Awaitility.await().atMost(60, TimeUnit.SECONDS).until(f::isDone));
+
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return perStreamingSourceEvents;
+    }
+
 }

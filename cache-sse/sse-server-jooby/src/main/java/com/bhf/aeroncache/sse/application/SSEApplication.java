@@ -2,6 +2,7 @@ package com.bhf.aeroncache.sse.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
@@ -118,6 +119,74 @@ public class SSEApplication extends Jooby {
         }
     }
 
+    /**
+     * Parsed subscription request parameters expanded from the request URI query string.
+     *
+     * @param cacheIds The caches to subscribe to (parallel to {@code keys}).
+     * @param keys     The keys parallel to {@code cacheIds}; a {@code null} entry denotes a whole-cache subscription.
+     * @param mode     The subscription mode.
+     */
+    private record SubscriptionParams(List<String> cacheIds, List<String> keys, SubscriptionMode mode) {
+    }
+
+    /**
+     * Expand the optional {@code keys} and {@code mode} query parameters into parallel cacheId/key lists.
+     *
+     * <p>{@code ?mode=patch} selects patch mode (default is full). {@code ?keys=} is a comma-separated list of
+     * tokens, where a token of the form {@code cacheId:key} targets a specific cache and a bare {@code key} token
+     * applies to every cache in the route. When {@code keys} is absent the behaviour is a whole-cache subscription.</p>
+     *
+     * @param ctx        The request context.
+     * @param baseCaches The caches identified from the request path.
+     * @param allowPatch Whether patch mode is permitted for this route (patch is cache-only, not for counters).
+     * @return The expanded subscription parameters.
+     */
+    private static SubscriptionParams expandSubscription(Context ctx, List<String> baseCaches, boolean allowPatch) {
+        var modeParam = ctx.query("mode").valueOrNull();
+        var mode = (allowPatch && "patch".equalsIgnoreCase(modeParam)) ? SubscriptionMode.PATCH : SubscriptionMode.FULL;
+
+        var keysParam = ctx.query("keys").valueOrNull();
+        if (keysParam == null || keysParam.isBlank()) {
+            return new SubscriptionParams(baseCaches, null, mode);
+        }
+
+        Map<String, LinkedHashSet<String>> keysByCache = new LinkedHashMap<>();
+        for (var token : keysParam.split(",")) {
+            var trimmed = token.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            var sep = trimmed.indexOf(':');
+            if (sep >= 0) {
+                var cacheId = trimmed.substring(0, sep);
+                var key = trimmed.substring(sep + 1);
+                if (!key.isEmpty()) {
+                    keysByCache.computeIfAbsent(cacheId, x -> new LinkedHashSet<>()).add(key);
+                }
+            } else {
+                for (var cacheId : baseCaches) {
+                    keysByCache.computeIfAbsent(cacheId, x -> new LinkedHashSet<>()).add(trimmed);
+                }
+            }
+        }
+
+        List<String> cacheIds = new ArrayList<>();
+        List<String> keys = new ArrayList<>();
+        for (var cacheId : baseCaches) {
+            var keySet = keysByCache.get(cacheId);
+            if (keySet == null || keySet.isEmpty()) {
+                cacheIds.add(cacheId);
+                keys.add(null);
+            } else {
+                for (var key : keySet) {
+                    cacheIds.add(cacheId);
+                    keys.add(key);
+                }
+            }
+        }
+        return new SubscriptionParams(cacheIds, keys, mode);
+    }
+
     private static void handleSingleCacheSSE(ServerSentEmitter serverSentEmitter) {
         try {
             var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
@@ -145,8 +214,9 @@ public class SSEApplication extends Jooby {
                 }
             };
 
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), serverSentEmitter.getId(),
-                    requestId, false, consumer);
+            var params = expandSubscription(serverSentEmitter.getContext(), List.of(cacheId), true);
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+                    serverSentEmitter.getId(), requestId, false, consumer);
         } catch (TypeMismatchException e) {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
         }
@@ -179,8 +249,9 @@ public class SSEApplication extends Jooby {
                 }
             };
 
-            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), serverSentEmitter.getId(),
-                    requestId, false, consumer);
+            var params = expandSubscription(serverSentEmitter.getContext(), List.of(cacheId), false);
+            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+                    serverSentEmitter.getId(), requestId, false, consumer);
         } catch (TypeMismatchException e) {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
         }
@@ -213,8 +284,9 @@ public class SSEApplication extends Jooby {
                 }
             };
 
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), serverSentEmitter.getId(),
-                    requestId, true, consumer);
+            var params = expandSubscription(serverSentEmitter.getContext(), List.of(cacheId), true);
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+                    serverSentEmitter.getId(), requestId, true, consumer);
         } catch (TypeMismatchException e) {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
         }
@@ -247,8 +319,9 @@ public class SSEApplication extends Jooby {
                 }
             };
 
-            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), serverSentEmitter.getId(),
-                    requestId, true, consumer);
+            var params = expandSubscription(serverSentEmitter.getContext(), List.of(cacheId), false);
+            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+                    serverSentEmitter.getId(), requestId, true, consumer);
         } catch (TypeMismatchException e) {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
         }
@@ -275,8 +348,9 @@ public class SSEApplication extends Jooby {
             }
         };
 
-        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, caches, serverSentEmitter.getId(),
-                requestId, false, consumer);
+        var params = expandSubscription(serverSentEmitter.getContext(), caches, true);
+        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+                serverSentEmitter.getId(), requestId, false, consumer);
     }
 
     private static void handleMultiCountersCacheSSE(ServerSentEmitter serverSentEmitter) {
@@ -299,8 +373,9 @@ public class SSEApplication extends Jooby {
             }
         };
 
-        countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, caches, serverSentEmitter.getId(),
-                requestId, false, consumer);
+        var params = expandSubscription(serverSentEmitter.getContext(), caches, false);
+        countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+                serverSentEmitter.getId(), requestId, false, consumer);
     }
 
     private static void handleMultiCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
@@ -323,8 +398,9 @@ public class SSEApplication extends Jooby {
             }
         };
 
-        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, caches, serverSentEmitter.getId(),
-                requestId, true, consumer);
+        var params = expandSubscription(serverSentEmitter.getContext(), caches, true);
+        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+                serverSentEmitter.getId(), requestId, true, consumer);
     }
 
     private static void handleMultiCountersCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
@@ -347,8 +423,9 @@ public class SSEApplication extends Jooby {
             }
         };
 
-        countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, caches, serverSentEmitter.getId(),
-                requestId, true, consumer);
+        var params = expandSubscription(serverSentEmitter.getContext(), caches, false);
+        countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+                serverSentEmitter.getId(), requestId, true, consumer);
     }
 
     private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {

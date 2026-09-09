@@ -108,6 +108,40 @@ public abstract class AbstractPatchValueTest<I extends Reusable, K extends Reusa
     }
 
     @Test
+    @DisplayName("Should notify the patch subscriber only on patch and not on add")
+    void shouldNotifyPatchSubscriberOnlyOnPatch() {
+        // Arrange
+        sut.patchSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
+
+        ClientSession session = TestUtils.getMockedSession(responseBuffer);
+        I cacheId = getCacheId();
+        K key = getKey();
+        V value = getInitialValue();
+
+        createCache(cacheId, session, requestBuffer, sut);
+
+        var requestId = UUID.randomUUID().toString();
+        var length = encodeAddCacheEntry(requestId, cacheId, key, value, 0, requestBuffer);
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+
+        // Adding an entry must NOT notify the patch subscription service
+        verify(sut.patchSubscriptionService, Mockito.never()).handleEntryAdded(
+                any(AddCacheEntryResult.class), any(MutableDirectBuffer.class), any(), any(), anyInt());
+
+        // Act - patch the entry
+        length = encodePatchValue(requestId, cacheId, key, getPatch(), requestBuffer);
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+
+        // Assert - a patch notifies the patch subscription service exactly once
+        verify(sut.patchSubscriptionService, times(1)).handleEntryAdded(
+                any(AddCacheEntryResult.class),
+                any(MutableDirectBuffer.class),
+                eq(key),
+                any(),
+                anyInt());
+    }
+
+    @Test
     @DisplayName("Should notify when entry key is unknown")
     void shouldNotifyWhenEntryKeyIsUnknown() {
         // Arrange

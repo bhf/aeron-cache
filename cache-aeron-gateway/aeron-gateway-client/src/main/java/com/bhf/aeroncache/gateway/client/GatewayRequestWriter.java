@@ -5,6 +5,7 @@ import com.bhf.aeroncache.gateway.messages.GatewayCommandEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewaySubscribeEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayUnsubscribeEncoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderEncoder;
+import com.bhf.aeroncache.gateway.messages.SubscriptionMode;
 import org.agrona.MutableDirectBuffer;
 
 import java.util.List;
@@ -42,18 +43,36 @@ class GatewayRequestWriter {
     }
 
     /**
-     * Encode a subscribe frame.
+     * Encode a subscribe frame (whole-cache, full mode).
      *
      * @return the encoded length in bytes.
      */
     int encodeSubscribe(MutableDirectBuffer buffer, String correlationId, List<String> cacheIds,
                         boolean sendSnapshot, boolean counters) {
+        return encodeSubscribe(buffer, correlationId, cacheIds, null, false, sendSnapshot, counters);
+    }
+
+    /**
+     * Encode a subscribe with per-cache keys and a subscription mode.
+     *
+     * @param keys  The keys parallel to {@code cacheIds}; a {@code null} entry (or {@code null} list) denotes a
+     *              whole-cache subscription for that cache.
+     * @param patch {@code true} to subscribe in patch mode, {@code false} for full mode.
+     * @return the encoded length in bytes.
+     */
+    int encodeSubscribe(MutableDirectBuffer buffer, String correlationId, List<String> cacheIds, List<String> keys,
+                        boolean patch, boolean sendSnapshot, boolean counters) {
+        final var sbeMode = patch ? SubscriptionMode.PATCH : SubscriptionMode.FULL;
         var subscribeEnc = subscribeEncoder.wrapAndApplyHeader(buffer, 0, headerEncoder)
                 .sendSnapshot(mapBoolean(sendSnapshot))
                 .counters(mapBoolean(counters));
         var group = subscribeEnc.cacheIdsCount(cacheIds.size());
-        for (String cacheId : cacheIds) {
-            group.next().cacheId(nullSafe(cacheId));
+        for (int i = 0; i < cacheIds.size(); i++) {
+            final var key = (keys == null) ? null : keys.get(i);
+            group.next()
+                    .mode(sbeMode)
+                    .cacheId(nullSafe(cacheIds.get(i)))
+                    .key(key == null ? "" : key);
         }
         subscribeEnc.correlationId(nullSafe(correlationId));
         return subscribeEncoder.limit();

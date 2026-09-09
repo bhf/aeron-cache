@@ -43,7 +43,7 @@ public class ReusableStringCountersCacheRequestDecoder implements CountersCacheR
     }
 
     @Override
-    public void decodeCacheSubscriptionRequest(DirectBuffer buffer, int offset, CacheSubscriptionRequestDetails<ReusableString> cacheSubscribeRequestDetails) {
+    public void decodeCacheSubscriptionRequest(DirectBuffer buffer, int offset, CacheSubscriptionRequestDetails<ReusableString, ReusableString> cacheSubscribeRequestDetails) {
         cacheSubscribeRequestDetails.clear();
         cacheSubscriptionRequestDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var sendSnapshot = cacheSubscriptionRequestDecoder.sendSnapshot();
@@ -51,14 +51,30 @@ public class ReusableStringCountersCacheRequestDecoder implements CountersCacheR
 
         cacheSubscribeRequestDetails.getCacheId().clear();
         var cacheIds = cacheSubscribeRequestDetails.getCacheId();
+        var keys = cacheSubscribeRequestDetails.getSubscriptionKey();
+        var modes = cacheSubscribeRequestDetails.getSubscriptionMode();
 
         var itemsDecoder = cacheSubscriptionRequestDecoder.cacheIds();
 
         for(var op: itemsDecoder) {
+            var mode = op.mode();
             ReusableString reusableCacheId = new ReusableString();
             var cacheId = op.cacheId();
             reusableCacheId.copyFrom(cacheId);
             cacheIds.add(reusableCacheId);
+
+            var key = op.key();
+            if (key == null || key.isEmpty()) {
+                keys.add(null);
+            } else {
+                ReusableString reusableKey = new ReusableString();
+                reusableKey.copyFrom(key);
+                keys.add(reusableKey);
+            }
+
+            modes.add(mode == com.bhf.aeroncache.messages.SubscriptionMode.PATCH
+                    ? com.bhf.aeroncache.models.requests.SubscriptionMode.PATCH
+                    : com.bhf.aeroncache.models.requests.SubscriptionMode.FULL);
         }
 
         var requestId = cacheSubscriptionRequestDecoder.requestId();

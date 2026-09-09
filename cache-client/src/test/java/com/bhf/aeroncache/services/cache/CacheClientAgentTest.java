@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -224,7 +225,8 @@ class CacheClientAgentTest {
         sut.runSingleCycle();
 
         // Assert
-        verify(publisher, times(1)).sendCacheSubscribe(requestId, List.of(cacheId), false);
+        verify(publisher, times(1)).sendCacheSubscribe(requestId, List.of(cacheId),
+                Collections.singletonList(null), List.of(com.bhf.aeroncache.models.requests.SubscriptionMode.FULL), false);
     }
 
     public static Stream<Arguments> provideCacheSubscribeParams() {
