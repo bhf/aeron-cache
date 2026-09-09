@@ -97,7 +97,7 @@ public class RegularStringCacheRequestEncoder implements CacheRequestEncoder<Str
     }
 
     @Override
-    public int encodeCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot, MutableDirectBuffer msgBuffer) {
+    public int encodeCacheSubscribe(String requestId, List<String> cacheId, List<String> keys, List<com.bhf.aeroncache.models.requests.SubscriptionMode> modes, boolean sendSnapshot, MutableDirectBuffer msgBuffer) {
         cacheSubscriptionRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .sendSnapshot(sendSnapshot ? BooleanType.T : BooleanType.F);
 
@@ -105,7 +105,10 @@ public class RegularStringCacheRequestEncoder implements CacheRequestEncoder<Str
 
         for (int i = 0; i < cacheId.size(); i++) {
             itemsEncoder.next();
+            itemsEncoder.mode(modes.get(i) == com.bhf.aeroncache.models.requests.SubscriptionMode.PATCH ? SubscriptionMode.PATCH : SubscriptionMode.FULL);
             itemsEncoder.cacheId(cacheId.get(i));
+            String key = keys.get(i);
+            itemsEncoder.key(key == null ? "" : key);
         }
 
         cacheSubscriptionRequestEncoder.requestId(requestId);

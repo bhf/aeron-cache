@@ -16,8 +16,8 @@ Features:
 * Bulk atomic operations across caches and counters
 * Clustered and single node modes
 * Run as a single monolith or separate horizontally scalable services
-* Streaming multi-cache subscriptions over Websocket, SSE and Aeron transport
-* PATCH support for partial updates to JSON values
+* Streaming multi-cache (and key) subscriptions over Websocket, SSE and Aeron transport
+* PATCH support for writing partial updates to JSON values including partial streaming subscriptions
 * Near cache implementation (read ahead)
 * Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded):
   * Aeron Transport (BIDI) - Java and Rust

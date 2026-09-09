@@ -172,7 +172,7 @@ class AbstractCacheClusterServiceTest {
         }
 
         @Override
-        protected <VT extends Reusable> CacheSubscriptionRequestDetails<ReusableString> getCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<ReusableString, ReusableString, VT> decoder, CacheSubscriptionRequestDetails<ReusableString> cacheSubscribeRequestDetails) {
+        protected <VT extends Reusable> CacheSubscriptionRequestDetails<ReusableString, ReusableString> getCacheSubscriptionRequest(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<ReusableString, ReusableString, VT> decoder, CacheSubscriptionRequestDetails<ReusableString, ReusableString> cacheSubscribeRequestDetails) {
             return null;
         }
 

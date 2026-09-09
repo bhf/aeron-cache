@@ -7,7 +7,7 @@ info:
     name: Sanjeev
     url: https://www.sanjeev.pages.dev
     email: na@na.com
-  version: 1.1.0
+  version: 1.2.0
 servers:
   - url: ws://localhost:7071
     description: Local WebSocket server
@@ -24,6 +24,8 @@ paths:
           description: The ID of the cache to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
+        - $ref: '#/components/parameters/ModeQueryParam'
       responses:
         101:
           description: Switching Protocols - WebSocket connection established.
@@ -52,6 +54,8 @@ paths:
           description: Comma-separated list of cache IDs to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
+        - $ref: '#/components/parameters/ModeQueryParam'
       responses:
         101:
           description: Switching Protocols - WebSocket connection established.
@@ -80,6 +84,8 @@ paths:
           description: The ID of the cache to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
+        - $ref: '#/components/parameters/ModeQueryParam'
       responses:
         101:
           description: Switching Protocols - WebSocket connection established.
@@ -108,6 +114,8 @@ paths:
           description: Comma-separated list of cache IDs to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
+        - $ref: '#/components/parameters/ModeQueryParam'
       responses:
         101:
           description: Switching Protocols - WebSocket connection established.
@@ -125,6 +133,30 @@ paths:
                 $ref: '#/components/schemas/RequestErrorResponse'
 
 components:
+  parameters:
+    KeysQueryParam:
+      name: keys
+      in: query
+      required: false
+      description: |
+        Optional comma-separated list of key filters that restrict the subscription to specific keys. Each token is
+        either `cacheId:key` (targets that key within that cache) or a bare `key` (applies to every cache in the
+        route). When omitted, the subscription covers the whole cache.
+      schema:
+        type: string
+    ModeQueryParam:
+      name: mode
+      in: query
+      required: false
+      description: |
+        Subscription mode. `full` (default) streams complete item values as `ADD_ITEM` events; `patch` streams only
+        the changed fields of patched items as `PATCH_ITEM` events. Patch mode is cache-only.
+      schema:
+        type: string
+        enum:
+          - full
+          - patch
+        default: full
   schemas:
     CacheUpdateEvent:
       type: object
@@ -138,6 +170,7 @@ components:
           description: The type of event.
           enum:
             - ADD_ITEM
+            - PATCH_ITEM
             - DELETE_CACHE
             - REMOVE_ITEM
             - CLEAR_CACHE

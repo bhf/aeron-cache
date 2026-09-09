@@ -96,6 +96,7 @@ public class ReusableStringCountersCacheResponseEncoder implements CountersCache
     public <VT extends Reusable> int encodeEntryUpdated(ReusableString key, VT value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, MutableDirectBuffer egressBuffer) {
         entryUpdateEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
         entryUpdateEncoder.value((Long) value.value());
+        entryUpdateEncoder.eventType(UpdateEventType.ADD_ITEM);
         entryUpdateEncoder.cacheId(addCacheEntryResult.getCacheId().value())
                 .key(key.value())
                 .requestId(addCacheEntryResult.getRequestId());

@@ -83,6 +83,36 @@ public class SSEStreamingHelper implements StreamingHelper{
         return eventData;
     }
 
+    @Override
+    public CompletableFuture<List<CacheUpdateEvent>> getEventsForKeys(BackendTestResource backend, String cacheId, List<String> keys, int count, CompletableFuture<Void> connectionReady) {
+        CountDownLatch latch = new CountDownLatch(count);
+        List<CacheUpdateEvent> events = new ArrayList<>();
+        CompletableFuture<List<CacheUpdateEvent>> eventData = new CompletableFuture<>();
+
+        var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
+                + backend.getSsePort() + endpointsProvider.getStreamingApiPrefix() + cacheId
+                + "?keys=" + String.join(",", keys);
+
+        connect(cacheSubscriptionURI, latch, eventData, events, connectionReady);
+
+        return eventData;
+    }
+
+    @Override
+    public CompletableFuture<List<CacheUpdateEvent>> getPatchEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> connectionReady) {
+        CountDownLatch latch = new CountDownLatch(count);
+        List<CacheUpdateEvent> events = new ArrayList<>();
+        CompletableFuture<List<CacheUpdateEvent>> eventData = new CompletableFuture<>();
+
+        var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
+                + backend.getSsePort() + endpointsProvider.getStreamingApiPrefix() + cacheId
+                + "?mode=patch";
+
+        connect(cacheSubscriptionURI, latch, eventData, events, connectionReady);
+
+        return eventData;
+    }
+
     private void connect(String uri, CountDownLatch latch, CompletableFuture<List<CacheUpdateEvent>> eventData, List<CacheUpdateEvent> events, CompletableFuture<Void> connectionReady) {
 
         Request request = new Request.Builder().url(uri).build();

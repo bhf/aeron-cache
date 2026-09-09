@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.*;
 
 import java.util.List;
@@ -118,6 +119,20 @@ public interface CacheRequestConsumingPublisher<RI extends Reusable, RK extends 
      * @param sendSnapshot Whether to send a snapshot for initial state hydration.
      */
     void sendCacheSubscribe(String requestId, List<BI> cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<RI, RK, RV>> c);
+
+    /**
+     * Send a message to subscribe to cache updates with per-cache subscription key and mode.
+     *
+     * @param requestId    The request ID.
+     * @param cacheId      The IDs of the caches to subscribe too.
+     * @param keys         Parallel list of subscription keys; a {@code null} entry (or {@code null} list) means whole-cache.
+     * @param modes        Parallel list of subscription modes; a {@code null} list means {@link SubscriptionMode#FULL}.
+     * @param sendSnapshot Whether to send a snapshot for initial state hydration.
+     * @param c            The consumer that will handle the result.
+     */
+    default void sendCacheSubscribe(String requestId, List<BI> cacheId, List<BK> keys, List<SubscriptionMode> modes, boolean sendSnapshot, Consumer<CacheSubscriptionResult<RI, RK, RV>> c) {
+        sendCacheSubscribe(requestId, cacheId, sendSnapshot, c);
+    }
 
     /**
      * Send a message to unsubscribe to cache updates.

@@ -79,7 +79,7 @@ public class IncrementCounterTest {
         assertEquals(initialValue + incrementAmount, result.getCounterValue());
 
         verify(sut.countersSubscriptionService, times(1)).handleCounterUpdated(
-                any(), any(MutableDirectBuffer.class), anyInt());
+                any(), any(), any(MutableDirectBuffer.class), anyInt());
     }
 
     @Test

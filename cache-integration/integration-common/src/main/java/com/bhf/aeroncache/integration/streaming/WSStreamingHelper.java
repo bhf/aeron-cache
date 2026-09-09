@@ -6,11 +6,7 @@ import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.WebSocket;
-import okhttp3.WebSocketListener;
+import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -77,6 +73,36 @@ public class WSStreamingHelper implements StreamingHelper {
 
         var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
                 + backend.getWsPort() + endpointsProvider.getStreamingMultiCacheHydrateApiPrefix() + String.join(",", cacheIds);
+
+        connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
+
+        return messageFuture;
+    }
+
+    @Override
+    public CompletableFuture<List<CacheUpdateEvent>> getEventsForKeys(BackendTestResource backend, String cacheId, List<String> keys, int count, CompletableFuture<Void> ready) {
+        CountDownLatch latch = new CountDownLatch(count);
+        CompletableFuture<List<CacheUpdateEvent>> messageFuture = new CompletableFuture<>();
+        List<CacheUpdateEvent> events = new ArrayList<>();
+
+        var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
+                + backend.getWsPort() + endpointsProvider.getStreamingApiPrefix() + cacheId
+                + "?keys=" + String.join(",", keys);
+
+        connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
+
+        return messageFuture;
+    }
+
+    @Override
+    public CompletableFuture<List<CacheUpdateEvent>> getPatchEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready) {
+        CountDownLatch latch = new CountDownLatch(count);
+        CompletableFuture<List<CacheUpdateEvent>> messageFuture = new CompletableFuture<>();
+        List<CacheUpdateEvent> events = new ArrayList<>();
+
+        var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
+                + backend.getWsPort() + endpointsProvider.getStreamingApiPrefix() + cacheId
+                + "?mode=patch";
 
         connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
 

@@ -185,7 +185,9 @@ class LoopbackGatewayServer implements Agent {
         final var group = subscribeDecoder.cacheIds();
         while (group.hasNext()) {
             group.next();
+            group.mode();
             cacheIds.add(group.cacheId());
+            group.key();
         }
         final String correlationId = subscribeDecoder.correlationId();
         final String cacheId = cacheIds.isEmpty() ? "" : cacheIds.get(0);

@@ -136,7 +136,7 @@ public class ReusableStringCountersCacheRequestEncoder implements CountersCacheR
     }
 
     @Override
-    public int encodeCacheSubscribe(String requestId, List<ReusableString> cacheId, boolean sendSnapshot, MutableDirectBuffer msgBuffer) {
+    public int encodeCacheSubscribe(String requestId, List<ReusableString> cacheId, List<ReusableString> keys, List<com.bhf.aeroncache.models.requests.SubscriptionMode> modes, boolean sendSnapshot, MutableDirectBuffer msgBuffer) {
         cacheSubscriptionRequestEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .sendSnapshot(sendSnapshot ? BooleanType.T : BooleanType.F);
 
@@ -144,7 +144,10 @@ public class ReusableStringCountersCacheRequestEncoder implements CountersCacheR
         for (int i = 0; i < cacheId.size(); i++) {
             itemsEncoder.next();
             ReusableString cache = cacheId.get(i);
+            itemsEncoder.mode(modes.get(i) == com.bhf.aeroncache.models.requests.SubscriptionMode.PATCH ? SubscriptionMode.PATCH : SubscriptionMode.FULL);
             itemsEncoder.cacheId(cache.value());
+            ReusableString key = keys.get(i);
+            itemsEncoder.key(key == null ? "" : key.value());
         }
 
         cacheSubscriptionRequestEncoder.requestId(requestId);

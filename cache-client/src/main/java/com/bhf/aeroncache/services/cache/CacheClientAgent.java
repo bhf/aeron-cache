@@ -4,6 +4,7 @@ import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
 import com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest;
+import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.services.AbstractClientAgent;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import lombok.extern.log4j.Log4j2;
@@ -170,8 +171,23 @@ public class CacheClientAgent extends AbstractClientAgent {
         }
 
         boolean sendSnapshot = buffer.getByte(cumulativeReadPosition) == (byte) 1;
-        log.debug("SUBSCRIBE CACHE Request has ID " + requestId + ", on cache IDs " + cacheIds);
-        cacheOpsPublisher.sendCacheSubscribe(requestId, cacheIds, sendSnapshot);
+        cumulativeReadPosition += 1;
+
+        List<String> keys = new ArrayList<>(cacheIdCount);
+        for (int i = 0; i < cacheIdCount; i++) {
+            var key = buffer.getStringUtf8(cumulativeReadPosition);
+            keys.add(key.isEmpty() ? null : key);
+            cumulativeReadPosition += (buffer.getInt(cumulativeReadPosition) + 4);
+        }
+
+        List<SubscriptionMode> modes = new ArrayList<>(cacheIdCount);
+        for (int i = 0; i < cacheIdCount; i++) {
+            modes.add(buffer.getByte(cumulativeReadPosition) == (byte) 1 ? SubscriptionMode.PATCH : SubscriptionMode.FULL);
+            cumulativeReadPosition += 1;
+        }
+
+        log.debug("SUBSCRIBE CACHE Request has ID " + requestId + ", on cache IDs " + cacheIds + ", keys " + keys + ", modes " + modes);
+        cacheOpsPublisher.sendCacheSubscribe(requestId, cacheIds, keys, modes, sendSnapshot);
     }
 
     private <BV> void handleGetCacheEntries(MutableDirectBuffer buffer, int index, ClusterMessagePublisher<String, String, BV> cacheOpsPublisher) {

@@ -7,7 +7,7 @@ info:
     name: Sanjeev
     url: https://www.sanjeev.pages.dev
     email: na@na.com
-  version: 1.1.0
+  version: 1.2.0
 servers:
   - url: http://localhost:7072
     description: Local SSE server
@@ -24,6 +24,7 @@ paths:
           description: The ID of the counter cache to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
       responses:
         200:
           description: OK - SSE connection established.
@@ -48,6 +49,7 @@ paths:
           description: Comma-separated list of counter cache IDs to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
       responses:
         200:
           description: OK - SSE connection established.
@@ -72,6 +74,7 @@ paths:
           description: The ID of the counter cache to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
       responses:
         200:
           description: OK - SSE connection established.
@@ -96,6 +99,7 @@ paths:
           description: Comma-separated list of counter cache IDs to subscribe to.
           schema:
             type: string
+        - $ref: '#/components/parameters/KeysQueryParam'
       responses:
         200:
           description: OK - SSE connection established.
@@ -109,6 +113,17 @@ paths:
           description: Service Unavailable - Cluster not connected.
 
 components:
+  parameters:
+    KeysQueryParam:
+      name: keys
+      in: query
+      required: false
+      description: |
+        Optional comma-separated list of key filters that restrict the subscription to specific counters. Each token
+        is either `cacheId:key` (targets that counter within that cache) or a bare `key` (applies to every counter
+        cache in the route). When omitted, the subscription covers the whole counter cache.
+      schema:
+        type: string
   schemas:
     CounterUpdateEvent:
       type: object

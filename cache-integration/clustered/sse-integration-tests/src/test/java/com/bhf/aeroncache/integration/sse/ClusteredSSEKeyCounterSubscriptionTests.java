@@ -1,0 +1,30 @@
+package com.bhf.aeroncache.integration.sse;
+
+import com.bhf.aeroncache.integration.config.BackendTestConfig;
+import com.bhf.aeroncache.integration.config.CounterTestEndpoints;
+import com.bhf.aeroncache.integration.config.SSECountersCacheTestEndpoints;
+import com.bhf.aeroncache.integration.streaming.AbstractMultiStreamKeySubscriptionTests;
+import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
+
+@BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = true, useClusteredMode = true, useTestContainersEnvironment = true)
+class ClusteredSSEKeyCounterSubscriptionTests extends AbstractMultiStreamKeySubscriptionTests<Integer> {
+
+    public ClusteredSSEKeyCounterSubscriptionTests() {
+        super(new CounterTestEndpoints(), new SSEStreamingHelper(new SSECountersCacheTestEndpoints()));
+    }
+
+    @Override
+    protected String getKnownCacheId() {
+        return "ClusteredSSEKeyCounterSubscriptionTestsCache";
+    }
+
+    @Override
+    protected Integer getSubscribedValue() {
+        return 1;
+    }
+
+    @Override
+    protected Integer getOtherValue() {
+        return 2;
+    }
+}

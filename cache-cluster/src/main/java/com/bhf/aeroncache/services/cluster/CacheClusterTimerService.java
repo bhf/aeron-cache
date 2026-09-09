@@ -3,7 +3,7 @@ package com.bhf.aeroncache.services.cluster;
 import com.bhf.aeroncache.codecs.CacheTimersCodec;
 import com.bhf.aeroncache.models.PendingRemove;
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.TimerLookupCompoundKey;
+import com.bhf.aeroncache.models.CompoundCacheKey;
 import com.bhf.aeroncache.services.CacheTimerService;
 import com.bhf.aeroncache.services.cache.Cache;
 import io.aeron.ExclusivePublication;
@@ -29,14 +29,14 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
     private final CacheTimersCodec<I, K> timersCodec;
     private final TimerCorrelationIdProvider timerCorrelationIdProvider;
     private final Long2ObjectHashMap<PendingRemove<I, K>> pendingRemoves = new Long2ObjectHashMap();
-    private final Map<TimerLookupCompoundKey<I, K>, Long> cacheKeyToTimerId = new Object2ObjectHashMap<>();
-    private final TimerLookupCompoundKey<I, K> lookupKey;
+    private final Map<CompoundCacheKey<I, K>, Long> cacheKeyToTimerId = new Object2ObjectHashMap<>();
+    private final CompoundCacheKey<I, K> lookupKey;
     private final Consumer<TimerDetailsFlyweight<I,K>> removeConsumer;
     private final TimerDetailsFlyweight<I, K> timerDetailsFlyweight;
 
     public CacheClusterTimerService(Supplier<I> indexSupplier, Supplier<K> keySupplier, CacheTimersCodec<I,K> timersCodec, TimerCorrelationIdProvider timerCorrelationIdProvider,
                                     Cluster cluster, TimerDetailsFlyweight<I,K> timerDetailsFlyweight, Consumer<TimerDetailsFlyweight<I,K>> remove) {
-        this.lookupKey = new TimerLookupCompoundKey<>(indexSupplier.get(), keySupplier.get());
+        this.lookupKey = new CompoundCacheKey<>(indexSupplier.get(), keySupplier.get());
         this.indexSupplier = indexSupplier;
         this.keySupplier = keySupplier;
         this.cluster = cluster;
@@ -81,7 +81,7 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
 
         var pendingRemove = new PendingRemove(timerCorrelationId, cacheToRemoveOn, keyToRemove);
         pendingRemoves.put(timerCorrelationId, pendingRemove);
-        cacheKeyToTimerId.put(new TimerLookupCompoundKey<>(cacheToRemoveOn, keyToRemove), timerCorrelationId);
+        cacheKeyToTimerId.put(new CompoundCacheKey<>(cacheToRemoveOn, keyToRemove), timerCorrelationId);
     }
 
     @Override
@@ -143,7 +143,7 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
 
                 for (var x : pendingRemoves.values()) {
                     log.info("Timer on cache {} key {}, correlationId {}", x.getCacheToRemoveOn(), x.getKeyToRemove(), x.getTimerCorrelationId());
-                    cacheKeyToTimerId.put(new TimerLookupCompoundKey<>(x.getCacheToRemoveOn(), x.getKeyToRemove()), x.getTimerCorrelationId());
+                    cacheKeyToTimerId.put(new CompoundCacheKey<>(x.getCacheToRemoveOn(), x.getKeyToRemove()), x.getTimerCorrelationId());
                 }
             }
 

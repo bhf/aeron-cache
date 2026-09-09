@@ -4,13 +4,18 @@ import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.models.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -18,10 +23,50 @@ import java.util.function.Consumer;
 @Log4j2
 public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reusable, V extends Reusable> extends ObservingCacheRequestPublisher<I,K,V, String, String, String> implements SSEStatusHandler, CacheSubscriptions  {
 
-    private final Map<String, List<IdentifiableConsumer<String, CacheUpdateEvent>>> cacheSubscriptions = new ConcurrentHashMap<>();
+    private final Map<String, List<KeyFilteredConsumer>> cacheSubscriptions = new ConcurrentHashMap<>();
+
+    /**
+     * Tracks the {@code (cacheId, key, mode)} combinations already subscribed to at the cluster so that
+     * a shared cluster session is not subscribed multiple times for the same combination.
+     */
+    private final Set<String> clusterSubscriptions = ConcurrentHashMap.newKeySet();
 
     public CacheSubscriptionRequestPublisher(CacheRequestPublisher rbPublisher) {
         super(rbPublisher);
+    }
+
+    private static String clusterSubscriptionKey(String cacheId, String key, SubscriptionMode mode) {
+        return cacheId + '\u0001' + (key == null ? "" : key) + '\u0001' + mode.name();
+    }
+
+    /**
+     * A subscriber consumer that only receives events for the specific keys it subscribed to. A {@code null}
+     * or empty key set denotes a whole-cache subscription that receives updates for every key.
+     */
+    private static final class KeyFilteredConsumer implements IdentifiableConsumer<String, CacheUpdateEvent> {
+        private final String sessionId;
+        private final Set<String> keys;
+        private final Consumer<CacheUpdateEvent> delegate;
+
+        KeyFilteredConsumer(String sessionId, Set<String> keys, Consumer<CacheUpdateEvent> delegate) {
+            this.sessionId = sessionId;
+            this.keys = keys;
+            this.delegate = delegate;
+        }
+
+        @Override
+        public String getId() {
+            return sessionId;
+        }
+
+        @Override
+        public void accept(CacheUpdateEvent cacheUpdateEvent) {
+            delegate.accept(cacheUpdateEvent);
+        }
+
+        boolean matches(String key) {
+            return keys == null || keys.isEmpty() || (key != null && keys.contains(key));
+        }
     }
 
 
@@ -38,38 +83,75 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
     @Override
     public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, List<String> cacheIds,
                                  String sseSessionId, String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
-        List<IdentifiableConsumer<String, CacheUpdateEvent>> currentSubscribers;
+        subscribeToCache(cluster, subscriptionFailureHandler, cacheIds, null, SubscriptionMode.FULL, sseSessionId, requestId, sendSnapshot, consumer);
+    }
 
-        if (sendSnapshot) {
-            sendCacheSubscriptionRequest(cluster, requestId, cacheIds, sendSnapshot, subscriptionFailureHandler, consumer);
+    /**
+     * Subscribe to cache updates for specific keys and a specific subscription mode.
+     *
+     * @param cluster                    The cluster to use.
+     * @param subscriptionFailureHandler The handler for subscription failures.
+     * @param cacheIds                   The caches to subscribe too (parallel to {@code keys}).
+     * @param keys                       The subscription keys parallel to {@code cacheIds}; a {@code null} entry (or
+     *                                   {@code null} list) means a whole-cache subscription for that cache.
+     * @param mode                       The subscription mode ({@link SubscriptionMode#FULL} or {@link SubscriptionMode#PATCH}).
+     * @param sseSessionId               The SSE session ID.
+     * @param requestId                  The request ID.
+     * @param sendSnapshot               Whether to request initial state hydration.
+     * @param consumer                   The consumer of {@link CacheUpdateEvent}.
+     */
+    @Override
+    public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, List<String> cacheIds,
+                                 List<String> keys, SubscriptionMode mode, String sseSessionId, String requestId,
+                                 boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
+        var effectiveMode = mode == null ? SubscriptionMode.FULL : mode;
+
+        // Group the requested keys per cache; an empty key set denotes a whole-cache subscription.
+        Map<String, Set<String>> keysByCache = new LinkedHashMap<>();
+        for (int i = 0; i < cacheIds.size(); i++) {
+            var cacheId = cacheIds.get(i);
+            var key = (keys == null) ? null : keys.get(i);
+            var keySet = keysByCache.computeIfAbsent(cacheId, x -> new LinkedHashSet<>());
+            if (key != null) {
+                keySet.add(key);
+            }
         }
 
-        for(var cacheId : cacheIds) {
-            if (cacheSubscriptions.containsKey(cacheId)) {
-                currentSubscribers = cacheSubscriptions.get(cacheId);
+        // Work out which (cacheId, key, mode) combinations the shared cluster session must subscribe to.
+        List<String> subscribeCacheIds = new ArrayList<>();
+        List<String> subscribeKeys = new ArrayList<>();
+        List<SubscriptionMode> subscribeModes = new ArrayList<>();
+        keysByCache.forEach((cacheId, keySet) -> {
+            if (keySet.isEmpty()) {
+                boolean isNew = clusterSubscriptions.add(clusterSubscriptionKey(cacheId, null, effectiveMode));
+                if (sendSnapshot || isNew) {
+                    subscribeCacheIds.add(cacheId);
+                    subscribeKeys.add(null);
+                    subscribeModes.add(effectiveMode);
+                }
             } else {
-                currentSubscribers = new CopyOnWriteArrayList<>();
-                cacheSubscriptions.put(cacheId, currentSubscribers);
-
-                if(!sendSnapshot) { // we don't want a snapshot but we're not subscribed
-                    log.info("Sending request to cluster to subscribe to cache {}", cacheId);
-                    sendCacheSubscriptionRequest(cluster, requestId, List.of(cacheId), sendSnapshot, subscriptionFailureHandler, consumer);
+                for (var key : keySet) {
+                    boolean isNew = clusterSubscriptions.add(clusterSubscriptionKey(cacheId, key, effectiveMode));
+                    if (sendSnapshot || isNew) {
+                        subscribeCacheIds.add(cacheId);
+                        subscribeKeys.add(key);
+                        subscribeModes.add(effectiveMode);
+                    }
                 }
             }
+        });
 
-            log.info("Adding subscription for cache {}, send snapshot {} client session {}", cacheId, sendSnapshot, sseSessionId);
-            currentSubscribers.add(new IdentifiableConsumer<>() {
-                @Override
-                public String getId() {
-                    return sseSessionId;
-                }
-
-                @Override
-                public void accept(CacheUpdateEvent cacheUpdateEvent) {
-                    consumer.accept(cacheUpdateEvent);
-                }
-            });
+        if (!subscribeCacheIds.isEmpty()) {
+            log.info("Sending request to cluster to subscribe to caches {}, keys {}, mode {}", subscribeCacheIds, subscribeKeys, effectiveMode);
+            sendCacheSubscriptionRequest(cluster, requestId, subscribeCacheIds, subscribeKeys, subscribeModes, sendSnapshot, subscriptionFailureHandler, consumer);
         }
+
+        // Register a per-session consumer for each cache, carrying the key set it wants to receive.
+        keysByCache.forEach((cacheId, keySet) -> {
+            var currentSubscribers = cacheSubscriptions.computeIfAbsent(cacheId, x -> new CopyOnWriteArrayList<>());
+            log.info("Adding subscription for cache {}, keys {}, send snapshot {} client session {}", cacheId, keySet, sendSnapshot, sseSessionId);
+            currentSubscribers.add(new KeyFilteredConsumer(sseSessionId, keySet.isEmpty() ? null : new LinkedHashSet<>(keySet), consumer));
+        });
     }
 
     /**
@@ -77,11 +159,14 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      *
      * @param cluster   The cluster to use.
      * @param requestId The request ID.
-     * @param cacheId   The ID of the cache we want to subscribe too on the cluster side.
+     * @param cacheId   The IDs of the caches we want to subscribe too on the cluster side.
+     * @param keys      The keys parallel to {@code cacheId}; a {@code null} entry means a whole-cache subscription.
+     * @param modes     The subscription modes parallel to {@code cacheId}.
      */
-    private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, List<String> cacheId, boolean sendSnapshot,
+    private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, List<String> cacheId, List<String> keys,
+                                              List<SubscriptionMode> modes, boolean sendSnapshot,
                                               Consumer<Void> subscriptionFailureHandler, Consumer<CacheUpdateEvent> streamingEventConsumer) {
-        sendCacheSubscribe(requestId, cacheId, sendSnapshot, subscriptionResult -> {
+        sendCacheSubscribe(requestId, cacheId, keys, modes, sendSnapshot, subscriptionResult -> {
             if (subscriptionResult.getStatus() != CacheOperationStatus.SUCCESS) {
                 var errorMsg = "Couldn't subscribe to cache " + cacheId + ", status=" + subscriptionResult.getStatus();
                 log.warn(errorMsg);
@@ -122,6 +207,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                 if (sseSubscriptions != null) {
                     log.info("Removed {} subscriptions to cacheId {}", sseSubscriptions.size(), cacheId);
                 }
+                clusterSubscriptions.removeIf(k -> k.startsWith(cacheId + '\u0001'));
             }
         });
     }
@@ -154,6 +240,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                     log.info("Removed last SSE client subscription on cacheId: {}", cacheId);
                     sendCacheUnsubscribeRequest(cluster, requestId, cacheId);
                     cacheSubscriptions.remove(cacheId);
+                    clusterSubscriptions.removeIf(k -> k.startsWith(cacheId + '\u0001'));
                 }
             }
         });
@@ -205,6 +292,9 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             var eventType = CacheUpdateEvent.EventType.REMOVE_ITEM;
             var key = removeCacheEntryResult.getKey().value().toString();
             subscribers.forEach(c -> {
+                if (!c.matches(key)) {
+                    return;
+                }
                 try {
                     c.accept(new CacheUpdateEvent(cacheId, eventType, key, null, removeCacheEntryResult.getRequestId()));
                 } catch (Exception e) {
@@ -221,10 +311,13 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
 
         if (subscribers != null) {
             var cacheId = String.valueOf(cacheEntryUpdateResult.getCacheId());
-            var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
+            var eventType = cacheEntryUpdateResult.isPatch() ? CacheUpdateEvent.EventType.PATCH_ITEM : CacheUpdateEvent.EventType.ADD_ITEM;
             var key = cacheEntryUpdateResult.getKey().value().toString();
             var value = cacheEntryUpdateResult.getValue().value();
             subscribers.forEach(c -> {
+                if (!c.matches(key)) {
+                    return;
+                }
                 try {
                     c.accept(
                             new CacheUpdateEvent(cacheId, eventType, key, value, cacheEntryUpdateResult.getRequestId()));
@@ -246,6 +339,9 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             var key = result.getKey().value().toString();
             var value = result.getCounterValue();
             subscribers.forEach(c -> {
+                if (!c.matches(key)) {
+                    return;
+                }
                 try {
                     c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, result.getRequestId()));
                 } catch (Exception e) {
@@ -266,6 +362,9 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             var key = result.getKey().value().toString();
             var value = result.getCounterValue();
             subscribers.forEach(c -> {
+                if (!c.matches(key)) {
+                    return;
+                }
                 try {
                     c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, result.getRequestId()));
                 } catch (Exception e) {
@@ -286,6 +385,9 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             var key = result.getKey().value().toString();
             var value = result.getCounterValue();
             subscribers.forEach(c -> {
+                if (!c.matches(key)) {
+                    return;
+                }
                 try {
                     c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, result.getRequestId()));
                 } catch (Exception e) {

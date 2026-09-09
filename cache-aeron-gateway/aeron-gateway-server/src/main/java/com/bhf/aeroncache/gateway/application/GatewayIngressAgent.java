@@ -258,10 +258,18 @@ public class GatewayIngressAgent implements Agent {
         final boolean counters = subscribeDecoder.counters() == BooleanType.T;
 
         final List<String> cacheIds = new ArrayList<>();
+        final List<String> keys = new ArrayList<>();
+        com.bhf.aeroncache.models.requests.SubscriptionMode mode = com.bhf.aeroncache.models.requests.SubscriptionMode.FULL;
         final var group = subscribeDecoder.cacheIds();
         while (group.hasNext()) {
             group.next();
+            final var entryMode = group.mode();
             cacheIds.add(group.cacheId());
+            final var key = group.key();
+            keys.add(key == null || key.isEmpty() ? null : key);
+            if (entryMode == com.bhf.aeroncache.gateway.messages.SubscriptionMode.PATCH) {
+                mode = com.bhf.aeroncache.models.requests.SubscriptionMode.PATCH;
+            }
         }
         final String correlationId = requestId(subscribeDecoder.correlationId());
 
@@ -271,8 +279,8 @@ public class GatewayIngressAgent implements Agent {
         final Consumer<CacheUpdateEvent> updateConsumer = event ->
                 egressWriter.writeStreamUpdate(responsePublication, event);
 
-        log.info("Gateway subscribe session {}, caches {}, snapshot {}, counters {}", sessionId, cacheIds, sendSnapshot, counters);
-        publisher.subscribeToCache(cluster, failureHandler, cacheIds, sessionId, correlationId, sendSnapshot, updateConsumer);
+        log.info("Gateway subscribe session {}, caches {}, keys {}, mode {}, snapshot {}, counters {}", sessionId, cacheIds, keys, mode, sendSnapshot, counters);
+        publisher.subscribeToCache(cluster, failureHandler, cacheIds, keys, mode, sessionId, correlationId, sendSnapshot, updateConsumer);
     }
 
     private void handleUnsubscribe(String sessionId) {

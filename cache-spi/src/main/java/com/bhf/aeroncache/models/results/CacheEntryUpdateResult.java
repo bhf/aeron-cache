@@ -17,6 +17,7 @@ public class CacheEntryUpdateResult<I extends Reusable, K extends Reusable, V ex
     final K key;
     final V value;
     final RequestId requestId = new RequestId();
+    boolean patch = false;
 
     public String getRequestId() {
         return requestId.getRequestId();
@@ -32,6 +33,7 @@ public class CacheEntryUpdateResult<I extends Reusable, K extends Reusable, V ex
         requestId.clear();
         key.clear();
         value.clear();
+        patch = false;
     }
 
     @Override
@@ -40,6 +42,7 @@ public class CacheEntryUpdateResult<I extends Reusable, K extends Reusable, V ex
         requestId.copyFrom(source.requestId);
         key.copyFrom(source.key);
         value.copyFrom(source.value);
+        patch = source.patch;
     }
 
     @Override

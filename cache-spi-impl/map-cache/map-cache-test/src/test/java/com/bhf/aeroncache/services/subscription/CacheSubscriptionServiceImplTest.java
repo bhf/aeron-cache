@@ -42,7 +42,7 @@ class CacheSubscriptionServiceImplTest {
         CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
         CacheUnsubscribeResult<ReusableString> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableString());
         sut = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult,
-                SupplierUtils.stringSupplier);
+                SupplierUtils.stringSupplier, SupplierUtils.stringSupplier);
     }
 
     @Test
@@ -155,12 +155,121 @@ class CacheSubscriptionServiceImplTest {
         Mockito.verify(session).offer(ArgumentMatchers.any(MutableDirectBuffer.class), ArgumentMatchers.eq(0), ArgumentMatchers.anyInt());
     }
 
+    @Test
+    @DisplayName("Should offer to a key subscriber when its subscribed key is added")
+    @HappyPath
+    void shouldOfferToKeySubscriberOnMatchingKey() {
+        // Arrange
+        subscribeToKey(session, "k1");
+
+        // Act
+        var requestDetails = new AddCacheEntryResult<>(new ReusableString(), new ReusableString());
+        requestDetails.getCacheId().copyFrom(KNOWN_CACHE);
+        MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
+        sut.handleEntryAdded(requestDetails, egressBuffer, ReusableString.build("k1"), ReusableString.build("value"), 1);
+
+        // Assert
+        Mockito.verify(session).offer(ArgumentMatchers.any(MutableDirectBuffer.class), ArgumentMatchers.eq(0), ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    @DisplayName("Should not offer to a key subscriber when a different key is added")
+    void shouldNotOfferToKeySubscriberOnDifferentKey() {
+        // Arrange
+        subscribeToKey(session, "k1");
+
+        // Act
+        var requestDetails = new AddCacheEntryResult<>(new ReusableString(), new ReusableString());
+        requestDetails.getCacheId().copyFrom(KNOWN_CACHE);
+        MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
+        sut.handleEntryAdded(requestDetails, egressBuffer, ReusableString.build("k2"), ReusableString.build("value"), 1);
+
+        // Assert
+        Mockito.verify(session, Mockito.never()).offer(ArgumentMatchers.any(MutableDirectBuffer.class), ArgumentMatchers.anyInt(), ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    @DisplayName("Should notify on duplicate key subscription")
+    void shouldNotifyOnDuplicateKeySubscription() {
+        // Arrange
+        subscribeToKey(session, "k1");
+
+        // Act
+        var result = subscribeToKey(session, "k1");
+
+        // Assert
+        assertEquals(CacheOperationStatus.DUPLICATE_SUBSCRIPTION, result.getStatus());
+        assertEquals(KNOWN_CACHE, result.getCacheId().value());
+    }
+
+    @Test
+    @DisplayName("Should offer to a whole-cache subscriber for any key while a key subscriber only receives its key")
+    void shouldNotifyBothWholeCacheAndKeySubscribersWithoutDuplication() {
+        // Arrange
+        var wholeCacheSession = Mockito.mock(ClientSession.class);
+        Mockito.when(wholeCacheSession.id()).thenReturn(111L);
+        Mockito.when(wholeCacheSession.offer(ArgumentMatchers.any(MutableDirectBuffer.class), ArgumentMatchers.anyInt(), ArgumentMatchers.anyInt())).thenReturn(1L);
+        subscribeWholeCache(wholeCacheSession);
+
+        var keySession = Mockito.mock(ClientSession.class);
+        Mockito.when(keySession.id()).thenReturn(222L);
+        Mockito.when(keySession.offer(ArgumentMatchers.any(MutableDirectBuffer.class), ArgumentMatchers.anyInt(), ArgumentMatchers.anyInt())).thenReturn(1L);
+        subscribeToKey(keySession, "k1");
+
+        // Act
+        var requestDetails = new AddCacheEntryResult<>(new ReusableString(), new ReusableString());
+        requestDetails.getCacheId().copyFrom(KNOWN_CACHE);
+        MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
+        sut.handleEntryAdded(requestDetails, egressBuffer, ReusableString.build("k1"), ReusableString.build("value"), 1);
+
+        // Assert - both receive exactly once
+        Mockito.verify(wholeCacheSession, Mockito.times(1)).offer(ArgumentMatchers.any(MutableDirectBuffer.class), ArgumentMatchers.eq(0), ArgumentMatchers.anyInt());
+        Mockito.verify(keySession, Mockito.times(1)).offer(ArgumentMatchers.any(MutableDirectBuffer.class), ArgumentMatchers.eq(0), ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    @DisplayName("Should offer to a counter key subscriber when its counter is updated")
+    @HappyPath
+    void shouldOfferToCounterKeySubscriberOnMatchingCounter() {
+        // Arrange
+        subscribeToKey(session, "counter1");
+
+        // Act
+        MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
+        sut.handleCounterUpdated(ReusableString.build(KNOWN_CACHE), ReusableString.build("counter1"), egressBuffer, 1);
+
+        // Assert
+        Mockito.verify(session).offer(ArgumentMatchers.any(MutableDirectBuffer.class), ArgumentMatchers.eq(0), ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    @DisplayName("Should not offer to a counter key subscriber when a different counter is updated")
+    void shouldNotOfferToCounterKeySubscriberOnDifferentCounter() {
+        // Arrange
+        subscribeToKey(session, "counter1");
+
+        // Act
+        MutableDirectBuffer egressBuffer = Mockito.mock(MutableDirectBuffer.class);
+        sut.handleCounterUpdated(ReusableString.build(KNOWN_CACHE), ReusableString.build("counter2"), egressBuffer, 1);
+
+        // Assert
+        Mockito.verify(session, Mockito.never()).offer(ArgumentMatchers.any(MutableDirectBuffer.class), ArgumentMatchers.anyInt(), ArgumentMatchers.anyInt());
+    }
+
     private CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> subscribeToCache() {
-        var subscribeRequest = new CacheSubscriptionRequestDetails<>();
-        subscribeRequest.setRequestId(UUID.randomUUID().toString());
+        return subscribeWholeCache(session);
+    }
+
+    private CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> subscribeWholeCache(ClientSession clientSession) {
         var cacheID = new ReusableString();
         cacheID.copyFrom(KNOWN_CACHE);
-        return sut.subscribe(session, cacheID, subscribeRequest.getRequestId());
+        return sut.subscribe(clientSession, cacheID, UUID.randomUUID().toString());
+    }
+
+    private CacheSubscriptionResult<ReusableString,ReusableString,ReusableString> subscribeToKey(ClientSession clientSession, String key) {
+        var cacheID = new ReusableString();
+        cacheID.copyFrom(KNOWN_CACHE);
+        return sut.subscribe(clientSession, cacheID, ReusableString.build(key), UUID.randomUUID().toString());
     }
 
 }

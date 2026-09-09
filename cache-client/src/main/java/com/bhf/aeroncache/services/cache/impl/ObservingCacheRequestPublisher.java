@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services.cache.impl;
 
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.CacheRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
@@ -178,9 +179,20 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     }
 
     @Override
+    public void sendCacheSubscribe(String requestId, List<BI> cacheId, List<BK> keys, List<SubscriptionMode> modes, boolean sendSnapshot) {
+        rbPublisher.sendCacheSubscribe(requestId, cacheId, keys, modes, sendSnapshot);
+    }
+
+    @Override
     public void sendCacheSubscribe(String requestId, List<BI> cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
         cacheResponseObservers.sendCacheSubscribe(requestId, cacheId, sendSnapshot, c);
         rbPublisher.sendCacheSubscribe(requestId, cacheId, sendSnapshot);
+    }
+
+    @Override
+    public void sendCacheSubscribe(String requestId, List<BI> cacheId, List<BK> keys, List<SubscriptionMode> modes, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
+        cacheResponseObservers.sendCacheSubscribe(requestId, cacheId, sendSnapshot, c);
+        rbPublisher.sendCacheSubscribe(requestId, cacheId, keys, modes, sendSnapshot);
     }
 
     @Override

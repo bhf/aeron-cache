@@ -287,6 +287,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     public void decodeCacheEntryUpdated(DirectBuffer buffer, int offset, CacheEntryUpdateResult<ReusableString, ReusableString, ReusableString> cacheEntryUpdateResult) {
         cacheEntryUpdateDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
+        var eventType = cacheEntryUpdateDecoder.eventType();
         var cacheId = cacheEntryUpdateDecoder.cacheId();
         var key = cacheEntryUpdateDecoder.key();
         var value = cacheEntryUpdateDecoder.value();
@@ -297,6 +298,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
         cacheEntryUpdateResult.setRequestId(requestId);
         cacheEntryUpdateResult.getKey().copyFrom(key);
         cacheEntryUpdateResult.getValue().copyFrom(value);
+        cacheEntryUpdateResult.setPatch(eventType == UpdateEventType.PATCH_ITEM);
     }
 
     @Override

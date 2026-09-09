@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.services.cache.impl;
 
+import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -358,6 +359,11 @@ public abstract class AbstractRBRequestPublisher<BV> implements CacheRequestPubl
 
     @Override
     public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot) {
+        sendCacheSubscribe(requestId, cacheId, null, null, sendSnapshot);
+    }
+
+    @Override
+    public void sendCacheSubscribe(String requestId, List<String> cacheId, List<String> keys, List<SubscriptionMode> modes, boolean sendSnapshot) {
 
         if (requestId == null) {
             return;
@@ -376,6 +382,17 @@ public abstract class AbstractRBRequestPublisher<BV> implements CacheRequestPubl
 
         buffer.putByte(writeCursor, sendSnapshot ? (byte) 1 : (byte) 0);
         writeCursor += 1;
+
+        for (int i = 0; i < cacheId.size(); i++) {
+            String key = (keys == null) ? null : keys.get(i);
+            writeCursor += buffer.putStringUtf8(writeCursor, key == null ? "" : key);
+        }
+
+        for (int i = 0; i < cacheId.size(); i++) {
+            SubscriptionMode mode = (modes == null) ? SubscriptionMode.FULL : modes.get(i);
+            buffer.putByte(writeCursor, mode == SubscriptionMode.PATCH ? (byte) 1 : (byte) 0);
+            writeCursor += 1;
+        }
 
         var length = writeCursor;
         while (!rb.write(subscribeToCacheMsgId(), writeBuffer, 0, length)) {

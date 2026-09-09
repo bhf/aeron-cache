@@ -14,10 +14,12 @@ import java.util.List;
 @Setter
 @RequiredArgsConstructor
 @Flyweight
-public class CacheSubscriptionRequestDetails<I extends Reusable> implements Reusable<CacheSubscriptionRequestDetails<I>> {
+public class CacheSubscriptionRequestDetails<I extends Reusable, K extends Reusable> implements Reusable<CacheSubscriptionRequestDetails<I, K>> {
 
     final RequestId requestId = new RequestId();
     final List<I> cacheId = new ArrayList<>();
+    final List<K> subscriptionKey = new ArrayList<>();
+    final List<SubscriptionMode> subscriptionMode = new ArrayList<>();
     boolean sendSnapshot;
 
     public String getRequestId(){
@@ -32,21 +34,25 @@ public class CacheSubscriptionRequestDetails<I extends Reusable> implements Reus
     public void clear() {
         requestId.clear();
         cacheId.clear();
+        subscriptionKey.clear();
+        subscriptionMode.clear();
     }
 
     @Override
-    public void copyFrom(CacheSubscriptionRequestDetails<I> source) {
+    public void copyFrom(CacheSubscriptionRequestDetails<I, K> source) {
         this.requestId.copyFrom(source.requestId);
         this.cacheId.addAll(source.cacheId);
+        this.subscriptionKey.addAll(source.subscriptionKey);
+        this.subscriptionMode.addAll(source.subscriptionMode);
     }
 
     @Override
-    public void copyFrom(Reusable<CacheSubscriptionRequestDetails<I>> source) {
+    public void copyFrom(Reusable<CacheSubscriptionRequestDetails<I, K>> source) {
         this.copyFrom(source.value());
     }
 
     @Override
-    public CacheSubscriptionRequestDetails<I> value() {
+    public CacheSubscriptionRequestDetails<I, K> value() {
         return this;
     }
 }
