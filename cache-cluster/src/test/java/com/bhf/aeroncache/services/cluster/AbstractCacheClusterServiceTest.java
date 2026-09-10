@@ -85,6 +85,13 @@ class AbstractCacheClusterServiceTest {
 
         setTimerServiceWithReflection();
         setCountersTimerServiceWithReflection();
+        setClusterWithReflection();
+    }
+
+    private void setClusterWithReflection() throws NoSuchFieldException, IllegalAccessException {
+        Field clusterField = AbstractCacheClusterService.class.getDeclaredField("cluster");
+        clusterField.setAccessible(true);
+        clusterField.set(sut, cluster);
     }
 
     /**
@@ -119,7 +126,7 @@ class AbstractCacheClusterServiceTest {
         // Assert
         verify(cacheTimerService).onTakeSnapshot(eq(snapshotPublication), any(MutableDirectBuffer.class));
         verify(snapshotPublication).offer(any(MutableDirectBuffer.class), eq(0), eq(100));
-        verify(cacheManager).takeSnapshot(snapshotPublication);
+        verify(cacheManager).takeSnapshot(snapshotPublication, cluster);
     }
 
     @Test

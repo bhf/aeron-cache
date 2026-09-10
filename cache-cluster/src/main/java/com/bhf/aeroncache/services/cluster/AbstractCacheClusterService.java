@@ -1478,10 +1478,10 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         snapshotPublication.offer(timersBuffer, 0, cumulativeLength);
 
         log.info("Taking cache manager snapshot");
-        cacheManager.takeSnapshot(snapshotPublication);
+        cacheManager.takeSnapshot(snapshotPublication, cluster);
 
         log.info("Taking counters cache manager snapshot");
-        countersCacheManager.takeSnapshot(snapshotPublication);
+        countersCacheManager.takeSnapshot(snapshotPublication, cluster);
     }
 
     /**

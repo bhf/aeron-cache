@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.aeron.ExclusivePublication;
 import io.aeron.Publication;
+import io.aeron.cluster.service.Cluster;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
@@ -222,7 +223,7 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
     }
 
     @Override
-    public void takeSnapshot(ExclusivePublication snapshotPublication, I cacheId) {
+    public void takeSnapshot(ExclusivePublication snapshotPublication, I cacheId, Cluster cluster) {
         int offset = cacheIdSnapshotCodec.serializeCacheId(cacheId, buffer, 0);
         offset = stats.encode(buffer, offset);
         int length = offset;
@@ -235,6 +236,10 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
             ++entriesSnapshotted;
             var value = allEntries.get(key);
             length = cacheEntrySnapshotCodec.serializeCacheEntry(key, value, buffer, length);
+
+            if(entriesSnapshotted % 100 == 0) {
+                cluster.idleStrategy().idle();
+            }
         }
 
         log.info("Total entries snapshotted in cache {} is {}", cacheId, entriesSnapshotted);

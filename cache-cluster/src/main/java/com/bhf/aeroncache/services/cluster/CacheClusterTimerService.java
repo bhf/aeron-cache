@@ -113,6 +113,7 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
         log.info("Total timers to snapshot: {}", timersSize);
         int cumulativeLength = 4;
         if (timersSize > 0) {
+            int timersSnapshotted = 0;
             for (var t : pendingRemoves.keySet().stream().sorted().toList()) {
                 var pendingTimer = pendingRemoves.get(t);
                 var correlationId = pendingTimer.getTimerCorrelationId();
@@ -121,6 +122,11 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
                 var codec = timersCodec;
                 int length = codec.encodeCacheTimer(timersBuffer, cumulativeLength, correlationId, key, cacheId);
                 cumulativeLength += length;
+                timersSnapshotted++;
+
+                if (timersSnapshotted % 100 == 0) {
+                    cluster.idleStrategy().idle();
+                }
             }
         }
         return cumulativeLength;
@@ -138,7 +144,7 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
 
             if (timersSize > 0) {
                 var codec = timersCodec;
-                codec.decodeCacheTimers(timersSize, pendingRemoves, buffer, offset + 4);
+                codec.decodeCacheTimers(timersSize, pendingRemoves, buffer, offset + 4, cluster);
                 log.info("Loaded {} timers", pendingRemoves.size());
 
                 for (var x : pendingRemoves.values()) {

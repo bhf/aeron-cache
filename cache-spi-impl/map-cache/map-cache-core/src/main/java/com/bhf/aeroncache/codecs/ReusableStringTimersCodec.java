@@ -2,8 +2,8 @@ package com.bhf.aeroncache.codecs;
 
 import com.bhf.aeroncache.models.PendingRemove;
 import com.bhf.aeroncache.services.integrity.MultiTypeStreamingHasher;
-import com.bhf.aeroncache.services.integrity.StreamingHasher;
 import com.bhf.aeroncache.types.ReusableString;
+import io.aeron.cluster.service.Cluster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.DirectBuffer;
@@ -39,7 +39,7 @@ public class ReusableStringTimersCodec implements CacheTimersCodec<ReusableStrin
     }
 
     @Override
-    public void decodeCacheTimers(int timersSize, Long2ObjectHashMap<PendingRemove<ReusableString, ReusableString>> pendingRemoves, DirectBuffer buffer, int offset) {
+    public void decodeCacheTimers(int timersSize, Long2ObjectHashMap<PendingRemove<ReusableString, ReusableString>> pendingRemoves, DirectBuffer buffer, int offset, Cluster cluster) {
         for (int i = 0; i < timersSize; i++) {
             long timerCorrelationId = buffer.getLong(offset);
             offset += 8;
@@ -73,6 +73,10 @@ public class ReusableStringTimersCodec implements CacheTimersCodec<ReusableStrin
             PendingRemove<ReusableString, ReusableString> pendingRemove = new PendingRemove<>(timerCorrelationId, cacheId, key);
 
             pendingRemoves.put(timerCorrelationId, pendingRemove);
+
+            if (i % 100 == 0) {
+                cluster.idleStrategy().idle();
+            }
         }
     }
 }

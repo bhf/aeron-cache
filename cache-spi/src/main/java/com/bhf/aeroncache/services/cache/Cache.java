@@ -3,6 +3,7 @@ package com.bhf.aeroncache.services.cache;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import io.aeron.ExclusivePublication;
+import io.aeron.cluster.service.Cluster;
 import org.agrona.DirectBuffer;
 
 import java.util.Map;
@@ -85,10 +86,12 @@ public interface Cache<I extends Reusable, K extends Reusable, V extends Reusabl
 
     /**
      * Take a snapshot of this cache.
+     *
      * @param snapshotPublication
      * @param cacheId
+     * @param cluster
      */
-    void takeSnapshot(ExclusivePublication snapshotPublication, I cacheId);
+    void takeSnapshot(ExclusivePublication snapshotPublication, I cacheId, Cluster cluster);
 
     /**
      * Load a snapshot into this cache.
