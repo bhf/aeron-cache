@@ -269,12 +269,12 @@ abstract class AbstractGatewayEndToEndTest {
         client.patchEntry(patchCorr, cacheId, "patchKey", "{\"b\":3,\"c\":4}");
         awaitCommandSuccess(patchCorr);
 
-        // Assert: a patch-mode subscriber receives a PATCH_ITEM event carrying the merged value.
+        // Assert: a patch-mode subscriber receives a PATCH_ITEM event carrying the patch delta.
         await().atMost(30, SECONDS).until(() -> listener.streamUpdates.stream()
                 .anyMatch(u -> u.eventType() == UpdateEventType.PATCH_ITEM
                         && u.cacheId().equals(cacheId)
                         && u.key().equals("patchKey")
-                        && u.value().equals("{\"a\":1,\"b\":3,\"c\":4}")));
+                        && u.value().equals("{\"b\":3,\"c\":4}")));
     }
 
     @Test
