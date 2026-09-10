@@ -6,7 +6,7 @@
 [![Helm CI](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci.yaml)
 [![Microbenchmarks](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks.yml)
 
-A key value store with counters built using Aeron, Agrona and SBE. RAFT clustered or single node - fast by default. UI with NextJS, Shadcn and Tailwind. 
+A key value store with counters built using Aeron, Agrona and SBE. RAFT clustered or single node - fast by design. UI with NextJS, Shadcn and Tailwind. 
 Includes HTTP, WS and SSE interfaces with support for multi-cache joins over WS and SSE.
 Containerized and deployable with ```docker compose``` or on Kubernetes via ```helm``` or ```kubectl```.
 
@@ -17,7 +17,7 @@ Features:
 * Clustered and single node modes
 * Run as a single monolith or separate horizontally scalable services
 * Streaming multi-cache (and key) subscriptions over Websocket, SSE and Aeron transport
-* PATCH support for writing partial updates to JSON values including partial streaming subscriptions
+* PATCH support for writing partial updates to JSON values including partial streaming subscriptions (JSON Merge Patch RFC 7386)
 * Near cache implementation (read ahead)
 * Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded):
   * Aeron Transport (BIDI) - Java and Rust

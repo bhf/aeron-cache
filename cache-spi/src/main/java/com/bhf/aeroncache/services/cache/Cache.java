@@ -19,6 +19,26 @@ public interface Cache<I extends Reusable, K extends Reusable, V extends Reusabl
     AddCacheEntryResult<I, K> add(K key, V value);
 
     /**
+     * Add an entry to the cache, optionally producing a JSON merge patch (RFC 7386)
+     * describing the change from any pre-existing value to the new value.
+     *
+     * <p>When {@code mergePatchOut} is non-null and the key already held a value,
+     * the implementation populates {@code mergePatchOut} with the merge patch
+     * (status {@link com.bhf.aeroncache.models.results.CacheOperationStatus#SUCCESS}
+     * and the patch document as the entry value). When {@code mergePatchOut} is null,
+     * or there was no previous value, no patch is produced.
+     *
+     * @param key           The key of the entry to add.
+     * @param value         The value of the entry to add.
+     * @param mergePatchOut An out-parameter flyweight populated with the merge patch,
+     *                      or {@code null} to skip merge patch production.
+     * @return The result of adding the entry.
+     */
+    default AddCacheEntryResult<I, K> add(K key, V value, PatchValueResult<I, K, V> mergePatchOut) {
+        return add(key, value);
+    }
+
+    /**
      * Get an entry from the cache.
      * @param key The key of the entry to get.
      * @return The result of the get operation.

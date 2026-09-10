@@ -23,6 +23,7 @@ import org.agrona.MutableDirectBuffer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.List;
@@ -34,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Test bulk operations on a cache instance.
@@ -147,6 +149,40 @@ class BulkOpsHappyPathTest {
         // Calling the tracing service is part of the public API of the SUT
         verify(tracingService, times(1)).startBulkOpsRequest(any(BulkCacheOpsRequestDetails.class));
         verify(tracingService, times(1)).endBulkOpsRequest(any(BulkCacheOpsRequestDetails.class));
+    }
+
+    @Test
+    @DisplayName("Should notify the patch subscriber with the merge patch when a bulk ADD_ITEM overwrites an existing entry")
+    @HappyPath
+    void shouldNotifyPatchSubscriberOnBulkAddOverExistingKey() {
+        // Arrange
+        sut.patchSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
+        when(sut.patchSubscriptionService.hasSubscriber(any(), any())).thenReturn(true);
+
+        ClientSession session = TestUtils.getMockedSession(responseBuffer);
+        var requestId = UUID.randomUUID().toString();
+        List<CacheOperationRequest> ops = List.of(
+                getCacheOperation(BulkOperationType.CREATE_CACHE, CACHE_ID, "", "", 0),
+                // first add - no prior value, so no patch is produced
+                getCacheOperation(BulkOperationType.ADD_ITEM, CACHE_ID, "key", "{\"a\":1,\"b\":2}", 0),
+                // overwrite - produces a merge patch delta for the patch subscriber
+                getCacheOperation(BulkOperationType.ADD_ITEM, CACHE_ID, "key", "{\"a\":1,\"b\":3,\"c\":4}", 0)
+        );
+        BulkCacheOpsRequest bulkRequest = new BulkCacheOpsRequest(requestId, ops);
+        int length = cacheRequestEncoder.encodeBulkOperations(requestId, bulkRequest, requestBuffer);
+
+        // Act
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+
+        // Assert - the patch subscriber is notified exactly once, with the merge patch (the delta)
+        ArgumentCaptor<ReusableString> valueCaptor = ArgumentCaptor.forClass(ReusableString.class);
+        verify(sut.patchSubscriptionService, times(1)).handleEntryAdded(
+                any(AddCacheEntryResult.class),
+                any(MutableDirectBuffer.class),
+                any(ReusableString.class),
+                valueCaptor.capture(),
+                anyInt());
+        assertEquals("{\"b\":3,\"c\":4}", valueCaptor.getValue().value());
     }
 
 

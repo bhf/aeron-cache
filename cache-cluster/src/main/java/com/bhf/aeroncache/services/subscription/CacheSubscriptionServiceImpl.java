@@ -231,6 +231,11 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
     }
 
     @Override
+    public boolean hasSubscriber(I cacheId, K key) {
+        return !getSessionsForKey(cacheId, key).isEmpty();
+    }
+
+    @Override
     public void onSessionClose(ClientSession session) {
         log.info("Handling client session closed, sessionId: {}", session.id());
         wholeCacheSubscriptions.forEach((cacheId, clientSessions) -> {
