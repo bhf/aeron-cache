@@ -7,6 +7,7 @@ import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotC
 import com.bhf.aeroncache.services.integrity.NoOpStreamingHasher;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
+import io.aeron.cluster.service.Cluster;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mockito;
 
 import java.util.stream.Stream;
 
@@ -170,7 +172,7 @@ class MapCacheTest {
         when(snapshotPublication.offer(any(MutableDirectBuffer.class), eq(0), anyInt())).thenReturn(100L);
 
         // Act
-        cache.takeSnapshot(snapshotPublication, cacheId);
+        cache.takeSnapshot(snapshotPublication, cacheId, Mockito.mock(Cluster.class));
 
         // Assert
         verify(snapshotPublication).offer(any(MutableDirectBuffer.class), eq(0), anyInt());

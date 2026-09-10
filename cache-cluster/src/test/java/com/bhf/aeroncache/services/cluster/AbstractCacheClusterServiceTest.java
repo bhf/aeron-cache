@@ -119,7 +119,7 @@ class AbstractCacheClusterServiceTest {
         // Assert
         verify(cacheTimerService).onTakeSnapshot(eq(snapshotPublication), any(MutableDirectBuffer.class));
         verify(snapshotPublication).offer(any(MutableDirectBuffer.class), eq(0), eq(100));
-        verify(cacheManager).takeSnapshot(snapshotPublication);
+        verify(cacheManager).takeSnapshot(snapshotPublication, cluster);
     }
 
     @Test

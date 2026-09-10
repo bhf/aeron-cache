@@ -8,6 +8,7 @@ import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
+import io.aeron.cluster.service.Cluster;
 import io.aeron.logbuffer.FragmentHandler;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.collections.MutableBoolean;
@@ -44,13 +45,13 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
     }
 
     @Override
-    public void takeSnapshot(ExclusivePublication snapshotPublication) {
+    public void takeSnapshot(ExclusivePublication snapshotPublication, Cluster cluster) {
         int totalCachesSnapshotted = 0;
         for (var cacheEntry : caches.entrySet()) {
             ++totalCachesSnapshotted;
             var cacheId = cacheEntry.getKey();
             var cache = cacheEntry.getValue();
-            cache.takeSnapshot(snapshotPublication, cacheId);
+            cache.takeSnapshot(snapshotPublication, cacheId, cluster);
         }
 
         log.info("Total caches snapshotted: {}", totalCachesSnapshotted);

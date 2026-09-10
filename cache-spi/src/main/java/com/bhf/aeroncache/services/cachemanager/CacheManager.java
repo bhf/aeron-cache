@@ -5,6 +5,7 @@ import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.Cache;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
+import io.aeron.cluster.service.Cluster;
 
 /**
  * Top level cache manager interface.
@@ -36,8 +37,9 @@ public interface CacheManager<I extends Reusable, K extends Reusable, V extends 
      * serialize them to an {@link ExclusivePublication}.
      *
      * @param snapshotPublication The ExclusivePublication to serialize the caches too.
+     * @param cluster
      */
-    void takeSnapshot(ExclusivePublication snapshotPublication);
+    void takeSnapshot(ExclusivePublication snapshotPublication, Cluster cluster);
 
     /**
      * Load all caches from a snapshot image.
