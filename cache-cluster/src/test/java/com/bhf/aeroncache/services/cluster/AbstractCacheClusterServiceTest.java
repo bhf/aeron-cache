@@ -85,6 +85,13 @@ class AbstractCacheClusterServiceTest {
 
         setTimerServiceWithReflection();
         setCountersTimerServiceWithReflection();
+        setClusterWithReflection();
+    }
+
+    private void setClusterWithReflection() throws NoSuchFieldException, IllegalAccessException {
+        Field clusterField = AbstractCacheClusterService.class.getDeclaredField("cluster");
+        clusterField.setAccessible(true);
+        clusterField.set(sut, cluster);
     }
 
     /**

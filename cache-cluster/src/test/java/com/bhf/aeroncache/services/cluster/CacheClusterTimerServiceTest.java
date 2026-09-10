@@ -178,6 +178,6 @@ class CacheClusterTimerServiceTest {
         sut.loadSnapshot(cluster, snapshotImage);
         
         // Assert
-        verify(cacheTimersCodec).decodeCacheTimers(eq(1), any(), any(), eq(4), cluster);
+        verify(cacheTimersCodec).decodeCacheTimers(eq(1), any(), any(), eq(4), eq(cluster));
     }
 }
