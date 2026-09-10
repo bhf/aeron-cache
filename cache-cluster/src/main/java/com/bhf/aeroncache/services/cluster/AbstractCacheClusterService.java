@@ -70,6 +70,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     final GetAllCacheEntriesRequestDetails<I> getAllCacheEntriesRequestDetails;
     final AddCacheEntryResult<I, K> addEntryFailureResult;
     final AddCacheEntryResult<I, K> patchEntryUpdateResult;
+    final PatchValueResult<I, K, V> addMergePatchResult;
     final GetCacheStatsRequestDetails getCacheStatsRequestDetails;
     final CacheSubscriptionRequestDetails<I, K> cacheSubscribeRequestDetails;
     final CacheUnsubscribeRequestDetails<I> cacheUnsubscribeRequestDetails;
@@ -122,6 +123,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         this.getAllCacheEntriesRequestDetails = new GetAllCacheEntriesRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.addEntryFailureResult = new AddCacheEntryResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
         this.patchEntryUpdateResult = new AddCacheEntryResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+        this.addMergePatchResult = new PatchValueResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get(), cacheManagerFactory.getValueSupplier().get());
         this.getCacheStatsRequestDetails = new GetCacheStatsRequestDetails();
         this.cacheSubscribeRequestDetails = new CacheSubscriptionRequestDetails<>();
         this.cacheUnsubscribeRequestDetails = new CacheUnsubscribeRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
@@ -173,7 +175,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         if (templateId == schemaDetails.getCreateCacheId()) {
             handleCreateCache(session, buffer, offset, decoder, encoder, createCacheRequestDetails, cacheManager);
         } else if (templateId == schemaDetails.getAddCacheEntryId()) {
-            handleAddCacheEntry(session, buffer, offset, decoder, encoder, addCacheEntryRequestDetails, cacheManager, subscriptionService, cacheTimerService);
+            handleAddCacheEntry(session, buffer, offset, decoder, encoder, addCacheEntryRequestDetails, cacheManager, subscriptionService, patchSubscriptionService, addMergePatchResult, cacheTimerService);
         } else if (templateId == schemaDetails.getGetCacheEntryId()) {
             handleGetCacheEntry(session, buffer, offset, decoder, encoder, cacheManager);
         } else if (templateId == schemaDetails.getRemoveCacheEntryId()) {
@@ -202,7 +204,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         else if (templateId == schemaDetails.getCreateCounterCacheId()) {
             handleCreateCache(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, createCacheRequestDetails, countersCacheManager);
         } else if (templateId == schemaDetails.getAddCounterCacheEntryId()) {
-            handleAddCacheEntry(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, addCountersCacheEntryRequestDetails, countersCacheManager, countersSubscriptionService, cacheCountersTimerService);
+            handleAddCacheEntry(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, addCountersCacheEntryRequestDetails, countersCacheManager, countersSubscriptionService, null, null, cacheCountersTimerService);
         } else if (templateId == schemaDetails.getGetCounterCacheEntryId()) {
             handleGetCacheEntry(session, buffer, offset, countersRequestDecoder, countersResponseEncoder, countersCacheManager);
         } else if (templateId == schemaDetails.getRemoveCounterCacheEntryId()) {
@@ -553,7 +555,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         VT patch = requestDetails.getValue();
         var requestId = requestDetails.getRequestId();
         var patchValueResult = processPatchValue(cacheId, key, patch, requestId, cacheManager);
-        handlePostPatchValue(cacheId, key, patchValueResult, session, responseEncoder, subscriptionService, patchSubscriptionService);
+        handlePostPatchValue(cacheId, key, patch, patchValueResult, session, responseEncoder, subscriptionService, patchSubscriptionService);
     }
 
     private <VT extends Reusable> PatchValueResult<I, K, VT> processPatchValue(I cacheId, K key, VT patch, String requestId, CacheManager<I, K, VT> cacheManager) {
@@ -571,7 +573,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param offset             Offset in the buffer at which the message is encoded.
      * @param cacheTimerService_
      */
-    <VT extends Reusable> void handleAddCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, CacheResponseEncoder<I, K, VT> responseEncoder, AddCacheEntryRequestDetails<I, K, VT> addCacheEntryRequestDetails, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService, CacheTimerService<I, K> cacheTimerService_) {
+    <VT extends Reusable> void handleAddCacheEntry(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I,K,VT> decoder, CacheResponseEncoder<I, K, VT> responseEncoder, AddCacheEntryRequestDetails<I, K, VT> addCacheEntryRequestDetails, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService, CacheSubscriptionService<I, K, VT> patchSubscriptionService, PatchValueResult<I, K, VT> mergePatchOut, CacheTimerService<I, K> cacheTimerService_) {
         AddCacheEntryRequestDetails<I, K, VT> requestDetails = getAddCacheEntryRequestDetails(session, buffer, offset, decoder, addCacheEntryRequestDetails);
         tracingService.startAddCacheEntry(requestDetails);
         I cacheId = requestDetails.getCacheId();
@@ -579,14 +581,14 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         VT value = requestDetails.getValue();
         long ttl = requestDetails.getTtl();
         var requestId = requestDetails.getRequestId();
-        var addCacheEntryResult = processAddCacheEntry(cacheId, key, value, ttl, requestId, session, buffer, offset, responseEncoder, cacheManager, subscriptionService, cacheTimerService_);
+        var addCacheEntryResult = processAddCacheEntry(cacheId, key, value, ttl, requestId, session, buffer, offset, responseEncoder, cacheManager, subscriptionService, patchSubscriptionService, mergePatchOut, cacheTimerService_);
 
         log.info("Result for add entry, key: {}, status: {}, ", addCacheEntryResult.getEntryKey(), addCacheEntryResult.getStatus());
-        handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, responseEncoder, subscriptionService);
+        handlePostAddCacheEntry(cacheId, key, value, addCacheEntryResult, session, responseEncoder, subscriptionService, patchSubscriptionService, mergePatchOut);
         tracingService.endAddCacheEntry(requestDetails);
     }
 
-    private <VT extends Reusable> AddCacheEntryResult<I,K> processAddCacheEntry(I cacheId, K key, VT value, long ttl, String requestId, ClientSession session, DirectBuffer buffer, int offset, CacheResponseEncoder<I, K, VT> responseEncoder, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService, CacheTimerService<I, K> timerService) {
+    private <VT extends Reusable> AddCacheEntryResult<I,K> processAddCacheEntry(I cacheId, K key, VT value, long ttl, String requestId, ClientSession session, DirectBuffer buffer, int offset, CacheResponseEncoder<I, K, VT> responseEncoder, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService, CacheSubscriptionService<I, K, VT> patchSubscriptionService, PatchValueResult<I, K, VT> mergePatchOut, CacheTimerService<I, K> timerService) {
         log.info("Got add cache entry request for cache id {}, key {}, value {}, ttl {}, request Id: {}", cacheId, key, value, ttl, requestId);
         var cache = cacheManager.getCache(cacheId);
 
@@ -608,7 +610,14 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
             }
         }
 
-        var addCacheEntryResult = cache.add(key, value);
+        // Only ask the cache to produce a merge patch when a patch subscriber is
+        // actually listening for updates on this cache/key. Counters pass a null
+        // patch subscription service (and merge patch flyweight) as they never patch.
+        PatchValueResult<I, K, VT> patchOut =
+                (patchSubscriptionService != null && mergePatchOut != null && patchSubscriptionService.hasSubscriber(cacheId, key))
+                        ? mergePatchOut : null;
+
+        var addCacheEntryResult = cache.add(key, value, patchOut);
         addCacheEntryResult.setRequestId(requestId);
         addCacheEntryResult.getCacheId().copyFrom(cacheId);
 
@@ -636,7 +645,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         addEntryFailureResult.getCacheId().copyFrom(cacheId);
         log.info("Cache {} doesn't exist, tried to add on key key: {}", cacheId, addEntryFailureResult.getEntryKey());
 
-        handlePostAddCacheEntry(cacheId, key, value, addEntryFailureResult, session, responseEncoder, subscriptionService);
+        handlePostAddCacheEntry(cacheId, key, value, addEntryFailureResult, session, responseEncoder, subscriptionService, null, null);
     }
 
     /**
@@ -876,7 +885,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         for (var op : requestDetails.getOperations()) {
             switch (op.getOperationType()) {
                 case CREATE_CACHE -> handleBulkOpCreateCache(op, bulkOpsResult, cacheManager);
-                case ADD_ITEM -> handleBulkOpAddItem(op, bulkOpsResult, op.getValue(), cacheManager, encoder_, subscriptionService, cacheTimerService_);
+                case ADD_ITEM -> handleBulkOpAddItem(op, bulkOpsResult, op.getValue(), cacheManager, encoder_, subscriptionService, patchSubscriptionService, addMergePatchResult, cacheTimerService_);
                 case CLEAR_CACHE -> handleBulkOpClearCache(op, bulkOpsResult, cacheManager, encoder_, subscriptionService);
                 case GET_ITEM -> handleBulkOpGetItem(op, bulkOpsResult, cacheManager, cacheValueSupplier);
                 case DELETE_CACHE -> handleBulkOpDeleteCache(op, bulkOpsResult, cacheManager, encoder_, subscriptionService);
@@ -979,7 +988,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
         // update the subscription service
         if (result.getStatus() == CacheOperationStatus.SUCCESS) {
-            handlePostPatchValue(cacheId, key, result, null, encoder_, subscriptionService, patchSubscriptionService);
+            handlePostPatchValue(cacheId, key, patch, result, null, encoder_, subscriptionService, patchSubscriptionService);
         }
     }
 
@@ -1024,12 +1033,12 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         }
     }
 
-    private <VT extends Reusable> void handleBulkOpAddItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, VT value, CacheManager<I, K, VT> cacheManager, CacheResponseEncoder<I, K, VT> encoder_, CacheSubscriptionService<I, K, VT> subscriptionService, CacheTimerService<I, K> cacheTimerService_) {
+    private <VT extends Reusable> void handleBulkOpAddItem(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, VT value, CacheManager<I, K, VT> cacheManager, CacheResponseEncoder<I, K, VT> encoder_, CacheSubscriptionService<I, K, VT> subscriptionService, CacheSubscriptionService<I, K, VT> patchSubscriptionService, PatchValueResult<I, K, VT> mergePatchOut, CacheTimerService<I, K> cacheTimerService_) {
         I cacheId = op.getCacheId();
         K key = op.getKey();
         var ttl = op.getTtl();
         var requestId = op.getRequestId();
-        var result = processAddCacheEntry(cacheId, key, value, ttl, requestId, null, null, 0, encoder_, cacheManager, subscriptionService, cacheTimerService_);
+        var result = processAddCacheEntry(cacheId, key, value, ttl, requestId, null, null, 0, encoder_, cacheManager, subscriptionService, patchSubscriptionService, mergePatchOut, cacheTimerService_);
         AddCacheEntryResult<I, K> bulkResult = new AddCacheEntryResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
         bulkResult.copyFrom(result);
         log.info("Bulk request, add item result: {}, value: {}", bulkResult, value);
@@ -1037,7 +1046,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
         // update the subscription service
         if (result.getStatus() == CacheOperationStatus.SUCCESS) {
-            handlePostAddCacheEntry(cacheId, key, value, result, null, encoder_, subscriptionService);
+            handlePostAddCacheEntry(cacheId, key, value, result, null, encoder_, subscriptionService, patchSubscriptionService, mergePatchOut);
         }
     }
 
@@ -1047,7 +1056,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
         log.info("Request counter value: {}", op.getCounterValue());
 
-        handleBulkOpAddItem(op, bulkOpsResult, value, countersCacheManager, encoder_, subscriptionService, cacheCountersTimerService_);
+        handleBulkOpAddItem(op, bulkOpsResult, value, countersCacheManager, encoder_, subscriptionService, null, null, cacheCountersTimerService_);
     }
 
     private <VT extends Reusable> void handleBulkOpCreateCache(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CacheManager<I, K, VT> cacheManager) {
@@ -1249,12 +1258,27 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param session             The client session.
      * @param encoder
      */
-    protected <VT extends Reusable> void handlePostAddCacheEntry(I cacheId, K key, VT value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session, CacheResponseEncoder<I, K, VT> encoder, CacheSubscriptionService<I, K, VT> subscriptionService) {
+    protected <VT extends Reusable> void handlePostAddCacheEntry(I cacheId, K key, VT value, AddCacheEntryResult<I, K> addCacheEntryResult, ClientSession session, CacheResponseEncoder<I, K, VT> encoder, CacheSubscriptionService<I, K, VT> subscriptionService, CacheSubscriptionService<I, K, VT> patchSubscriptionService, PatchValueResult<I, K, VT> mergePatchResult) {
         var addCacheEntryResultLength = encoder.encodeAddCacheEntryResult(cacheId, key, addCacheEntryResult, egressBuffer);
         sendMessage(session, egressBuffer, addCacheEntryResultLength);
 
         var entryUpdatedLength = encoder.encodeEntryUpdated(key, value, addCacheEntryResult, egressBuffer);
         subscriptionService.handleEntryAdded(addCacheEntryResult, egressBuffer, key, value, entryUpdatedLength);
+
+        // If a patch subscriber is listening and the add produced a merge patch
+        // (i.e. it overwrote an existing value), notify patch subscribers with the delta.
+        if (patchSubscriptionService != null && mergePatchResult != null
+                && mergePatchResult.getStatus() == CacheOperationStatus.SUCCESS) {
+            VT patchValue = mergePatchResult.getEntryValue();
+            patchEntryUpdateResult.clear();
+            patchEntryUpdateResult.setRequestId(addCacheEntryResult.getRequestId());
+            patchEntryUpdateResult.getCacheId().copyFrom(cacheId);
+            patchEntryUpdateResult.getEntryKey().copyFrom(key);
+            patchEntryUpdateResult.setStatus(CacheOperationStatus.SUCCESS);
+
+            var entryPatchedLength = encoder.encodeEntryPatched(key, patchValue, patchEntryUpdateResult, egressBuffer);
+            patchSubscriptionService.handleEntryAdded(patchEntryUpdateResult, egressBuffer, key, patchValue, entryPatchedLength);
+        }
     }
 
     /**
@@ -1280,7 +1304,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param encoder          The response encoder to use.
      * @param subscriptionService The subscription service used to notify subscribers of the new value.
      */
-    protected <VT extends Reusable> void handlePostPatchValue(I cacheId, K key, PatchValueResult<I, K, VT> patchValueResult, ClientSession session, CacheResponseEncoder<I, K, VT> encoder, CacheSubscriptionService<I, K, VT> subscriptionService, CacheSubscriptionService<I, K, VT> patchSubscriptionService) {
+    protected <VT extends Reusable> void handlePostPatchValue(I cacheId, K key, VT patch, PatchValueResult<I, K, VT> patchValueResult, ClientSession session, CacheResponseEncoder<I, K, VT> encoder, CacheSubscriptionService<I, K, VT> subscriptionService, CacheSubscriptionService<I, K, VT> patchSubscriptionService) {
         var length = encoder.encodePatchValueResult(cacheId, patchValueResult, egressBuffer);
         sendMessage(session, egressBuffer, length);
 
@@ -1296,7 +1320,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
             subscriptionService.handleEntryAdded(patchEntryUpdateResult, egressBuffer, key, value, entryUpdatedLength);
 
             if (patchSubscriptionService != null) {
-                var entryPatchedLength = encoder.encodeEntryPatched(key, value, patchEntryUpdateResult, egressBuffer);
+                var entryPatchedLength = encoder.encodeEntryPatched(key, patch, patchEntryUpdateResult, egressBuffer);
                 patchSubscriptionService.handleEntryAdded(patchEntryUpdateResult, egressBuffer, key, value, entryPatchedLength);
             }
         }

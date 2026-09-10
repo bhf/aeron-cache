@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.models.results.PatchValueResult;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
 import com.bhf.aeroncache.services.integrity.NoOpStreamingHasher;
@@ -259,6 +260,96 @@ class MapCacheTest {
 
         // Assert
         assertEquals(CacheOperationStatus.ERROR, result.getStatus());
+    }
+
+    /**
+     * Build an empty {@link PatchValueResult} suitable for use as the merge-patch
+     * out-parameter of {@link MapCache#add(Object, Object, PatchValueResult)}.
+     */
+    private PatchValueResult<ReusableString, ReusableString, ReusableString> newMergePatchOut() {
+        return new PatchValueResult<>(SupplierUtils.stringSupplier.get(),
+                SupplierUtils.stringSupplier.get(),
+                SupplierUtils.stringSupplier.get());
+    }
+
+    private ReusableString reusable(String value) {
+        var reusable = new ReusableString();
+        reusable.copyFrom(value);
+        return reusable;
+    }
+
+    @Test
+    @DisplayName("Should produce a merge patch describing changed and added fields when an add overwrites an existing value")
+    void testAddProducesMergePatchOnOverwrite() {
+        // Arrange
+        seedCache("key1", "{\"a\":1,\"b\":2}");
+        var mergePatchOut = newMergePatchOut();
+
+        // Act
+        var result = cache.add(reusable("key1"), reusable("{\"a\":1,\"b\":3,\"c\":4}"), mergePatchOut);
+
+        // Assert
+        assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
+        assertEquals(CacheOperationStatus.SUCCESS, mergePatchOut.getStatus());
+        assertEquals("key1", mergePatchOut.getEntryKey().value());
+        assertEquals("{\"b\":3,\"c\":4}", mergePatchOut.getEntryValue().value());
+    }
+
+    @Test
+    @DisplayName("Should represent a removed field as a null in the merge patch when an add overwrites an existing value")
+    void testAddProducesRemovalMergePatch() {
+        // Arrange
+        seedCache("key1", "{\"a\":1,\"b\":2}");
+        var mergePatchOut = newMergePatchOut();
+
+        // Act
+        cache.add(reusable("key1"), reusable("{\"a\":1}"), mergePatchOut);
+
+        // Assert
+        assertEquals(CacheOperationStatus.SUCCESS, mergePatchOut.getStatus());
+        assertEquals("{\"b\":null}", mergePatchOut.getEntryValue().value());
+    }
+
+    @Test
+    @DisplayName("Should not produce a merge patch when an add creates a new key")
+    void testAddProducesNoMergePatchOnFirstAdd() {
+        // Arrange
+        var mergePatchOut = newMergePatchOut();
+
+        // Act
+        var result = cache.add(reusable("key1"), reusable("{\"a\":1}"), mergePatchOut);
+
+        // Assert
+        assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
+        assertEquals(CacheOperationStatus.NONE, mergePatchOut.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should not produce a merge patch when an add does not change the value")
+    void testAddProducesNoMergePatchWhenValueUnchanged() {
+        // Arrange
+        seedCache("key1", "{\"a\":1,\"b\":2}");
+        var mergePatchOut = newMergePatchOut();
+
+        // Act
+        cache.add(reusable("key1"), reusable("{\"a\":1,\"b\":2}"), mergePatchOut);
+
+        // Assert
+        assertEquals(CacheOperationStatus.NONE, mergePatchOut.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should add normally when the merge-patch out-parameter is null")
+    void testAddWithNullMergePatchOut() {
+        // Arrange
+        seedCache("key1", "{\"a\":1}");
+
+        // Act
+        var result = cache.add(reusable("key1"), reusable("{\"a\":2}"), null);
+
+        // Assert
+        assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
+        assertEquals("{\"a\":2}", cache.cache.get(reusable("key1")).value());
     }
 
 }

@@ -18,6 +18,7 @@ import org.agrona.MutableDirectBuffer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.UUID;
@@ -28,6 +29,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Test decoding a patch value request. Uses a Detroit style for simplicity in
@@ -187,6 +189,92 @@ public abstract class AbstractPatchValueTest<I extends Reusable, K extends Reusa
         assertEquals(cacheId.value(), result.getCacheId().value());
         assertEquals(requestId, result.getRequestId());
         assertEquals(CacheOperationStatus.ERROR, result.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should notify the patch subscriber with the merge patch when an add overwrites an existing entry")
+    void shouldNotifyPatchSubscriberOnAddOverExistingKey() {
+        // Arrange
+        sut.patchSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
+        when(sut.patchSubscriptionService.hasSubscriber(any(), any())).thenReturn(true);
+
+        ClientSession session = TestUtils.getMockedSession(responseBuffer);
+        I cacheId = getCacheId();
+        K key = getKey();
+
+        createCache(cacheId, session, requestBuffer, sut);
+
+        var requestId = UUID.randomUUID().toString();
+        // initial add - no prior value, so no patch is produced
+        var length = encodeAddCacheEntry(requestId, cacheId, key, getInitialValue(), 0, requestBuffer);
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+
+        verify(sut.patchSubscriptionService, Mockito.never()).handleEntryAdded(
+                any(AddCacheEntryResult.class), any(MutableDirectBuffer.class), any(), any(), anyInt());
+
+        // Act - overwrite the key with a new value that differs from the previous one
+        length = encodeAddCacheEntry(requestId, cacheId, key, getExpectedPatchedValue(), 0, requestBuffer);
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+
+        // Assert - the patch subscriber is notified once with the merge patch (the delta)
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<V> valueCaptor = ArgumentCaptor.forClass((Class<V>) getPatch().getClass());
+        verify(sut.patchSubscriptionService, times(1)).handleEntryAdded(
+                any(AddCacheEntryResult.class),
+                any(MutableDirectBuffer.class),
+                eq(key),
+                valueCaptor.capture(),
+                anyInt());
+        assertEquals(getPatch().value(), valueCaptor.getValue().value());
+    }
+
+    @Test
+    @DisplayName("Should not notify the patch subscriber when an add creates a new key")
+    void shouldNotNotifyPatchSubscriberOnFirstAdd() {
+        // Arrange
+        sut.patchSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
+        when(sut.patchSubscriptionService.hasSubscriber(any(), any())).thenReturn(true);
+
+        ClientSession session = TestUtils.getMockedSession(responseBuffer);
+        I cacheId = getCacheId();
+        K key = getKey();
+
+        createCache(cacheId, session, requestBuffer, sut);
+
+        // Act - a single add on a fresh key
+        var requestId = UUID.randomUUID().toString();
+        var length = encodeAddCacheEntry(requestId, cacheId, key, getInitialValue(), 0, requestBuffer);
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+
+        // Assert - no prior value means no merge patch, so the patch subscriber is not notified
+        verify(sut.patchSubscriptionService, Mockito.never()).handleEntryAdded(
+                any(AddCacheEntryResult.class), any(MutableDirectBuffer.class), any(), any(), anyInt());
+    }
+
+    @Test
+    @DisplayName("Should not notify the patch subscriber on an overwriting add when there is no patch subscriber for the key")
+    void shouldNotNotifyPatchSubscriberOnAddWhenNoSubscriberForKey() {
+        // Arrange - patchSubscriptionService is present but reports no subscriber for the key
+        sut.patchSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
+        when(sut.patchSubscriptionService.hasSubscriber(any(), any())).thenReturn(false);
+
+        ClientSession session = TestUtils.getMockedSession(responseBuffer);
+        I cacheId = getCacheId();
+        K key = getKey();
+
+        createCache(cacheId, session, requestBuffer, sut);
+
+        var requestId = UUID.randomUUID().toString();
+        var length = encodeAddCacheEntry(requestId, cacheId, key, getInitialValue(), 0, requestBuffer);
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+
+        // Act - overwrite the key with a differing value
+        length = encodeAddCacheEntry(requestId, cacheId, key, getExpectedPatchedValue(), 0, requestBuffer);
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+
+        // Assert - no subscriber for the key means no patch is produced or sent
+        verify(sut.patchSubscriptionService, Mockito.never()).handleEntryAdded(
+                any(AddCacheEntryResult.class), any(MutableDirectBuffer.class), any(), any(), anyInt());
     }
 
     protected abstract PatchValueResult<I, K, V> createResult();

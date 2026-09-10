@@ -29,5 +29,15 @@ public interface CacheSubscriptionService<I extends Reusable, K extends Reusable
 
     void handleCounterUpdated(I cacheId, K key, MutableDirectBuffer egressBuffer, int length);
 
+    /**
+     * Determine whether any session is subscribed to updates for the given cache/key,
+     * either through a whole-cache subscription or a key-specific subscription.
+     *
+     * @param cacheId The cache ID.
+     * @param key     The key.
+     * @return {@code true} if at least one session would receive an update for this key.
+     */
+    boolean hasSubscriber(I cacheId, K key);
+
     void onSessionClose(ClientSession session);
 }

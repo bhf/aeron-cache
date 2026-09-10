@@ -4,10 +4,11 @@ import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
-import com.bhf.aeroncache.types.ReusableString;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.NullNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.aeron.ExclusivePublication;
 import io.aeron.Publication;
 import lombok.extern.log4j.Log4j2;
@@ -15,7 +16,10 @@ import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
@@ -59,6 +63,87 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
         stats.addedCount++;
         stats.size = cache.size();
         return addCacheEntryResult;
+    }
+
+    @Override
+    public AddCacheEntryResult<I, K> add(K key, V value, PatchValueResult<I, K, V> mergePatchOut) {
+        V previousValue = mergePatchOut != null ? cache.get(key) : null;
+        var result = add(key, value);
+        if (mergePatchOut != null) {
+            produceMergePatch(key, previousValue, value, mergePatchOut);
+        }
+        return result;
+    }
+
+    /**
+     * Produce an RFC 7386 JSON merge patch describing the change from a pre-existing
+     * value to the newly added value, populating the supplied out-parameter. If there
+     * was no previous value or the values are equal, the out-parameter is left cleared
+     * (status {@link CacheOperationStatus#NONE}) so no patch update is sent.
+     */
+    private void produceMergePatch(K key, V previousValue, V newValue, PatchValueResult<I, K, V> mergePatchOut) {
+        mergePatchOut.clear();
+        if (previousValue == null) {
+            return;
+        }
+        mergePatchOut.getEntryKey().copyFrom(key);
+        try {
+            JsonNode oldNode = objectMapper.readTree(previousValue.value().toString());
+            JsonNode newNode = objectMapper.readTree(newValue.value().toString());
+            JsonNode patchNode = computeMergePatch(oldNode, newNode);
+
+            if (patchNode.isObject() && patchNode.isEmpty()) {
+                // nothing changed, no patch update required
+                return;
+            }
+
+            String patchJson = objectMapper.writeValueAsString(patchNode);
+            mergePatchOut.getEntryValue().copyFrom(patchJson);
+            mergePatchOut.setStatus(CacheOperationStatus.SUCCESS);
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to compute merge patch for key {}, reason: {}", key, e.getMessage());
+            mergePatchOut.setStatus(CacheOperationStatus.ERROR);
+        }
+    }
+
+    /**
+     * Compute an RFC 7386 JSON merge patch that transforms {@code source} into {@code target}.
+     */
+    private JsonNode computeMergePatch(JsonNode source, JsonNode target) {
+        if (!source.isObject() || !target.isObject()) {
+            return target;
+        }
+
+        ObjectNode patch = objectMapper.createObjectNode();
+
+        var sourceFields = source.fieldNames();
+        while (sourceFields.hasNext()) {
+            String field = sourceFields.next();
+            if (!target.has(field)) {
+                patch.set(field, NullNode.getInstance());
+            }
+        }
+
+        var targetFields = target.fieldNames();
+        while (targetFields.hasNext()) {
+            String field = targetFields.next();
+            JsonNode targetValue = target.get(field);
+            if (!source.has(field)) {
+                patch.set(field, targetValue);
+            } else {
+                JsonNode sourceValue = source.get(field);
+                if (sourceValue.isObject() && targetValue.isObject()) {
+                    JsonNode nested = computeMergePatch(sourceValue, targetValue);
+                    if (!nested.isObject() || !nested.isEmpty()) {
+                        patch.set(field, nested);
+                    }
+                } else if (!sourceValue.equals(targetValue)) {
+                    patch.set(field, targetValue);
+                }
+            }
+        }
+
+        return patch;
     }
 
     @Override
