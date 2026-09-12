@@ -14,11 +14,13 @@ Features:
 
 * Key-value and counter caches with item level TTL support
 * Bulk atomic operations across caches and counters
+* Streaming multi-cache (and key) subscriptions
+* HTTP (Request-Response), WS (UNIDI and BIDI), SSE (UNIDI) and SBE-Aeron (BIDI) APIs
+* PATCH support for writing partial updates to JSON values including partial streaming subscriptions (JSON Merge Patch RFC 7386)
 * Clustered and single node modes
 * Run as a single monolith or separate horizontally scalable services
-* Streaming multi-cache (and key) subscriptions over Websocket, SSE and Aeron transport
-* PATCH support for writing partial updates to JSON values including partial streaming subscriptions (JSON Merge Patch RFC 7386)
 * Near cache implementation (read ahead)
+
 * Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded):
   * Aeron Transport (BIDI) - Java and Rust
   * HTTP and WS - Java, Rust, Typescript and Python
