@@ -82,4 +82,17 @@ public interface GatewayClientListener {
      */
     default void onSubscribeAck(String correlationId, OperationStatus status, List<String> cacheIds) {
     }
+
+    /**
+     * The response to a bulk operations request, correlated via {@code correlationId}.
+     * <p>
+     * Carries one {@link GatewayBulkOpResult} per requested operation, in request order (each also echoes
+     * its operation's own {@code requestId}). Default is a no-op for listeners that do not issue bulk
+     * requests.
+     *
+     * @param correlationId the correlation id echoed from the bulk request.
+     * @param results       the per-operation results, in request order.
+     */
+    default void onBulkResponse(String correlationId, List<GatewayBulkOpResult> results) {
+    }
 }

@@ -1,7 +1,10 @@
 package com.bhf.aeroncache.integration.gateway;
 
+import com.bhf.aeroncache.gateway.client.GatewayBulkOp;
+import com.bhf.aeroncache.gateway.client.GatewayBulkOpResult;
 import com.bhf.aeroncache.gateway.client.GatewayClient;
 import com.bhf.aeroncache.gateway.client.GatewayStat;
+import com.bhf.aeroncache.gateway.messages.BulkOperationType;
 import com.bhf.aeroncache.gateway.messages.OperationStatus;
 import com.bhf.aeroncache.gateway.messages.UpdateEventType;
 import io.aeron.Aeron;
@@ -783,6 +786,51 @@ abstract class AbstractGatewayEndToEndTest {
         await().atMost(30, SECONDS).until(() -> listener.statsComplete.containsKey(statsCorr));
         assertTrue(statFor(statsCorr, cacheId).isEmpty(),
                 "expected deleted counter cache " + cacheId + " to be absent from counter stats");
+    }
+
+    @Test
+    @DisplayName("Should apply a mixed batch of cache and counter operations in one bulk request")
+    void shouldApplyMixedBulkOperations() {
+        // Arrange: a single bulk request that mixes regular-cache and counter operations. Each operation
+        // carries its own requestId, echoed on the matching result (results also come back in order).
+        var regCache = uniqueCache("bulk-reg");
+        var cntCache = uniqueCache("bulk-cnt");
+        var bulkCorr = correlationId();
+
+        var operations = List.of(
+                new GatewayBulkOp(BulkOperationType.CREATE_CACHE, 0L, 0L, "op-create", regCache, null, null),
+                new GatewayBulkOp(BulkOperationType.ADD_ITEM, 0L, 0L, "op-add", regCache, "k1", "v1"),
+                new GatewayBulkOp(BulkOperationType.GET_ITEM, 0L, 0L, "op-get", regCache, "k1", null),
+                new GatewayBulkOp(BulkOperationType.CREATE_COUNTER_CACHE, 0L, 0L, "op-create-cnt", cntCache, null, null),
+                new GatewayBulkOp(BulkOperationType.ADD_COUNTER, 0L, 5L, "op-add-cnt", cntCache, "hits", null),
+                new GatewayBulkOp(BulkOperationType.INCREMENT_COUNTER, 0L, 3L, "op-inc-cnt", cntCache, "hits", null),
+                new GatewayBulkOp(BulkOperationType.GET_COUNTER, 0L, 0L, "op-get-cnt", cntCache, "hits", null));
+
+        // Act
+        client.bulkOperations(bulkCorr, operations);
+        await().atMost(30, SECONDS).until(() -> listener.bulkResponses.containsKey(bulkCorr));
+
+        // Assert: one result per operation, in request order, all successful.
+        List<GatewayBulkOpResult> results = listener.bulkResponses.get(bulkCorr);
+        assertEquals(operations.size(), results.size(), "expected one result per bulk operation");
+        for (GatewayBulkOpResult result : results) {
+            assertEquals(OperationStatus.SUCCESS, result.status(), "bulk op " + result.requestId() + " did not succeed");
+        }
+        // Per-operation requestIds are echoed in order.
+        assertEquals(List.of("op-create", "op-add", "op-get", "op-create-cnt", "op-add-cnt", "op-inc-cnt", "op-get-cnt"),
+                results.stream().map(GatewayBulkOpResult::requestId).toList());
+        // The regular GET_ITEM read the value written earlier in the same batch...
+        assertEquals("v1", results.get(2).value());
+        // ...and the bulk GET_COUNTER reflects the batch's add (5) then increment (+3), the numeric
+        // counter value marshalled back as a string-encoded number.
+        assertEquals("8", results.get(6).value());
+
+        // The mutations are also durable outside the bulk request.
+        assertEquals(Map.of("k1", "v1"), fetchEntries(regCache));
+        var getCounterCorr = correlationId();
+        client.getCounterEntry(getCounterCorr, cntCache, "hits");
+        await().atMost(30, SECONDS).until(() -> listener.commandResponses.containsKey(getCounterCorr));
+        assertEquals("8", listener.commandResponses.get(getCounterCorr).value());
     }
 
     // ------------------------------------------------------------------ helpers

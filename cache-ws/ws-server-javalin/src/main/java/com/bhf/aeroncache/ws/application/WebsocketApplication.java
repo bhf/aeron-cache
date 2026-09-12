@@ -89,7 +89,10 @@ public class WebsocketApplication {
         var app = startHTTPServer(port);
 
         try {
-            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
+            // Sized to match the HTTP edge: large enough that a batched bulk-operations request (many
+            // operations in one frame) stays under the ring buffer's max message length. A small buffer
+            // caps maxMsgLength at capacity/8, which a realistic bulk request easily exceeds.
+            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(ClusterUtils.getConfiguredTermLength(16777216));
             System.out.println("Starting AeronCache Cluster Interface");
 
             CacheClientFactory clientFactory = getCacheClientFactory();

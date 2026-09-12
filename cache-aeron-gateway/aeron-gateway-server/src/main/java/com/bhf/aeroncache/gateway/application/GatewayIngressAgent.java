@@ -3,13 +3,19 @@ package com.bhf.aeroncache.gateway.application;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.gateway.codec.GatewayResponseWriter;
 import com.bhf.aeroncache.gateway.messages.BooleanType;
+import com.bhf.aeroncache.gateway.messages.GatewayBulkRequestDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayCommandDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewaySubscribeDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayUnsubscribeDecoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
+import com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
+import com.bhf.aeroncache.models.results.BulkCacheOpsResult;
+import com.bhf.aeroncache.models.results.CacheOperationResultDetails;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.CacheStats;
 import com.bhf.aeroncache.models.results.CacheStatsResult;
@@ -81,6 +87,7 @@ public class GatewayIngressAgent implements Agent {
     private final GatewayCommandDecoder commandDecoder = new GatewayCommandDecoder();
     private final GatewaySubscribeDecoder subscribeDecoder = new GatewaySubscribeDecoder();
     private final GatewayUnsubscribeDecoder unsubscribeDecoder = new GatewayUnsubscribeDecoder();
+    private final GatewayBulkRequestDecoder bulkRequestDecoder = new GatewayBulkRequestDecoder();
     private final FragmentAssembler fragmentAssembler = new FragmentAssembler(this::onFragment);
 
     private Subscription subscription;
@@ -181,8 +188,63 @@ public class GatewayIngressAgent implements Agent {
         } else if (templateId == GatewayUnsubscribeDecoder.TEMPLATE_ID) {
             unsubscribeDecoder.wrap(buffer, bodyOffset, blockLength, version);
             handleUnsubscribe(sessionId);
+        } else if (templateId == GatewayBulkRequestDecoder.TEMPLATE_ID) {
+            bulkRequestDecoder.wrap(buffer, bodyOffset, blockLength, version);
+            handleBulkRequest(responsePublication);
         } else {
             log.warn("Unknown gateway template id {} on session {}", templateId, sessionId);
+        }
+    }
+
+    // ------------------------------------------------------------------ bulk operations
+
+    /**
+     * Decode a bulk request, forward it to the cluster as a single {@link BulkCacheOpsRequest}, and stream
+     * the per-operation results back as a bulk response. A bulk request may mix regular-cache and counter
+     * operations; the cluster dispatches each to the right cache manager, so we always route the batch
+     * through the regular-cache publisher (the cluster egress delivers the single combined result there).
+     */
+    private void handleBulkRequest(Publication responsePublication) {
+        final List<CacheOperationRequest> operations = new ArrayList<>();
+        for (GatewayBulkRequestDecoder.OperationsDecoder op : bulkRequestDecoder.operations()) {
+            final BulkOperationType operationType = mapBulkOperationType(op.operationType());
+            final long ttl = op.ttl();
+            final long counterValue = op.counterValue();
+            final String opRequestId = op.requestId();
+            final String opCacheId = op.cacheId();
+            final String opKey = op.key();
+            final String opValue = op.value();
+            operations.add(new CacheOperationRequest(operationType, ttl, counterValue, opRequestId, opCacheId, opKey, opValue));
+        }
+        final String correlationId = requestId(bulkRequestDecoder.correlationId());
+
+        final BulkCacheOpsRequest request = new BulkCacheOpsRequest(correlationId, operations);
+        cacheSubs.sendBulkOperationsRequest(correlationId, request,
+                (Consumer<BulkCacheOpsResult>) o -> respondBulk(responsePublication, correlationId, (BulkCacheOpsResult) o));
+    }
+
+    private void respondBulk(Publication publication, String correlationId, BulkCacheOpsResult result) {
+        final List<GatewayResponseWriter.BulkOpResultEntry> entries = new ArrayList<>();
+        for (Object o : result.getOperations()) {
+            final CacheOperationResultDetails details = (CacheOperationResultDetails) o;
+            final String cacheId = details.getCacheId() == null ? null : String.valueOf(details.getCacheId().value());
+            final String key = details.getKey() == null ? null : String.valueOf(details.getKey().value());
+            final String value = details.getValue() == null ? null : String.valueOf(details.getValue().value());
+            entries.add(new GatewayResponseWriter.BulkOpResultEntry(
+                    details.getOperationStatus(), details.getRequestId(), cacheId, key, value));
+        }
+        egressWriter.writeBulkResponse(publication, correlationId, entries);
+    }
+
+    private static BulkOperationType mapBulkOperationType(com.bhf.aeroncache.gateway.messages.BulkOperationType type) {
+        if (type == null) {
+            return BulkOperationType.NONE;
+        }
+        try {
+            return BulkOperationType.valueOf(type.name());
+        } catch (IllegalArgumentException e) {
+            log.warn("Unknown bulk operation type {}", type);
+            return BulkOperationType.NONE;
         }
     }
 

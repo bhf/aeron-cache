@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.gateway.client;
 
 import com.bhf.aeroncache.gateway.messages.BooleanType;
+import com.bhf.aeroncache.gateway.messages.GatewayBulkRequestEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayCommandEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewaySubscribeEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayUnsubscribeEncoder;
@@ -23,6 +24,7 @@ class GatewayRequestWriter {
     private final GatewayCommandEncoder commandEncoder = new GatewayCommandEncoder();
     private final GatewaySubscribeEncoder subscribeEncoder = new GatewaySubscribeEncoder();
     private final GatewayUnsubscribeEncoder unsubscribeEncoder = new GatewayUnsubscribeEncoder();
+    private final GatewayBulkRequestEncoder bulkRequestEncoder = new GatewayBulkRequestEncoder();
 
     /**
      * Encode a command frame.
@@ -76,6 +78,29 @@ class GatewayRequestWriter {
         }
         subscribeEnc.correlationId(nullSafe(correlationId));
         return subscribeEncoder.limit();
+    }
+
+    /**
+     * Encode a bulk operations frame.
+     *
+     * @param operations the operations to batch, in the order they should be applied.
+     * @return the encoded length in bytes.
+     */
+    int encodeBulkRequest(MutableDirectBuffer buffer, String correlationId, List<GatewayBulkOp> operations) {
+        var bulkEnc = bulkRequestEncoder.wrapAndApplyHeader(buffer, 0, headerEncoder);
+        var group = bulkEnc.operationsCount(operations.size());
+        for (GatewayBulkOp op : operations) {
+            group.next()
+                    .operationType(op.operationType())
+                    .ttl(op.ttl())
+                    .counterValue(op.counterValue())
+                    .requestId(nullSafe(op.requestId()))
+                    .cacheId(nullSafe(op.cacheId()))
+                    .key(nullSafe(op.key()))
+                    .value(nullSafe(op.value()));
+        }
+        bulkEnc.correlationId(nullSafe(correlationId));
+        return bulkRequestEncoder.limit();
     }
 
     /**

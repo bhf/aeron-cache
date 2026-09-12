@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.integration.gateway;
 
+import com.bhf.aeroncache.gateway.client.GatewayBulkOpResult;
 import com.bhf.aeroncache.gateway.client.GatewayClient;
 import com.bhf.aeroncache.gateway.client.GatewayClientListener;
 import com.bhf.aeroncache.gateway.client.GatewayStat;
@@ -36,6 +37,7 @@ final class RecordingListener implements GatewayClientListener {
     final Map<String, Boolean> statsComplete = new ConcurrentHashMap<>();
     final Queue<StreamUpdate> streamUpdates = new ConcurrentLinkedQueue<>();
     final Map<String, SubscribeAck> subscribeAcks = new ConcurrentHashMap<>();
+    final Map<String, List<GatewayBulkOpResult>> bulkResponses = new ConcurrentHashMap<>();
     final Map<String, String> errors = new ConcurrentHashMap<>();
 
     @Override
@@ -68,6 +70,11 @@ final class RecordingListener implements GatewayClientListener {
     @Override
     public void onSubscribeAck(String correlationId, OperationStatus status, List<String> cacheIds) {
         subscribeAcks.put(correlationId, new SubscribeAck(status, List.copyOf(cacheIds)));
+    }
+
+    @Override
+    public void onBulkResponse(String correlationId, List<GatewayBulkOpResult> results) {
+        bulkResponses.put(correlationId, List.copyOf(results));
     }
 
     @Override

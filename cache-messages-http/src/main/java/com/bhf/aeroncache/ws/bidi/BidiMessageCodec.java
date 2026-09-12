@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.ws.bidi;
 
+import com.bhf.aeroncache.ws.bidi.messages.BidiBulk;
 import com.bhf.aeroncache.ws.bidi.messages.BidiClientMessage;
 import com.bhf.aeroncache.ws.bidi.messages.BidiCommand;
 import com.bhf.aeroncache.ws.bidi.messages.BidiServerMessage;
@@ -62,6 +63,7 @@ public class BidiMessageCodec {
                 case BidiClientMessage.COMMAND -> mapper.treeToValue(root, BidiCommand.class);
                 case BidiClientMessage.SUBSCRIBE -> mapper.treeToValue(root, BidiSubscribe.class);
                 case BidiClientMessage.UNSUBSCRIBE -> mapper.treeToValue(root, BidiUnsubscribe.class);
+                case BidiClientMessage.BULK -> mapper.treeToValue(root, BidiBulk.class);
                 default -> throw new BidiProtocolException("Unknown frame type '" + type + "'");
             };
         } catch (BidiProtocolException e) {
