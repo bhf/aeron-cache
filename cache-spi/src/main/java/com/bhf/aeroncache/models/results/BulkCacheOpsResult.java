@@ -130,13 +130,21 @@ public class BulkCacheOpsResult <I extends Reusable, K extends Reusable, V exten
         operations.add(cacheOpResult);
     }
 
+    @SuppressWarnings("unchecked")
     public <VT extends Reusable> void addResult(GetCacheEntryResult<I, K, VT> result) {
         var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
         cacheOpResult.requestId.copyFrom(result.requestId);
         cacheOpResult.getCacheId().copyFrom(result.getCacheId());
         cacheOpResult.operationStatus = result.status;
         cacheOpResult.getKey().copyFrom(result.getEntryKey());
-        cacheOpResult.getValue().copyFrom(result.getEntryValue());
+        // The bulk result carries a single (string) value type, but the read value may be of a different
+        // type (e.g. a numeric counter). Marshal it as its string form rather than copying the raw
+        // Reusable across value types; clients decode counter values as string-encoded numbers, exactly
+        // as the non-bulk GET_COUNTER path already returns them.
+        var entryValue = result.getEntryValue();
+        if (entryValue != null && entryValue.value() != null) {
+            cacheOpResult.getValue().copyFrom(String.valueOf(entryValue.value()));
+        }
         operations.add(cacheOpResult);
     }
 

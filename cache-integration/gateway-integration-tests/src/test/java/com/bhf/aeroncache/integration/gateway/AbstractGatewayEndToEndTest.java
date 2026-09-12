@@ -797,17 +797,14 @@ abstract class AbstractGatewayEndToEndTest {
         var cntCache = uniqueCache("bulk-cnt");
         var bulkCorr = correlationId();
 
-        // Note: a bulk GET_COUNTER is intentionally not exercised here — reading a counter inside a bulk
-        // batch hits a pre-existing cluster limitation (the long counter value cannot be marshalled into
-        // the bulk result's string value), independent of the gateway. The counter's value is instead
-        // confirmed with a normal getCounterEntry after the batch.
         var operations = List.of(
                 new GatewayBulkOp(BulkOperationType.CREATE_CACHE, 0L, 0L, "op-create", regCache, null, null),
                 new GatewayBulkOp(BulkOperationType.ADD_ITEM, 0L, 0L, "op-add", regCache, "k1", "v1"),
                 new GatewayBulkOp(BulkOperationType.GET_ITEM, 0L, 0L, "op-get", regCache, "k1", null),
                 new GatewayBulkOp(BulkOperationType.CREATE_COUNTER_CACHE, 0L, 0L, "op-create-cnt", cntCache, null, null),
                 new GatewayBulkOp(BulkOperationType.ADD_COUNTER, 0L, 5L, "op-add-cnt", cntCache, "hits", null),
-                new GatewayBulkOp(BulkOperationType.INCREMENT_COUNTER, 0L, 3L, "op-inc-cnt", cntCache, "hits", null));
+                new GatewayBulkOp(BulkOperationType.INCREMENT_COUNTER, 0L, 3L, "op-inc-cnt", cntCache, "hits", null),
+                new GatewayBulkOp(BulkOperationType.GET_COUNTER, 0L, 0L, "op-get-cnt", cntCache, "hits", null));
 
         // Act
         client.bulkOperations(bulkCorr, operations);
@@ -820,14 +817,16 @@ abstract class AbstractGatewayEndToEndTest {
             assertEquals(OperationStatus.SUCCESS, result.status(), "bulk op " + result.requestId() + " did not succeed");
         }
         // Per-operation requestIds are echoed in order.
-        assertEquals(List.of("op-create", "op-add", "op-get", "op-create-cnt", "op-add-cnt", "op-inc-cnt"),
+        assertEquals(List.of("op-create", "op-add", "op-get", "op-create-cnt", "op-add-cnt", "op-inc-cnt", "op-get-cnt"),
                 results.stream().map(GatewayBulkOpResult::requestId).toList());
-        // The regular GET_ITEM read the value written earlier in the same batch.
+        // The regular GET_ITEM read the value written earlier in the same batch...
         assertEquals("v1", results.get(2).value());
+        // ...and the bulk GET_COUNTER reflects the batch's add (5) then increment (+3), the numeric
+        // counter value marshalled back as a string-encoded number.
+        assertEquals("8", results.get(6).value());
 
-        // The mutations are durable outside the bulk request: the regular entry is present...
+        // The mutations are also durable outside the bulk request.
         assertEquals(Map.of("k1", "v1"), fetchEntries(regCache));
-        // ...and the counter reflects the batch's add (5) then increment (+3).
         var getCounterCorr = correlationId();
         client.getCounterEntry(getCounterCorr, cntCache, "hits");
         await().atMost(30, SECONDS).until(() -> listener.commandResponses.containsKey(getCounterCorr));
