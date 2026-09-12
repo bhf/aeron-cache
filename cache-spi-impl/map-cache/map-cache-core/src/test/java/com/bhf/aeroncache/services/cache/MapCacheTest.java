@@ -5,6 +5,7 @@ import com.bhf.aeroncache.models.results.PatchValueResult;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
 import com.bhf.aeroncache.services.integrity.NoOpStreamingHasher;
+import com.bhf.aeroncache.services.patch.JSONPatchProvider;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.Cluster;
@@ -35,7 +36,7 @@ class MapCacheTest {
         cache = new MapCache<>(SupplierUtils.stringSupplier, SupplierUtils.stringSupplier,
                 SupplierUtils.stringSupplier, SupplierUtils.mapSupplier,
                 new ReusableStringCacheIdSnapshotCodec(new NoOpStreamingHasher<>()),
-                new ReusableStringCacheEntrySnapshotCodec(new NoOpStreamingHasher<>()));
+                new ReusableStringCacheEntrySnapshotCodec(new NoOpStreamingHasher<>()), new JSONPatchProvider<>());
     }
 
     /**
@@ -264,10 +265,7 @@ class MapCacheTest {
         assertEquals(CacheOperationStatus.ERROR, result.getStatus());
     }
 
-    /**
-     * Build an empty {@link PatchValueResult} suitable for use as the merge-patch
-     * out-parameter of {@link MapCache#add(Object, Object, PatchValueResult)}.
-     */
+
     private PatchValueResult<ReusableString, ReusableString, ReusableString> newMergePatchOut() {
         return new PatchValueResult<>(SupplierUtils.stringSupplier.get(),
                 SupplierUtils.stringSupplier.get(),
