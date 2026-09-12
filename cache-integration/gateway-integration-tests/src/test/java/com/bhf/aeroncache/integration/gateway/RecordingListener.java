@@ -25,6 +25,9 @@ final class RecordingListener implements GatewayClientListener {
     record StreamUpdate(UpdateEventType eventType, String cacheId, String key, String value) {
     }
 
+    record SubscribeAck(OperationStatus status, List<String> cacheIds) {
+    }
+
     final Map<String, CommandResponse> commandResponses = new ConcurrentHashMap<>();
     final Map<String, Map<String, String>> entriesAccumulated = new ConcurrentHashMap<>();
     final Map<String, OperationStatus> entriesStatus = new ConcurrentHashMap<>();
@@ -32,6 +35,7 @@ final class RecordingListener implements GatewayClientListener {
     final Map<String, List<GatewayStat>> statsAccumulated = new ConcurrentHashMap<>();
     final Map<String, Boolean> statsComplete = new ConcurrentHashMap<>();
     final Queue<StreamUpdate> streamUpdates = new ConcurrentLinkedQueue<>();
+    final Map<String, SubscribeAck> subscribeAcks = new ConcurrentHashMap<>();
     final Map<String, String> errors = new ConcurrentHashMap<>();
 
     @Override
@@ -59,6 +63,11 @@ final class RecordingListener implements GatewayClientListener {
     @Override
     public void onStreamUpdate(String correlationId, UpdateEventType eventType, String cacheId, String key, String value) {
         streamUpdates.add(new StreamUpdate(eventType, cacheId, key, value));
+    }
+
+    @Override
+    public void onSubscribeAck(String correlationId, OperationStatus status, List<String> cacheIds) {
+        subscribeAcks.put(correlationId, new SubscribeAck(status, List.copyOf(cacheIds)));
     }
 
     @Override

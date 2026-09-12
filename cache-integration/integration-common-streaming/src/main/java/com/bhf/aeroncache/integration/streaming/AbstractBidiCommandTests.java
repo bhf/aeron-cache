@@ -159,11 +159,320 @@ public abstract class AbstractBidiCommandTests {
                 .until(() -> helper.frames().stream().anyMatch(f -> "error".equals(f.path("type").asText(null))));
     }
 
+    @Test
+    @DisplayName("Should patch an entry, deep-merging the value, over the BIDI socket")
+    protected void shouldPatchEntryOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-patch";
+        var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
+        var patchId = helper.newCorrelationId();
+        var getId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.CREATE_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_CACHE_ENTRY, addId, cacheId, "k1", "{\"a\":1,\"b\":2}", 0, 0);
+        awaitCommandResponse(addId);
+        helper.command(WsOp.PATCH_CACHE_ENTRY, patchId, cacheId, "k1", "{\"b\":3,\"c\":4}", 0, 0);
+        var patchResponse = awaitCommandResponse(patchId);
+        helper.command(WsOp.GET_CACHE_ENTRY, getId, cacheId, "k1", null, 0, 0);
+        var getResponse = awaitCommandResponse(getId);
+
+        // Assert: the patch merged into (not replaced) the stored value.
+        assertThat(patchResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(getResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(getResponse.get("value").asText(), is("{\"a\":1,\"b\":3,\"c\":4}"));
+    }
+
+    @Test
+    @DisplayName("Should remove an entry over the BIDI socket so it reads back as UNKNOWN_KEY")
+    protected void shouldRemoveEntryOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-remove";
+        var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
+        var removeId = helper.newCorrelationId();
+        var getId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.CREATE_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_CACHE_ENTRY, addId, cacheId, "k1", "v1", 0, 0);
+        awaitCommandResponse(addId);
+        helper.command(WsOp.REMOVE_CACHE_ENTRY, removeId, cacheId, "k1", null, 0, 0);
+        var removeResponse = awaitCommandResponse(removeId);
+        helper.command(WsOp.GET_CACHE_ENTRY, getId, cacheId, "k1", null, 0, 0);
+        var getResponse = awaitCommandResponse(getId);
+
+        // Assert
+        assertThat(removeResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(getResponse.get("status").asText(), is("UNKNOWN_KEY"));
+    }
+
+    @Test
+    @DisplayName("Should clear a cache over the BIDI socket, leaving no entries")
+    protected void shouldClearCacheOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-clear";
+        var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
+        var clearId = helper.newCorrelationId();
+        var entriesId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.CREATE_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_CACHE_ENTRY, addId, cacheId, "k1", "v1", 0, 0);
+        awaitCommandResponse(addId);
+        helper.command(WsOp.CLEAR_CACHE, clearId, cacheId, null, null, 0, 0);
+        var clearResponse = awaitCommandResponse(clearId);
+        helper.command(WsOp.GET_CACHE_ENTRIES, entriesId, cacheId, null, null, 0, 0);
+        var entriesFrame = awaitEndOfBatchEntries(entriesId);
+
+        // Assert
+        assertThat(clearResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(entriesFrame.get("items").isEmpty(), is(true));
+    }
+
+    @Test
+    @DisplayName("Should delete a cache over the BIDI socket")
+    protected void shouldDeleteCacheOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-delete";
+        var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
+        var deleteId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.CREATE_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_CACHE_ENTRY, addId, cacheId, "k1", "v1", 0, 0);
+        awaitCommandResponse(addId);
+        helper.command(WsOp.DELETE_CACHE, deleteId, cacheId, null, null, 0, 0);
+        var deleteResponse = awaitCommandResponse(deleteId);
+
+        // Assert
+        assertThat(deleteResponse.get("status").asText(), is("SUCCESS"));
+    }
+
+    @Test
+    @DisplayName("Should schedule a TTL removal and cancel it over the BIDI socket, keeping the entry")
+    protected void shouldCancelScheduledRemovalOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-cancel-removal";
+        var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
+        var cancelId = helper.newCorrelationId();
+        var getId = helper.newCorrelationId();
+
+        // Act: add with a (long) scheduled removal, then cancel the pending timer.
+        helper.command(WsOp.CREATE_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_CACHE_ENTRY, addId, cacheId, "k1", "v1", 60_000, 0);
+        awaitCommandResponse(addId);
+        helper.command(WsOp.CANCEL_CACHE_ITEM_REMOVAL, cancelId, cacheId, "k1", null, 0, 0);
+        var cancelResponse = awaitCommandResponse(cancelId);
+        helper.command(WsOp.GET_CACHE_ENTRY, getId, cacheId, "k1", null, 0, 0);
+        var getResponse = awaitCommandResponse(getId);
+
+        // Assert: the cancel succeeded (a removal was pending) and the entry survives.
+        assertThat(cancelResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(getResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(getResponse.get("value").asText(), is("v1"));
+    }
+
+    @Test
+    @DisplayName("Should read a counter entry back over the BIDI socket")
+    protected void shouldGetCounterEntryOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-counter-get";
+        var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
+        var getId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.CREATE_COUNTER_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_COUNTER_ENTRY, addId, cacheId, "hits", null, 0, 7);
+        awaitCommandResponse(addId);
+        helper.command(WsOp.GET_COUNTER_ENTRY, getId, cacheId, "hits", null, 0, 0);
+        var getResponse = awaitCommandResponse(getId);
+
+        // Assert
+        assertThat(getResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(getResponse.get("value").asText(), is("7"));
+    }
+
+    @Test
+    @DisplayName("Should decrement a counter over the BIDI socket")
+    protected void shouldDecrementCounterOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-counter-dec";
+        var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
+        var decId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.CREATE_COUNTER_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_COUNTER_ENTRY, addId, cacheId, "gauge", null, 0, 10);
+        awaitCommandResponse(addId);
+        helper.command(WsOp.DECREMENT_COUNTER_ENTRY, decId, cacheId, "gauge", null, 0, 4);
+        var decResponse = awaitCommandResponse(decId);
+
+        // Assert
+        assertThat(decResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(decResponse.get("value").asText(), is("6"));
+    }
+
+    @Test
+    @DisplayName("Should set a counter to an absolute value over the BIDI socket")
+    protected void shouldSetCounterOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-counter-set";
+        var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
+        var setId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.CREATE_COUNTER_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_COUNTER_ENTRY, addId, cacheId, "gauge", null, 0, 1);
+        awaitCommandResponse(addId);
+        helper.command(WsOp.SET_COUNTER_ENTRY, setId, cacheId, "gauge", null, 0, 42);
+        var setResponse = awaitCommandResponse(setId);
+
+        // Assert
+        assertThat(setResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(setResponse.get("value").asText(), is("42"));
+    }
+
+    @Test
+    @DisplayName("Should stream all counter entries in an end-of-batch frame over the BIDI socket")
+    protected void shouldStreamCounterEntriesOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-counter-entries";
+        var createId = helper.newCorrelationId();
+        var addA = helper.newCorrelationId();
+        var addB = helper.newCorrelationId();
+        var entriesId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.CREATE_COUNTER_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_COUNTER_ENTRY, addA, cacheId, "a", null, 0, 1);
+        awaitCommandResponse(addA);
+        helper.command(WsOp.ADD_COUNTER_ENTRY, addB, cacheId, "b", null, 0, 2);
+        awaitCommandResponse(addB);
+        helper.command(WsOp.GET_COUNTER_ENTRIES, entriesId, cacheId, null, null, 0, 0);
+        var entriesFrame = awaitEndOfBatchEntries(entriesId);
+
+        // Assert
+        assertThat(entriesFrame.get("items").get("a").asText(), is("1"));
+        assertThat(entriesFrame.get("items").get("b").asText(), is("2"));
+    }
+
+    @Test
+    @DisplayName("Should return counter cache stats in an end-of-batch frame over the BIDI socket")
+    protected void shouldReturnCounterStatsOverSocket() {
+        // Arrange
+        var statsId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.GET_COUNTER_STATS, statsId, null, null, null, 0, 0);
+
+        // Assert
+        await().atMost(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .until(() -> helper.firstFrame(statsId, "stats")
+                        .filter(f -> f.get("endOfBatch").asBoolean())
+                        .isPresent());
+    }
+
+    @Test
+    @DisplayName("Should remove a counter entry over the BIDI socket so it reads back as UNKNOWN_KEY")
+    protected void shouldRemoveCounterEntryOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-counter-remove";
+        var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
+        var removeId = helper.newCorrelationId();
+        var getId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.CREATE_COUNTER_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_COUNTER_ENTRY, addId, cacheId, "hits", null, 0, 7);
+        awaitCommandResponse(addId);
+        helper.command(WsOp.REMOVE_COUNTER_ENTRY, removeId, cacheId, "hits", null, 0, 0);
+        var removeResponse = awaitCommandResponse(removeId);
+        helper.command(WsOp.GET_COUNTER_ENTRY, getId, cacheId, "hits", null, 0, 0);
+        var getResponse = awaitCommandResponse(getId);
+
+        // Assert
+        assertThat(removeResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(getResponse.get("status").asText(), is("UNKNOWN_KEY"));
+    }
+
+    @Test
+    @DisplayName("Should clear a counter cache over the BIDI socket, leaving no entries")
+    protected void shouldClearCounterCacheOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-counter-clear";
+        var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
+        var clearId = helper.newCorrelationId();
+        var entriesId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.CREATE_COUNTER_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_COUNTER_ENTRY, addId, cacheId, "hits", null, 0, 3);
+        awaitCommandResponse(addId);
+        helper.command(WsOp.CLEAR_COUNTER_CACHE, clearId, cacheId, null, null, 0, 0);
+        var clearResponse = awaitCommandResponse(clearId);
+        helper.command(WsOp.GET_COUNTER_ENTRIES, entriesId, cacheId, null, null, 0, 0);
+        var entriesFrame = awaitEndOfBatchEntries(entriesId);
+
+        // Assert
+        assertThat(clearResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(entriesFrame.get("items").isEmpty(), is(true));
+    }
+
+    @Test
+    @DisplayName("Should delete a counter cache over the BIDI socket")
+    protected void shouldDeleteCounterCacheOverSocket() {
+        // Arrange
+        var cacheId = cacheIdPrefix() + "-counter-delete";
+        var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
+        var deleteId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.CREATE_COUNTER_CACHE, createId, cacheId, null, null, 0, 0);
+        awaitCommandResponse(createId);
+        helper.command(WsOp.ADD_COUNTER_ENTRY, addId, cacheId, "hits", null, 0, 3);
+        awaitCommandResponse(addId);
+        helper.command(WsOp.DELETE_COUNTER_CACHE, deleteId, cacheId, null, null, 0, 0);
+        var deleteResponse = awaitCommandResponse(deleteId);
+
+        // Assert
+        assertThat(deleteResponse.get("status").asText(), is("SUCCESS"));
+    }
+
     private JsonNode awaitCommandResponse(String correlationId) {
         await().atMost(TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .until(() -> helper.firstFrame(correlationId, "commandResponse").isPresent());
         var response = helper.firstFrame(correlationId, "commandResponse").orElseThrow();
         assertThat(response, notNullValue());
         return response;
+    }
+
+    private JsonNode awaitEndOfBatchEntries(String correlationId) {
+        await().atMost(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .until(() -> helper.firstFrame(correlationId, "entries")
+                        .filter(f -> f.get("endOfBatch").asBoolean())
+                        .isPresent());
+        return helper.firstFrame(correlationId, "entries").orElseThrow();
     }
 }
