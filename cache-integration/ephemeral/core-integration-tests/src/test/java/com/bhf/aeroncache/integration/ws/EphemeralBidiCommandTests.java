@@ -11,4 +11,14 @@ class EphemeralBidiCommandTests extends AbstractBidiCommandTests {
     protected String cacheIdPrefix() {
         return "EphemeralBidiCommandTests";
     }
+
+    /**
+     * Cache stats are not served by the unclustered single-node backend (no ephemeral stats coverage
+     * exists anywhere in the suite), so the getStats scenario is not applicable here. Overriding without
+     * {@code @Test} means JUnit does not run it for this variant.
+     */
+    @Override
+    protected void shouldReturnStatsOverSocket() {
+        // Not applicable in unclustered mode.
+    }
 }

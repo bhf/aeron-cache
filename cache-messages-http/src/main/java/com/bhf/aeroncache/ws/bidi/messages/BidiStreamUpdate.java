@@ -14,24 +14,28 @@ import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
  * @param eventType     the type of update.
  * @param cacheId       the cache the update belongs to.
  * @param key           the entry key, where applicable.
- * @param value         the entry value, where applicable.
+ * @param value         the entry value, where applicable. Carried with its native JSON type (a string for
+ *                      regular caches, a number for counters), mirroring {@link CacheUpdateEvent#itemValue()}.
  */
 public record BidiStreamUpdate(String type,
                                String correlationId,
                                CacheUpdateEvent.EventType eventType,
                                String cacheId,
                                String key,
-                               String value) implements BidiServerMessage {
+                               Object value) implements BidiServerMessage {
 
     /**
      * Build a stream-update frame from a {@link CacheUpdateEvent}.
+     *
+     * <p>The value is passed through unchanged so its native type is preserved on the wire (regular cache
+     * values serialize as JSON strings, counter values as JSON numbers), matching the one-directional
+     * websocket routes' {@link CacheUpdateEvent} payload.</p>
      *
      * @param event the update event produced by the subscription machinery.
      * @return the frame.
      */
     public static BidiStreamUpdate from(CacheUpdateEvent<?> event) {
-        var value = event.itemValue() == null ? null : String.valueOf(event.itemValue());
         return new BidiStreamUpdate(STREAM_UPDATE, event.requestId(), event.eventType(),
-                event.cacheId(), event.itemKey(), value);
+                event.cacheId(), event.itemKey(), event.itemValue());
     }
 }

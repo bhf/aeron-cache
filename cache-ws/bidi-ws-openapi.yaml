@@ -238,8 +238,13 @@ components:
           type: string
           nullable: true
         value:
-          type: string
           nullable: true
+          description: |
+            The entry value, carried with its native JSON type: a string for regular caches, a number for
+            counters (mirroring the one-directional routes' CacheUpdateEvent payload).
+          oneOf:
+            - type: string
+            - type: number
       required:
         - type
         - eventType

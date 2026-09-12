@@ -194,17 +194,30 @@ public class BidiWsStreamingHelper implements StreamingHelper {
         }
     }
 
-    private static CacheUpdateEvent<String> toCacheUpdateEvent(JsonNode node) {
+    private static CacheUpdateEvent<Object> toCacheUpdateEvent(JsonNode node) {
         return new CacheUpdateEvent<>(
                 textOrNull(node, "cacheId"),
                 CacheUpdateEvent.EventType.valueOf(node.path("eventType").asText()),
                 textOrNull(node, "key"),
-                textOrNull(node, "value"),
+                valueOrNull(node, "value"),
                 textOrNull(node, "correlationId"));
     }
 
     private static String textOrNull(JsonNode node, String field) {
         var value = node.get(field);
         return value == null || value.isNull() ? null : value.asText();
+    }
+
+    /**
+     * Extract a field preserving its native JSON type (number vs string), matching how
+     * {@link WSStreamingHelper} deserializes {@link CacheUpdateEvent#itemValue()} for the one-directional
+     * routes. Counter values thus arrive as numbers and regular cache values as strings.
+     */
+    private static Object valueOrNull(JsonNode node, String field) {
+        var value = node.get(field);
+        if (value == null || value.isNull()) {
+            return null;
+        }
+        return OBJECT_MAPPER.convertValue(value, Object.class);
     }
 }

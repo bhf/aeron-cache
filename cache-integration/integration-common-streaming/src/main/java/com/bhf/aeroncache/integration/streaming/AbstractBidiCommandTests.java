@@ -126,16 +126,21 @@ public abstract class AbstractBidiCommandTests {
         // Arrange
         var cacheId = cacheIdPrefix() + "-counter";
         var createId = helper.newCorrelationId();
+        var addId = helper.newCorrelationId();
         var incId = helper.newCorrelationId();
 
         // Act
         helper.command(WsOp.CREATE_COUNTER_CACHE, createId, cacheId, null, null, 0, 0);
         var createResponse = awaitCommandResponse(createId);
+        // Counters must be initialised before they can be incremented (see the increment streaming suite).
+        helper.command(WsOp.ADD_COUNTER_ENTRY, addId, cacheId, "hits", null, 0, 0);
+        var addResponse = awaitCommandResponse(addId);
         helper.command(WsOp.INCREMENT_COUNTER_ENTRY, incId, cacheId, "hits", null, 0, 3);
         var incResponse = awaitCommandResponse(incId);
 
         // Assert
         assertThat(createResponse.get("status").asText(), is("SUCCESS"));
+        assertThat(addResponse.get("status").asText(), is("SUCCESS"));
         assertThat(incResponse.get("status").asText(), is("SUCCESS"));
         assertThat(incResponse.get("value"), notNullValue());
     }
