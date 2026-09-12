@@ -4,6 +4,7 @@ import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
+import com.bhf.aeroncache.services.patch.ValuePatchProvider;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,7 +32,7 @@ import java.util.function.Supplier;
  * @param <V> The type of the value.
  */
 @Log4j2
-public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCache<I, K, V> {
+public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable> extends AbstractCache<I, K, V> implements ValuePatchProvider<I,K,V>{
 
     final Map<K, V> cache;
     private final V emptyValue;
@@ -82,7 +83,8 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
      * was no previous value or the values are equal, the out-parameter is left cleared
      * (status {@link CacheOperationStatus#NONE}) so no patch update is sent.
      */
-    private void produceMergePatch(K key, V previousValue, V newValue, PatchValueResult<I, K, V> mergePatchOut) {
+    @Override
+    public void produceMergePatch(K key, V previousValue, V newValue, PatchValueResult<I, K, V> mergePatchOut) {
         mergePatchOut.clear();
         if (previousValue == null) {
             return;
