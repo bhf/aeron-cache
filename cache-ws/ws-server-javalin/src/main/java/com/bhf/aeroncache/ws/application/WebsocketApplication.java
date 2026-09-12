@@ -3,7 +3,6 @@ package com.bhf.aeroncache.ws.application;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
-import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -17,6 +16,8 @@ import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
 import com.bhf.aeroncache.utils.*;
 import com.bhf.aeroncache.ws.config.WsIdleStrategies;
+import com.bhf.aeroncache.ws.handlers.CacheWsRouteHandlers;
+import com.bhf.aeroncache.ws.handlers.CountersWsRouteHandlers;
 import io.aeron.Aeron;
 import io.aeron.RethrowingErrorHandler;
 import io.aeron.driver.MediaDriver;
@@ -26,7 +27,6 @@ import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
 import io.javalin.http.servlet.JavalinServletContext;
 import io.javalin.micrometer.MicrometerPlugin;
-import io.javalin.websocket.*;
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
@@ -36,7 +36,6 @@ import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.binder.system.UptimeMetrics;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
-import io.opentelemetry.api.trace.Span;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.MutableDirectBuffer;
@@ -68,9 +67,9 @@ public class WebsocketApplication {
     private static CacheSubscriptionRequestPublisher countersSubscriptionService;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
-    private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
+    public static final CacheStatsTracker statsTracker = new CacheStatsTracker();
 
-    private static String tracingServiceName;
+    public static String tracingServiceName;
 
     private static AgentRunner agentRunner;
     private static MediaDriver mediaDriver;
@@ -121,6 +120,9 @@ public class WebsocketApplication {
             client.setCacheResultsCallbacks(subscriptionService);
             client.setCountersResultsCallbacks(countersSubscriptionService);
             client.setCountersCacheResponseDecoder(countersResponseDecoder);
+
+            setupCacheWsRouteHandlers(app);
+            setupCountersWsRouteHandlers(app);
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
             System.out.println("CLUSTER_ADDRESSES=" + allHosts);
@@ -297,21 +299,36 @@ public class WebsocketApplication {
         return Javalin.create(config)
                 .beforeMatched(WebsocketApplication::checkClusterConnectivity)
                 .before(CACHE_API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
-
-                .ws(CACHE_API_PREFIX + "hydrate/{cacheId}", WebsocketApplication::handleSingleCacheWsWithHydration)
-                .ws(CACHE_MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", WebsocketApplication::handleMultiCacheWsWithHydration)
-                .ws(CACHE_API_PREFIX + "{cacheId}", WebsocketApplication::handleSingleCacheWs)
-                .ws(CACHE_MULTI_SUB_API_PREFIX + "{cacheIds}", WebsocketApplication::handleMultiCacheWs)
-
-                .ws(COUNTERS_API_PREFIX + "hydrate/{cacheId}", WebsocketApplication::handleSingleCountersCacheWsWithHydration)
-                .ws(COUNTERS_MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", WebsocketApplication::handleMultiCountersCacheWsWithHydration)
-                .ws(COUNTERS_API_PREFIX + "{cacheId}", WebsocketApplication::handleSingleCountersCacheWs)
-                .ws(COUNTERS_MULTI_SUB_API_PREFIX + "{cacheIds}", WebsocketApplication::handleMultiCountersCacheWs)
-
                 .get(LIVENESS, WebsocketApplication::handleGetLiveness)
                 .get(READINESS, WebsocketApplication::handleGetReadiness)
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
                 .start(port);
+    }
+
+    /**
+     * Register the websocket routes for regular cache subscriptions.
+     *
+     * @param app The Javalin instance.
+     */
+    private static void setupCacheWsRouteHandlers(Javalin app) {
+        var handlers = new CacheWsRouteHandlers(subscriptionService);
+        app.ws(CACHE_API_PREFIX + "hydrate/{cacheId}", handlers::handleSingleCacheWsWithHydration)
+                .ws(CACHE_MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", handlers::handleMultiCacheWsWithHydration)
+                .ws(CACHE_API_PREFIX + "{cacheId}", handlers::handleSingleCacheWs)
+                .ws(CACHE_MULTI_SUB_API_PREFIX + "{cacheIds}", handlers::handleMultiCacheWs);
+    }
+
+    /**
+     * Register the websocket routes for counter cache subscriptions.
+     *
+     * @param app The Javalin instance.
+     */
+    private static void setupCountersWsRouteHandlers(Javalin app) {
+        var handlers = new CountersWsRouteHandlers(countersSubscriptionService);
+        app.ws(COUNTERS_API_PREFIX + "hydrate/{cacheId}", handlers::handleSingleCacheWsWithHydration)
+                .ws(COUNTERS_MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", handlers::handleMultiCacheWsWithHydration)
+                .ws(COUNTERS_API_PREFIX + "{cacheId}", handlers::handleSingleCacheWs)
+                .ws(COUNTERS_MULTI_SUB_API_PREFIX + "{cacheIds}", handlers::handleMultiCacheWs);
     }
 
     private static void checkClusterConnectivity(Context ctx) {
@@ -326,334 +343,21 @@ public class WebsocketApplication {
     }
 
     /**
-     * Setup websocket for subscriptions to a single cache.
+     * The current cluster connection used to send subscription requests.
      *
-     * @param wsConfig
+     * @return The cache cluster connection.
      */
-    private static void handleSingleCacheWs(WsConfig wsConfig) {
-        wsConfig.onConnect(WebsocketApplication::onSingleCacheConnect);
-        wsConfig.onClose(WebsocketApplication::onWsClose);
-        wsConfig.onError(WebsocketApplication::onWsError);
-        wsConfig.onMessage(WebsocketApplication::onWsMessage);
-    }
-
-    private static void handleSingleCountersCacheWs(WsConfig wsConfig) {
-        wsConfig.onConnect(WebsocketApplication::onSingleCountersCacheConnect);
-        wsConfig.onClose(WebsocketApplication::onWsClose);
-        wsConfig.onError(WebsocketApplication::onWsError);
-        wsConfig.onMessage(WebsocketApplication::onWsMessage);
+    public static AeronCache getCache() {
+        return cache;
     }
 
     /**
-     * Setup websocket for subscriptions to a single cache with hydration.
+     * Whether the service is running against a Raft cluster (as opposed to unclustered mode).
      *
-     * @param wsConfig
+     * @return {@code true} if clustered mode is in use.
      */
-    private static void handleSingleCacheWsWithHydration(WsConfig wsConfig) {
-        wsConfig.onConnect(WebsocketApplication::onSingleCacheConnectWithHydration);
-        wsConfig.onClose(WebsocketApplication::onWsClose);
-        wsConfig.onError(WebsocketApplication::onWsError);
-        wsConfig.onMessage(WebsocketApplication::onWsMessage);
-    }
-
-    private static void handleSingleCountersCacheWsWithHydration(WsConfig wsConfig) {
-        wsConfig.onConnect(WebsocketApplication::onSingleCountersCacheConnectWithHydration);
-        wsConfig.onClose(WebsocketApplication::onWsClose);
-        wsConfig.onError(WebsocketApplication::onWsError);
-        wsConfig.onMessage(WebsocketApplication::onWsMessage);
-    }
-
-    /**
-     * Setup websocket for subscriptions to multiple caches.
-     *
-     * @param wsConfig
-     */
-    private static void handleMultiCacheWs(WsConfig wsConfig) {
-        wsConfig.onConnect(WebsocketApplication::onMultiCacheConnect);
-        wsConfig.onClose(WebsocketApplication::onWsClose);
-        wsConfig.onError(WebsocketApplication::onWsError);
-        wsConfig.onMessage(WebsocketApplication::onWsMessage);
-    }
-
-    private static void handleMultiCountersCacheWs(WsConfig wsConfig) {
-        wsConfig.onConnect(WebsocketApplication::onMultiCountersCacheConnect);
-        wsConfig.onClose(WebsocketApplication::onWsClose);
-        wsConfig.onError(WebsocketApplication::onWsError);
-        wsConfig.onMessage(WebsocketApplication::onWsMessage);
-    }
-
-    private static void handleMultiCacheWsWithHydration(WsConfig wsConfig) {
-        wsConfig.onConnect(WebsocketApplication::onMultiCacheConnectWithHydration);
-        wsConfig.onClose(WebsocketApplication::onWsClose);
-        wsConfig.onError(WebsocketApplication::onWsError);
-        wsConfig.onMessage(WebsocketApplication::onWsMessage);
-    }
-
-    private static void handleMultiCountersCacheWsWithHydration(WsConfig wsConfig) {
-        wsConfig.onConnect(WebsocketApplication::onMultiCountersCacheConnectWithHydration);
-        wsConfig.onClose(WebsocketApplication::onWsClose);
-        wsConfig.onError(WebsocketApplication::onWsError);
-        wsConfig.onMessage(WebsocketApplication::onWsMessage);
-    }
-
-    private static void onWsMessage(WsMessageContext wsMessageContext) {
-        log.warn("Received message from websocket sessionId: {}, message: {}", wsMessageContext.sessionId(),
-                wsMessageContext.message());
-    }
-
-    private static void onWsError(WsErrorContext wsErrorContext) {
-        log.warn("Got websocket error: {}", wsErrorContext);
-        subscriptionService.handleWsError(cache, getRequestId(wsErrorContext.getUpgradeCtx$javalin()),
-                wsErrorContext.sessionId());
-    }
-
-    private static void onWsClose(WsCloseContext wsCloseContext) {
-        log.info("Websocket closed for sessionId: {}", wsCloseContext.sessionId());
-
-        if(CLUSTERED_MODE) {
-            subscriptionService.handleWsClosed(cache, getRequestId(wsCloseContext.getUpgradeCtx$javalin()),
-                    wsCloseContext.sessionId());
-        }
-    }
-
-    /**
-     * Parsed subscription request parameters expanded from the request URI query string.
-     *
-     * @param cacheIds The caches to subscribe to (parallel to {@code keys}).
-     * @param keys     The keys parallel to {@code cacheIds}; a {@code null} entry denotes a whole-cache subscription.
-     * @param mode     The subscription mode.
-     */
-    private record SubscriptionParams(List<String> cacheIds, List<String> keys, SubscriptionMode mode) {
-    }
-
-    /**
-     * Expand the optional {@code keys} and {@code mode} query parameters into parallel cacheId/key lists.
-     *
-     * <p>{@code ?mode=patch} selects patch mode (default is full). {@code ?keys=} is a comma-separated list of
-     * tokens, where a token of the form {@code cacheId:key} targets a specific cache and a bare {@code key} token
-     * applies to every cache in the route. When {@code keys} is absent the behaviour is a whole-cache subscription.</p>
-     *
-     * @param ctx        The websocket connect context.
-     * @param baseCaches The caches identified from the request path.
-     * @param allowPatch Whether patch mode is permitted for this route (patch is cache-only, not for counters).
-     * @return The expanded subscription parameters.
-     */
-    private static SubscriptionParams expandSubscription(WsConnectContext ctx, List<String> baseCaches, boolean allowPatch) {
-        var modeParam = ctx.queryParam("mode");
-        var mode = (allowPatch && "patch".equalsIgnoreCase(modeParam)) ? SubscriptionMode.PATCH : SubscriptionMode.FULL;
-
-        var keysParam = ctx.queryParam("keys");
-        if (keysParam == null || keysParam.isBlank()) {
-            return new SubscriptionParams(baseCaches, null, mode);
-        }
-
-        Map<String, LinkedHashSet<String>> keysByCache = new LinkedHashMap<>();
-        for (var token : keysParam.split(",")) {
-            var trimmed = token.trim();
-            if (trimmed.isEmpty()) {
-                continue;
-            }
-            var sep = trimmed.indexOf(':');
-            if (sep >= 0) {
-                var cacheId = trimmed.substring(0, sep);
-                var key = trimmed.substring(sep + 1);
-                if (!key.isEmpty()) {
-                    keysByCache.computeIfAbsent(cacheId, x -> new LinkedHashSet<>()).add(key);
-                }
-            } else {
-                for (var cacheId : baseCaches) {
-                    keysByCache.computeIfAbsent(cacheId, x -> new LinkedHashSet<>()).add(trimmed);
-                }
-            }
-        }
-
-        List<String> cacheIds = new ArrayList<>();
-        List<String> keys = new ArrayList<>();
-        for (var cacheId : baseCaches) {
-            var keySet = keysByCache.get(cacheId);
-            if (keySet == null || keySet.isEmpty()) {
-                cacheIds.add(cacheId);
-                keys.add(null);
-            } else {
-                for (var key : keySet) {
-                    cacheIds.add(cacheId);
-                    keys.add(key);
-                }
-            }
-        }
-        return new SubscriptionParams(cacheIds, keys, mode);
-    }
-
-    /**
-     * Add subscription to a single cache to the
-     * websocket.
-     *
-     * @param wsConnectContext
-     */
-    private static void onSingleCacheConnect(WsConnectContext wsConnectContext) {
-        try {
-            wsConnectContext.enableAutomaticPings();
-            var cacheId = wsConnectContext.pathParam("cacheId");
-            var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-            log.info("Subscription request for cacheId: {} on ws sessionId: {}", cacheId, wsConnectContext.sessionId());
-
-            final Consumer<Void> subscriptionFailureHandler = _ ->
-                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
-            var params = expandSubscription(wsConnectContext, List.of(cacheId), true);
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
-                    wsConnectContext.sessionId(), requestId, false, wsConnectContext::send);
-        } catch (NumberFormatException e) {
-            statsTracker.getTotalErrors().incrementAndGet();
-            log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
-            wsConnectContext.closeSession(WsCloseStatus.PROTOCOL_ERROR, "Couldn't parse cacheId");
-        }
-    }
-
-    private static void onSingleCountersCacheConnect(WsConnectContext wsConnectContext) {
-        try {
-            wsConnectContext.enableAutomaticPings();
-            var cacheId = wsConnectContext.pathParam("cacheId");
-            var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-            log.info("Subscription request for counters cacheId: {} on ws sessionId: {}", cacheId, wsConnectContext.sessionId());
-
-            final Consumer<Void> subscriptionFailureHandler = _ ->
-                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to counters cache");
-            var params = expandSubscription(wsConnectContext, List.of(cacheId), false);
-            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
-                    wsConnectContext.sessionId(), requestId, false, wsConnectContext::send);
-        } catch (NumberFormatException e) {
-            statsTracker.getTotalErrors().incrementAndGet();
-            log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
-            wsConnectContext.closeSession(WsCloseStatus.PROTOCOL_ERROR, "Couldn't parse cacheId");
-        }
-    }
-
-    private static void onSingleCacheConnectWithHydration(WsConnectContext wsConnectContext) {
-        try {
-            wsConnectContext.enableAutomaticPings();
-            var cacheId = wsConnectContext.pathParam("cacheId");
-            var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-            log.info("Subscription request with hydration for cacheId: {} on ws sessionId: {}", cacheId, wsConnectContext.sessionId());
-
-            final Consumer<Void> subscriptionFailureHandler = _ ->
-                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
-            var params = expandSubscription(wsConnectContext, List.of(cacheId), true);
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
-                    wsConnectContext.sessionId(), requestId, true, wsConnectContext::send);
-        } catch (NumberFormatException e) {
-            statsTracker.getTotalErrors().incrementAndGet();
-            log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
-            wsConnectContext.closeSession(WsCloseStatus.PROTOCOL_ERROR, "Couldn't parse cacheId");
-        }
-    }
-
-    private static void onSingleCountersCacheConnectWithHydration(WsConnectContext wsConnectContext) {
-        try {
-            wsConnectContext.enableAutomaticPings();
-            var cacheId = wsConnectContext.pathParam("cacheId");
-            var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-            log.info("Subscription request with hydration for counter cacheId: {} on ws sessionId: {}", cacheId, wsConnectContext.sessionId());
-
-            final Consumer<Void> subscriptionFailureHandler = _ ->
-                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to counters cache");
-            var params = expandSubscription(wsConnectContext, List.of(cacheId), false);
-            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
-                    wsConnectContext.sessionId(), requestId, true, wsConnectContext::send);
-        } catch (NumberFormatException e) {
-            statsTracker.getTotalErrors().incrementAndGet();
-            log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
-            wsConnectContext.closeSession(WsCloseStatus.PROTOCOL_ERROR, "Couldn't parse cacheId");
-        }
-    }
-
-    /**
-     * Add subscriptions to multiple caches on the same
-     * websocket.
-     *
-     * @param wsConnectContext
-     */
-    private static void onMultiCacheConnect(WsConnectContext wsConnectContext) {
-        try {
-            wsConnectContext.enableAutomaticPings();
-            var cacheIds = wsConnectContext.pathParam("cacheIds");
-            List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
-            var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-            log.info("Subscription request for cacheId: {} on ws sessionId: {}", caches,
-                    wsConnectContext.sessionId());
-            final Consumer<Void> subscriptionFailureHandler = _ ->
-                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
-
-            var params = expandSubscription(wsConnectContext, caches, true);
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
-                    wsConnectContext.sessionId(), requestId, false, wsConnectContext::send);
-        } catch (NumberFormatException e) {
-            statsTracker.getTotalErrors().incrementAndGet();
-            log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
-            wsConnectContext.closeSession(WsCloseStatus.PROTOCOL_ERROR, "Couldn't parse cacheId");
-        }
-    }
-
-    private static void onMultiCountersCacheConnect(WsConnectContext wsConnectContext) {
-        try {
-            wsConnectContext.enableAutomaticPings();
-            var cacheIds = wsConnectContext.pathParam("cacheIds");
-            List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
-            var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-            log.info("Subscription request for counters cacheId: {} on ws sessionId: {}", caches,
-                    wsConnectContext.sessionId());
-            final Consumer<Void> subscriptionFailureHandler = _ ->
-                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to counters cache");
-
-            var params = expandSubscription(wsConnectContext, caches, false);
-            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
-                    wsConnectContext.sessionId(), requestId, false, wsConnectContext::send);
-        } catch (NumberFormatException e) {
-            statsTracker.getTotalErrors().incrementAndGet();
-            log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
-            wsConnectContext.closeSession(WsCloseStatus.PROTOCOL_ERROR, "Couldn't parse cacheId");
-        }
-    }
-
-    private static void onMultiCacheConnectWithHydration(WsConnectContext wsConnectContext) {
-        try {
-            wsConnectContext.enableAutomaticPings();
-            var cacheIds = wsConnectContext.pathParam("cacheIds");
-            List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
-            var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-            log.info("Subscription request with hydration for cacheId: {} on ws sessionId: {}", caches,
-                    wsConnectContext.sessionId());
-            final Consumer<Void> subscriptionFailureHandler = _ ->
-                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to cache");
-
-            var params = expandSubscription(wsConnectContext, caches, true);
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
-                    wsConnectContext.sessionId(), requestId, true, wsConnectContext::send);
-        } catch (NumberFormatException e) {
-            statsTracker.getTotalErrors().incrementAndGet();
-            log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
-            wsConnectContext.closeSession(WsCloseStatus.PROTOCOL_ERROR, "Couldn't parse cacheId");
-        }
-    }
-
-    private static void onMultiCountersCacheConnectWithHydration(WsConnectContext wsConnectContext) {
-        try {
-            wsConnectContext.enableAutomaticPings();
-            var cacheIds = wsConnectContext.pathParam("cacheIds");
-            List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
-            var requestId = getRequestId(wsConnectContext.getUpgradeCtx$javalin());
-            log.info("Subscription request with hydration for counters cacheId: {} on ws sessionId: {}", caches,
-                    wsConnectContext.sessionId());
-            final Consumer<Void> subscriptionFailureHandler = _ ->
-                    wsConnectContext.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to counters cache");
-
-            var params = expandSubscription(wsConnectContext, caches, false);
-            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
-                    wsConnectContext.sessionId(), requestId, true, wsConnectContext::send);
-        } catch (NumberFormatException e) {
-            statsTracker.getTotalErrors().incrementAndGet();
-            log.warn("Couldn't parse cacheId correctly, path params: {}", wsConnectContext.pathParamMap());
-            wsConnectContext.closeSession(WsCloseStatus.PROTOCOL_ERROR, "Couldn't parse cacheId");
-        }
+    public static boolean isClusteredMode() {
+        return CLUSTERED_MODE;
     }
 
     /**
@@ -707,30 +411,6 @@ public class WebsocketApplication {
             ctx.status(HTTPStatusUtils.SERVICE_NOT_LIVE);
             ctx.result("Cluster not connected");
         }
-    }
-
-    /**
-     * Build the requestId based on whether tracing is enabled.
-     *
-     * @param ctx The Context.
-     * @return A requestId
-     */
-    private static String getRequestId(Context ctx) {
-        return tracingServiceName != null && ctx != null ? getTraceBasedRequestId(ctx) : UUID.randomUUID().toString();
-    }
-
-    /**
-     * Use the current span and trace Ids to build a requestId to
-     * be sent to the Aeron Cache cluster.
-     *
-     * @param ctx
-     * @return
-     */
-    private static String getTraceBasedRequestId(Context ctx) {
-        var currentSpanId = Span.current().getSpanContext().getSpanId();
-        var currentTraceId = Span.current().getSpanContext().getTraceId();
-        log.info("Creating requestId using traceID {} and spanID {}", currentTraceId, currentSpanId);
-        return currentTraceId + "@" + currentSpanId;
     }
 
 }
