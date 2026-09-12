@@ -16,6 +16,7 @@ import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
 import com.bhf.aeroncache.utils.*;
 import com.bhf.aeroncache.ws.config.WsIdleStrategies;
+import com.bhf.aeroncache.ws.bidi.BidiWsRouteHandler;
 import com.bhf.aeroncache.ws.handlers.CacheWsRouteHandlers;
 import com.bhf.aeroncache.ws.handlers.CountersWsRouteHandlers;
 import io.aeron.Aeron;
@@ -59,6 +60,7 @@ public class WebsocketApplication {
     private static final String CACHE_MULTI_SUB_API_PREFIX = "/api/ws/v1/caches/";
     private static final String COUNTERS_API_PREFIX = "/api/ws/v1/counter/";
     private static final String COUNTERS_MULTI_SUB_API_PREFIX = "/api/ws/v1/counters/";
+    private static final String BIDI_API = "/api/ws/v1/bidi";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
@@ -123,6 +125,7 @@ public class WebsocketApplication {
 
             setupCacheWsRouteHandlers(app);
             setupCountersWsRouteHandlers(app);
+            setupBidiWsRouteHandler(app);
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
             System.out.println("CLUSTER_ADDRESSES=" + allHosts);
@@ -329,6 +332,18 @@ public class WebsocketApplication {
                 .ws(COUNTERS_MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", handlers::handleMultiCacheWsWithHydration)
                 .ws(COUNTERS_API_PREFIX + "{cacheId}", handlers::handleSingleCacheWs)
                 .ws(COUNTERS_MULTI_SUB_API_PREFIX + "{cacheIds}", handlers::handleMultiCacheWs);
+    }
+
+    /**
+     * Register the single bidirectional websocket endpoint that carries the full command surface plus
+     * dynamic subscribe/unsubscribe, correlated per request. The one-directional subscription routes
+     * remain available unchanged.
+     *
+     * @param app The Javalin instance.
+     */
+    private static void setupBidiWsRouteHandler(Javalin app) {
+        var handler = new BidiWsRouteHandler(subscriptionService, countersSubscriptionService);
+        app.ws(BIDI_API, handler::handleBidi);
     }
 
     private static void checkClusterConnectivity(Context ctx) {

@@ -5,6 +5,8 @@ plugins {
 
 dependencies {
     implementation(project(":cache-spi"))
+    implementation(project(":cache-common"))
+    implementation(libs.jackson.core)
 }
 
 tasks.test {

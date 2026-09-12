@@ -247,8 +247,35 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         });
     }
 
+    /**
+     * Remove a single websocket session's subscription to a single cache in response to an explicit
+     * unsubscribe request (used by the bidirectional protocol). If this was the last subscriber to the
+     * cache, a cluster side unsubscribe is sent.
+     *
+     * @param cluster     The cluster to use.
+     * @param requestId   The request ID.
+     * @param wsSessionId The websocket session we want to unsubscribe.
+     * @param cacheId     The cache to unsubscribe from.
+     */
+    public void unsubscribeSession(AeronCache cluster, String requestId, String wsSessionId, String cacheId) {
+        var consumers = cacheSubscriptions.get(cacheId);
+        if (consumers == null) {
+            return;
+        }
+        var removed = consumers.removeIf(p -> p.getId().equals(wsSessionId));
+        if (removed && consumers.isEmpty()) {
+            log.info("Removed last websocket client subscription on cacheId: {} via explicit unsubscribe", cacheId);
+            sendCacheUnsubscribeRequest(cluster, requestId, cacheId);
+            cacheSubscriptions.remove(cacheId);
+            clusterSubscriptions.removeIf(k -> k.startsWith(cacheId + ''));
+        }
+    }
+
     @Override
     public void handleCacheCleared(ClearCacheResult<I> clearCacheResult) {
+        // Fire the request/response command callback (drives the BIDI command response) before
+        // dispatching streaming events to subscribers.
+        super.handleCacheCleared(clearCacheResult);
         log.info("Got cache cleared to send to ws");
         var subscribers = cacheSubscriptions.get(clearCacheResult.getCacheId().value());
 
@@ -267,6 +294,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
 
     @Override
     public void handleCacheDeleted(DeleteCacheResult<I> deleteCacheResult) {
+        super.handleCacheDeleted(deleteCacheResult);
         log.info("Got cache deleted to send to ws");
         var subscribers = cacheSubscriptions.get(deleteCacheResult.getCacheId().value());
 
@@ -285,6 +313,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
 
     @Override
     public void handleCacheEntryRemoved(RemoveCacheEntryResult<I, K> removeCacheEntryResult) {
+        super.handleCacheEntryRemoved(removeCacheEntryResult);
         log.info("Got cache entry removed to send to ws on requestId {}", removeCacheEntryResult.getRequestId());
         var subscribers = cacheSubscriptions.get(removeCacheEntryResult.getCacheId().value());
 
@@ -332,6 +361,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
 
     @Override
     public void handleCounterIncremented(IncrementCounterResult<I, K> result) {
+        super.handleCounterIncremented(result);
         log.info("Got counter incremented to send to ws on cacheId {}", result.getCacheId().value());
         var subscribers = cacheSubscriptions.get(result.getCacheId().value());
 
@@ -356,6 +386,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
 
     @Override
     public void handleCounterDecremented(DecrementCounterResult<I, K> result) {
+        super.handleCounterDecremented(result);
         log.info("Got counter decremented to send to ws on cacheId {}", result.getCacheId().value());
         var subscribers = cacheSubscriptions.get(result.getCacheId().value());
 
@@ -380,6 +411,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
 
     @Override
     public void handleCounterSet(SetCounterResult<I, K> result) {
+        super.handleCounterSet(result);
         log.info("Got counter set to send to ws on cacheId {}", result.getCacheId().value());
         var subscribers = cacheSubscriptions.get(result.getCacheId().value());
 
