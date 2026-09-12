@@ -105,9 +105,13 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
 
         V existingValue = cache.get(key);
         try {
-            patchProvider.applyPatch(patch, existingValue);
-            patchValueResult.getEntryValue().copyFrom(existingValue);
-            patchValueResult.setStatus(CacheOperationStatus.SUCCESS);
+            if (patchProvider.applyPatch(patch, existingValue)) {
+                patchValueResult.getEntryValue().copyFrom(existingValue);
+                patchValueResult.setStatus(CacheOperationStatus.SUCCESS);
+            } else {
+                patchValueResult.getEntryValue().copyFrom(existingValue);
+                patchValueResult.setStatus(CacheOperationStatus.ERROR);
+            }
         } catch (Exception e) {
             log.warn("Failed to patch value for key {}, reason: {}", key, e.getMessage());
             patchValueResult.getEntryValue().copyFrom(existingValue);

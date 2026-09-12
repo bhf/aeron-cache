@@ -17,12 +17,14 @@ public class JSONPatchProvider<I extends Reusable, K extends Reusable, V extends
 
     /**
      * Apply a JSON merge patch to an existing value. The patch is applied in-place, modifying the existing value.
+     *
      * @param patch
      * @param existingValue
      * @param <V>
+     * @return
      */
     @Override
-    public <V extends Reusable> void applyPatch(V patch, V existingValue){
+    public <V extends Reusable> boolean applyPatch(V patch, V existingValue){
         try {
             String existingJson = existingValue.value().toString();
             String patchJson = patch.value().toString();
@@ -31,9 +33,11 @@ public class JSONPatchProvider<I extends Reusable, K extends Reusable, V extends
 
             existingValue.clear();
             existingValue.copyFrom(mergedJson);
+            return true;
         } catch (JsonProcessingException e) {
             log.error("Failed to apply patch, reason: {}", e.getMessage());
         }
+        return false;
     }
 
     /**
