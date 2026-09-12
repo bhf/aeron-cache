@@ -2,6 +2,7 @@ package com.bhf.aeroncache.sse.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.http.responses.SubscriptionAck;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -187,6 +188,25 @@ public class SSEApplication extends Jooby {
         return new SubscriptionParams(cacheIds, keys, mode);
     }
 
+    /**
+     * Build a handler that emits a subscription-confirmed ack (a {@code subscribed} SSE event) once the
+     * cluster has registered the subscription, so clients know updates will now be delivered.
+     *
+     * @param emitter   The SSE emitter for the session.
+     * @param caches    The caches the subscription covers.
+     * @param requestId The request ID.
+     * @return the ack handler.
+     */
+    private static Runnable subscriptionAck(ServerSentEmitter emitter, List<String> caches, String requestId) {
+        return () -> {
+            try {
+                emitter.send(SubscriptionAck.SUBSCRIBED, writer.writeValueAsString(SubscriptionAck.of(caches, requestId)));
+            } catch (JsonProcessingException e) {
+                log.error("Error trying to convert subscription ack to JSON", e);
+            }
+        };
+    }
+
     private static void handleSingleCacheSSE(ServerSentEmitter serverSentEmitter) {
         try {
             var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
@@ -215,7 +235,7 @@ public class SSEApplication extends Jooby {
             };
 
             var params = expandSubscription(serverSentEmitter.getContext(), List.of(cacheId), true);
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, subscriptionAck(serverSentEmitter, params.cacheIds(), requestId), params.cacheIds(), params.keys(), params.mode(),
                     serverSentEmitter.getId(), requestId, false, consumer);
         } catch (TypeMismatchException e) {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
@@ -250,7 +270,7 @@ public class SSEApplication extends Jooby {
             };
 
             var params = expandSubscription(serverSentEmitter.getContext(), List.of(cacheId), false);
-            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, subscriptionAck(serverSentEmitter, params.cacheIds(), requestId), params.cacheIds(), params.keys(), params.mode(),
                     serverSentEmitter.getId(), requestId, false, consumer);
         } catch (TypeMismatchException e) {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
@@ -285,7 +305,7 @@ public class SSEApplication extends Jooby {
             };
 
             var params = expandSubscription(serverSentEmitter.getContext(), List.of(cacheId), true);
-            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+            subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, subscriptionAck(serverSentEmitter, params.cacheIds(), requestId), params.cacheIds(), params.keys(), params.mode(),
                     serverSentEmitter.getId(), requestId, true, consumer);
         } catch (TypeMismatchException e) {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
@@ -320,7 +340,7 @@ public class SSEApplication extends Jooby {
             };
 
             var params = expandSubscription(serverSentEmitter.getContext(), List.of(cacheId), false);
-            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+            countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, subscriptionAck(serverSentEmitter, params.cacheIds(), requestId), params.cacheIds(), params.keys(), params.mode(),
                     serverSentEmitter.getId(), requestId, true, consumer);
         } catch (TypeMismatchException e) {
             log.warn("Couldn't parse cacheId correctly, path params: {}", serverSentEmitter.getContext().pathMap());
@@ -349,7 +369,7 @@ public class SSEApplication extends Jooby {
         };
 
         var params = expandSubscription(serverSentEmitter.getContext(), caches, true);
-        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, subscriptionAck(serverSentEmitter, params.cacheIds(), requestId), params.cacheIds(), params.keys(), params.mode(),
                 serverSentEmitter.getId(), requestId, false, consumer);
     }
 
@@ -374,7 +394,7 @@ public class SSEApplication extends Jooby {
         };
 
         var params = expandSubscription(serverSentEmitter.getContext(), caches, false);
-        countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+        countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, subscriptionAck(serverSentEmitter, params.cacheIds(), requestId), params.cacheIds(), params.keys(), params.mode(),
                 serverSentEmitter.getId(), requestId, false, consumer);
     }
 
@@ -399,7 +419,7 @@ public class SSEApplication extends Jooby {
         };
 
         var params = expandSubscription(serverSentEmitter.getContext(), caches, true);
-        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, subscriptionAck(serverSentEmitter, params.cacheIds(), requestId), params.cacheIds(), params.keys(), params.mode(),
                 serverSentEmitter.getId(), requestId, true, consumer);
     }
 
@@ -424,7 +444,7 @@ public class SSEApplication extends Jooby {
         };
 
         var params = expandSubscription(serverSentEmitter.getContext(), caches, false);
-        countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, params.cacheIds(), params.keys(), params.mode(),
+        countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, subscriptionAck(serverSentEmitter, params.cacheIds(), requestId), params.cacheIds(), params.keys(), params.mode(),
                 serverSentEmitter.getId(), requestId, true, consumer);
     }
 

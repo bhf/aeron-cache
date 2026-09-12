@@ -25,13 +25,10 @@ public class StreamingHelperUtil {
                 })
                 .collect(Collectors.toList());
 
+        // readyFutures now complete on the server's subscription-confirmed ack, so no fixed delay is
+        // needed before returning: any mutation the caller issues next is guaranteed to be streamed back.
         readyFutures.forEach(f -> Awaitility.await().atMost(60, TimeUnit.SECONDS).until(f::isDone));
 
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
         return perStreamingSourceEvents;
     }
 
@@ -47,13 +44,10 @@ public class StreamingHelperUtil {
                 })
                 .collect(Collectors.toList());
 
+        // readyFutures now complete on the server's subscription-confirmed ack, so no fixed delay is
+        // needed before returning: any mutation the caller issues next is guaranteed to be streamed back.
         readyFutures.forEach(f -> Awaitility.await().atMost(60, TimeUnit.SECONDS).until(f::isDone));
 
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
         return perStreamingSourceEvents;
     }
 
@@ -102,13 +96,10 @@ public class StreamingHelperUtil {
                 })
                 .collect(Collectors.toList());
 
+        // readyFutures now complete on the server's subscription-confirmed ack, so no fixed delay is
+        // needed before returning: any mutation the caller issues next is guaranteed to be streamed back.
         readyFutures.forEach(f -> Awaitility.await().atMost(60, TimeUnit.SECONDS).until(f::isDone));
 
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
         return perStreamingSourceEvents;
     }
 
@@ -124,13 +115,10 @@ public class StreamingHelperUtil {
                 })
                 .collect(Collectors.toList());
 
+        // readyFutures now complete on the server's subscription-confirmed ack, so no fixed delay is
+        // needed before returning: any mutation the caller issues next is guaranteed to be streamed back.
         readyFutures.forEach(f -> Awaitility.await().atMost(60, TimeUnit.SECONDS).until(f::isDone));
 
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
         return perStreamingSourceEvents;
     }
 

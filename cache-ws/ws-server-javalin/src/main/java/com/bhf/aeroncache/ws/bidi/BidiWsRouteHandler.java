@@ -28,6 +28,7 @@ import com.bhf.aeroncache.ws.bidi.messages.BidiError;
 import com.bhf.aeroncache.ws.bidi.messages.BidiStats;
 import com.bhf.aeroncache.ws.bidi.messages.BidiStreamUpdate;
 import com.bhf.aeroncache.ws.bidi.messages.BidiSubscribe;
+import com.bhf.aeroncache.ws.bidi.messages.BidiSubscribeAck;
 import com.bhf.aeroncache.ws.bidi.messages.BidiUnsubscribe;
 import io.javalin.websocket.WsCloseContext;
 import io.javalin.websocket.WsConfig;
@@ -221,12 +222,14 @@ public class BidiWsRouteHandler {
         final CacheSubscriptionRequestPublisher publisher = counters ? countersSubs : cacheSubs;
         final Consumer<Void> failureHandler = ignored ->
                 session.send(codec.write(BidiError.of(correlationId, CacheOperationStatus.ERROR, "Subscription failed")));
+        final Runnable ackHandler = () ->
+                session.send(codec.write(BidiSubscribeAck.of(correlationId, cacheIds)));
         final Consumer<CacheUpdateEvent> updateConsumer = event ->
                 session.send(codec.write(BidiStreamUpdate.from(event)));
 
         log.info("BIDI subscribe session {}, caches {}, keys {}, mode {}, snapshot {}, counters {}",
                 session.sessionId(), cacheIds, keys, mode, sendSnapshot, counters);
-        publisher.subscribeToCache(WebsocketApplication.getCache(), failureHandler, cacheIds, keys, mode,
+        publisher.subscribeToCache(WebsocketApplication.getCache(), failureHandler, ackHandler, cacheIds, keys, mode,
                 session.sessionId(), correlationId, sendSnapshot, updateConsumer);
     }
 

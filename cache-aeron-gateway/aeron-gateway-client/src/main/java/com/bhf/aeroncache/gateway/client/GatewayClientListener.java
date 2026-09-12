@@ -68,4 +68,18 @@ public interface GatewayClientListener {
      * @param message       a human readable error message.
      */
     void onError(String correlationId, OperationStatus status, String message);
+
+    /**
+     * Confirms a subscription is now live: the cluster has registered it, so updates for the requested
+     * caches will be delivered from this point on. Emitted once per subscribe request.
+     * <p>
+     * Callers can use this as a barrier before issuing mutations they expect to be streamed back, instead
+     * of guessing with a fixed delay. Default is a no-op for listeners that do not need it.
+     *
+     * @param correlationId the correlation id echoed from the subscribe request.
+     * @param status        the subscription status.
+     * @param cacheIds      the caches the subscription now covers.
+     */
+    default void onSubscribeAck(String correlationId, OperationStatus status, List<String> cacheIds) {
+    }
 }

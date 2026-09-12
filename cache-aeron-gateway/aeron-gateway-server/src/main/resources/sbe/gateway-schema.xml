@@ -138,4 +138,13 @@
         <data name="correlationId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
+    <sbe:message name="GatewaySubscribeAck" id="15" semanticType="GatewaySubscribeAck"
+                 description="Confirms a GatewaySubscribe is live: the cluster has registered the subscription, so updates for the requested caches will now be delivered. Emitted once per subscribe request, correlated via correlationId.">
+        <field name="status" id="1" type="OperationStatus"/>
+        <group name="cacheIds" id="40" dimensionType="groupSizeEncoding">
+            <data name="cacheId" id="41" type="varStringEncoding"/>
+        </group>
+        <data name="correlationId" id="2" type="varStringEncoding"/>
+    </sbe:message>
+
 </sbe:messageSchema>

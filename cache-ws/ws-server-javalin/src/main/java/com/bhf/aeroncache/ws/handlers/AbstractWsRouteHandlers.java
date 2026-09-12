@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.ws.handlers;
 
+import com.bhf.aeroncache.http.responses.SubscriptionAck;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.ws.application.CacheSubscriptionRequestPublisher;
 import com.bhf.aeroncache.ws.application.WebsocketApplication;
@@ -113,9 +114,10 @@ public abstract class AbstractWsRouteHandlers {
         var requestId = getRequestId(ctx.getUpgradeCtx$javalin());
         final Consumer<Void> subscriptionFailureHandler = _ ->
                 ctx.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to " + entityLabel);
+        final Runnable subscriptionAckHandler = () -> ctx.send(SubscriptionAck.of(caches, requestId));
         var params = expandSubscription(ctx, caches, allowPatch);
         subscriptionService.subscribeToCache(WebsocketApplication.getCache(), subscriptionFailureHandler,
-                params.cacheIds(), params.keys(), params.mode(),
+                subscriptionAckHandler, params.cacheIds(), params.keys(), params.mode(),
                 ctx.sessionId(), requestId, hydrate, ctx::send);
     }
 

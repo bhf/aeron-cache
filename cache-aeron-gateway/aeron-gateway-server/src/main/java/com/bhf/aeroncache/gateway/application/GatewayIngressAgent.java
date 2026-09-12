@@ -276,11 +276,13 @@ public class GatewayIngressAgent implements Agent {
         final GatewaySubscriptionPublisher publisher = counters ? countersSubs : cacheSubs;
         final Consumer<Void> failureHandler = ignored ->
                 egressWriter.writeError(responsePublication, correlationId, CacheOperationStatus.ERROR, "Subscription failed");
+        final Runnable ackHandler = () ->
+                egressWriter.writeSubscribeAck(responsePublication, correlationId, CacheOperationStatus.SUCCESS, cacheIds);
         final Consumer<CacheUpdateEvent> updateConsumer = event ->
                 egressWriter.writeStreamUpdate(responsePublication, event);
 
         log.info("Gateway subscribe session {}, caches {}, keys {}, mode {}, snapshot {}, counters {}", sessionId, cacheIds, keys, mode, sendSnapshot, counters);
-        publisher.subscribeToCache(cluster, failureHandler, cacheIds, keys, mode, sessionId, correlationId, sendSnapshot, updateConsumer);
+        publisher.subscribeToCache(cluster, failureHandler, ackHandler, cacheIds, keys, mode, sessionId, correlationId, sendSnapshot, updateConsumer);
     }
 
     private void handleUnsubscribe(String sessionId) {

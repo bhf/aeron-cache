@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.integration.streaming;
 
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.http.responses.SubscriptionAck;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
@@ -122,6 +123,11 @@ public class SSEStreamingHelper implements StreamingHelper{
         factory.newEventSource(request, new EventSourceListener() {
             @Override
             public void onEvent(@NotNull EventSource eventSource, @Nullable String id, @Nullable String type, @NotNull String data) {
+                // The subscription-confirmed ack marks the point from which updates are guaranteed.
+                if (SubscriptionAck.SUBSCRIBED.equals(type)) {
+                    connectionReady.complete(null);
+                    return;
+                }
                 try {
                     CacheUpdateEvent event = OBJECT_MAPPER.readValue(data, CacheUpdateEvent.class);
                     synchronized (events) {
@@ -138,8 +144,8 @@ public class SSEStreamingHelper implements StreamingHelper{
 
             @Override
             public void onOpen(@NotNull EventSource eventSource, @NotNull Response response) {
+                // Connection open is not readiness: readiness is the subscription ack (see onEvent).
                 System.out.println("SSE CONNECTION NOW OPEN");
-                connectionReady.complete(null);
             }
 
             @Override
