@@ -5,6 +5,7 @@ import com.bhf.aeroncache.gateway.messages.GatewayCommandResponseDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayEntriesDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayErrorDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayStatsDecoder;
+import com.bhf.aeroncache.gateway.messages.GatewaySubscribeAckDecoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.gateway.messages.OperationStatus;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
@@ -278,6 +279,32 @@ class GatewayResponseWriterTest {
         assertEquals(OperationStatus.ERROR, decoder.status());
         assertEquals("corr-err", decoder.correlationId());
         assertEquals("boom", decoder.message());
+    }
+
+    @Test
+    @DisplayName("Should encode a subscribe ack that round-trips through the decoder")
+    void shouldEncodeSubscribeAckThatRoundTrips() {
+        // Arrange
+        // (inputs supplied directly to the writer)
+
+        // Act
+        writer.writeSubscribeAck(publication, "corr-sub", CacheOperationStatus.SUCCESS, List.of("cacheA", "cacheB"));
+
+        // Assert
+        UnsafeBuffer buf = lastFrame();
+        int offset = wrapHeader(buf);
+        assertEquals(GatewaySubscribeAckDecoder.TEMPLATE_ID, headerDecoder.templateId());
+
+        GatewaySubscribeAckDecoder decoder = new GatewaySubscribeAckDecoder();
+        decoder.wrap(buf, offset, headerDecoder.blockLength(), headerDecoder.version());
+
+        assertEquals(OperationStatus.SUCCESS, decoder.status());
+        List<String> cacheIds = new java.util.ArrayList<>();
+        for (GatewaySubscribeAckDecoder.CacheIdsDecoder id : decoder.cacheIds()) {
+            cacheIds.add(id.cacheId());
+        }
+        assertEquals(List.of("cacheA", "cacheB"), cacheIds);
+        assertEquals("corr-sub", decoder.correlationId());
     }
 
     @Test

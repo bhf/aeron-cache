@@ -7,6 +7,7 @@ import com.bhf.aeroncache.gateway.messages.GatewayEntriesEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayErrorEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayStatsEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayStreamUpdateEncoder;
+import com.bhf.aeroncache.gateway.messages.GatewaySubscribeAckEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewaySubscribeDecoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderEncoder;
@@ -63,6 +64,7 @@ class LoopbackGatewayServer implements Agent {
     private final GatewayStatsEncoder statsEncoder = new GatewayStatsEncoder();
     private final GatewayStreamUpdateEncoder streamUpdateEncoder = new GatewayStreamUpdateEncoder();
     private final GatewayErrorEncoder errorEncoder = new GatewayErrorEncoder();
+    private final GatewaySubscribeAckEncoder subscribeAckEncoder = new GatewaySubscribeAckEncoder();
     private final MutableDirectBuffer scratch = new ExpandableArrayBuffer(4096);
     private final FragmentAssembler fragmentAssembler = new FragmentAssembler(this::onFragment);
 
@@ -191,7 +193,19 @@ class LoopbackGatewayServer implements Agent {
         }
         final String correlationId = subscribeDecoder.correlationId();
         final String cacheId = cacheIds.isEmpty() ? "" : cacheIds.get(0);
+        enqueueSubscribeAck(response, correlationId, cacheIds);
         enqueueStreamUpdate(response, correlationId, cacheId, "k", "v");
+    }
+
+    private void enqueueSubscribeAck(Publication response, String correlationId, java.util.List<String> cacheIds) {
+        var enc = subscribeAckEncoder.wrapAndApplyHeader(scratch, 0, headerEncoder)
+                .status(OperationStatus.SUCCESS);
+        var idsEnc = enc.cacheIdsCount(cacheIds.size());
+        for (String cacheId : cacheIds) {
+            idsEnc.next().cacheId(cacheId);
+        }
+        enc.correlationId(correlationId);
+        enqueue(response, subscribeAckEncoder.limit());
     }
 
     private void enqueueCommandResponse(Publication response, String correlationId, String cacheId,

@@ -41,7 +41,7 @@ public interface GatewaySubscriptions {
      * @param sendSnapshot               Whether to request initial state hydration.
      * @param consumer                   The consumer of {@link CacheUpdateEvent}.
      */
-    void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, List<String> cacheIds,
-                          List<String> keys, SubscriptionMode mode, String sessionId, String requestId,
-                          boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer);
+    void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, Runnable subscriptionAckHandler,
+                          List<String> cacheIds, List<String> keys, SubscriptionMode mode, String sessionId,
+                          String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer);
 }

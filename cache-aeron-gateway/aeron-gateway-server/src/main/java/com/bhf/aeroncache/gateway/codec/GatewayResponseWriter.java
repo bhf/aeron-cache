@@ -6,6 +6,7 @@ import com.bhf.aeroncache.gateway.messages.GatewayEntriesEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayErrorEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayStatsEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayStreamUpdateEncoder;
+import com.bhf.aeroncache.gateway.messages.GatewaySubscribeAckEncoder;
 import com.bhf.aeroncache.gateway.messages.BooleanType;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderEncoder;
 import com.bhf.aeroncache.gateway.messages.OperationStatus;
@@ -38,6 +39,7 @@ public class GatewayResponseWriter {
     private final GatewayEntriesEncoder entriesEncoder = new GatewayEntriesEncoder();
     private final GatewayStatsEncoder statsEncoder = new GatewayStatsEncoder();
     private final GatewayErrorEncoder errorEncoder = new GatewayErrorEncoder();
+    private final GatewaySubscribeAckEncoder subscribeAckEncoder = new GatewaySubscribeAckEncoder();
 
     /**
      * A single cache stats record, decoupled from the cluster domain types.
@@ -123,6 +125,27 @@ public class GatewayResponseWriter {
                 .value(nullSafe(value))
                 .correlationId(nullSafe(event.requestId()));
         offer(publication, streamUpdateEncoder.limit());
+    }
+
+    /**
+     * Encode and publish a subscription-confirmed ack frame.
+     * <p>
+     * Emitted once per subscribe request when the cluster has registered the subscription, so the client
+     * knows updates for the requested caches will now be delivered.
+     *
+     * @param correlationId the correlation id echoed from the subscribe request.
+     * @param cacheIds      the caches the subscription now covers.
+     */
+    public void writeSubscribeAck(Publication publication, String correlationId, CacheOperationStatus status,
+                                  List<String> cacheIds) {
+        var ackEnc = subscribeAckEncoder.wrapAndApplyHeader(buffer, 0, headerEncoder)
+                .status(mapStatus(status));
+        var idsEnc = ackEnc.cacheIdsCount(cacheIds.size());
+        for (String cacheId : cacheIds) {
+            idsEnc.next().cacheId(nullSafe(cacheId));
+        }
+        ackEnc.correlationId(nullSafe(correlationId));
+        offer(publication, subscribeAckEncoder.limit());
     }
 
     /**

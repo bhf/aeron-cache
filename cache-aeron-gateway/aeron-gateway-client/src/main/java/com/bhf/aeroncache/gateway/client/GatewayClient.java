@@ -5,6 +5,7 @@ import com.bhf.aeroncache.gateway.messages.GatewayEntriesDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayErrorDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayStatsDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayStreamUpdateDecoder;
+import com.bhf.aeroncache.gateway.messages.GatewaySubscribeAckDecoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.models.CacheRequestMessageTypes;
 import io.aeron.Aeron;
@@ -25,6 +26,7 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 import org.agrona.concurrent.ringbuffer.RingBufferDescriptor;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +78,7 @@ public class GatewayClient implements Agent, AutoCloseable {
     private final GatewayStatsDecoder statsDecoder = new GatewayStatsDecoder();
     private final GatewayStreamUpdateDecoder streamUpdateDecoder = new GatewayStreamUpdateDecoder();
     private final GatewayErrorDecoder errorDecoder = new GatewayErrorDecoder();
+    private final GatewaySubscribeAckDecoder subscribeAckDecoder = new GatewaySubscribeAckDecoder();
     private final FragmentAssembler fragmentAssembler = new FragmentAssembler(this::onFragment);
 
     private ExclusivePublication publication;
@@ -359,8 +362,23 @@ public class GatewayClient implements Agent, AutoCloseable {
             decodeStreamUpdate(buffer, bodyOffset, blockLength, version);
         } else if (templateId == GatewayErrorDecoder.TEMPLATE_ID) {
             decodeError(buffer, bodyOffset, blockLength, version);
+        } else if (templateId == GatewaySubscribeAckDecoder.TEMPLATE_ID) {
+            decodeSubscribeAck(buffer, bodyOffset, blockLength, version);
         } else {
             log.warn("Unknown gateway response templateId {}", templateId);
+        }
+    }
+
+    private void decodeSubscribeAck(DirectBuffer buffer, int offset, int blockLength, int version) {
+        subscribeAckDecoder.wrap(buffer, offset, blockLength, version);
+        final var status = subscribeAckDecoder.status();
+        final List<String> cacheIds = new ArrayList<>();
+        for (GatewaySubscribeAckDecoder.CacheIdsDecoder id : subscribeAckDecoder.cacheIds()) {
+            cacheIds.add(id.cacheId());
+        }
+        final String correlationId = subscribeAckDecoder.correlationId();
+        for (GatewayClientListener listener : listeners) {
+            listener.onSubscribeAck(correlationId, status, cacheIds);
         }
     }
 

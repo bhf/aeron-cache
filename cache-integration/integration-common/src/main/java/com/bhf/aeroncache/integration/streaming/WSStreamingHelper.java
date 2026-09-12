@@ -1,9 +1,11 @@
 package com.bhf.aeroncache.integration.streaming;
 
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.http.responses.SubscriptionAck;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import okhttp3.*;
@@ -117,22 +119,35 @@ public class WSStreamingHelper implements StreamingHelper {
         client.newWebSocket(request, new WebSocketListener() {
             @Override
             public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
+                // Connection open is not readiness: readiness is the subscription ack (see onMessage).
                 System.out.println("WS OPEN");
-                ready.complete(null);
             }
 
             @Override
             public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
                 System.out.println("WS MESSAGE: " + text);
+                final JsonNode node;
                 try {
-                    CacheUpdateEvent event = OBJECT_MAPPER.readValue(text, CacheUpdateEvent.class);
-                    synchronized (events) {
-                        events.add(event);
-                        latch.countDown();
-                    }
+                    node = OBJECT_MAPPER.readTree(text);
                 } catch (JsonProcessingException e) {
                     messageFuture.completeExceptionally(e);
                     return;
+                }
+                // The subscription-confirmed ack marks the point from which updates are guaranteed.
+                if (SubscriptionAck.SUBSCRIBED.equals(node.path("type").asText(null))) {
+                    ready.complete(null);
+                    return;
+                }
+                final CacheUpdateEvent event;
+                try {
+                    event = OBJECT_MAPPER.treeToValue(node, CacheUpdateEvent.class);
+                } catch (JsonProcessingException e) {
+                    messageFuture.completeExceptionally(e);
+                    return;
+                }
+                synchronized (events) {
+                    events.add(event);
+                    latch.countDown();
                 }
                 if (latch.getCount() == 0) {
                     System.out.println("COMPLETING ON WS DATA");

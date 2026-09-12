@@ -128,9 +128,9 @@ public class BidiWsStreamingHelper implements StreamingHelper {
         client.newWebSocket(request, new WebSocketListener() {
             @Override
             public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
+                // Connection open is not readiness: readiness is the subscription ack (see onMessage).
                 System.out.println("BIDI WS OPEN");
                 webSocket.send(subscribeFrame);
-                ready.complete(null);
             }
 
             @Override
@@ -144,6 +144,11 @@ public class BidiWsStreamingHelper implements StreamingHelper {
                     return;
                 }
                 var type = node.path("type").asText("");
+                // The subscription-confirmed ack marks the point from which updates are guaranteed.
+                if (BidiServerMessage.SUBSCRIBED.equals(type)) {
+                    ready.complete(null);
+                    return;
+                }
                 if (!BidiServerMessage.STREAM_UPDATE.equals(type)) {
                     // Ignore command responses / errors / batches on the streaming path.
                     return;

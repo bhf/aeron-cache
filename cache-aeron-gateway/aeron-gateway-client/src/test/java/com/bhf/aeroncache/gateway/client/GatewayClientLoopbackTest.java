@@ -151,6 +151,11 @@ class GatewayClientLoopbackTest {
         await().atMost(TIMEOUT).until(() -> client.subscribe(correlationId, List.of("cacheA"), false, false) > 0);
 
         // Assert
+        await().atMost(TIMEOUT).until(() -> listener.subscribeAck(correlationId) != null);
+        RecordingListener.SubscribeAck ack = listener.subscribeAck(correlationId);
+        assertEquals(OperationStatus.SUCCESS, ack.status());
+        assertEquals(List.of("cacheA"), ack.cacheIds());
+
         await().atMost(TIMEOUT).until(() -> listener.streamUpdate(correlationId) != null);
         RecordingListener.StreamUpdate update = listener.streamUpdate(correlationId);
         assertEquals(UpdateEventType.ADD_ITEM, update.eventType());
@@ -193,6 +198,7 @@ class GatewayClientLoopbackTest {
         private final List<StatsBatch> statsBatches = new CopyOnWriteArrayList<>();
         private final List<StreamUpdate> streamUpdates = new CopyOnWriteArrayList<>();
         private final List<ErrorRecord> errors = new CopyOnWriteArrayList<>();
+        private final List<SubscribeAck> subscribeAcks = new CopyOnWriteArrayList<>();
 
         void clear() {
             commandResponses.clear();
@@ -200,6 +206,7 @@ class GatewayClientLoopbackTest {
             statsBatches.clear();
             streamUpdates.clear();
             errors.clear();
+            subscribeAcks.clear();
         }
 
         @Override
@@ -215,6 +222,11 @@ class GatewayClientLoopbackTest {
         @Override
         public void onStats(String correlationId, OperationStatus status, List<GatewayStat> stats, boolean endOfBatch) {
             statsBatches.add(new StatsBatch(correlationId, status, new ArrayList<>(stats), endOfBatch));
+        }
+
+        @Override
+        public void onSubscribeAck(String correlationId, OperationStatus status, List<String> cacheIds) {
+            subscribeAcks.add(new SubscribeAck(correlationId, status, new ArrayList<>(cacheIds)));
         }
 
         @Override
@@ -247,6 +259,10 @@ class GatewayClientLoopbackTest {
             return streamUpdates.stream().filter(u -> u.correlationId().equals(correlationId)).findFirst().orElse(null);
         }
 
+        SubscribeAck subscribeAck(String correlationId) {
+            return subscribeAcks.stream().filter(a -> a.correlationId().equals(correlationId)).findFirst().orElse(null);
+        }
+
         ErrorRecord error(String correlationId) {
             return errors.stream().filter(e -> e.correlationId().equals(correlationId)).findFirst().orElse(null);
         }
@@ -258,6 +274,9 @@ class GatewayClientLoopbackTest {
         }
 
         record StatsBatch(String correlationId, OperationStatus status, List<GatewayStat> stats, boolean endOfBatch) {
+        }
+
+        record SubscribeAck(String correlationId, OperationStatus status, List<String> cacheIds) {
         }
 
         record StreamUpdate(String correlationId, UpdateEventType eventType, String cacheId, String key, String value) {

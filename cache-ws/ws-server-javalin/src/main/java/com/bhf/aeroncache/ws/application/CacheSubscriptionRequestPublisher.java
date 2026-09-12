@@ -84,7 +84,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
     @Override
     public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, List<String> cacheIds,
                                  String wsSessionId, String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
-        subscribeToCache(cluster, subscriptionFailureHandler, cacheIds, null, SubscriptionMode.FULL, wsSessionId, requestId, sendSnapshot, consumer);
+        subscribeToCache(cluster, subscriptionFailureHandler, () -> {}, cacheIds, null, SubscriptionMode.FULL, wsSessionId, requestId, sendSnapshot, consumer);
     }
 
     /**
@@ -102,9 +102,9 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      * @param consumer                   The consumer of {@link CacheUpdateEvent}.
      */
     @Override
-    public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, List<String> cacheIds,
-                                 List<String> keys, SubscriptionMode mode, String wsSessionId, String requestId,
-                                 boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
+    public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, Runnable subscriptionAckHandler,
+                                 List<String> cacheIds, List<String> keys, SubscriptionMode mode, String wsSessionId,
+                                 String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
         var effectiveMode = mode == null ? SubscriptionMode.FULL : mode;
 
         // Group the requested keys per cache; an empty key set denotes a whole-cache subscription.
@@ -144,7 +144,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
 
         if (!subscribeCacheIds.isEmpty()) {
             log.info("Sending request to cluster to subscribe to caches {}, keys {}, mode {}", subscribeCacheIds, subscribeKeys, effectiveMode);
-            sendCacheSubscriptionRequest(cluster, requestId, subscribeCacheIds, subscribeKeys, subscribeModes, sendSnapshot, subscriptionFailureHandler, consumer);
+            sendCacheSubscriptionRequest(cluster, requestId, subscribeCacheIds, subscribeKeys, subscribeModes, sendSnapshot, subscriptionFailureHandler, subscriptionAckHandler, consumer);
         }
 
         // Register a per-session consumer for each cache, carrying the key set it wants to receive.
@@ -153,6 +153,13 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             log.info("Adding subscription for cache {}, keys {}, send snapshot {} client session {}", cacheId, keySet, sendSnapshot, wsSessionId);
             currentSubscribers.add(new KeyFilteredConsumer(wsSessionId, keySet.isEmpty() ? null : new LinkedHashSet<>(keySet), consumer));
         });
+
+        // Nothing was sent to the cluster because every requested subscription was already live, so the
+        // subscription is confirmed immediately. When a cluster request was sent, the ack is fired from
+        // its confirmation callback instead.
+        if (subscribeCacheIds.isEmpty()) {
+            subscriptionAckHandler.run();
+        }
     }
 
     /**
@@ -166,7 +173,11 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      */
     private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, List<String> cacheId, List<String> keys,
                                               List<SubscriptionMode> modes, boolean sendSnapshot,
-                                              Consumer<Void> subscriptionFailureHandler, Consumer<CacheUpdateEvent> streamingEventConsumer) {
+                                              Consumer<Void> subscriptionFailureHandler, Runnable subscriptionAckHandler,
+                                              Consumer<CacheUpdateEvent> streamingEventConsumer) {
+        // The whole subscribe is one atomic cluster command, so the first confirmed result means every
+        // requested subscription in the batch is live. Ack exactly once for the request.
+        var acked = new java.util.concurrent.atomic.AtomicBoolean(false);
         sendCacheSubscribe(requestId, cacheId, keys, modes, sendSnapshot, subscriptionResult -> {
             if (subscriptionResult.getStatus() != CacheOperationStatus.SUCCESS) {
                 var errorMsg = "Couldn't subscribe to cache " + cacheId + ", status=" + subscriptionResult.getStatus();
@@ -179,6 +190,12 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                 else{
                     log.warn("Not calling subscription failure handler");
                 }
+            }
+
+            var status = subscriptionResult.getStatus();
+            if ((status == CacheOperationStatus.SUCCESS || status == CacheOperationStatus.DUPLICATE_SUBSCRIPTION)
+                    && acked.compareAndSet(false, true)) {
+                subscriptionAckHandler.run();
             }
 
             if(subscriptionResult.getEntries()!=null && !subscriptionResult.getEntries().isEmpty()){
