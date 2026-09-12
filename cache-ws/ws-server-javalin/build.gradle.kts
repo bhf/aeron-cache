@@ -33,6 +33,11 @@ dependencies {
     extension("io.opentelemetry.contrib:opentelemetry-samplers:1.46.0-alpha") {
         isTransitive = false
     }
+
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit)
+    testImplementation(libs.junit.params)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 val copyAgent = tasks.register<Copy>("copyAgent") {
@@ -86,11 +91,16 @@ tasks.named("jibDockerBuild") {
 
 tasks.test {
     useJUnitPlatform()
+    jvmArgs("--enable-preview")
     jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED")
     jvmArgs("--add-opens", "java.base/java.util.zip=ALL-UNNAMED")
 }
 
 tasks.compileJava{
+    options.compilerArgs.add("--enable-preview")
+}
+
+tasks.compileTestJava{
     options.compilerArgs.add("--enable-preview")
 }
 

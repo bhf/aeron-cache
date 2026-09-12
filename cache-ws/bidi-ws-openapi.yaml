@@ -1,0 +1,399 @@
+openapi: 3.0.3
+info:
+  title: Aeron Cache Bidirectional WebSocket API
+  description: |
+    Bidirectional WebSocket API for the Aeron Cache.
+
+    A single WebSocket connection to `/api/ws/v1/bidi` carries the full cache/counter command surface
+    **and** dynamic streaming subscriptions, correlated per request. This is the WebSocket counterpart of
+    the Aeron gateway's bidirectional protocol; the one-directional connect-URL subscription routes (see
+    `ws-openapi.yaml`) remain available and unchanged.
+
+    ## Protocol
+
+    All frames are JSON text. Every frame carries a `type` discriminator. Client frames carry a
+    client-generated `correlationId` which the server echoes on every response correlated to that frame,
+    so multiple in-flight requests can be multiplexed over one connection.
+
+    ### Client -> Server frames (`type`)
+    - `command` — a request/response cache or counter command (see `op`). Correlated by a single
+      `commandResponse` (or `error`); `getEntries`/`getStats` instead stream one or more `entries`/`stats`
+      batches ending with `endOfBatch: true`.
+    - `subscribe` — subscribe to streaming updates for one or more caches; updates arrive as `streamUpdate`
+      frames carrying the subscription's `correlationId`. `sendSnapshot: true` replays current state as
+      `streamUpdate` `ADD_ITEM` events.
+    - `unsubscribe` — remove this connection's subscription to a cache.
+
+    ### Server -> Client frames (`type`)
+    - `commandResponse` — the result of a `command`.
+    - `streamUpdate` — a streamed cache update for a subscription.
+    - `entries` — a batch of entries in response to a `getEntries` command.
+    - `stats` — a batch of cache stats in response to a `getStats` command.
+    - `error` — an error correlated to a client frame (or with `correlationId: null` when an inbound frame
+      could not be parsed).
+
+    Because OpenAPI has no first-class WebSocket message model, the message contract is expressed here as
+    the connection `requestBody` (client -> server frames) and the `101` response body (server -> client
+    frames). Both are `oneOf` unions discriminated on `type`.
+  termsOfService: https://www.github.com/bhf
+  contact:
+    name: Sanjeev
+    url: https://www.sanjeev.pages.dev
+    email: na@na.com
+  version: 1.0.0
+servers:
+  - url: ws://localhost:7071
+    description: Local WebSocket server
+paths:
+  /api/ws/v1/bidi:
+    get:
+      summary: Open a bidirectional cache/counter connection
+      description: |
+        Establish a WebSocket connection carrying the full command surface plus dynamic
+        subscribe/unsubscribe. Send `command`, `subscribe` and `unsubscribe` frames; receive
+        `commandResponse`, `streamUpdate`, `entries`, `stats` and `error` frames.
+      requestBody:
+        description: A frame sent by the client over the established connection.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BidiClientMessage'
+      responses:
+        101:
+          description: |
+            Switching Protocols - WebSocket connection established. The body schema describes the frames
+            the server sends to the client over the connection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BidiServerMessage'
+        503:
+          description: Service Unavailable - Cluster not connected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestErrorResponse'
+components:
+  schemas:
+    # ---------------------------------------------------------------- client -> server
+    BidiClientMessage:
+      description: A frame sent by the client, discriminated on `type`.
+      oneOf:
+        - $ref: '#/components/schemas/BidiCommand'
+        - $ref: '#/components/schemas/BidiSubscribe'
+        - $ref: '#/components/schemas/BidiUnsubscribe'
+      discriminator:
+        propertyName: type
+        mapping:
+          command: '#/components/schemas/BidiCommand'
+          subscribe: '#/components/schemas/BidiSubscribe'
+          unsubscribe: '#/components/schemas/BidiUnsubscribe'
+    BidiCommand:
+      type: object
+      description: A request/response cache or counter command.
+      properties:
+        type:
+          type: string
+          enum: [command]
+        correlationId:
+          type: string
+          description: Client correlation id, echoed on the response.
+        op:
+          $ref: '#/components/schemas/WsOp'
+        cacheId:
+          type: string
+          nullable: true
+        key:
+          type: string
+          nullable: true
+        value:
+          type: string
+          nullable: true
+        ttl:
+          type: integer
+          format: int64
+          default: 0
+          description: Entry time-to-live in milliseconds (0 = none), where applicable.
+        counterValue:
+          type: integer
+          format: int64
+          default: 0
+          description: Counter amount/value for counter operations.
+      required:
+        - type
+        - op
+    BidiSubscribe:
+      type: object
+      description: Subscribe to streaming updates for one or more caches.
+      properties:
+        type:
+          type: string
+          enum: [subscribe]
+        correlationId:
+          type: string
+          description: Correlation id echoed on streamed updates for this subscription.
+        counters:
+          type: boolean
+          default: false
+          description: Whether the counters cache flavour is targeted.
+        sendSnapshot:
+          type: boolean
+          default: false
+          description: Whether to replay current state as ADD_ITEM stream updates.
+        caches:
+          type: array
+          items:
+            $ref: '#/components/schemas/CacheSelector'
+      required:
+        - type
+        - caches
+    CacheSelector:
+      type: object
+      description: A cache (and optional key) to subscribe to.
+      properties:
+        cacheId:
+          type: string
+        key:
+          type: string
+          nullable: true
+          description: A specific key, or null/omitted for a whole-cache subscription.
+        mode:
+          $ref: '#/components/schemas/SubscriptionMode'
+      required:
+        - cacheId
+    BidiUnsubscribe:
+      type: object
+      description: Unsubscribe this connection from a cache.
+      properties:
+        type:
+          type: string
+          enum: [unsubscribe]
+        correlationId:
+          type: string
+        counters:
+          type: boolean
+          default: false
+        cacheId:
+          type: string
+      required:
+        - type
+        - cacheId
+    # ---------------------------------------------------------------- server -> client
+    BidiServerMessage:
+      description: A frame sent by the server, discriminated on `type`.
+      oneOf:
+        - $ref: '#/components/schemas/BidiCommandResponse'
+        - $ref: '#/components/schemas/BidiStreamUpdate'
+        - $ref: '#/components/schemas/BidiEntries'
+        - $ref: '#/components/schemas/BidiStats'
+        - $ref: '#/components/schemas/BidiError'
+      discriminator:
+        propertyName: type
+        mapping:
+          commandResponse: '#/components/schemas/BidiCommandResponse'
+          streamUpdate: '#/components/schemas/BidiStreamUpdate'
+          entries: '#/components/schemas/BidiEntries'
+          stats: '#/components/schemas/BidiStats'
+          error: '#/components/schemas/BidiError'
+    BidiCommandResponse:
+      type: object
+      description: The result of a command, correlated via correlationId.
+      properties:
+        type:
+          type: string
+          enum: [commandResponse]
+        correlationId:
+          type: string
+        status:
+          $ref: '#/components/schemas/CacheOperationStatus'
+        cacheId:
+          type: string
+          nullable: true
+        key:
+          type: string
+          nullable: true
+        value:
+          type: string
+          nullable: true
+          description: The entry value, or the resulting counter value (as a string) for counter operations.
+      required:
+        - type
+        - status
+    BidiStreamUpdate:
+      type: object
+      description: A streamed cache update for a subscription.
+      properties:
+        type:
+          type: string
+          enum: [streamUpdate]
+        correlationId:
+          type: string
+          description: The subscription's correlation id.
+        eventType:
+          $ref: '#/components/schemas/UpdateEventType'
+        cacheId:
+          type: string
+        key:
+          type: string
+          nullable: true
+        value:
+          nullable: true
+          description: |
+            The entry value, carried with its native JSON type: a string for regular caches, a number for
+            counters (mirroring the one-directional routes' CacheUpdateEvent payload).
+          oneOf:
+            - type: string
+            - type: number
+      required:
+        - type
+        - eventType
+        - cacheId
+    BidiEntries:
+      type: object
+      description: A batch of entries in response to a getEntries command.
+      properties:
+        type:
+          type: string
+          enum: [entries]
+        correlationId:
+          type: string
+        status:
+          $ref: '#/components/schemas/CacheOperationStatus'
+        cacheId:
+          type: string
+        items:
+          type: object
+          additionalProperties:
+            type: string
+          description: Key/value pairs in this batch (may be empty on a terminal frame).
+        endOfBatch:
+          type: boolean
+          description: True when this is the final batch for the request.
+      required:
+        - type
+        - status
+        - endOfBatch
+    BidiStats:
+      type: object
+      description: A batch of cache stats in response to a getStats command.
+      properties:
+        type:
+          type: string
+          enum: [stats]
+        correlationId:
+          type: string
+        status:
+          $ref: '#/components/schemas/CacheOperationStatus'
+        stats:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatEntry'
+        endOfBatch:
+          type: boolean
+      required:
+        - type
+        - status
+        - endOfBatch
+    StatEntry:
+      type: object
+      properties:
+        cacheId:
+          type: string
+        addedCount:
+          type: integer
+          format: int64
+        removedCount:
+          type: integer
+          format: int64
+        clearedCount:
+          type: integer
+          format: int64
+        size:
+          type: integer
+          format: int64
+    BidiError:
+      type: object
+      description: An error correlated to a client frame.
+      properties:
+        type:
+          type: string
+          enum: [error]
+        correlationId:
+          type: string
+          nullable: true
+          description: Echoed from the originating frame, or null if the frame could not be parsed.
+        status:
+          $ref: '#/components/schemas/CacheOperationStatus'
+        message:
+          type: string
+      required:
+        - type
+        - status
+    # ---------------------------------------------------------------- enums / shared
+    WsOp:
+      type: string
+      description: |
+        The command operation. Cache operations act on regular caches; counter operations
+        (prefixed `*_COUNTER_*`) act on the counters cache flavour.
+      enum:
+        - CREATE_CACHE
+        - ADD_CACHE_ENTRY
+        - PATCH_CACHE_ENTRY
+        - GET_CACHE_ENTRY
+        - CLEAR_CACHE
+        - DELETE_CACHE
+        - REMOVE_CACHE_ENTRY
+        - CANCEL_CACHE_ITEM_REMOVAL
+        - GET_CACHE_ENTRIES
+        - GET_CACHE_STATS
+        - CREATE_COUNTER_CACHE
+        - ADD_COUNTER_ENTRY
+        - GET_COUNTER_ENTRY
+        - CLEAR_COUNTER_CACHE
+        - DELETE_COUNTER_CACHE
+        - REMOVE_COUNTER_ENTRY
+        - CANCEL_COUNTER_ITEM_REMOVAL
+        - GET_COUNTER_ENTRIES
+        - GET_COUNTER_STATS
+        - INCREMENT_COUNTER_ENTRY
+        - DECREMENT_COUNTER_ENTRY
+        - SET_COUNTER_ENTRY
+    UpdateEventType:
+      type: string
+      enum:
+        - ADD_ITEM
+        - PATCH_ITEM
+        - DELETE_CACHE
+        - REMOVE_ITEM
+        - CLEAR_CACHE
+    SubscriptionMode:
+      type: string
+      description: |
+        `FULL` (default) streams complete item values as `ADD_ITEM` events; `PATCH` streams only the
+        changed fields of patched items as `PATCH_ITEM` events. Patch mode is cache-only.
+      enum:
+        - FULL
+        - PATCH
+      default: FULL
+    CacheOperationStatus:
+      type: string
+      enum:
+        - NONE
+        - SUCCESS
+        - ERROR
+        - UNKNOWN_CACHE
+        - UNKNOWN_KEY
+        - CACHE_EXISTS
+        - DUPLICATE_SUBSCRIPTION
+        - UNKNOWN_SUBSCRIPTION
+        - NULL_VAL
+    RequestErrorResponse:
+      type: object
+      properties:
+        errorMsg:
+          type: string
+        helpMsg:
+          type: string
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
