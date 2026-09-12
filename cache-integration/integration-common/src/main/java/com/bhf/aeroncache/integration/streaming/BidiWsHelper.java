@@ -155,6 +155,52 @@ public class BidiWsHelper implements AutoCloseable {
     }
 
     /**
+     * Build a single bulk operation node for {@link #bulk}.
+     *
+     * @param operationType the {@code BulkOperationType} name (e.g. {@code "ADD_ITEM"}, {@code "INCREMENT_COUNTER"}).
+     * @param requestId     the per-operation id, echoed on the matching response entry.
+     * @param cacheId       the target cache id.
+     * @param key           the entry key, or {@code null}.
+     * @param value         the entry value, or {@code null}.
+     * @param ttl           the entry ttl in millis.
+     * @param counterValue  the counter amount/value for counter operations.
+     * @return the operation node.
+     */
+    public ObjectNode bulkOp(String operationType, String requestId, String cacheId, String key, String value,
+                             long ttl, long counterValue) {
+        ObjectNode op = OBJECT_MAPPER.createObjectNode();
+        op.put("operationType", operationType);
+        op.put("requestId", requestId);
+        op.put("ttl", ttl);
+        op.put("counterValue", counterValue);
+        if (cacheId != null) {
+            op.put("cacheId", cacheId);
+        }
+        if (key != null) {
+            op.put("key", key);
+        }
+        if (value != null) {
+            op.put("value", value);
+        }
+        return op;
+    }
+
+    /**
+     * Send a bulk operations frame batching the given operations, applied by the cluster in order.
+     *
+     * @param correlationId the correlation id to echo on the bulk response.
+     * @param operations    the operations (see {@link #bulkOp}).
+     */
+    public void bulk(String correlationId, List<ObjectNode> operations) {
+        ObjectNode frame = OBJECT_MAPPER.createObjectNode();
+        frame.put("type", BidiClientMessage.BULK);
+        frame.put("correlationId", correlationId);
+        ArrayNode ops = frame.putArray("operations");
+        operations.forEach(ops::add);
+        send(frame.toString());
+    }
+
+    /**
      * Send a raw JSON frame verbatim (used to exercise malformed / unknown input).
      *
      * @param json the frame text.

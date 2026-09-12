@@ -2,8 +2,13 @@ package com.bhf.aeroncache.ws.bidi;
 
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.responses.BulkCacheOpsResponse;
+import com.bhf.aeroncache.models.bulk.responses.CacheOperationResponse;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
+import com.bhf.aeroncache.models.results.BulkCacheOpsResult;
+import com.bhf.aeroncache.models.results.CacheOperationResultDetails;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.CacheStats;
 import com.bhf.aeroncache.models.results.CacheStatsResult;
@@ -20,6 +25,8 @@ import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.models.results.SetCounterResult;
 import com.bhf.aeroncache.ws.application.CacheSubscriptionRequestPublisher;
 import com.bhf.aeroncache.ws.application.WebsocketApplication;
+import com.bhf.aeroncache.ws.bidi.messages.BidiBulk;
+import com.bhf.aeroncache.ws.bidi.messages.BidiBulkResponse;
 import com.bhf.aeroncache.ws.bidi.messages.BidiClientMessage;
 import com.bhf.aeroncache.ws.bidi.messages.BidiCommand;
 import com.bhf.aeroncache.ws.bidi.messages.BidiCommandResponse;
@@ -109,6 +116,7 @@ public class BidiWsRouteHandler {
                 case BidiCommand command -> handleCommand(session, command);
                 case BidiSubscribe subscribe -> handleSubscribe(session, subscribe);
                 case BidiUnsubscribe unsubscribe -> handleUnsubscribe(session, unsubscribe);
+                case BidiBulk bulk -> handleBulk(session, bulk);
             }
         } catch (Exception e) {
             log.warn("Error handling BIDI frame on sessionId {}", ctx.sessionId(), e);
@@ -241,6 +249,35 @@ public class BidiWsRouteHandler {
         final CacheSubscriptionRequestPublisher publisher = counters ? countersSubs : cacheSubs;
         log.info("BIDI unsubscribe session {}, cache {}, counters {}", session.sessionId(), cacheId, counters);
         publisher.unsubscribeSession(WebsocketApplication.getCache(), correlationId, session.sessionId(), cacheId);
+    }
+
+    // ------------------------------------------------------------------ bulk operations
+
+    /**
+     * Forward a bulk request to the cluster as a single {@link BulkCacheOpsRequest} and stream the
+     * per-operation results back as a bulk response. A bulk request may mix regular-cache and counter
+     * operations; the cluster dispatches each to the right cache manager, so the batch is always routed
+     * through the regular-cache publisher (the cluster egress delivers the single combined result there).
+     */
+    private void handleBulk(BidiSession session, BidiBulk bulk) {
+        final String correlationId = requestId(bulk.correlationId());
+        final var operations = bulk.operations() == null ? List.<com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest>of() : bulk.operations();
+        final BulkCacheOpsRequest request = new BulkCacheOpsRequest(correlationId, operations);
+        cacheSubs.sendBulkOperationsRequest(correlationId, request,
+                (Consumer<BulkCacheOpsResult>) o -> respondBulk(session, correlationId, (BulkCacheOpsResult) o));
+    }
+
+    private void respondBulk(BidiSession session, String correlationId, BulkCacheOpsResult result) {
+        final List<CacheOperationResponse> operationResponses = new ArrayList<>();
+        for (Object o : result.getOperations()) {
+            final CacheOperationResultDetails details = (CacheOperationResultDetails) o;
+            final String cacheId = details.getCacheId() == null ? null : String.valueOf(details.getCacheId().value());
+            final String key = details.getKey() == null ? null : String.valueOf(details.getKey().value());
+            final String value = details.getValue() == null ? null : String.valueOf(details.getValue().value());
+            operationResponses.add(new CacheOperationResponse(details.getRequestId(), details.getOperationStatus(), cacheId, key, value));
+        }
+        final BulkCacheOpsResponse response = new BulkCacheOpsResponse(correlationId, operationResponses);
+        session.send(codec.write(BidiBulkResponse.of(response.requestId(), response.operationResponses())));
     }
 
     // ------------------------------------------------------------------ response helpers

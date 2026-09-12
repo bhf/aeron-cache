@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.gateway.codec;
 
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.gateway.messages.GatewayBulkResponseEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayCommandResponseEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayEntriesEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayErrorEncoder;
@@ -40,11 +41,18 @@ public class GatewayResponseWriter {
     private final GatewayStatsEncoder statsEncoder = new GatewayStatsEncoder();
     private final GatewayErrorEncoder errorEncoder = new GatewayErrorEncoder();
     private final GatewaySubscribeAckEncoder subscribeAckEncoder = new GatewaySubscribeAckEncoder();
+    private final GatewayBulkResponseEncoder bulkResponseEncoder = new GatewayBulkResponseEncoder();
 
     /**
      * A single cache stats record, decoupled from the cluster domain types.
      */
     public record StatEntry(String cacheId, long addedCount, long removedCount, long clearedCount, long size) {
+    }
+
+    /**
+     * A single bulk operation result, decoupled from the cluster domain types.
+     */
+    public record BulkOpResultEntry(CacheOperationStatus status, String requestId, String cacheId, String key, String value) {
     }
 
     /**
@@ -146,6 +154,30 @@ public class GatewayResponseWriter {
         }
         ackEnc.correlationId(nullSafe(correlationId));
         offer(publication, subscribeAckEncoder.limit());
+    }
+
+    /**
+     * Encode and publish a bulk operations response frame.
+     * <p>
+     * Carries one result per requested operation, in request order; each entry echoes its operation's own
+     * {@code requestId} so the client can correlate individual operations.
+     *
+     * @param correlationId the correlation id echoed from the bulk request.
+     * @param operations    the per-operation results, in request order.
+     */
+    public void writeBulkResponse(Publication publication, String correlationId, List<BulkOpResultEntry> operations) {
+        var bulkEnc = bulkResponseEncoder.wrapAndApplyHeader(buffer, 0, headerEncoder);
+        var groupEnc = bulkEnc.operationsCount(operations.size());
+        for (BulkOpResultEntry op : operations) {
+            groupEnc.next()
+                    .status(mapStatus(op.status()))
+                    .requestId(nullSafe(op.requestId()))
+                    .cacheId(nullSafe(op.cacheId()))
+                    .key(nullSafe(op.key()))
+                    .value(nullSafe(op.value()));
+        }
+        bulkEnc.correlationId(nullSafe(correlationId));
+        offer(publication, bulkResponseEncoder.limit());
     }
 
     /**

@@ -51,6 +51,29 @@
             <validValue name="FULL">0</validValue>
             <validValue name="PATCH">1</validValue>
         </enum>
+
+        <enum name="BulkOperationType" encodingType="uint8"
+              description="Mirrors com.bhf.aeroncache.models.bulk.requests.BulkOperationType (matched by name).">
+            <validValue name="NONE">0</validValue>
+            <validValue name="CREATE_CACHE">1</validValue>
+            <validValue name="ADD_ITEM">2</validValue>
+            <validValue name="REMOVE_ITEM">3</validValue>
+            <validValue name="CLEAR_CACHE">4</validValue>
+            <validValue name="GET_ITEM">5</validValue>
+            <validValue name="DELETE_CACHE">6</validValue>
+            <validValue name="PATCH_ITEM">7</validValue>
+            <validValue name="CREATE_COUNTER_CACHE">8</validValue>
+            <validValue name="ADD_COUNTER">9</validValue>
+            <validValue name="REMOVE_COUNTER">10</validValue>
+            <validValue name="CLEAR_COUNTER_CACHE">11</validValue>
+            <validValue name="GET_COUNTER">12</validValue>
+            <validValue name="DELETE_COUNTER_CACHE">13</validValue>
+            <validValue name="INCREMENT_COUNTER">14</validValue>
+            <validValue name="DECREMENT_COUNTER">15</validValue>
+            <validValue name="SET_COUNTER">16</validValue>
+            <validValue name="CANCEL_ITEM">17</validValue>
+            <validValue name="CANCEL_COUNTER">18</validValue>
+        </enum>
     </types>
 
     <!-- ================= Client -> Gateway ================= -->
@@ -83,6 +106,20 @@
         <field name="counters" id="1" type="BooleanType"/>
         <data name="correlationId" id="2" type="varStringEncoding"/>
         <data name="cacheId" id="3" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="GatewayBulkRequest" id="4" semanticType="GatewayBulkRequest"
+                 description="A batch of cache/counter operations applied atomically in order by the cluster. Mirrors BulkCacheOpsRequest: each operation carries its own per-operation requestId, echoed on the matching bulk response entry.">
+        <group name="operations" id="50" dimensionType="groupSizeEncoding">
+            <field name="operationType" id="51" type="BulkOperationType"/>
+            <field name="ttl" id="52" type="int64"/>
+            <field name="counterValue" id="53" type="int64"/>
+            <data name="requestId" id="54" type="varStringEncoding"/>
+            <data name="cacheId" id="55" type="varStringEncoding"/>
+            <data name="key" id="56" type="varStringEncoding"/>
+            <data name="value" id="57" type="varStringEncoding"/>
+        </group>
+        <data name="correlationId" id="1" type="varStringEncoding"/>
     </sbe:message>
 
     <!-- ================= Gateway -> Client ================= -->
@@ -145,6 +182,18 @@
             <data name="cacheId" id="41" type="varStringEncoding"/>
         </group>
         <data name="correlationId" id="2" type="varStringEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="GatewayBulkResponse" id="16" semanticType="GatewayBulkResponse"
+                 description="The response to a GatewayBulkRequest, correlated via correlationId. Carries one result per requested operation, in request order; each result echoes its operation's per-operation requestId.">
+        <group name="operations" id="60" dimensionType="groupSizeEncoding">
+            <field name="status" id="61" type="OperationStatus"/>
+            <data name="requestId" id="62" type="varStringEncoding"/>
+            <data name="cacheId" id="63" type="varStringEncoding"/>
+            <data name="key" id="64" type="varStringEncoding"/>
+            <data name="value" id="65" type="varStringEncoding"/>
+        </group>
+        <data name="correlationId" id="1" type="varStringEncoding"/>
     </sbe:message>
 
 </sbe:messageSchema>

@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.gateway.client;
 
+import com.bhf.aeroncache.gateway.messages.GatewayBulkResponseDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayCommandResponseDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayEntriesDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayErrorDecoder;
@@ -79,6 +80,7 @@ public class GatewayClient implements Agent, AutoCloseable {
     private final GatewayStreamUpdateDecoder streamUpdateDecoder = new GatewayStreamUpdateDecoder();
     private final GatewayErrorDecoder errorDecoder = new GatewayErrorDecoder();
     private final GatewaySubscribeAckDecoder subscribeAckDecoder = new GatewaySubscribeAckDecoder();
+    private final GatewayBulkResponseDecoder bulkResponseDecoder = new GatewayBulkResponseDecoder();
     private final FragmentAssembler fragmentAssembler = new FragmentAssembler(this::onFragment);
 
     private ExclusivePublication publication;
@@ -303,6 +305,24 @@ public class GatewayClient implements Agent, AutoCloseable {
         return enqueue(buffer, length);
     }
 
+    // ------------------------------------------------------------------ bulk operations
+
+    /**
+     * Send a batch of cache/counter operations to be applied by the cluster in the order given. A single
+     * bulk request may freely mix regular-cache and counter operations. The response is delivered once to
+     * {@link GatewayClientListener#onBulkResponse}, correlated via {@code correlationId}, with one result
+     * per operation in request order.
+     *
+     * @param correlationId the correlation id echoed on the bulk response.
+     * @param operations    the operations to apply, in order.
+     * @return a positive value if the frame was accepted, or {@link Aeron#NULL_VALUE} under backpressure.
+     */
+    public long bulkOperations(String correlationId, List<GatewayBulkOp> operations) {
+        final MutableDirectBuffer buffer = encodeBuffer.get();
+        final int length = requestWriter.get().encodeBulkRequest(buffer, correlationId, operations);
+        return enqueue(buffer, length);
+    }
+
     // ------------------------------------------------------------------ internals
 
     private long sendCommand(int msgType, long ttl, long counterValue,
@@ -364,8 +384,27 @@ public class GatewayClient implements Agent, AutoCloseable {
             decodeError(buffer, bodyOffset, blockLength, version);
         } else if (templateId == GatewaySubscribeAckDecoder.TEMPLATE_ID) {
             decodeSubscribeAck(buffer, bodyOffset, blockLength, version);
+        } else if (templateId == GatewayBulkResponseDecoder.TEMPLATE_ID) {
+            decodeBulkResponse(buffer, bodyOffset, blockLength, version);
         } else {
             log.warn("Unknown gateway response templateId {}", templateId);
+        }
+    }
+
+    private void decodeBulkResponse(DirectBuffer buffer, int offset, int blockLength, int version) {
+        bulkResponseDecoder.wrap(buffer, offset, blockLength, version);
+        final List<GatewayBulkOpResult> results = new ArrayList<>();
+        for (GatewayBulkResponseDecoder.OperationsDecoder op : bulkResponseDecoder.operations()) {
+            final var status = op.status();
+            final String requestId = op.requestId();
+            final String cacheId = op.cacheId();
+            final String key = op.key();
+            final String value = op.value();
+            results.add(new GatewayBulkOpResult(status, requestId, cacheId, key, value));
+        }
+        final String correlationId = bulkResponseDecoder.correlationId();
+        for (GatewayClientListener listener : listeners) {
+            listener.onBulkResponse(correlationId, results);
         }
     }
 

@@ -460,6 +460,53 @@ public abstract class AbstractBidiCommandTests {
         assertThat(deleteResponse.get("status").asText(), is("SUCCESS"));
     }
 
+    @Test
+    @DisplayName("Should apply a mixed batch of cache and counter operations in one bulk frame")
+    protected void shouldApplyMixedBulkOperationsOverSocket() {
+        // Arrange: a single bulk frame mixing regular-cache and counter operations, each with its own
+        // requestId (echoed on the matching response entry; results also come back in request order).
+        var regCache = cacheIdPrefix() + "-bulk-reg";
+        var cntCache = cacheIdPrefix() + "-bulk-cnt";
+        var bulkId = helper.newCorrelationId();
+
+        // Note: a bulk GET_COUNTER is intentionally not exercised here — reading a counter inside a bulk
+        // batch hits a pre-existing cluster limitation (the long counter value cannot be marshalled into
+        // the bulk result's string value), independent of the gateway. The counter's value is instead
+        // confirmed with a normal GET_COUNTER_ENTRY command after the batch.
+        var operations = java.util.List.of(
+                helper.bulkOp("CREATE_CACHE", "op-create", regCache, null, null, 0, 0),
+                helper.bulkOp("ADD_ITEM", "op-add", regCache, "k1", "v1", 0, 0),
+                helper.bulkOp("GET_ITEM", "op-get", regCache, "k1", null, 0, 0),
+                helper.bulkOp("CREATE_COUNTER_CACHE", "op-create-cnt", cntCache, null, null, 0, 0),
+                helper.bulkOp("ADD_COUNTER", "op-add-cnt", cntCache, "hits", null, 0, 5),
+                helper.bulkOp("INCREMENT_COUNTER", "op-inc-cnt", cntCache, "hits", null, 0, 3));
+
+        // Act
+        helper.bulk(bulkId, operations);
+
+        // Assert: a single bulk response with one result per operation, in request order, all successful.
+        await().atMost(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .until(() -> helper.firstFrame(bulkId, "bulkResponse").isPresent());
+        var response = helper.firstFrame(bulkId, "bulkResponse").orElseThrow();
+        var opResponses = response.get("operationResponses");
+        assertThat(opResponses.size(), is(operations.size()));
+        for (var opResponse : opResponses) {
+            assertThat("bulk op " + opResponse.path("requestId").asText() + " did not succeed",
+                    opResponse.get("status").asText(), is("SUCCESS"));
+        }
+        // Per-operation requestIds are echoed in order.
+        assertThat(opResponses.get(0).get("requestId").asText(), is("op-create"));
+        assertThat(opResponses.get(5).get("requestId").asText(), is("op-inc-cnt"));
+        // The regular GET_ITEM read the value written earlier in the same batch.
+        assertThat(opResponses.get(2).get("value").asText(), is("v1"));
+
+        // The counter reflects the batch's add (5) then increment (+3), read back with a normal command.
+        var getCounterId = helper.newCorrelationId();
+        helper.command(WsOp.GET_COUNTER_ENTRY, getCounterId, cntCache, "hits", null, 0, 0);
+        var getCounterResponse = awaitCommandResponse(getCounterId);
+        assertThat(getCounterResponse.get("value").asText(), is("8"));
+    }
+
     private JsonNode awaitCommandResponse(String correlationId) {
         await().atMost(TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .until(() -> helper.firstFrame(correlationId, "commandResponse").isPresent());

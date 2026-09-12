@@ -9,7 +9,7 @@ package com.bhf.aeroncache.ws.bidi.messages;
  * {@link BidiStreamUpdate}, {@link BidiError}, {@link BidiEntries} and {@link BidiStats}.</p>
  */
 public sealed interface BidiServerMessage
-        permits BidiCommandResponse, BidiStreamUpdate, BidiError, BidiEntries, BidiStats, BidiSubscribeAck {
+        permits BidiCommandResponse, BidiStreamUpdate, BidiError, BidiEntries, BidiStats, BidiSubscribeAck, BidiBulkResponse {
 
     /** The {@code type} discriminator value for a command-response frame. */
     String COMMAND_RESPONSE = "commandResponse";
@@ -23,6 +23,8 @@ public sealed interface BidiServerMessage
     String STATS = "stats";
     /** The {@code type} discriminator value for a subscription-confirmed ack frame. */
     String SUBSCRIBED = "subscribed";
+    /** The {@code type} discriminator value for a bulk operations response frame. */
+    String BULK_RESPONSE = "bulkResponse";
 
     /**
      * The discriminator identifying this frame's concrete type.

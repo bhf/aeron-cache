@@ -9,7 +9,7 @@ package com.bhf.aeroncache.ws.bidi.messages;
  * client-facing message types on the Aeron gateway ({@code GatewayCommand}/{@code GatewaySubscribe}/
  * {@code GatewayUnsubscribe}).</p>
  */
-public sealed interface BidiClientMessage permits BidiCommand, BidiSubscribe, BidiUnsubscribe {
+public sealed interface BidiClientMessage permits BidiCommand, BidiSubscribe, BidiUnsubscribe, BidiBulk {
 
     /** The {@code type} discriminator value for a command frame. */
     String COMMAND = "command";
@@ -17,6 +17,8 @@ public sealed interface BidiClientMessage permits BidiCommand, BidiSubscribe, Bi
     String SUBSCRIBE = "subscribe";
     /** The {@code type} discriminator value for an unsubscribe frame. */
     String UNSUBSCRIBE = "unsubscribe";
+    /** The {@code type} discriminator value for a bulk operations frame. */
+    String BULK = "bulk";
 
     /**
      * The correlation id the client supplied; echoed on every response correlated to this frame.
