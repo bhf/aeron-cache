@@ -29,6 +29,9 @@ info:
     - `streamUpdate` — a streamed cache update for a subscription.
     - `entries` — a batch of entries in response to a `getEntries` command.
     - `stats` — a batch of cache stats in response to a `getStats` command.
+    - `subscribed` — confirms a `subscribe` is live (the cluster has registered it); updates for the
+      requested caches will now be delivered. Clients can use it as a barrier before issuing mutations they
+      expect to be streamed back, rather than guessing with a fixed delay.
     - `error` — an error correlated to a client frame (or with `correlationId: null` when an inbound frame
       could not be parsed).
 
@@ -188,6 +191,7 @@ components:
         - $ref: '#/components/schemas/BidiEntries'
         - $ref: '#/components/schemas/BidiStats'
         - $ref: '#/components/schemas/BidiError'
+        - $ref: '#/components/schemas/BidiSubscribeAck'
       discriminator:
         propertyName: type
         mapping:
@@ -196,6 +200,7 @@ components:
           entries: '#/components/schemas/BidiEntries'
           stats: '#/components/schemas/BidiStats'
           error: '#/components/schemas/BidiError'
+          subscribed: '#/components/schemas/BidiSubscribeAck'
     BidiCommandResponse:
       type: object
       description: The result of a command, correlated via correlationId.
@@ -330,6 +335,25 @@ components:
       required:
         - type
         - status
+    BidiSubscribeAck:
+      type: object
+      description: |
+        Confirms a subscribe is live: the cluster has registered the subscription, so updates for the
+        requested caches will now be delivered. Emitted once per subscribe request.
+      properties:
+        type:
+          type: string
+          enum: [subscribed]
+        correlationId:
+          type: string
+          description: The correlation id echoed from the subscribe request.
+        cacheIds:
+          type: array
+          items:
+            type: string
+          description: The caches the subscription now covers.
+      required:
+        - type
     # ---------------------------------------------------------------- enums / shared
     WsOp:
       type: string
