@@ -20,7 +20,6 @@ Features:
 * Clustered and single node modes
 * Run as a single monolith or separate horizontally scalable services
 * Near cache implementation (read ahead)
-
 * Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded):
   * Aeron Transport (BIDI) - Java and Rust
   * HTTP and WS - Java, Rust, Typescript and Python
