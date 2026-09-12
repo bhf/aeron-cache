@@ -21,4 +21,13 @@ class EphemeralBidiCommandTests extends AbstractBidiCommandTests {
     protected void shouldReturnStatsOverSocket() {
         // Not applicable in unclustered mode.
     }
+
+    /**
+     * Counter cache stats are likewise not served by the unclustered single-node backend. Overriding
+     * without {@code @Test} means JUnit does not run it for this variant.
+     */
+    @Override
+    protected void shouldReturnCounterStatsOverSocket() {
+        // Not applicable in unclustered mode.
+    }
 }
