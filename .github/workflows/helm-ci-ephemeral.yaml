@@ -1,0 +1,133 @@
+name: K8s CI (Ephemeral)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-k8s-ephemeral:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Build Local Target Docker Images
+        run: |
+          docker pull eclipse-temurin:25-jre
+          ./gradlew jibDockerBuild -PjibDockerOnBuild=true
+
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: kind
+
+      - name: Load local images into Kind
+        run: |
+          # The ephemeral (SINGLE) cache runs from the aeroncache-cluster image; only the
+          # http/ws/sse interfaces are needed for the core suite (no clustertools/near/gateway).
+          kind load docker-image aeroncache-cluster:latest --name kind
+          kind load docker-image aeroncache-http:latest --name kind
+          kind load docker-image aeroncache-ws:latest --name kind
+          kind load docker-image aeroncache-sse:latest --name kind
+
+      - name: Install Ephemeral Backend Helm Charts
+        working-directory: ./k8s/helm
+        run: |
+          # Deploy the single-node (ephemeral/SINGLE) cache plus the http/ws/sse interfaces.
+          # The ephemeral install targets render the interface services headless and point the
+          # interface REQUEST_PUB_HOST (and the node's per-interface response hosts) at pod IPs,
+          # which Aeron's pod-to-pod UDP requires - a virtual ClusterIP does not forward it.
+          # http-near and gateway are intentionally omitted; the core ephemeral suite does not use them.
+          make install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral
+
+      - name: Verify Ephemeral Component Readiness (Wait)
+        run: |
+          echo "Waiting for all pods to be in the Ready state..."
+          sleep 10
+          kubectl wait -n aeroncache --for=condition=ready pod --all --timeout=300s
+
+      - name: Port-forward Cache Interfaces
+        run: |
+          # Expose the ephemeral interface services on localhost so the integration suite can reach
+          # them. Ports match the standard interface ports the tests default to (see BackendTestLauncher).
+          kubectl port-forward -n aeroncache svc/aeroncache-http 7070:7070 &
+          kubectl port-forward -n aeroncache svc/aeroncache-ws 7071:7071 &
+          kubectl port-forward -n aeroncache svc/aeroncache-sse 7072:7072 &
+          sleep 5 # give port-forwarding a moment to establish
+          echo "Port-forwards established for http/ws/sse."
+
+      - name: Smoke Pre-Gate (fast fail before the full suite)
+        run: |
+          # A minimal create/put/get against the live HTTP interface, so an unhealthy deployment fails
+          # fast and clearly before we spend time launching the full integration suite.
+          echo "Checking liveness endpoint..."
+          curl --fail --retry 5 --retry-delay 3 --retry-connrefused http://localhost:7070/liveness/ || exit 1
+
+          echo -e "\nChecking readiness endpoint..."
+          curl --fail --retry 5 --retry-delay 3 --retry-connrefused http://localhost:7070/readiness/ || exit 1
+
+          echo -e "\nCreating cache..."
+          curl -s --fail -X POST http://localhost:7070/api/v1/cache \
+            -H 'Content-Type: application/json' \
+            -d '{"cacheId": "smoke-test-cache"}' || exit 1
+
+          echo -e "\nPutting item into cache..."
+          curl -s --fail -X POST http://localhost:7070/api/v1/cache/smoke-test-cache \
+            -H 'Content-Type: application/json' \
+            -d '{"key": "testKey", "value": "testValue"}' || exit 1
+
+          echo -e "\nRetrieving item from cache..."
+          RESPONSE=$(curl -s --fail -X GET http://localhost:7070/api/v1/cache/smoke-test-cache/testKey)
+          echo "Response: $RESPONSE"
+          if [[ "$RESPONSE" != *"testValue"* ]]; then
+            echo "Smoke pre-gate failed: Returned item value did not match 'testValue'."
+            exit 1
+          fi
+
+          echo -e "\nSmoke pre-gate passed. Running the ephemeral integration suite against the deployment..."
+
+      - name: Run Ephemeral Integration Suite Against Deployment
+        # Reuse the existing ephemeral core suite against the already-running kind deployment.
+        # externalEnv=true makes BackendTestLauncher target the port-forwarded interfaces instead of
+        # starting TestContainers. Only the core suite is run: it matches the deployed topology
+        # (single-node/SINGLE, static caches, http+ws+sse). The dynamic-cache suite is excluded
+        # (dynamic creation is not enabled on the deployment) and the shutdown/restart suite is
+        # excluded (it must control the node lifecycle, which it cannot for an external deployment).
+        # timeout-minutes bounds the job so a blocked test can't run until the GitHub 6h limit; the
+        # per-test STARTED logging (enabled by externalEnv) then names the last test to start.
+        timeout-minutes: 30
+        run: |
+          ./gradlew --console=plain --continue \
+            :cache-integration:ephemeral:core-integration-tests:test \
+            -PskipIntegrationTests=false \
+            -Daeroncache.integration.externalEnv=true
+
+      - name: Upload Integration Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-ci-ephemeral-integration-test-reports
+          path: '**/build/reports/tests/test/'
+          if-no-files-found: ignore
+
+      - name: Debug cluster state on failure
+        if: failure()
+        run: |
+          echo "===== Nodes ====="
+          kubectl get nodes
+          echo "===== Pods ====="
+          kubectl get pods -A
+          echo "===== Events ====="
+          kubectl get events -n aeroncache --sort-by='.metadata.creationTimestamp'
+          echo "===== Ephemeral Node Logs ====="
+          kubectl logs -n aeroncache -l app.kubernetes.io/name=aeroncache-ephemeral --tail=200 || true
+          echo "===== HTTP Interface Logs ====="
+          kubectl logs -n aeroncache aeroncache-http-0 --tail=200 || true

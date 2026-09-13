@@ -50,8 +50,8 @@ public class EphemeralCacheServiceAgent implements Agent {
                 wsRequestsSubscription.isConnected());
 
         initialiseResponses();
-        log.info("Response publication connected, http: {}, ws: {}", httpResponsePublication.isConnected(),
-                wsResponsePublication.isConnected());
+        log.info("Response publication connected, http: {}, ws: {}, sse: {}", httpResponsePublication.isConnected(),
+                wsResponsePublication.isConnected(), sseResponsePublication.isConnected());
 
         ClientSession session = getClientSession();
         fragmentHandler = (buffer, offset, length, header) -> service.onSessionMessage(session,
@@ -61,16 +61,19 @@ public class EphemeralCacheServiceAgent implements Agent {
     }
 
     /**
-     * Initialise the response publications and wait for at least
-     * one of them to be connected so that we can send responses and stream.
+     * Initialise the response publications and wait for all of them to be connected before we start
+     * serving. Waiting for only one leaves a startup race: the node begins processing requests while,
+     * say, the SSE response publication is still unconnected, so an early subscribe's confirmation is
+     * silently dropped by the {@code isConnected()} guard in {@link #getClientSession()}'s offer while
+     * later updates (once the publication connects) get through. Waiting for all three closes that window.
      */
     private void initialiseResponses() {
         httpResponsePublication = aeron.addPublication(httpResponseChannel, responseStream);
         wsResponsePublication = aeron.addPublication(wsResponseChannel, responseStream);
         sseResponsePublication = aeron.addPublication(sseResponseChannel, responseStream);
 
-        while (!httpResponsePublication.isConnected() && !wsResponsePublication.isConnected()
-                && !sseResponsePublication.isConnected()) {
+        while (!httpResponsePublication.isConnected() || !wsResponsePublication.isConnected()
+                || !sseResponsePublication.isConnected()) {
             aeron.context().idleStrategy().idle();
         }
     }
