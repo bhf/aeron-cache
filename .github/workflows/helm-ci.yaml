@@ -97,8 +97,11 @@ jobs:
         # externalEnv=true makes BackendTestLauncher target the port-forwarded interfaces instead of
         # starting TestContainers. Suites are limited to those matching the deployed topology
         # (clustered/RAFT, static caches); shutdown/restart and dynamic-cache suites are excluded.
+        # timeout-minutes bounds the job so a blocked test can't run until the GitHub 6h limit; the
+        # per-test STARTED logging (enabled by externalEnv) then names the last test to start.
+        timeout-minutes: 25
         run: |
-          ./gradlew \
+          ./gradlew --console=plain --continue \
             :cache-integration:clustered:http-integration-tests:test \
             :cache-integration:clustered:http-near-integration-tests:test \
             :cache-integration:clustered:ws-integration-tests:test \
