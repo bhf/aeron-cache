@@ -7,6 +7,13 @@ aeroncacheClusterConfigmap: aeroncache-ephemeral-config
 # This sets the cache mode for the cluster
 cacheMode: "SINGLE"
 
+# Aeron term buffer length for the single-node cache media driver. The maximum Aeron message size is
+# termLength / 8, so 128m is required to support values up to ~16MB (see LargeItemTests). Must match
+# the interfaces' term length; without it the node's driver falls back to a 16m term (~2MB max), which
+# hangs on larger items (e.g. the 4MB LargeItemTests case). Buffers are sparse, so the resident memory
+# cost is small.
+aeronCacheTermLength: "128m"
+
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   repository: aeroncache-cluster

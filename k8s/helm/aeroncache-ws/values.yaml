@@ -65,6 +65,13 @@ service:
   type: LoadBalancer
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
   port: 7071
+  # Set to "None" to make this a headless service (ephemeral/SINGLE mode) so the service
+  # DNS name resolves to the interface pod IP. Aeron uses UDP directly between pods, which a
+  # virtual ClusterIP (LoadBalancer/ClusterIP) does not forward. Leave empty for cluster/RAFT mode.
+  clusterIP: ""
+  # When headless, publish the pod address in DNS before it is Ready so the ephemeral cluster
+  # can resolve the response target during startup. Ignored for LoadBalancer/ClusterIP services.
+  publishNotReadyAddresses: false
 
 # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:
