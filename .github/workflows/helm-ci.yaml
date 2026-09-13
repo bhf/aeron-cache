@@ -1,4 +1,4 @@
-name: Helm Charts CI
+name: K8s CI
 
 on:
   push:
