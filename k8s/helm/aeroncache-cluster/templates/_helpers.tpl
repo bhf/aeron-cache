@@ -77,10 +77,10 @@ Clustertools container
     - "-c"
     - |
       if [ -n "$CACHE_DATA_DIR_BASE" ]; then
-        CLUSTER_NODE=$(echo $POD_NAME | rev | cut -d- -f1 | rev)
+        CLUSTER_NODE=${POD_NAME##*-}
         export CACHE_DATA_DIR="${CACHE_DATA_DIR_BASE}/node${CLUSTER_NODE}/cluster"
       fi
-      exec java --enable-preview --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED -cp @/app/jib-classpath-file com.bhf.aeroncache.clustertools.application.ClusterToolsHTTPApplication
+      exec java --enable-preview --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED {{ if .Values.externalMediaDriver.enabled }}-Daeron.dir={{ .Values.externalMediaDriver.aeronDir }} {{ end }}-cp @/app/jib-classpath-file com.bhf.aeroncache.clustertools.application.ClusterToolsHTTPApplication
   env:
     - name: POD_NAME
       valueFrom:
@@ -112,5 +112,49 @@ Clustertools container
     - name: data
       mountPath: {{ $.Values.persistence.mountPath }}
     {{- end }}
+  {{- end }}
+{{- end }}
+
+{{/*
+Aeron C media driver native sidecar for the cluster pod. Rendered as an initContainer entry with
+restartPolicy: Always so the driver starts before the node and terminates after it. The node,
+clustertools and driver share the `shm` volume at aeronDir; the driver does NOT mount the data PVC.
+The startupProbe gates the node container on the CnC file existing so the Aeron client never races
+the driver.
+*/}}
+{{- define "aeroncache-cluster.mediadriver" -}}
+{{- $md := .Values.externalMediaDriver -}}
+- name: aeron-media-driver
+  image: "{{ $md.image.repository }}:{{ $md.image.tag }}"
+  imagePullPolicy: {{ $md.image.pullPolicy }}
+  restartPolicy: Always
+  env:
+    - name: AERON_DIR
+      value: {{ $md.aeronDir | quote }}
+    - name: AERON_THREADING_MODE
+      value: {{ $md.threadingMode | quote }}
+    {{- if .Values.aeronCacheTermLength }}
+    - name: AERON_CACHE_TERM_LENGTH
+      value: {{ .Values.aeronCacheTermLength | quote }}
+    {{- end }}
+    {{- with $md.extraEnv }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  startupProbe:
+    exec:
+      command: ["sh", "-c", "test -e {{ $md.aeronDir }}/cnc.dat"]
+    periodSeconds: 1
+    failureThreshold: 30
+  readinessProbe:
+    exec:
+      command: ["sh", "-c", "test -e {{ $md.aeronDir }}/cnc.dat"]
+    periodSeconds: 5
+  {{- with $md.resources }}
+  resources:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.volumeMounts }}
+  volumeMounts:
+    {{- toYaml . | nindent 4 }}
   {{- end }}
 {{- end }}

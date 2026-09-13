@@ -17,7 +17,6 @@ import io.aeron.archive.client.AeronArchive;
 import io.aeron.cluster.ConsensusModule;
 import io.aeron.cluster.service.ClusteredServiceContainer;
 import io.aeron.driver.MediaDriver;
-import io.aeron.driver.MinMulticastFlowControlSupplier;
 import io.aeron.driver.ThreadingMode;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.ErrorHandler;
@@ -194,8 +193,16 @@ public class CacheNodeApplication {
         final String hostname = hostnames[nodeId];
         System.out.println("This node's hostname:" + hostname);
         final File baseDir = new File(baseDirectory, "node" + nodeId);
-        final String aeronDirName = CommonContext.getAeronDirectoryName() + "-" + nodeId + "-driver";
+        // Unified with the interface apps: LAUNCH_EMBEDDED=false means attach to an external media
+        // driver (default unset -> embedded). When external, all four contexts below share the
+        // driver's fixed AERON_DIR instead of the per-node derived directory.
+        final boolean useExternalMediaDriver =
+                !Boolean.parseBoolean(System.getenv().getOrDefault("LAUNCH_EMBEDDED", "true"));
+        final String aeronDirName = useExternalMediaDriver
+                ? System.getenv().getOrDefault("AERON_DIR", CommonContext.getAeronDirectoryName())
+                : CommonContext.getAeronDirectoryName() + "-" + nodeId + "-driver";
         System.out.println("user.dir=" + baseDir.getAbsolutePath());
+        System.out.println("useExternalMediaDriver=" + useExternalMediaDriver);
         System.out.println("AeronDirName=" + aeronDirName);
 
         boolean dynamicCacheCreation = false;
@@ -237,7 +244,7 @@ public class CacheNodeApplication {
                 .clusterMembers(clusterMembers(Arrays.asList(hostnames)))
                 .clusterDir(new File(baseDir, "cluster"))
                 .ingressChannel("aeron:udp?term-length=" + TERM_LENGTH + "|alias=AeronCache-Concensus-Ingress-" + nodeId)
-                .logChannel("aeron:udp?term-length=" + ClusterUtils.getConfiguredTermLength(64 * 1024 * 1024))
+                .logChannel("aeron:udp?term-length=" + TERM_LENGTH)
                 .replicationChannel(logReplicationChannel(hostname))
                 .archiveContext(aeronArchiveContext.clone())
                 .idleStrategySupplier(CacheNodeIdleStrategies.consensusModuleIdleStrategy);
@@ -262,21 +269,23 @@ public class CacheNodeApplication {
             DNSUtils.awaitDnsResolution(hostAddresses, i);
         }
         
-        boolean useExternalMediaDriver = Boolean.parseBoolean(System.getenv().getOrDefault("LAUNCH_EMBEDDED", "false"));
-
         System.out.println("Launching cluster node now...");
 
         try (final ShutdownSignalBarrier barrier = new ShutdownSignalBarrier()) {
-            final var mediaDriverContext = new MediaDriver.Context()
+            // Only build/launch an embedded driver when not using an external one. Unicast
+            // deployment, so no multicast flow control is configured.
+            final MediaDriver.Context mediaDriverContext = useExternalMediaDriver ? null
+                    : new MediaDriver.Context()
                     .aeronDirectoryName(aeronDirName)
                     .threadingMode(ThreadingMode.SHARED)
                     .termBufferSparseFile(true)
-                    .multicastFlowControlSupplier(new MinMulticastFlowControlSupplier())
                     .terminationHook(barrier::signal)
                     .errorHandler(CacheNodeApplication.errorHandler("Media Driver"));
-            ClusterUtils.applyConfiguredTermLength(mediaDriverContext);
+            if (mediaDriverContext != null) {
+                ClusterUtils.applyConfiguredTermLength(mediaDriverContext);
+            }
 
-            try (var mediaDriver = useExternalMediaDriver ? null : MediaDriver.launch(mediaDriverContext);
+            try (var mediaDriver = mediaDriverContext == null ? null : MediaDriver.launch(mediaDriverContext);
                  var archive = Archive.launch(archiveContext);
                  var concensusModule = ConsensusModule.launch(consensusModuleContext);
                  var serviceContainer = ClusteredServiceContainer.launch(clusteredServiceContext)) {

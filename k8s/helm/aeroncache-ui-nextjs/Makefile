@@ -5,4 +5,4 @@ upgrade:
 	helm upgrade -n aeroncache aeroncache-ui-nextjs -f values.yaml
 
 uninstall:
-	helm uninstall -n aeroncache aeroncache-ui-nextjs
+	helm uninstall -n aeroncache aeroncache-ui-nextjs --ignore-not-found

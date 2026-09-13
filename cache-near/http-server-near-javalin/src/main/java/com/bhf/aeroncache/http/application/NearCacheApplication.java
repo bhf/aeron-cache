@@ -152,7 +152,17 @@ public class NearCacheApplication {
             }
 
             System.out.println("DNS Resolution Complete. Building cluster connection now.");
-            mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
+            // LAUNCH_EMBEDDED=false attaches to an external media driver at AERON_DIR (default
+            // unset -> embedded), matching the other interface apps.
+            final boolean launchEmbedded =
+                    Boolean.parseBoolean(System.getenv().getOrDefault("LAUNCH_EMBEDDED", "true"));
+            final String aeronDir;
+            if (launchEmbedded) {
+                mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
+                aeronDir = mediaDriver.aeronDirectoryName();
+            } else {
+                aeronDir = System.getenv("AERON_DIR");
+            }
 
             var cacheMode = System.getenv("CACHE_MODE");
             final boolean CLUSTERED_MODE = cacheMode == null || cacheMode.equalsIgnoreCase("RAFT");
@@ -160,10 +170,10 @@ public class NearCacheApplication {
             System.out.println("Cache mode: " + cacheMode + ", using clustered mode: " + CLUSTERED_MODE);
 
             if (CLUSTERED_MODE) {
-                buildClusterConnection(egressIP, ingressEndpoints);
+                buildClusterConnection(egressIP, ingressEndpoints, aeronDir);
             } else {
                 final Aeron.Context aeronCtx = new Aeron.Context()
-                        .aeronDirectoryName(mediaDriver.aeronDirectoryName());
+                        .aeronDirectoryName(aeronDir);
                 final Aeron aeron = Aeron.connect(aeronCtx);
                 var requestPubHost = System.getenv("REQUEST_PUB_HOST");
                 buildUnclusteredConnection(aeron, requestPubHost);
@@ -265,9 +275,9 @@ public class NearCacheApplication {
         clusterConnected.set(true);
     }
 
-    private static void buildClusterConnection(String egressIP, String ingressEndpoints) {
+    private static void buildClusterConnection(String egressIP, String ingressEndpoints, String aeronDirectory) {
         ReconnectingAeronCache reconnectingCache = new ReconnectingAeronCache(egressIP, ingressEndpoints, client, "HTTPNearClient",
-                mediaDriver, clusterConnected::set);
+                aeronDirectory, clusterConnected::set);
         reconnectingCache.connect();
         cache = reconnectingCache;
     }

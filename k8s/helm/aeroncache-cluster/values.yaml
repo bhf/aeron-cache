@@ -10,6 +10,26 @@ aeroncacheClusterConfigmap: aeroncache-cluster-config
 # cost of a larger term length is small.
 aeronCacheTermLength: "128m"
 
+# External Aeron C media driver (aeronmd) sidecar. When enabled, the C driver runs as a native
+# sidecar and the cache node (plus its Archive/ConsensusModule/ClusteredService) attaches to it as
+# a pure client (LAUNCH_EMBEDDED=false) instead of launching an embedded Java MediaDriver. The
+# node, clustertools and driver all share the pod `shm` volume at aeronDir; term buffers are sized
+# from aeronCacheTermLength above (single source of truth). The images run as root, so they can map
+# the driver's CnC/term files even though the driver runs as uid 1000.
+externalMediaDriver:
+  enabled: false
+  # Aeron dir shared between the driver, node and clustertools containers via the `shm` emptyDir.
+  aeronDir: /dev/shm/aeron
+  # Driver threading mode: SHARED, SHARED_NETWORK, or DEDICATED.
+  threadingMode: SHARED
+  image:
+    repository: aeroncache-media-driver
+    pullPolicy: Never
+    tag: "latest"
+  # Extra AERON_* env for the driver (e.g. AERON_DRIVER_TIMEOUT, *_IDLE_STRATEGY).
+  extraEnv: []
+  resources: {}
+
 # This sets the cache mode for the cluster
 cacheMode: "RAFT"
 
@@ -88,6 +108,11 @@ service:
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
   port: 80
   clusterIP: None
+  # Publish each cluster pod's DNS address before it is Ready. RAFT nodes must resolve their
+  # peers during bootstrap, but a node only becomes Ready after it has connected to the cluster
+  # (which needs peer resolution) - so without this, all nodes time out resolving each other and
+  # crash-loop. Same reason the ephemeral interface services set it (commit 94fd6c03).
+  publishNotReadyAddresses: true
 
 # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:

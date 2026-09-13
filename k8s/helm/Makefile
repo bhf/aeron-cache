@@ -1,3 +1,10 @@
+# External Aeron C media driver:
+#   Pass EXTERNAL_MEDIA_DRIVER=true to any install target to deploy the interface apps
+#   (http, ws, sse, gateway) with the aeronmd C driver as a native sidecar instead of an
+#   embedded Java driver; EXTERNAL_MEDIA_DRIVER=false forces it off. Unset uses each
+#   chart's values.yaml default (off). Command-line variables propagate to the sub-makes.
+#   e.g.  make install-backend-ephemeral EXTERNAL_MEDIA_DRIVER=true
+
 install-backend: install-cluster install-http install-ws install-sse install-gateway install-http-near
 uninstall-backend: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-gateway uninstall-http-near
 
@@ -7,8 +14,8 @@ uninstall-frontend: uninstall-ui
 install-all: install-cluster install-http install-ws install-sse install-gateway install-http-near install-ui
 uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-gateway uninstall-http-near uninstall-ui
 
-install-all-ephemeral: install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral install-ui
-uninstall-all-ephemeral: uninstall-ephemeral uninstall-http uninstall-ws uninstall-sse uninstall-ui
+install-all-ephemeral: install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral install-gateway-ephemeral install-ui
+uninstall-all-ephemeral: uninstall-ephemeral uninstall-http uninstall-ws uninstall-sse uninstall-ui uninstall-gateway
 
 install-backend-ephemeral: install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral install-gateway-ephemeral
 uninstall-backend-ephemeral: uninstall-ephemeral uninstall-http uninstall-ws uninstall-sse uninstall-gateway

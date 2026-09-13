@@ -20,6 +20,27 @@ idleStrategy: "backoff"
 # cost of a larger term length is small.
 aeronCacheTermLength: "128m"
 
+# External Aeron C media driver (aeronmd) sidecar. When enabled, the C driver runs as a native
+# sidecar and this app attaches to it as a pure Aeron client (LAUNCH_EMBEDDED=false) instead of
+# launching an embedded Java MediaDriver. Both containers share the `shm` volume at aeronDir, and
+# the driver's term buffers are sized from aeronCacheTermLength above (single source of truth).
+# The app image runs as root, so it can map the driver's CnC/term files even though the driver
+# runs as uid 1000; pin both containers to a matching non-root uid via podSecurityContext for a
+# hardened deployment.
+externalMediaDriver:
+  enabled: false
+  # Aeron dir shared between the driver and app containers via the `shm` emptyDir.
+  aeronDir: /dev/shm/aeron
+  # Driver threading mode: SHARED, SHARED_NETWORK, or DEDICATED.
+  threadingMode: SHARED
+  image:
+    repository: aeroncache-media-driver
+    pullPolicy: Never
+    tag: "latest"
+  # Extra AERON_* env for the driver (e.g. AERON_DRIVER_TIMEOUT, *_IDLE_STRATEGY).
+  extraEnv: []
+  resources: {}
+
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   repository: aeroncache-http-near

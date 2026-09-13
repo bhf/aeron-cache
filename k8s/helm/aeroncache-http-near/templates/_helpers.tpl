@@ -60,3 +60,46 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Aeron C media driver native sidecar. Rendered as an initContainer entry with
+restartPolicy: Always so the driver starts before the app and terminates after it.
+The startupProbe gates the app container on the CnC file existing, so the Aeron
+client never races ahead of the driver.
+*/}}
+{{- define "aeroncache-http-near.mediadriver" -}}
+{{- $md := .Values.externalMediaDriver -}}
+- name: aeron-media-driver
+  image: "{{ $md.image.repository }}:{{ $md.image.tag }}"
+  imagePullPolicy: {{ $md.image.pullPolicy }}
+  restartPolicy: Always
+  env:
+    - name: AERON_DIR
+      value: {{ $md.aeronDir | quote }}
+    - name: AERON_THREADING_MODE
+      value: {{ $md.threadingMode | quote }}
+    {{- if .Values.aeronCacheTermLength }}
+    - name: AERON_CACHE_TERM_LENGTH
+      value: {{ .Values.aeronCacheTermLength | quote }}
+    {{- end }}
+    {{- with $md.extraEnv }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  startupProbe:
+    exec:
+      command: ["sh", "-c", "test -e {{ $md.aeronDir }}/cnc.dat"]
+    periodSeconds: 1
+    failureThreshold: 30
+  readinessProbe:
+    exec:
+      command: ["sh", "-c", "test -e {{ $md.aeronDir }}/cnc.dat"]
+    periodSeconds: 5
+  {{- with $md.resources }}
+  resources:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.volumeMounts }}
+  volumeMounts:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
