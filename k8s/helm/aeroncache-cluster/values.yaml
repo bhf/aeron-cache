@@ -88,6 +88,11 @@ service:
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
   port: 80
   clusterIP: None
+  # Publish each cluster pod's DNS address before it is Ready. RAFT nodes must resolve their
+  # peers during bootstrap, but a node only becomes Ready after it has connected to the cluster
+  # (which needs peer resolution) - so without this, all nodes time out resolving each other and
+  # crash-loop. Same reason the ephemeral interface services set it (commit 94fd6c03).
+  publishNotReadyAddresses: true
 
 # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:

@@ -5,4 +5,4 @@ upgrade:
 	helm upgrade -n aeroncache aeroncache-ephemeral -f values.yaml .
 
 uninstall:
-	helm uninstall -n aeroncache aeroncache-ephemeral
+	helm uninstall -n aeroncache aeroncache-ephemeral --ignore-not-found

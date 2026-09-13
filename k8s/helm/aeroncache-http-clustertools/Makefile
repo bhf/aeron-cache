@@ -5,4 +5,4 @@ upgrade:
 	helm upgrade -n aeroncache aeroncache-http-clustertools -f values.yaml
 
 uninstall:
-	helm uninstall -n aeroncache aeroncache-http-clustertools
+	helm uninstall -n aeroncache aeroncache-http-clustertools --ignore-not-found

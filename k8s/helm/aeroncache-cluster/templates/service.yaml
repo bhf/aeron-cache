@@ -7,5 +7,8 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   clusterIP: {{ .Values.service.clusterIP }}
+  {{- if .Values.service.publishNotReadyAddresses }}
+  publishNotReadyAddresses: true
+  {{- end }}
   selector:
     {{- include "aeroncache-cluster.selectorLabels" . | nindent 4 }}

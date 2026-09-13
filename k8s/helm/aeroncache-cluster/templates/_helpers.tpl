@@ -77,7 +77,7 @@ Clustertools container
     - "-c"
     - |
       if [ -n "$CACHE_DATA_DIR_BASE" ]; then
-        CLUSTER_NODE=$(echo $POD_NAME | rev | cut -d- -f1 | rev)
+        CLUSTER_NODE=${POD_NAME##*-}
         export CACHE_DATA_DIR="${CACHE_DATA_DIR_BASE}/node${CLUSTER_NODE}/cluster"
       fi
       exec java --enable-preview --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED -cp @/app/jib-classpath-file com.bhf.aeroncache.clustertools.application.ClusterToolsHTTPApplication
