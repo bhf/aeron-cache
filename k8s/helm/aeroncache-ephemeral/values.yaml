@@ -7,6 +7,12 @@ aeroncacheClusterConfigmap: aeroncache-ephemeral-config
 # This sets the cache mode for the cluster
 cacheMode: "SINGLE"
 
+# Idle strategy for the Aeron and agent threads. One of: backoff, spin, noop, yield,
+# sleep-ns[:nanos], sleep-ms[:millis], or a fully qualified IdleStrategy class name. Applies to all
+# roles; individual roles can be overridden with IDLE_STRATEGY_<ROLE> environment variables. Leave
+# blank to use the application default (backoff).
+idleStrategy: "backoff"
+
 # Aeron term buffer length for the single-node cache media driver. The maximum Aeron message size is
 # termLength / 8, so 128m is required to support values up to ~16MB (see LargeItemTests). Must match
 # the interfaces' term length; without it the node's driver falls back to a 16m term (~2MB max), which
