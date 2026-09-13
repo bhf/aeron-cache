@@ -39,6 +39,15 @@ subprojects {
         systemProperty("aeroncache.image.tag", appVersion)
         systemProperty("aeroncache.image.registry", dockerRegistry)
 
+        // Forward any -Daeroncache.* properties (e.g. externalEnv + interface host/port used to point
+        // the integration tests at an already-running backend) from the Gradle JVM to the test JVM.
+        System.getProperties().forEach { key, value ->
+            val name = key.toString()
+            if (name.startsWith("aeroncache.")) {
+                systemProperty(name, value.toString())
+            }
+        }
+
         if (project.path.startsWith(":cache-integration:")) {
             enabled = !skipIntegrationTests
             if (!skipIntegrationTests && jibOnBuild) {

@@ -24,9 +24,34 @@ public class BackendTestResource implements ExtensionContext.Store.CloseableReso
     private boolean useTestContainers;
     private final BackendTestContainers containers;
 
+    /**
+     * When true the backend is an externally managed, already-running environment (for example an
+     * Aeron Cache cluster deployed onto Kubernetes) that this test run neither started nor owns.
+     * In that case {@link #close()} is a no-op - the tests must not tear the environment down.
+     */
+    private boolean external;
+
+    /**
+     * Build a resource pointing at an externally managed, already-running backend. No containers or
+     * embedded processes are owned, so {@link #close()} does nothing.
+     */
+    public static BackendTestResource forExternalEnvironment(String baseHttpUri, int httpPort,
+                                                             String baseWsUri, int wsPort,
+                                                             String baseSSEUri, int ssePort,
+                                                             String baseHttpNearUri, int httpNearPort,
+                                                             String functionalityKey) {
+        return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSSEUri, ssePort,
+                baseHttpNearUri, httpNearPort, functionalityKey, false, null, true);
+    }
+
     @Override
     public void close() {
         System.out.println("Shutting down backend...");
+
+        if (external) {
+            System.out.println("External environment - leaving backend running");
+            return;
+        }
 
         if(!useTestContainers){
             System.out.println("Shutting down embedded environment");

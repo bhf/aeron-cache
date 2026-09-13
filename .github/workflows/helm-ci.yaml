@@ -51,45 +51,69 @@ jobs:
           sleep 10
           kubectl wait -n aeroncache --for=condition=ready pod --all --timeout=300s
 
-      - name: Verify HTTP Service (API Smoke Test)
+      - name: Port-forward Cache Interfaces
         run: |
-          # Port forward the HTTP service so it's accessible via localhost
+          # Expose the clustered interface services on localhost so the integration suite can reach
+          # them. Ports match the standard interface ports the tests default to (see BackendTestLauncher).
           kubectl port-forward -n aeroncache svc/aeroncache-http 7070:7070 &
+          kubectl port-forward -n aeroncache svc/aeroncache-ws 7071:7071 &
+          kubectl port-forward -n aeroncache svc/aeroncache-sse 7072:7072 &
+          kubectl port-forward -n aeroncache svc/aeroncache-http-near 7073:7073 &
           sleep 5 # give port-forwarding a moment to establish
-          
+          echo "Port-forwards established for http/ws/sse/http-near."
+
+      - name: Smoke Pre-Gate (fast fail before the full suite)
+        run: |
+          # A minimal create/put/get against the live HTTP interface, so an unhealthy deployment fails
+          # fast and clearly before we spend time launching the full integration suite.
           echo "Checking liveness endpoint..."
-          curl --fail http://localhost:7070/liveness/ || exit 1
-          
+          curl --fail --retry 5 --retry-delay 3 --retry-connrefused http://localhost:7070/liveness/ || exit 1
+
           echo -e "\nChecking readiness endpoint..."
-          curl --fail http://localhost:7070/readiness/ || exit 1
-          
-          # Create a new cache called smoke-test-cache
+          curl --fail --retry 5 --retry-delay 3 --retry-connrefused http://localhost:7070/readiness/ || exit 1
+
           echo -e "\nCreating cache..."
           curl -s --fail -X POST http://localhost:7070/api/v1/cache \
             -H 'Content-Type: application/json' \
             -d '{"cacheId": "smoke-test-cache"}' || exit 1
-          
-          # Put an item into the cache
+
           echo -e "\nPutting item into cache..."
           curl -s --fail -X POST http://localhost:7070/api/v1/cache/smoke-test-cache \
             -H 'Content-Type: application/json' \
             -d '{"key": "testKey", "value": "testValue"}' || exit 1
-            
-          # Retrieve the item back and verify the value
+
           echo -e "\nRetrieving item from cache..."
           RESPONSE=$(curl -s --fail -X GET http://localhost:7070/api/v1/cache/smoke-test-cache/testKey)
           echo "Response: $RESPONSE"
           if [[ "$RESPONSE" != *"testValue"* ]]; then
-            echo "Smoke test failed: Returned item value did not match 'testValue'."
+            echo "Smoke pre-gate failed: Returned item value did not match 'testValue'."
             exit 1
           fi
-          
-          # Get global cache stats to confirm the cluster sees the operation
-          echo -e "\nRetrieving global stats..."
-          STATS=$(curl -s --fail -X GET http://localhost:7070/api/v1/stats)
-          echo "Stats: $STATS"
-          
-          echo -e "\nSmoke test passed successfully! Aeron cache is fully operational in Kind."
+
+          echo -e "\nSmoke pre-gate passed. Running the full integration suite against the cluster..."
+
+      - name: Run Integration Suite Against Cluster
+        # Reuse the existing clustered integration suites against the already-running kind deployment.
+        # externalEnv=true makes BackendTestLauncher target the port-forwarded interfaces instead of
+        # starting TestContainers. Suites are limited to those matching the deployed topology
+        # (clustered/RAFT, static caches); shutdown/restart and dynamic-cache suites are excluded.
+        run: |
+          ./gradlew \
+            :cache-integration:clustered:http-integration-tests:test \
+            :cache-integration:clustered:http-near-integration-tests:test \
+            :cache-integration:clustered:ws-integration-tests:test \
+            :cache-integration:clustered:sse-integration-tests:test \
+            :cache-integration:clustered:multistream-integration-tests:test \
+            -PskipIntegrationTests=false \
+            -Daeroncache.integration.externalEnv=true
+
+      - name: Upload Integration Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-ci-integration-test-reports
+          path: '**/build/reports/tests/test/'
+          if-no-files-found: ignore
 
       - name: Debug cluster state on failure
         if: failure()
