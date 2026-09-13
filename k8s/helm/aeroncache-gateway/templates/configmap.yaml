@@ -10,4 +10,7 @@ data:
   REQUEST_PUB_HOST: {{ tpl .Values.requestPubHost . | quote }}
   GATEWAY_REQUEST_ENDPOINT: {{ tpl .Values.gatewayRequestEndpoint . | quote }}
   GATEWAY_RESPONSE_CONTROL_ENDPOINT: {{ tpl .Values.gatewayResponseControlEndpoint . | quote }}
-  {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | indent 2 }}
+  {{- if .Values.idleStrategy }}
+  IDLE_STRATEGY: {{ tpl .Values.idleStrategy . | quote }}
+  {{- end }}
+  {{- printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | nindent 2 }}

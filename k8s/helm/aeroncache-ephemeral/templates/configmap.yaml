@@ -10,4 +10,7 @@ data:
   DNS_DELAY: "true"
   CACHE_MODE: {{ .Values.cacheMode | quote }}
   CLUSTER_ADDRESSES: "aeroncache-ephemeral-0.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-ephemeral-1.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-ephemeral-2.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local"
-  {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | indent 2 }}
+  {{- if .Values.idleStrategy }}
+  IDLE_STRATEGY: {{ tpl .Values.idleStrategy . | quote }}
+  {{- end }}
+  {{- printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | nindent 2 }}

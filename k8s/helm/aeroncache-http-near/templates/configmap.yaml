@@ -9,4 +9,7 @@ data:
   {{- if .Values.corsAllowedOrigins }}
   CORS_ALLOWED_ORIGINS: {{ tpl .Values.corsAllowedOrigins . | quote }}
   {{- end }}
+  {{- if .Values.idleStrategy }}
+  IDLE_STRATEGY: {{ tpl .Values.idleStrategy . | quote }}
+  {{- end }}
   {{- printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | nindent 2 }}
