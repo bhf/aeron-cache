@@ -326,7 +326,7 @@ public class NearCacheApplication {
             config.showJavalinBanner = false;
             config.bundledPlugins.enableCors(cors -> {
                 cors.addRule(it -> {
-                    it.allowHost("http://localhost:3000", "http://localhost");
+                    CorsUtils.getAllowedOrigins("http://localhost:3000", "http://localhost").forEach(it::allowHost);
                 });
             });
 

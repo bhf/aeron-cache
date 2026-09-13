@@ -30,6 +30,7 @@ import com.bhf.aeroncache.services.cluster.impl.ObservingClusterRequestPublisher
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.ClusterUtils;
+import com.bhf.aeroncache.utils.CorsUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
@@ -548,12 +549,12 @@ public class HttpApplication {
             config.http.maxRequestSize = MAX_REQUEST_SIZE_BYTES;
             config.bundledPlugins.enableCors(cors -> {
                 cors.addRule(it -> {
-                    it.allowHost("http://localhost:3000",
+                    CorsUtils.getAllowedOrigins("http://localhost:3000",
                             "http://localhost:3001",
                             "http://localhost:3002",
                             "http://localhost:3003",
                             "http://localhost:3004",
-                            "http://localhost:3005", "http://localhost");
+                            "http://localhost:3005", "http://localhost").forEach(it::allowHost);
                 });
             });
 

@@ -8,4 +8,7 @@ data:
   CACHE_MODE: {{ tpl .Values.cacheMode . | quote }}
   CLUSTER_ADDRESSES: {{ tpl .Values.clusterAddresses . | quote }}
   REQUEST_PUB_HOST: {{ tpl .Values.requestPubHost . | quote }}
-  {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | indent 2 }}
+  {{- if .Values.corsAllowedOrigins }}
+  CORS_ALLOWED_ORIGINS: {{ tpl .Values.corsAllowedOrigins . | quote }}
+  {{- end }}
+  {{- printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | nindent 2 }}
