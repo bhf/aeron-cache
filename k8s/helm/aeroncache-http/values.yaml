@@ -9,6 +9,10 @@ cacheMode: "RAFT"
 aeroncacheHTTPConfigmap: aeroncache-http-config
 requestPubHost: "aeroncache-http"
 
+# Comma separated list of allowed CORS origins for the web facing interface. Leave blank to fall
+# back to the application default (localhost dev origins).
+corsAllowedOrigins: "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost"
+
 # Aeron term buffer length for the cache data channels. The maximum Aeron message size is
 # termLength / 8, so 128m is required to support values up to ~16MB (see LargeItemTests). Leave
 # blank to fall back to the application default (64k). Buffers are sparse, so the resident memory

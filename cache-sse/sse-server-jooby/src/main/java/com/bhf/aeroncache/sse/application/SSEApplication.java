@@ -15,6 +15,7 @@ import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.services.cluster.impl.RBClusterMessagePublisher;
 import com.bhf.aeroncache.sse.config.SSEIdleStrategies;
 import com.bhf.aeroncache.utils.ClusterUtils;
+import com.bhf.aeroncache.utils.CorsUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.services.ReconnectingAeronCache;
 import com.bhf.aeroncache.utils.RingBufferUtils;
@@ -84,12 +85,12 @@ public class SSEApplication extends Jooby {
 
     {
         install(new JacksonModule());
-        use(new CorsHandler(new Cors().setOrigin("http://localhost:3000",
+        use(new CorsHandler(new Cors().setOrigin(CorsUtils.getAllowedOrigins("http://localhost:3000",
                 "http://localhost:3001",
                 "http://localhost:3002",
                 "http://localhost:3003",
                 "http://localhost:3004",
-                "http://localhost:3005")));
+                "http://localhost:3005"))));
         sse(CACHE_API_PREFIX + "hydrate/{cacheId}", SSEApplication::handleSingleCacheSSEWithHydration);
         sse(CACHE_MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", SSEApplication::handleMultiCacheSSEWithHydration);
         sse(CACHE_API_PREFIX + "{cacheId}", SSEApplication::handleSingleCacheSSE);
