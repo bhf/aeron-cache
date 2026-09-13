@@ -21,7 +21,6 @@ import io.aeron.driver.MinMulticastFlowControlSupplier;
 import io.aeron.driver.ThreadingMode;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.agrona.concurrent.NoOpLock;
 import org.agrona.concurrent.ShutdownSignalBarrier;
 
@@ -57,7 +56,6 @@ public class CacheNodeApplication {
     private static final int TRANSFER_PORT_OFFSET = 5;
     private static final int LOG_CONTROL_PORT_OFFSET = 6;
     private static final int TERM_LENGTH = ClusterUtils.getConfiguredTermLength(64 * 1024);
-    private static final boolean USE_BUSY_SPIN_IDLE_FOR_CLUSTER_SERVICE = false;
     private static final long RESTART_ATTEMPT_INTERVAL = 10000;
 
     static int calculatePort(final int nodeId, final int offset) {
@@ -241,7 +239,8 @@ public class CacheNodeApplication {
                 .ingressChannel("aeron:udp?term-length=" + TERM_LENGTH + "|alias=AeronCache-Concensus-Ingress-" + nodeId)
                 .logChannel("aeron:udp?term-length=" + ClusterUtils.getConfiguredTermLength(64 * 1024 * 1024))
                 .replicationChannel(logReplicationChannel(hostname))
-                .archiveContext(aeronArchiveContext.clone());
+                .archiveContext(aeronArchiveContext.clone())
+                .idleStrategySupplier(CacheNodeIdleStrategies.consensusModuleIdleStrategy);
 
         final var cacheManagerFactory = getCacheManagerFactory();
         final var cacheService = getSbeDecodingCacheClusterService(nodeId, cacheManagerFactory, dynamicCacheCreation);
@@ -254,9 +253,7 @@ public class CacheNodeApplication {
                         .clusteredService(cacheService)
                         .errorHandler(errorHandler("Clustered Service"));
 
-        if (USE_BUSY_SPIN_IDLE_FOR_CLUSTER_SERVICE) {
-            clusteredServiceContext.idleStrategySupplier(BusySpinIdleStrategy::new);
-        }
+        clusteredServiceContext.idleStrategySupplier(CacheNodeIdleStrategies.clusteredServiceIdleStrategy);
 
         System.out.println("Awaiting DNS Resolution");
         final List<String> hostAddresses = List.of(hostnames);
