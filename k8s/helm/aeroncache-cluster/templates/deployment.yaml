@@ -34,6 +34,10 @@ spec:
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.externalMediaDriver.enabled }}
+      initContainers:
+        {{- include "aeroncache-cluster.mediadriver" . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           {{- with .Values.securityContext }}
@@ -58,6 +62,12 @@ spec:
             {{- if .Values.aeronCacheTermLength }}
             - name: AERON_CACHE_TERM_LENGTH
               value: {{ .Values.aeronCacheTermLength | quote }}
+            {{- end }}
+            {{- if .Values.externalMediaDriver.enabled }}
+            - name: LAUNCH_EMBEDDED
+              value: "false"
+            - name: AERON_DIR
+              value: {{ .Values.externalMediaDriver.aeronDir | quote }}
             {{- end }}
           envFrom:
             - configMapRef:
