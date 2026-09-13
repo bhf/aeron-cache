@@ -76,14 +76,24 @@ public class EphemeralCacheApplication {
                                     String sseResponseHost,
                                     boolean dynamicCacheCreation) {
 
-        final MediaDriver.Context mediaDriverCtx = ClusterUtils.applyConfiguredTermLength(new MediaDriver.Context()
-                .dirDeleteOnStart(true)
-                .dirDeleteOnShutdown(true)
-                .threadingMode(ThreadingMode.SHARED));
-        final MediaDriver mediaDriver = MediaDriver.launchEmbedded(mediaDriverCtx);
+        // LAUNCH_EMBEDDED=false attaches to an external media driver at AERON_DIR (default unset
+        // -> embedded), matching the other apps.
+        final boolean launchEmbedded =
+                Boolean.parseBoolean(System.getenv().getOrDefault("LAUNCH_EMBEDDED", "true"));
+        final String aeronDir;
+        if (launchEmbedded) {
+            final MediaDriver.Context mediaDriverCtx = ClusterUtils.applyConfiguredTermLength(new MediaDriver.Context()
+                    .dirDeleteOnStart(true)
+                    .dirDeleteOnShutdown(true)
+                    .threadingMode(ThreadingMode.SHARED));
+            final MediaDriver mediaDriver = MediaDriver.launchEmbedded(mediaDriverCtx);
+            aeronDir = mediaDriver.aeronDirectoryName();
+        } else {
+            aeronDir = System.getenv("AERON_DIR");
+        }
 
         final Aeron.Context aeronCtx = new Aeron.Context()
-                .aeronDirectoryName(mediaDriver.aeronDirectoryName());
+                .aeronDirectoryName(aeronDir);
         final Aeron aeron = Aeron.connect(aeronCtx);
 
         final var cacheManagerFactory = getCacheManagerFactory();

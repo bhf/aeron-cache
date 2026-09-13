@@ -23,12 +23,6 @@ jobs:
         run: |
           docker pull eclipse-temurin:25-jre
           ./gradlew jibDockerBuild -PjibDockerOnBuild=true
-          # Aeron C media driver sidecar image (aeronmd), pinned to the catalog Aeron version.
-          # Built directly against the host daemon to match the Jib build above (no Minikube in CI).
-          AERON_VERSION=$(sed -nE 's/^aeron = "([^"]+)".*/\1/p' gradle/libs.versions.toml)
-          docker build docker/aeron-media-driver \
-            -t aeroncache-media-driver:latest \
-            --build-arg AERON_VERSION="${AERON_VERSION}"
 
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.10.0
