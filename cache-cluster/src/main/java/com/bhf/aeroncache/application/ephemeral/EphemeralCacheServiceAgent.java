@@ -41,6 +41,14 @@ public class EphemeralCacheServiceAgent implements Agent {
     private FragmentAssembler assembler;
     private long msgCount = 0;
 
+    /**
+     * Upper bound on how long a response offer will wait for the requesting interface's response
+     * publication to connect before falling back to best-effort delivery. This closes the fresh-start
+     * race where an interface's first request (e.g. a subscribe) is handled before its response
+     * publication has finished connecting, without letting a vanished peer wedge the agent thread.
+     */
+    private static final long AWAIT_RESPONSE_CONNECT_NANOS = 5_000_000_000L;
+
     @Override
     public void onStart() {
         log.info("Starting unclustered Aeron Cache");
@@ -61,19 +69,21 @@ public class EphemeralCacheServiceAgent implements Agent {
     }
 
     /**
-     * Initialise the response publications and wait for all of them to be connected before we start
-     * serving. Waiting for only one leaves a startup race: the node begins processing requests while,
-     * say, the SSE response publication is still unconnected, so an early subscribe's confirmation is
-     * silently dropped by the {@code isConnected()} guard in {@link #getClientSession()}'s offer while
-     * later updates (once the publication connects) get through. Waiting for all three closes that window.
+     * Initialise the response publications and wait for at least one of them to be connected so that we
+     * can start serving. We deliberately do not wait for all three: an ephemeral cache may be paired
+     * with only a subset of interfaces (for example the gateway embedded tests wire only the WS
+     * transport), and gating startup on every publication would hang forever when one has no peer. The
+     * per-request delivery in {@link #getClientSession()}'s offer waits (bounded) for the requesting
+     * interface's own publication, which closes the startup race for that interface without this global
+     * gate.
      */
     private void initialiseResponses() {
         httpResponsePublication = aeron.addPublication(httpResponseChannel, responseStream);
         wsResponsePublication = aeron.addPublication(wsResponseChannel, responseStream);
         sseResponsePublication = aeron.addPublication(sseResponseChannel, responseStream);
 
-        while (!httpResponsePublication.isConnected() || !wsResponsePublication.isConnected()
-                || !sseResponsePublication.isConnected()) {
+        while (!httpResponsePublication.isConnected() && !wsResponsePublication.isConnected()
+                && !sseResponsePublication.isConnected()) {
             aeron.context().idleStrategy().idle();
         }
     }
@@ -132,6 +142,19 @@ public class EphemeralCacheServiceAgent implements Agent {
 
             @Override
             public long offer(DirectBuffer buffer, int offset, int length) {
+                // Make sure the response reaches the interface that made this request even if its
+                // response publication is still connecting on a fresh start - otherwise that interface's
+                // first message (typically a subscribe confirmation) is silently dropped by the
+                // isConnected() guards below while later traffic gets through. Bounded so an interface
+                // that never connects (e.g. one not present in this deployment) cannot wedge the agent.
+                final Publication requester = matchingResponsePublication;
+                if (requester != null && !requester.isConnected()) {
+                    final long deadlineNs = System.nanoTime() + AWAIT_RESPONSE_CONNECT_NANOS;
+                    while (!requester.isConnected() && System.nanoTime() < deadlineNs) {
+                        aeron.context().idleStrategy().idle();
+                    }
+                }
+
                 long responseCodeHttp = 0;
                 if (httpResponsePublication.isConnected()) {
                     while ((responseCodeHttp = httpResponsePublication.offer(buffer, offset, length)) < 0) {
