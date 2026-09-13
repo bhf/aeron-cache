@@ -39,6 +39,26 @@ subprojects {
         systemProperty("aeroncache.image.tag", appVersion)
         systemProperty("aeroncache.image.registry", dockerRegistry)
 
+        // Forward any -Daeroncache.* properties (e.g. externalEnv + interface host/port used to point
+        // the integration tests at an already-running backend) from the Gradle JVM to the test JVM.
+        System.getProperties().forEach { key, value ->
+            val name = key.toString()
+            if (name.startsWith("aeroncache.")) {
+                systemProperty(name, value.toString())
+            }
+        }
+
+        // When running against an external (already-running) backend - e.g. the helm-ci kind cluster -
+        // log each test as it starts so that, if a test blocks (streaming .join(), a socket read with
+        // no timeout, ...), the last "STARTED" line in the CI log names the exact culprit.
+        if (System.getProperty("aeroncache.integration.externalEnv")?.toBoolean() == true) {
+            testLogging {
+                events("started", "passed", "failed", "skipped")
+                exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+                showStandardStreams = true
+            }
+        }
+
         if (project.path.startsWith(":cache-integration:")) {
             enabled = !skipIntegrationTests
             if (!skipIntegrationTests && jibOnBuild) {

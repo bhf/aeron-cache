@@ -55,6 +55,10 @@ spec:
             - name: CACHE_DATA_DIR
               value: {{ .Values.persistence.mountPath }}
             {{- end }}
+            {{- if .Values.aeronCacheTermLength }}
+            - name: AERON_CACHE_TERM_LENGTH
+              value: {{ .Values.aeronCacheTermLength | quote }}
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ .Values.aeroncacheClusterConfigmap }}

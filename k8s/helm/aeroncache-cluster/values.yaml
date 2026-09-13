@@ -4,6 +4,12 @@ replicaCount: 3
 # Set the configmap to use for the cluster config
 aeroncacheClusterConfigmap: aeroncache-cluster-config
 
+# Aeron term buffer length for the cache data channels. The maximum Aeron message size is
+# termLength / 8, so 128m is required to support values up to ~16MB (see LargeItemTests). Leave
+# blank to fall back to the application default (64k). Buffers are sparse, so the resident memory
+# cost of a larger term length is small.
+aeronCacheTermLength: "128m"
+
 # This sets the cache mode for the cluster
 cacheMode: "RAFT"
 

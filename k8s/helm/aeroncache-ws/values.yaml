@@ -9,6 +9,12 @@ cacheMode: "RAFT"
 aeroncacheWSConfigmap: aeroncache-ws-config
 requestPubHost: "aeroncache-ws"
 
+# Aeron term buffer length for the cache data channels. The maximum Aeron message size is
+# termLength / 8, so 128m is required to support values up to ~16MB (see LargeItemTests). Leave
+# blank to fall back to the application default (64k). Buffers are sparse, so the resident memory
+# cost of a larger term length is small.
+aeronCacheTermLength: "128m"
+
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   repository: aeroncache-ws

@@ -22,6 +22,15 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
 
     private static final String BACKEND_KEY = "backend";
     public static final int NODES = 1;
+
+    /**
+     * When set to {@code true} the tests run against an externally managed, already-running backend
+     * (for example an Aeron Cache cluster deployed onto Kubernetes) instead of starting TestContainers
+     * or an embedded environment. The interface host/port are read from the {@code aeroncache.*.host} /
+     * {@code aeroncache.*.port} system properties (see {@link #getExternalBackendTestResource}).
+     */
+    public static final String EXTERNAL_ENV_PROPERTY = "aeroncache.integration.externalEnv";
+
     private static String functionalityKey;
 
     @Override
@@ -38,13 +47,75 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
 
         extensionContextStore.getOrComputeIfAbsent(functionalityKey, key -> {
             try {
-                return config.useTestContainersEnvironment() ? getTestContainersTestResource(config) 
+                if (useExternalEnvironment()) {
+                    return getExternalBackendTestResource(config);
+                }
+                return config.useTestContainersEnvironment() ? getTestContainersTestResource(config)
                         : getEmbeddedBackendTestResource(config);
             } catch (Exception e) {
                 e.printStackTrace();
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    /**
+     * Whether the tests should target an externally managed, already-running backend.
+     *
+     * @return true if the {@link #EXTERNAL_ENV_PROPERTY} system property is set to {@code true}
+     */
+    private static boolean useExternalEnvironment() {
+        return Boolean.parseBoolean(System.getProperty(EXTERNAL_ENV_PROPERTY, "false"));
+    }
+
+    /**
+     * Build a {@link BackendTestResource} pointing at an externally managed, already-running backend.
+     * Nothing is started or owned by the test run - the interface host/port are read from system
+     * properties, defaulting to a localhost port-forward of the standard interface ports. Only the
+     * interfaces enabled by the test's {@link BackendTestConfig} have their URIs populated.
+     *
+     * @param config the test's backend configuration
+     * @return a resource whose {@link BackendTestResource#close()} is a no-op
+     */
+    private static BackendTestResource getExternalBackendTestResource(BackendTestConfig config) {
+        System.out.println("Using external (already-running) backend environment for " + config);
+
+        var baseHttpUri = "http://localhost";
+        var baseWsUri = "ws://localhost";
+        var baseSseUri = "http://localhost";
+        var baseHttpNearUri = "http://localhost";
+        int httpPort = 0;
+        int wsPort = 0;
+        int ssePort = 0;
+        int httpNearPort = 0;
+
+        if (config.httpEnabled()) {
+            baseHttpUri = "http://" + externalHost("http");
+            httpPort = externalPort("http", 7070);
+        }
+        if (config.wsEnabled()) {
+            baseWsUri = "ws://" + externalHost("ws");
+            wsPort = externalPort("ws", 7071);
+        }
+        if (config.sseEnabled()) {
+            baseSseUri = "http://" + externalHost("sse");
+            ssePort = externalPort("sse", 7072);
+        }
+        if (config.httpNearCacheEnabled()) {
+            baseHttpNearUri = "http://" + externalHost("httpNear");
+            httpNearPort = externalPort("httpNear", 7073);
+        }
+
+        return BackendTestResource.forExternalEnvironment(baseHttpUri, httpPort, baseWsUri, wsPort,
+                baseSseUri, ssePort, baseHttpNearUri, httpNearPort, functionalityKey);
+    }
+
+    private static String externalHost(String iface) {
+        return System.getProperty("aeroncache." + iface + ".host", "localhost");
+    }
+
+    private static int externalPort(String iface, int defaultPort) {
+        return Integer.parseInt(System.getProperty("aeroncache." + iface + ".port", String.valueOf(defaultPort)));
     }
 
     /**
@@ -120,7 +191,7 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
 
         var backendTestContainers = new BackendTestContainers(cacheNodes, httpContainer, httpNearContainer, wsContainer, sseContainer);
         return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSseUri, ssePort, baseHttpNearUri,
-                httpNearPort, functionalityKey, true, backendTestContainers);
+                httpNearPort, functionalityKey, true, backendTestContainers, false);
     }
 
     private static @NotNull BackendTestResource setupEphemeralCacheEnvironment(BackendTestConfig config, Network network) {
@@ -174,7 +245,7 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
 
         var backendTestContainers = new BackendTestContainers(cacheNodeList, httpContainer, httpNearContainer, wsContainer, sseContainer);
         return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSseUri, ssePort, baseHttpNearUri,
-                httpNearPort, functionalityKey, true, backendTestContainers);
+                httpNearPort, functionalityKey, true, backendTestContainers, false);
     }
 
     /**
@@ -211,7 +282,7 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
         }
 
         return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseHttpUri, ssePort,
-                null, 0, functionalityKey, false, null);
+                null, 0, functionalityKey, false, null, false);
     }
 
     @Override
