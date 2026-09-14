@@ -16,8 +16,8 @@ import java.util.List;
  */
 public final class SnapshotFixture {
 
-    /** Bump whenever {@link #ENTRIES} changes so older artifacts remain assertable. */
-    public static final int VERSION = 2;
+    /** Bump whenever {@link #ENTRIES} or {@link #COUNTER_ENTRIES} changes so older artifacts remain assertable. */
+    public static final int VERSION = 3;
 
     /** A single seeded cache entry against the standard cache API. */
     public record Entry(String cacheId, String key, String value, int sinceFixtureVersion) {
@@ -26,14 +26,24 @@ public final class SnapshotFixture {
         }
     }
 
+    /** A single seeded entry against the counters cache API. */
+    public record CounterEntry(String cacheId, String key, long value, int sinceFixtureVersion) {
+    }
+
     public static final String CACHE_A = "regression-cache-a";
     public static final String CACHE_B = "regression-cache-b";
+
+    public static final String COUNTER_CACHE_A = "regression-counters-a";
+    public static final String COUNTER_CACHE_B = "regression-counters-b";
 
     /**
      * Known caches created before seeding. Kept explicit (rather than derived from entries) so the
      * set of caches is itself part of the asserted contract.
      */
     public static final List<String> CACHES = List.of(CACHE_A, CACHE_B);
+
+    /** Known counter caches created before seeding (fixture version 3+). */
+    public static final List<String> COUNTER_CACHES = List.of(COUNTER_CACHE_A, COUNTER_CACHE_B);
 
     /**
      * The seeded entries. Values span serialization edge cases: plain ASCII, a multi-byte unicode
@@ -50,11 +60,34 @@ public final class SnapshotFixture {
             new Entry(CACHE_B, "large", "x".repeat(65536), 2)
     );
 
-    /** Entries that existed at or before the given artifact fixture version. */
+    /**
+     * Counter cache entries (fixture version 3+). Seeding both regular caches and counter caches and
+     * asserting both recover exercises the snapshot's manager boundary: the regular-cache loader must
+     * stop at its own end marker and leave the counter-cache records for the counters manager.
+     */
+    public static final List<CounterEntry> COUNTER_ENTRIES = List.of(
+            new CounterEntry(COUNTER_CACHE_A, "hits", 42L, 3),
+            new CounterEntry(COUNTER_CACHE_A, "misses", 7L, 3),
+            new CounterEntry(COUNTER_CACHE_B, "total", 1_000_000L, 3)
+    );
+
+    /** Regular-cache entries that existed at or before the given artifact fixture version. */
     public static List<Entry> entriesFor(int artifactFixtureVersion) {
         return ENTRIES.stream()
                 .filter(e -> e.sinceFixtureVersion() <= artifactFixtureVersion)
                 .toList();
+    }
+
+    /** Counter entries that existed at or before the given artifact fixture version. */
+    public static List<CounterEntry> counterEntriesFor(int artifactFixtureVersion) {
+        return COUNTER_ENTRIES.stream()
+                .filter(e -> e.sinceFixtureVersion() <= artifactFixtureVersion)
+                .toList();
+    }
+
+    /** Counter caches that existed at or before the given artifact fixture version. */
+    public static List<String> counterCachesFor(int artifactFixtureVersion) {
+        return artifactFixtureVersion >= 3 ? COUNTER_CACHES : List.of();
     }
 
     private SnapshotFixture() {

@@ -94,9 +94,20 @@ public interface Cache<I extends Reusable, K extends Reusable, V extends Reusabl
     void takeSnapshot(ExclusivePublication snapshotPublication, I cacheId, Cluster cluster);
 
     /**
-     * Load a snapshot into this cache.
-     * @param buffer
-     * @param offset
+     * Apply the cache-level stats carried by a {@code CACHE_BEGIN} snapshot record.
+     *
+     * @param buffer to read from.
+     * @param offset at which the stats begin.
+     * @return the next offset to read from.
      */
-    void loadSnapshot(DirectBuffer buffer, int offset);
+    int applyStats(DirectBuffer buffer, int offset);
+
+    /**
+     * Load a single cache entry from a {@code CACHE_ENTRY} snapshot record into this cache.
+     *
+     * @param buffer to read from.
+     * @param offset at which the entry begins.
+     * @return the next offset to read from.
+     */
+    int loadEntry(DirectBuffer buffer, int offset);
 }

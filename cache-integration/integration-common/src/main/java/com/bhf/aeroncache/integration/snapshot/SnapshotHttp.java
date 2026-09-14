@@ -15,6 +15,7 @@ import java.time.Duration;
 public final class SnapshotHttp {
 
     private static final String CACHE_API = "/api/v1/cache/";
+    private static final String COUNTERS_API = "/api/v1/counters/";
     private final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();
@@ -65,10 +66,34 @@ public final class SnapshotHttp {
         return json.has("value") ? json.getString("value") : null;
     }
 
-    /** Seed every cache and entry of the fixture. */
+    public void createCounterCache(String cacheId) {
+        var body = new JSONObject().put("cacheId", cacheId).toString();
+        var res = send(post(base + COUNTERS_API, body));
+        expect2xx("create counter cache " + cacheId, res);
+    }
+
+    public void putCounter(String cacheId, String key, long value) {
+        var body = new JSONObject().put("key", key).put("value", value).toString();
+        var res = send(post(base + COUNTERS_API + cacheId, body));
+        expect2xx("put counter " + cacheId + "/" + key, res);
+    }
+
+    /** @return the numeric {@code value} of the counter, or {@code null} if the response has none. */
+    public Long getCounterValue(String cacheId, String key) {
+        var res = send(HttpRequest.newBuilder(URI.create(base + COUNTERS_API + cacheId + "/" + key)).GET());
+        if (res.statusCode() != 200) {
+            throw new IllegalStateException("GET counter " + cacheId + "/" + key + " -> " + res.statusCode() + ": " + res.body());
+        }
+        var json = new JSONObject(res.body());
+        return json.has("value") ? json.getLong("value") : null;
+    }
+
+    /** Seed every cache and entry of the fixture, including counter caches. */
     public void seed() {
         SnapshotFixture.CACHES.forEach(this::createCache);
         SnapshotFixture.ENTRIES.forEach(e -> putItem(e.cacheId(), e.key(), e.value()));
+        SnapshotFixture.COUNTER_CACHES.forEach(this::createCounterCache);
+        SnapshotFixture.COUNTER_ENTRIES.forEach(e -> putCounter(e.cacheId(), e.key(), e.value()));
     }
 
     /**
@@ -90,6 +115,7 @@ public final class SnapshotHttp {
      */
     public void verifyFixture(int artifactFixtureVersion) {
         var mismatches = new java.util.ArrayList<String>();
+
         for (var e : SnapshotFixture.entriesFor(artifactFixtureVersion)) {
             String actual;
             try {
@@ -103,6 +129,21 @@ public final class SnapshotHttp {
                         + "' but got '" + preview(actual) + "'");
             }
         }
+
+        for (var e : SnapshotFixture.counterEntriesFor(artifactFixtureVersion)) {
+            Long actual;
+            try {
+                actual = getCounterValue(e.cacheId(), e.key());
+            } catch (RuntimeException ex) {
+                mismatches.add("counter " + e.cacheId() + "/" + e.key() + " -> error: " + ex.getMessage());
+                continue;
+            }
+            if (actual == null || e.value() != actual) {
+                mismatches.add("counter " + e.cacheId() + "/" + e.key() + " -> expected " + e.value()
+                        + " but got " + actual);
+            }
+        }
+
         if (!mismatches.isEmpty()) {
             throw new AssertionError("Snapshot fixture mismatches:\n  " + String.join("\n  ", mismatches));
         }
