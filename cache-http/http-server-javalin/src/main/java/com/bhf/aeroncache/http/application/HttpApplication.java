@@ -289,6 +289,11 @@ public class HttpApplication {
             public boolean isConnected() {
                 return true;
             }
+
+            @Override
+            public boolean snapshot() {
+                return false;
+            }
         };
 
         AeronCacheClusterListener egressListener = client;
@@ -437,7 +442,16 @@ public class HttpApplication {
 
     private static void handleTakeSnapshot(@NotNull Context context) {
         log.info("Got take snapshot request");
-        makeClusterToolsRequest(context, "snapshot");
+        //makeClusterToolsRequest(context, "snapshot");
+        boolean snapshotted = cache.snapshot();
+        if(snapshotted) {
+            context.status(HTTPStatusUtils.OK);
+            context.json(new ClusterToolsResponse("snapshot", System.getenv().getOrDefault("CLUSTER_FOLDER", "node0/cluster"), 0));
+        }
+        else{
+            context.status(HTTPStatusUtils.BAD_REQUEST);
+            context.json(new ClusterToolsResponse("snapshot", System.getenv().getOrDefault("CLUSTER_FOLDER", "node0/cluster"), -1));
+        }
     }
 
     private static void makeClusterToolsRequest(Context context, String command) {
