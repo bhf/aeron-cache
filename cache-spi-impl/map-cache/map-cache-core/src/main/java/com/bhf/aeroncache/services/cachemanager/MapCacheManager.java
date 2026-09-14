@@ -7,6 +7,7 @@ import com.bhf.aeroncache.services.cache.MapCacheFactory;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
 import io.aeron.ExclusivePublication;
+import io.aeron.FragmentAssembler;
 import io.aeron.Image;
 import io.aeron.cluster.service.Cluster;
 import io.aeron.logbuffer.FragmentHandler;
@@ -80,8 +81,10 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
 
         };
 
+        var assembler = new FragmentAssembler(handler);
+
         while (!snapshotImage.isEndOfStream()) {
-            snapshotImage.poll(handler, 1);
+            snapshotImage.poll(assembler, 1);
             if (snapshotFinished.value) break;
         }
     }
