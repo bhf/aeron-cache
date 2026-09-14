@@ -20,8 +20,4 @@ public interface AeronCache extends AutoCloseable {
     default void close() {
         // Default no-op
     }
-
-    default boolean snapshot() {
-        return true;
-    };
 }

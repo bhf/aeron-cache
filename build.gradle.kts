@@ -40,10 +40,12 @@ subprojects {
         systemProperty("aeroncache.image.registry", dockerRegistry)
 
         // Forward any -Daeroncache.* properties (e.g. externalEnv + interface host/port used to point
-        // the integration tests at an already-running backend) from the Gradle JVM to the test JVM.
+        // the integration tests at an already-running backend) and -Dsnapshot.* properties (used by
+        // the snapshot capture/restore harness to control the artifact path, version and source) from
+        // the Gradle JVM to the test JVM.
         System.getProperties().forEach { key, value ->
             val name = key.toString()
-            if (name.startsWith("aeroncache.")) {
+            if (name.startsWith("aeroncache.") || name.startsWith("snapshot.")) {
                 systemProperty(name, value.toString())
             }
         }

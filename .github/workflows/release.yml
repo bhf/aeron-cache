@@ -32,6 +32,23 @@ jobs:
       - name: Build Backend (Shadow JAR)
         run: ./gradlew :cache-monolith:shadowJar
 
+      - name: Build Backend Images For Snapshot Capture
+        # The capture harness boots a single-node cluster (node + clustertools sidecar + http) from
+        # these locally-built images, so build them into the runner's Docker daemon first.
+        run: |
+          ./gradlew :cache-cluster:jibDockerBuild \
+                    :cache-http:http-server-javalin:jibDockerBuild \
+                    :cache-http:http-clustertools:jibDockerBuild
+
+      - name: Capture Cache Data Artifact
+        # Seed the known fixture, snapshot via POST /api/v1/snapshot, and archive the recovered
+        # cluster directory so a future release's binary can be regression-tested against it.
+        run: |
+          ./gradlew :cache-integration:clustered:snapshot-capture-tests:test \
+            -PskipIntegrationTests=false \
+            -Dsnapshot.capture.output="$PWD/cache-data-${{ github.ref_name }}.tar.gz" \
+            -Dsnapshot.artifact.version="${{ github.ref_name }}"
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -87,7 +104,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: cache-monolith-${{ github.ref_name }}.tar.gz
+          files: |
+            cache-monolith-${{ github.ref_name }}.tar.gz
+            cache-data-${{ github.ref_name }}.tar.gz
           generate_release_notes: true
           tag_name: ${{ github.ref_name }}
 
