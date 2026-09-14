@@ -142,4 +142,9 @@ public class ReconnectingAeronCache implements AeronCache {
         log.info("Closing ReconnectingAeronCache on {}", alias);
         ClusterUtils.close(aeronCluster);
     }
+
+    @Override
+    public boolean snapshot() {
+        return aeronCluster.sendAdminRequestToTakeASnapshot(System.currentTimeMillis());
+    }
 }
