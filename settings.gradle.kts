@@ -32,6 +32,8 @@ include("cache-integration:clustered:multistream-integration-tests")
 include("cache-integration:clustered:multistream-restart-tests")
 include("cache-integration:clustered:multistream-dynamic-integration-tests")
 include("cache-integration:clustered:shutdown-integration-tests")
+include("cache-integration:clustered:snapshot-capture-tests")
+include("cache-integration:clustered:snapshot-restore-tests")
 
 include("cache-integration:ephemeral:core-integration-tests")
 include("cache-integration:ephemeral:dynamic-integration-tests")

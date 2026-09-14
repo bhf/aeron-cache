@@ -122,6 +122,32 @@ public class TestContainersEnvironmentFactory {
      * @param network
      * @return
      */
+    /**
+     * A single {@code node0} cluster container bound to a caller-supplied host directory, used by
+     * the snapshot backward-compatibility harness. Unlike {@link #getClusteredCacheContainers} the
+     * host path is explicit (not a random UUID) so the caller can archive it after capture, or mount
+     * a previously captured artifact into it for restore.
+     *
+     * @param network  the shared docker network
+     * @param hostPath host directory bound to {@code /tmp/data}; created if absent, and for restore
+     *                 it already contains the extracted {@code node0/} data
+     */
+    public static GenericContainer<?> getSingleNodeClusterContainer(Network network, String hostPath) {
+        new File(hostPath).mkdirs();
+        return new GenericContainer<>(getImageName("aeroncache-cluster"))
+                .withNetwork(network)
+                .withNetworkAliases("node0")
+                .withCreateContainerCmdModifier(cmd -> cmd.withHostName("node0"))
+                .withFileSystemBind(hostPath, "/tmp/data", BindMode.READ_WRITE)
+                .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
+                .withEnv("CLUSTER_ADDRESSES", "node0")
+                .withEnv("CLUSTER_NODE", "0")
+                .withEnv("CLUSTER_PORT_BASE", "9000")
+                .withEnv("CACHE_MODE", "RAFT")
+                .withEnv("CACHE_DATA_DIR", "/tmp/data");
+    }
+
     public static GenericContainer<?> getClusteredHTTPContainer(int nodes, Network network) {
         String clusterAddresses = getClusterAddresses(nodes);
 

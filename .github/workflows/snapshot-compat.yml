@@ -1,0 +1,77 @@
+name: Snapshot Backward Compatibility
+
+# Boots the CURRENT build against cache-data artifacts captured by OLDER releases and asserts every
+# known fixture value still recovers from the snapshot. Green means the snapshot format is backward
+# compatible from those releases to HEAD.
+#
+# Trigger manually and list the release tags whose artifacts to test, e.g. "v1.0.0 v1.1.0". Each tag
+# must have a cache-data-<tag>.tar.gz asset (produced by the release workflow).
+on:
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: 'Space-separated release tags whose cache-data artifacts to test against the current build'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.parse.outputs.matrix }}
+    steps:
+      - id: parse
+        run: |
+          # Turn the space-separated versions input into a JSON array for the matrix.
+          MATRIX=$(echo '${{ github.event.inputs.versions }}' | tr ' ' '\n' | grep -v '^$' | jq -R -s -c 'split("\n")[:-1]')
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "Testing against: $MATRIX"
+
+  restore:
+    needs: prepare-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Build Current Backend Images
+        # The restore harness boots node + http from the current build, and runs ClusterTool from the
+        # cluster image to reseed the recording log from the snapshot.
+        run: |
+          ./gradlew :cache-cluster:jibDockerBuild \
+                    :cache-http:http-server-javalin:jibDockerBuild
+
+      - name: Download Old Cache Data Artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p artifacts
+          gh release download "${{ matrix.version }}" \
+            --repo "${{ github.repository }}" \
+            --pattern 'cache-data-*.tar.gz' \
+            --dir artifacts
+          echo "ARTIFACT=$(ls artifacts/cache-data-*.tar.gz | head -1)" >> "$GITHUB_ENV"
+
+      - name: Restore And Assert
+        run: |
+          ./gradlew :cache-integration:clustered:snapshot-restore-tests:test \
+            -PskipIntegrationTests=false \
+            -Dsnapshot.restore.artifact="$PWD/$ARTIFACT"
+
+      - name: Upload Test Report On Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: restore-report-${{ matrix.version }}
+          path: cache-integration/clustered/snapshot-restore-tests/build/reports/tests/test
