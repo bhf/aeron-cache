@@ -172,12 +172,11 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
 
         log.info("Total entries snapshotted in cache {} is {}", cacheId, entriesSnapshotted);
 
-        var result = snapshotPublication.offer(buffer, 0, length);
-
-        if (result < 0) {
-            var errorString = Publication.errorString(result);
-            log.warn("Failed to snapshot cache {}, reason: {}", cacheId.value(), errorString);
+        while (snapshotPublication.offer(buffer, 0, length) < 0) {
+            cluster.idleStrategy().idle();
         }
+
+        log.info("Snapshot for cache {} sent successfully with {} entries", cacheId, entriesSnapshotted);
     }
 
     private List<K> getSortedKeys(Map<K, V> allEntries) {
