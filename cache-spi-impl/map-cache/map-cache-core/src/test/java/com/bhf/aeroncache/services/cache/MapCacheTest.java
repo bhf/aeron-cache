@@ -1,16 +1,22 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.models.results.CacheStats;
 import com.bhf.aeroncache.models.results.PatchValueResult;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
+import com.bhf.aeroncache.services.cache.snapshot.SnapshotRecords;
 import com.bhf.aeroncache.services.integrity.NoOpStreamingHasher;
 import com.bhf.aeroncache.services.patch.JSONPatchProvider;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
+import io.aeron.ExclusivePublication;
 import io.aeron.cluster.service.Cluster;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
+
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -162,36 +168,66 @@ class MapCacheTest {
     }
 
     @Test
-    @DisplayName("Should take a snapshot of the map cache state")
+    @DisplayName("Should snapshot the cache as a CACHE_BEGIN record followed by one CACHE_ENTRY per entry")
     void testTakeSnapshot() {
         // Arrange
         seedCache("testKey", "testValue");
-        io.aeron.ExclusivePublication snapshotPublication = mock(io.aeron.ExclusivePublication.class);
+        ExclusivePublication snapshotPublication = mock(ExclusivePublication.class);
         var cacheId = new ReusableString();
         cacheId.copyFrom("testCacheId");
 
-        when(snapshotPublication.offer(any(MutableDirectBuffer.class), eq(0), anyInt())).thenReturn(100L);
+        // The snapshot buffer is reused across offers, so capture each record's type as it is offered.
+        List<Integer> recordTypes = new ArrayList<>();
+        when(snapshotPublication.offer(any(MutableDirectBuffer.class), eq(0), anyInt())).thenAnswer(inv -> {
+            MutableDirectBuffer offered = inv.getArgument(0);
+            recordTypes.add(offered.getInt(0));
+            return 100L;
+        });
 
         // Act
         cache.takeSnapshot(snapshotPublication, cacheId, Mockito.mock(Cluster.class));
 
-        // Assert
-        verify(snapshotPublication).offer(any(MutableDirectBuffer.class), eq(0), anyInt());
+        // Assert - one CACHE_BEGIN then one CACHE_ENTRY for the single seeded entry
+        assertEquals(List.of(SnapshotRecords.CACHE_BEGIN, SnapshotRecords.CACHE_ENTRY), recordTypes);
     }
 
     @Test
-    @DisplayName("Should load a snapshot of the map cache state")
-    void testLoadSnapshot() {
+    @DisplayName("Should apply cache stats from a CACHE_BEGIN record")
+    void testApplyStats() {
         // Arrange
         MutableDirectBuffer buffer = new ExpandableArrayBuffer();
-        cache.getCacheStats().size = 0;
-        cache.getCacheStats().encode(buffer, 0);
+        var source = new CacheStats<>(new ReusableString());
+        source.size = 7;
+        source.addedCount = 7;
+        source.encode(buffer, 0);
 
         // Act
-        cache.loadSnapshot(buffer, 0);
+        cache.applyStats(buffer, 0);
 
         // Assert
-        assertEquals(0, cache.getAllEntries().size());
+        assertEquals(7, cache.getCacheStats().size);
+        assertEquals(7, cache.getCacheStats().addedCount);
+    }
+
+    @Test
+    @DisplayName("Should load a single entry from a CACHE_ENTRY record")
+    void testLoadEntry() {
+        // Arrange
+        var codec = new ReusableStringCacheEntrySnapshotCodec(new NoOpStreamingHasher<>());
+        MutableDirectBuffer buffer = new ExpandableArrayBuffer();
+        var key = new ReusableString();
+        key.copyFrom("k1");
+        var value = new ReusableString();
+        value.copyFrom("v1");
+        codec.serializeCacheEntry(key, value, buffer, 0);
+
+        // Act
+        cache.loadEntry(buffer, 0);
+
+        // Assert
+        var entries = cache.getAllEntries();
+        assertEquals(1, entries.size());
+        assertEquals("v1", entries.get(key).value());
     }
 
     @Test

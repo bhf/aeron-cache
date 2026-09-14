@@ -6,12 +6,15 @@ import com.bhf.aeroncache.services.cache.Cache;
 import com.bhf.aeroncache.services.cache.MapCacheFactory;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
+import com.bhf.aeroncache.services.cache.snapshot.SnapshotRecords;
 import io.aeron.ExclusivePublication;
 import io.aeron.FragmentAssembler;
 import io.aeron.Image;
 import io.aeron.cluster.service.Cluster;
 import io.aeron.logbuffer.FragmentHandler;
 import lombok.extern.log4j.Log4j2;
+import org.agrona.ExpandableArrayBuffer;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.MutableBoolean;
 import org.agrona.collections.Object2ObjectHashMap;
 
@@ -34,6 +37,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
     private final CacheIdSnapshotCodec<I> cacheIdSnapshotCodec;
     private final CacheEntrySnapshotCodec<K, V> cacheEntrySnapshotCodec;
     private final MapCacheFactory<I, K, V> cacheFactory = new MapCacheFactory<>();
+    private final MutableDirectBuffer endMarkerBuffer = new ExpandableArrayBuffer(SnapshotRecords.TYPE_LENGTH);
 
     public MapCacheManager(Supplier<I> cacheIndexSupplier, Supplier<K> cacheKeySupplier,
                            Supplier<V> cacheValueSupplier, Supplier<Map<K, V>> mapSupplier,
@@ -55,37 +59,61 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
             cache.takeSnapshot(snapshotPublication, cacheId, cluster);
         }
 
+        // Mark the end of this manager's records
+        offerManagerEnd(snapshotPublication, cluster);
+
         log.info("Total caches snapshotted: {}", totalCachesSnapshotted);
+    }
+
+    private void offerManagerEnd(ExclusivePublication snapshotPublication, Cluster cluster) {
+        endMarkerBuffer.putInt(0, SnapshotRecords.MANAGER_END);
+        while (snapshotPublication.offer(endMarkerBuffer, 0, SnapshotRecords.TYPE_LENGTH) < 0) {
+            cluster.idleStrategy().idle();
+        }
     }
 
     @Override
     public void loadSnapshot(Image snapshotImage) {
-        MutableBoolean snapshotFinished = new MutableBoolean(false);
+        MutableBoolean finished = new MutableBoolean(false);
+        I currentCacheId = indexSupplier.get();
+        // One-element holder so the lambda can track the cache named by the most recent CACHE_BEGIN.
+        @SuppressWarnings("unchecked")
+        Cache<I, K, V>[] currentCache = new Cache[1];
 
         FragmentHandler handler = (buffer, offset, length, header) -> {
-            I cacheId = indexSupplier.get();
-            offset = cacheIdSnapshotCodec.deserializeCacheId(buffer, offset, cacheId);
-            var cacheCreateResult = createCache(cacheId);
+            int type = buffer.getInt(offset);
+            int recordOffset = offset + SnapshotRecords.TYPE_LENGTH;
 
-            log.info("Loading snapshot on cache Id: "+cacheId);
-
-            if (cacheCreateResult.getStatus() == CacheOperationStatus.SUCCESS) {
-                var cache = getCache(cacheId);
-                cache.loadSnapshot(buffer, offset);
-                cache.getCacheStats().getCacheId().copyFrom(cacheId);
+            switch (type) {
+                case SnapshotRecords.CACHE_BEGIN -> {
+                    int statsOffset = cacheIdSnapshotCodec.deserializeCacheId(buffer, recordOffset, currentCacheId);
+                    var createResult = createCache(currentCacheId);
+                    if (createResult.getStatus() == CacheOperationStatus.SUCCESS) {
+                        var cache = getCache(currentCacheId);
+                        cache.applyStats(buffer, statsOffset);
+                        cache.getCacheStats().getCacheId().copyFrom(currentCacheId);
+                        currentCache[0] = cache;
+                        log.info("Loading snapshot for cache Id: {}", currentCacheId);
+                    } else {
+                        currentCache[0] = null;
+                        log.warn("Couldn't create cache on cache Id {}, status: {}", currentCacheId.value(),
+                                createResult.getStatus());
+                    }
+                }
+                case SnapshotRecords.CACHE_ENTRY -> {
+                    if (currentCache[0] != null) {
+                        currentCache[0].loadEntry(buffer, recordOffset);
+                    }
+                }
+                case SnapshotRecords.MANAGER_END -> finished.set(true);
+                default -> log.warn("Unknown snapshot record type {} while loading cache manager snapshot", type);
             }
-            else{
-                log.warn("Couldn't create cache on cache Id {}, status: {}", cacheId.value(),
-                        cacheCreateResult.getStatus());
-            }
-
         };
 
         var assembler = new FragmentAssembler(handler);
 
-        while (!snapshotImage.isEndOfStream()) {
+        while (!finished.get() && !snapshotImage.isEndOfStream()) {
             snapshotImage.poll(assembler, 1);
-            if (snapshotFinished.value) break;
         }
     }
 

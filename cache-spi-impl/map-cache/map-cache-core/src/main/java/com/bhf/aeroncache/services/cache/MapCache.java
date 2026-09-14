@@ -4,6 +4,7 @@ import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.snapshot.CacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.CacheIdSnapshotCodec;
+import com.bhf.aeroncache.services.cache.snapshot.SnapshotRecords;
 import com.bhf.aeroncache.services.patch.ValuePatchProvider;
 import io.aeron.ExclusivePublication;
 import io.aeron.Publication;
@@ -152,9 +153,7 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
 
     @Override
     public void takeSnapshot(ExclusivePublication snapshotPublication, I cacheId, Cluster cluster) {
-        int offset = cacheIdSnapshotCodec.serializeCacheId(cacheId, buffer, 0);
-        offset = stats.encode(buffer, offset);
-        int length = offset;
+        offerCacheBegin(snapshotPublication, cacheId, cluster);
 
         var allEntries = getAllEntries();
         var sortedKeys = getSortedKeys(allEntries);
@@ -163,20 +162,35 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
         for (var key : sortedKeys) {
             ++entriesSnapshotted;
             var value = allEntries.get(key);
-            length = cacheEntrySnapshotCodec.serializeCacheEntry(key, value, buffer, length);
+            offerCacheEntry(snapshotPublication, key, value, cluster);
 
-            if(entriesSnapshotted % 100 == 0) {
+            if (entriesSnapshotted % 100 == 0) {
                 cluster.idleStrategy().idle();
             }
         }
 
-        log.info("Total entries snapshotted in cache {} is {}", cacheId, entriesSnapshotted);
+        log.info("Snapshot for cache {} sent successfully with {} entries", cacheId, entriesSnapshotted);
+    }
 
+    private void offerCacheBegin(ExclusivePublication snapshotPublication, I cacheId, Cluster cluster) {
+        int offset = SnapshotRecords.TYPE_LENGTH;
+        offset = cacheIdSnapshotCodec.serializeCacheId(cacheId, buffer, offset);
+        offset = stats.encode(buffer, offset);
+        buffer.putInt(0, SnapshotRecords.CACHE_BEGIN);
+        offerRecord(snapshotPublication, offset, cluster);
+    }
+
+    private void offerCacheEntry(ExclusivePublication snapshotPublication, K key, V value, Cluster cluster) {
+        int offset = SnapshotRecords.TYPE_LENGTH;
+        offset = cacheEntrySnapshotCodec.serializeCacheEntry(key, value, buffer, offset);
+        buffer.putInt(0, SnapshotRecords.CACHE_ENTRY);
+        offerRecord(snapshotPublication, offset, cluster);
+    }
+
+    private void offerRecord(ExclusivePublication snapshotPublication, int length, Cluster cluster) {
         while (snapshotPublication.offer(buffer, 0, length) < 0) {
             cluster.idleStrategy().idle();
         }
-
-        log.info("Snapshot for cache {} sent successfully with {} entries", cacheId, entriesSnapshotted);
     }
 
     private List<K> getSortedKeys(Map<K, V> allEntries) {
@@ -187,18 +201,15 @@ public class MapCache<I extends Reusable, K extends Reusable, V extends Reusable
     }
 
     @Override
-    public void loadSnapshot(DirectBuffer buffer, int offset) {
-
+    public int applyStats(DirectBuffer buffer, int offset) {
         offset = stats.decode(buffer, offset);
+        log.info("Loaded stats for cache Id: {}, size: {}, added: {}", stats.getCacheId(), stats.size, stats.addedCount);
+        return offset;
+    }
 
-        log.info("Total entries to load: {} for cache Id: {}, added: {}", stats.size, stats.getCacheId(), stats.addedCount);
-        int added = 0;
-        while (added < stats.size) {
-            offset = cacheEntrySnapshotCodec.deserializeCacheEntry(buffer, offset, cache);
-            added++;
-        }
-
-        log.info("Total loaded from snapshot: {}", added);
+    @Override
+    public int loadEntry(DirectBuffer buffer, int offset) {
+        return cacheEntrySnapshotCodec.deserializeCacheEntry(buffer, offset, cache);
     }
 
 }
