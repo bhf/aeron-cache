@@ -16,8 +16,15 @@ import java.nio.file.Paths;
 public class Main {
     static void main(String[] args) {
         String aeronDirectory = System.getProperty("aeron.dir", System.getenv().getOrDefault("AERON_DIR", "aeron"));
-        boolean gatewayEnabled = Boolean.parseBoolean(
-                System.getProperty("aeron.transport.gateway.enabled", System.getenv().getOrDefault("AERON_TRANSPORT_GATEWAY_ENABLED", "false")));
+
+        boolean aeronEnabled = Boolean.parseBoolean(
+                System.getProperty("aeron.gateway.enabled", System.getenv().getOrDefault("AERON_GATEWAY_ENABLED", "false")));
+
+        boolean websocketEnabled = Boolean.parseBoolean(
+                System.getProperty("websocket.gateway.enabled", System.getenv().getOrDefault("WEBSOCKET_GATEWAY_ENABLED", "true")));
+
+        boolean sseEnabled = Boolean.parseBoolean(
+                System.getProperty("sse.gateway.enabled", System.getenv().getOrDefault("SSE_GATEWAY_ENABLED", "true")));
 
         int toolsPort = 0;
         int httpInterfacePort = 0;
@@ -30,6 +37,9 @@ public class Main {
             wsInterfacePort = Integer.valueOf(args[2]);
             sseInterfacePort = Integer.valueOf(args[3]);
         }
+
+        System.out.println("Launching Aeron Cache Monolith with the following configuration: aeronEnabled="
+                + aeronEnabled + ", websocketEnabled=" + websocketEnabled + ", sseEnabled=" + sseEnabled);
 
         System.out.println("Launching with CluserToolsPort: " + toolsPort + ", HttpPort: " + httpInterfacePort
                 + ", WSPort: " + wsInterfacePort + ", SSEPort:" + sseInterfacePort);
@@ -50,18 +60,30 @@ public class Main {
             int httpPort = HttpApplication.BOUND_PORT;
             HttpApplication.setCLUSTER_TOOLS_PORT(clusterToolsPort);
 
-            System.out.println("Launching WS interface");
-            WebsocketApplication.setDEFAULT_WS_PORT(wsInterfacePort);
-            WebsocketApplication.main(null);
-            int wsPort = WebsocketApplication.BOUND_PORT;
+            int wsPort = 0;
+            if(websocketEnabled) {
+                System.out.println("Launching WS interface");
+                WebsocketApplication.setDEFAULT_WS_PORT(wsInterfacePort);
+                WebsocketApplication.main(null);
+                wsPort = WebsocketApplication.BOUND_PORT;
+            }
+            else{
+                System.out.println("Websocket interface disabled");
+            }
 
-            System.out.println("Launching SSE interface");
-            SSEApplication.setDEFAULT_SSE_PORT(sseInterfacePort);
-            SSEApplication.main(null);
-            int ssePort = SSEApplication.BOUND_PORT;
+            int ssePort = 0;
 
-            System.out.println("Launching Aeron Gateway");
-            if (gatewayEnabled) {
+            if (sseEnabled) {
+                System.out.println("Launching SSE interface");
+                SSEApplication.setDEFAULT_SSE_PORT(sseInterfacePort);
+                SSEApplication.main(null);
+                ssePort = SSEApplication.BOUND_PORT;
+            } else {
+                System.out.println("SSE interface disabled");
+            }
+
+            if (aeronEnabled) {
+                System.out.println("Launching Aeron Gateway");
                 int gatewayHealthPort = GatewayApplication.start(0);
                 System.out.println("Aeron Gateway HTTP health server bound to port " + gatewayHealthPort);
             } else {
