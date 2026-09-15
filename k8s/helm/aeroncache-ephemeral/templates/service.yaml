@@ -6,6 +6,8 @@ metadata:
     {{- include "aeroncache-ephemeral.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
+  clusterIP: {{ .Values.service.clusterIP }}
+  publishNotReadyAddresses: {{ .Values.service.publishNotReadyAddresses }}
   ports:
     - port: {{ .Values.service.requestPort }}
       targetPort: {{ .Values.service.requestPort }}
