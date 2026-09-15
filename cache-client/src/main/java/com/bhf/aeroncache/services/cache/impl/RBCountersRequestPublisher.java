@@ -26,6 +26,7 @@ public class RBCountersRequestPublisher extends AbstractRBRequestPublisher<Long>
     @Override protected int removeCacheEntryMsgId() { return CacheRequestMessageTypes.REMOVE_COUNTER_ENTRY_MSG_ID; }
     @Override protected int getCacheEntriesMsgId() { return CacheRequestMessageTypes.GET_COUNTER_ENTRIES_MSG_ID; }
     @Override protected int getCacheStatsMsgId() { return CacheRequestMessageTypes.GET_COUNTER_STATS_MSG_ID; }
+    @Override protected int getAllTimersMsgId() { return CacheRequestMessageTypes.GET_TIMERS_MSG_ID; }
     @Override protected int subscribeToCacheMsgId() { return CacheRequestMessageTypes.SUBSCRIBE_TO_COUNTER_CACHE_MSG_ID; }
     @Override protected int unsubscribeToCacheMsgId() { return CacheRequestMessageTypes.UNSUBSCRIBE_TO_COUNTER_CACHE_MSG_ID; }
     @Override protected int addCacheEntryMsgId() { return CacheRequestMessageTypes.ADD_COUNTER_ENTRY_MSG_ID; }

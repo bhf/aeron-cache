@@ -24,6 +24,7 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     private final CacheClearedEncoder cacheClearedEncoder = new CacheClearedEncoder();
     private final CacheDeletedEncoder cacheDeletedEncoder = new CacheDeletedEncoder();
     private final AllCacheStatsResultEncoder cacheStatsResultEncoder = new AllCacheStatsResultEncoder();
+    private final AllTimersResultEncoder allTimersResultEncoder = new AllTimersResultEncoder();
     private final CacheSubscriptionResponseEncoder cacheSubscriptionResponseEncoder = new CacheSubscriptionResponseEncoder();
     private final CacheUnsubscribeResponseEncoder cacheUnsubscribeResponseEncoder = new CacheUnsubscribeResponseEncoder();
     private final BulkOperationResponseEncoder bulkOperationResponseEncoder = new BulkOperationResponseEncoder();
@@ -191,6 +192,33 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
         cacheStatsResultEncoder.requestId(cacheStatsResult.getRequestId());
 
         return cacheStatsResultEncoder.encodedLength() + headerEncoder.encodedLength();
+    }
+
+    @Override
+    public int encodeAllTimersResult(AllTimersResult<ReusableString, ReusableString> allTimersResult, MutableDirectBuffer egressBuffer) {
+        allTimersResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        allTimersResultEncoder.status(getOperationStatus(allTimersResult.getOperationStatus()));
+        allTimersResultEncoder.endOfBatch(allTimersResult.isEndOfBatch() ? BooleanType.T : BooleanType.F);
+
+        var timers = allTimersResult.getTimers();
+        var itemsEncoder = allTimersResultEncoder.timersCount(timers.size());
+        timers.forEach(t -> {
+            itemsEncoder.next();
+            itemsEncoder.timerType(getTimerType(t.timerType));
+            itemsEncoder.deadline(t.deadline);
+            itemsEncoder.cacheId(t.getCacheId().value());
+            itemsEncoder.key(t.getKey().value());
+        });
+
+        allTimersResultEncoder.requestId(allTimersResult.getRequestId());
+
+        return allTimersResultEncoder.encodedLength() + headerEncoder.encodedLength();
+    }
+
+    private static com.bhf.aeroncache.messages.TimerType getTimerType(com.bhf.aeroncache.models.results.TimerType timerType) {
+        return timerType == com.bhf.aeroncache.models.results.TimerType.COUNTER
+                ? com.bhf.aeroncache.messages.TimerType.COUNTER
+                : com.bhf.aeroncache.messages.TimerType.CACHE;
     }
 
     @Override

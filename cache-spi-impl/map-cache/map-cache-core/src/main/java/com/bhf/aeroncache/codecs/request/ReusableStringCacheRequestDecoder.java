@@ -20,6 +20,7 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
     private final GetAllCacheEntriesDecoder getAllCacheEntriesDecoder = new GetAllCacheEntriesDecoder();
     private final DeleteCacheDecoder deleteCacheDecoder = new DeleteCacheDecoder();
     private final GetCacheStatsDecoder getCacheStatsDecoder = new GetCacheStatsDecoder();
+    private final GetAllTimersDecoder getAllTimersDecoder = new GetAllTimersDecoder();
     private final CacheUnsubscribeRequestDecoder cacheUnsubscribeRequestDecoder = new CacheUnsubscribeRequestDecoder();
     private final BulkOperationRequestDecoder bulkOperationRequestDecoder = new BulkOperationRequestDecoder();
 
@@ -176,6 +177,14 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
         getCacheStatsDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
         var requestId = getCacheStatsDecoder.requestId();
         getCacheStatsRequestDetails.setRequestId(requestId);
+    }
+
+    @Override
+    public void decodeGetAllTimersRequest(DirectBuffer buffer, int offset, GetAllTimersRequestDetails getAllTimersRequestDetails) {
+        getAllTimersRequestDetails.clear();
+        getAllTimersDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var requestId = getAllTimersDecoder.requestId();
+        getAllTimersRequestDetails.setRequestId(requestId);
     }
 
     @Override

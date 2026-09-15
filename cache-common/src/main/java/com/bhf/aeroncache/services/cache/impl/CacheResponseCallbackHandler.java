@@ -62,6 +62,11 @@ public class CacheResponseCallbackHandler<I extends Reusable, K extends Reusable
     }
 
     @Override
+    public void handleAllTimers(AllTimersResult<I, K> allTimersResult) {
+        observerGroup.handleAllTimers(allTimersResult);
+    }
+
+    @Override
     public void handleCacheSubscribeResponse(CacheSubscriptionResult<I,K,V> cacheSubscriptionResult) {
         observerGroup.handleCacheSubscribeResponse(cacheSubscriptionResult);
     }

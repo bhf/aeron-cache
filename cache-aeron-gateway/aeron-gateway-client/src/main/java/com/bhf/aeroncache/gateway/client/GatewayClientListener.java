@@ -50,6 +50,16 @@ public interface GatewayClientListener {
     void onStats(String correlationId, OperationStatus status, List<GatewayStat> stats, boolean endOfBatch);
 
     /**
+     * A batch of pending TTL removal timers streamed in response to a getTimers command.
+     *
+     * @param correlationId the correlation id echoed from the originating command.
+     * @param status        the operation status.
+     * @param timers        the timer records in this batch, each tagged with its type.
+     * @param endOfBatch    {@code true} when this is the final batch for the request.
+     */
+    default void onTimers(String correlationId, OperationStatus status, List<GatewayTimer> timers, boolean endOfBatch) {}
+
+    /**
      * A streaming cache update pushed to a subscribed client.
      *
      * @param correlationId the subscription's correlation id.

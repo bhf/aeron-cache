@@ -111,6 +111,15 @@ public interface CacheRequestConsumingPublisher<RI extends Reusable, RK extends 
     void getAllCacheStats(String requestId, Consumer<CacheStatsResult<RI>> c);
 
     /**
+     * Send a message to get all pending TTL removal timers (for both caches and counter caches).
+     * Passes the result to the Consumer.
+     *
+     * @param requestId The request ID.
+     * @param c         The consumer that will handle the result.
+     */
+    void getAllTimers(String requestId, Consumer<AllTimersResult<RI, RK>> c);
+
+    /**
      * Send a message to subscribe to cache updates.
      *
      * @param requestId The request ID.

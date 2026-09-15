@@ -25,6 +25,7 @@ public class ReusableStringCacheRequestEncoder implements CacheRequestEncoder<Re
     private final CacheSubscriptionRequestEncoder cacheSubscriptionRequestEncoder = new CacheSubscriptionRequestEncoder();
     private final CacheUnsubscribeRequestEncoder cacheUnsubscribeRequestEncoder = new CacheUnsubscribeRequestEncoder();
     private final GetCacheStatsEncoder getCacheStatsEncoder = new GetCacheStatsEncoder();
+    private final GetAllTimersEncoder getAllTimersEncoder = new GetAllTimersEncoder();
     private final BulkOperationRequestEncoder bulkOpsEncoder = new BulkOperationRequestEncoder();
 
     @Override
@@ -129,6 +130,13 @@ public class ReusableStringCacheRequestEncoder implements CacheRequestEncoder<Re
         getCacheStatsEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
                 .requestId(requestId);
         return getCacheStatsEncoder.encodedLength()+ headerEncoder.encodedLength();
+    }
+
+    @Override
+    public int encodeGetAllTimers(String requestId, MutableDirectBuffer msgBuffer) {
+        getAllTimersEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .requestId(requestId);
+        return getAllTimersEncoder.encodedLength() + headerEncoder.encodedLength();
     }
 
     @Override

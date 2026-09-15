@@ -223,6 +223,12 @@ public class ClusterMessagePublisher<BI, BK, BV> implements CacheRequestPublishe
         log.info("Sent request to get all cache with request Id {}", requestId);
     }
 
+    public void getAllTimers(String requestId) {
+        var length = cacheRequestEncoder.encodeGetAllTimers(requestId, msgBuffer);
+        publishToCache(msgBuffer, 0, length);
+        log.info("Sent request to get all timers with request Id {}", requestId);
+    }
+
     public void publishToCache(MutableDirectBuffer msgBuffer, int offset, int length) {
         idleStrategy.reset();
         long offered = 0;

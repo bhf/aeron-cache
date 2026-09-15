@@ -22,6 +22,8 @@ public interface CacheClientSchemDetailsProvider {
 
     int getAllCacheStatsResultId();
 
+    int getAllTimersResultId();
+
     int getCacheSubscriptionResponseId();
 
     int getCacheUnsubscribeResponseId();

@@ -26,6 +26,7 @@ public enum WsOp {
     CANCEL_CACHE_ITEM_REMOVAL(CacheRequestMessageTypes.CANCEL_CACHE_ITEM_REMOVAL_MSG_ID),
     GET_CACHE_ENTRIES(CacheRequestMessageTypes.GET_CACHE_ENTRIES_MSG_ID),
     GET_CACHE_STATS(CacheRequestMessageTypes.GET_CACHE_STATS_MSG_ID),
+    GET_TIMERS(CacheRequestMessageTypes.GET_TIMERS_MSG_ID),
 
     CREATE_COUNTER_CACHE(CacheRequestMessageTypes.CREATE_COUNTER_CACHE_MSG_ID),
     ADD_COUNTER_ENTRY(CacheRequestMessageTypes.ADD_COUNTER_ENTRY_MSG_ID),

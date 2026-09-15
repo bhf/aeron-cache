@@ -25,6 +25,8 @@ public interface CacheResponseDecoder<I extends Reusable, K extends Reusable, V 
 
     void decodeAllCacheStatsResult(DirectBuffer buffer, int offset, CacheStatsResult<I> cacheStatsResult);
 
+    void decodeAllTimersResult(DirectBuffer buffer, int offset, AllTimersResult<I, K> allTimersResult);
+
     void decodeCacheSubscribeResult(DirectBuffer buffer, int offset, CacheSubscriptionResult<I,K,V> cacheSubscriptionResult);
 
     void decodeCacheUnsubscribeResult(DirectBuffer buffer, int offset, CacheUnsubscribeResult<I> cacheUnsubscribeResult);

@@ -28,6 +28,7 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     final List<IdentifiableConsumer<String, ClearCacheResult<I>>> clearCacheObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, GetAllCacheEntriesResult<I, K, V>>> getCacheEntriesObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, CacheStatsResult<I>>> allCacheStatsObservers = new CopyOnWriteArrayList<>();
+    final List<IdentifiableConsumer<String, AllTimersResult<I, K>>> allTimersObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, CacheSubscriptionResult<I,K,V>>> cacheSubscribeObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, CacheUnsubscribeResult<I>>> cacheUnsubscribeObservers = new CopyOnWriteArrayList<>();
     final List<IdentifiableConsumer<String, BulkCacheOpsResult<I,K,V>>> bulkOpsObservers = new CopyOnWriteArrayList<>();
@@ -180,6 +181,21 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     }
 
     @Override
+    public void getAllTimers(String requestId, Consumer<AllTimersResult<I, K>> c) {
+        allTimersObservers.add(new IdentifiableConsumer<>() {
+            @Override
+            public String getId() {
+                return requestId;
+            }
+
+            @Override
+            public void accept(AllTimersResult<I, K> allTimersResult) {
+                c.accept(allTimersResult);
+            }
+        });
+    }
+
+    @Override
     public void sendCacheSubscribe(String requestId, List<String> cacheId, boolean sendSnapshot, Consumer<CacheSubscriptionResult<I,K,V>> c) {
         cacheSubscribeObservers.add(new IdentifiableConsumer<>() {
             @Override
@@ -309,6 +325,15 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
         var targetId = statsResult.getRequestId();
         allCacheStatsObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(statsResult));
         allCacheStatsObservers.removeIf(p -> p.getId().equals(targetId));
+    }
+
+    @Override
+    public void handleAllTimers(AllTimersResult<I, K> allTimersResult) {
+        var targetId = allTimersResult.getRequestId();
+        allTimersObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(allTimersResult));
+        if (allTimersResult.isEndOfBatch()) {
+            allTimersObservers.removeIf(p -> p.getId().equals(targetId));
+        }
     }
 
     @Override

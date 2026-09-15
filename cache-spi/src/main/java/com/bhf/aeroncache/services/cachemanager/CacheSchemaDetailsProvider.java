@@ -24,6 +24,8 @@ public interface CacheSchemaDetailsProvider {
 
     int getGetCacheStatsId();
 
+    int getGetAllTimersId();
+
     int getCacheSubscriptionRequestId();
 
     int getCacheUnsubscribeRequestId();

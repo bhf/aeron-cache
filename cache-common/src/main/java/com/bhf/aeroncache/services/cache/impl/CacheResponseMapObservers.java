@@ -34,6 +34,7 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     final Map<String, Consumer<ClearCacheResult<I>>> clearCacheObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<GetAllCacheEntriesResult<I, K, V>>> getCacheEntriesObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<CacheStatsResult<I>>> allCacheStatsObservers = new ConcurrentHashMap<>();
+    final Map<String, Consumer<AllTimersResult<I, K>>> allTimersObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<CacheSubscriptionResult<I,K,V>>> cacheSubscribeObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<CacheUnsubscribeResult<I>>> cacheUnsubscribeObservers = new ConcurrentHashMap<>();
     final Map<String, Consumer<BulkCacheOpsResult<I,K,V>>> bulkOpsObservers = new ConcurrentHashMap<>();
@@ -101,6 +102,11 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     @Override
     public void getAllCacheStats(String requestId, Consumer<CacheStatsResult<I>> c) {
         allCacheStatsObservers.put(requestId, c);
+    }
+
+    @Override
+    public void getAllTimers(String requestId, Consumer<AllTimersResult<I, K>> c) {
+        allTimersObservers.put(requestId, c);
     }
 
     @Override
@@ -252,6 +258,16 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
         var observer = allCacheStatsObservers.remove(targetId);
         if (observer != null) {
             observer.accept(cacheStatsResult);
+        }
+    }
+
+    @Override
+    public void handleAllTimers(AllTimersResult<I, K> allTimersResult) {
+        var targetId = allTimersResult.getRequestId();
+        var observer = allTimersResult.isEndOfBatch() ? allTimersObservers.remove(targetId) :
+                allTimersObservers.get(targetId);
+        if (observer != null) {
+            observer.accept(allTimersResult);
         }
     }
 

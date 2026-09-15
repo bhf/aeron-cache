@@ -173,4 +173,13 @@ public class ReusableStringCountersCacheRequestEncoder implements CountersCacheR
     public int encodeBulkOperations(String requestId, BulkCacheOpsRequest request, MutableDirectBuffer msgBuffer) {
         return 0;
     }
+
+    private final GetAllTimersEncoder getAllTimersEncoder = new GetAllTimersEncoder();
+
+    @Override
+    public int encodeGetAllTimers(String requestId, MutableDirectBuffer msgBuffer) {
+        getAllTimersEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder)
+                .requestId(requestId);
+        return getAllTimersEncoder.encodedLength() + headerEncoder.encodedLength();
+    }
 }

@@ -346,7 +346,8 @@ public class HttpApplication {
                 .patch(CACHE_API_PREFIX + "<cacheId>/<key>", handlers::handlePatchItemRequest)
                 .patch(CACHE_API_PREFIX + "<cacheId>", handlers::handleClearCacheRequest)
                 .get("/api/v1/caches", handlers::handleGetCachesRequest)
-                .get("/api/v1/stats", handlers::handleGetStatsRequest);
+                .get("/api/v1/stats", handlers::handleGetStatsRequest)
+                .get("/api/v1/timers", handlers::handleGetTimersRequest);
     }
 
     /**

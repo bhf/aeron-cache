@@ -7,11 +7,13 @@ import com.bhf.aeroncache.models.bulk.responses.BulkCacheOpsResponse;
 import com.bhf.aeroncache.models.bulk.responses.CacheOperationResponse;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
+import com.bhf.aeroncache.models.results.AllTimersResult;
 import com.bhf.aeroncache.models.results.BulkCacheOpsResult;
 import com.bhf.aeroncache.models.results.CacheOperationResultDetails;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.CacheStats;
 import com.bhf.aeroncache.models.results.CacheStatsResult;
+import com.bhf.aeroncache.models.results.TimerDetails;
 import com.bhf.aeroncache.models.results.CancelItemRemovalResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
@@ -33,6 +35,7 @@ import com.bhf.aeroncache.ws.bidi.messages.BidiCommandResponse;
 import com.bhf.aeroncache.ws.bidi.messages.BidiEntries;
 import com.bhf.aeroncache.ws.bidi.messages.BidiError;
 import com.bhf.aeroncache.ws.bidi.messages.BidiStats;
+import com.bhf.aeroncache.ws.bidi.messages.BidiTimers;
 import com.bhf.aeroncache.ws.bidi.messages.BidiStreamUpdate;
 import com.bhf.aeroncache.ws.bidi.messages.BidiSubscribe;
 import com.bhf.aeroncache.ws.bidi.messages.BidiSubscribeAck;
@@ -174,6 +177,8 @@ public class BidiWsRouteHandler {
                     (Consumer<GetAllCacheEntriesResult>) o -> streamEntries(session, correlationId, (GetAllCacheEntriesResult) o));
             case GET_CACHE_STATS -> cacheSubs.getAllCacheStats(correlationId,
                     (Consumer<CacheStatsResult>) o -> streamStats(session, correlationId, (CacheStatsResult) o));
+            case GET_TIMERS -> cacheSubs.getAllTimers(correlationId,
+                    (Consumer<AllTimersResult>) o -> streamTimers(session, correlationId, (AllTimersResult) o));
 
             case CREATE_COUNTER_CACHE -> countersSubs.sendCreateCache(correlationId, cacheId,
                     (Consumer<CreateCacheResult>) o -> respondStatus(session, correlationId, ((CreateCacheResult) o).getStatus(), cacheId));
@@ -330,6 +335,19 @@ public class BidiWsRouteHandler {
                     stat.addedCount, stat.removedCount, stat.clearedCount, stat.size));
         }
         session.send(codec.write(BidiStats.of(correlationId, result.getOperationStatus(), stats, true)));
+    }
+
+    private void streamTimers(BidiSession session, String correlationId, AllTimersResult result) {
+        final List<BidiTimers.TimerEntry> timers = new ArrayList<>();
+        for (Object o : result.getTimers()) {
+            final TimerDetails timer = (TimerDetails) o;
+            timers.add(new BidiTimers.TimerEntry(
+                    timer.timerType.name(),
+                    String.valueOf(timer.getCacheId().value()),
+                    String.valueOf(timer.getKey().value()),
+                    timer.deadline));
+        }
+        session.send(codec.write(BidiTimers.of(correlationId, result.getOperationStatus(), timers, result.isEndOfBatch())));
     }
 
     private static String requestId(String correlationId) {

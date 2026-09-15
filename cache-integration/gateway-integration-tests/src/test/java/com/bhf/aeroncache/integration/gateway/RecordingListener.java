@@ -4,6 +4,7 @@ import com.bhf.aeroncache.gateway.client.GatewayBulkOpResult;
 import com.bhf.aeroncache.gateway.client.GatewayClient;
 import com.bhf.aeroncache.gateway.client.GatewayClientListener;
 import com.bhf.aeroncache.gateway.client.GatewayStat;
+import com.bhf.aeroncache.gateway.client.GatewayTimer;
 import com.bhf.aeroncache.gateway.messages.OperationStatus;
 import com.bhf.aeroncache.gateway.messages.UpdateEventType;
 
@@ -35,6 +36,8 @@ final class RecordingListener implements GatewayClientListener {
     final Map<String, Boolean> entriesComplete = new ConcurrentHashMap<>();
     final Map<String, List<GatewayStat>> statsAccumulated = new ConcurrentHashMap<>();
     final Map<String, Boolean> statsComplete = new ConcurrentHashMap<>();
+    final Map<String, List<GatewayTimer>> timersAccumulated = new ConcurrentHashMap<>();
+    final Map<String, Boolean> timersComplete = new ConcurrentHashMap<>();
     final Queue<StreamUpdate> streamUpdates = new ConcurrentLinkedQueue<>();
     final Map<String, SubscribeAck> subscribeAcks = new ConcurrentHashMap<>();
     final Map<String, List<GatewayBulkOpResult>> bulkResponses = new ConcurrentHashMap<>();
@@ -59,6 +62,14 @@ final class RecordingListener implements GatewayClientListener {
         statsAccumulated.computeIfAbsent(correlationId, k -> new CopyOnWriteArrayList<>()).addAll(stats);
         if (endOfBatch) {
             statsComplete.put(correlationId, Boolean.TRUE);
+        }
+    }
+
+    @Override
+    public void onTimers(String correlationId, OperationStatus status, List<GatewayTimer> timers, boolean endOfBatch) {
+        timersAccumulated.computeIfAbsent(correlationId, k -> new CopyOnWriteArrayList<>()).addAll(timers);
+        if (endOfBatch) {
+            timersComplete.put(correlationId, Boolean.TRUE);
         }
     }
 

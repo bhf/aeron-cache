@@ -173,4 +173,14 @@ public class HTTPConsumerUtils {
         });
         return res;
     }
+
+    public static Consumer<AllTimersResult<ReusableString, ReusableString>> getAllTimersResultConsumer(CompletableFuture<GetTimersResponse> future) {
+        return c -> {
+            log.info("Get all timers response from cluster, requestId {}", c.getRequestId());
+            List<TimerInfo> timers = new ArrayList<>();
+            c.getTimers().forEach(t -> timers.add(
+                    new TimerInfo(t.timerType.name(), t.getCacheId().value(), t.getKey().value(), t.deadline)));
+            future.complete(new GetTimersResponse(c.getOperationStatus(), timers));
+        };
+    }
 }

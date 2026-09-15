@@ -103,6 +103,13 @@ public interface CacheRequestPublisher<BI,BK,BV> {
     void getAllCacheStats(String requestId);
 
     /**
+     * Send a message to get all pending TTL removal timers (for both caches and counter caches) from the cluster.
+     *
+     * @param requestId The Id of this request.
+     */
+    void getAllTimers(String requestId);
+
+    /**
      * Send a request to subscribe to cache updates.
      *
      * @param requestId    The Id of this request.

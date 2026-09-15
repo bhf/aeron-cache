@@ -190,6 +190,7 @@ components:
         - $ref: '#/components/schemas/BidiStreamUpdate'
         - $ref: '#/components/schemas/BidiEntries'
         - $ref: '#/components/schemas/BidiStats'
+        - $ref: '#/components/schemas/BidiTimers'
         - $ref: '#/components/schemas/BidiError'
         - $ref: '#/components/schemas/BidiSubscribeAck'
       discriminator:
@@ -199,6 +200,7 @@ components:
           streamUpdate: '#/components/schemas/BidiStreamUpdate'
           entries: '#/components/schemas/BidiEntries'
           stats: '#/components/schemas/BidiStats'
+          timers: '#/components/schemas/BidiTimers'
           error: '#/components/schemas/BidiError'
           subscribed: '#/components/schemas/BidiSubscribeAck'
     BidiCommandResponse:
@@ -317,6 +319,41 @@ components:
         size:
           type: integer
           format: int64
+    BidiTimers:
+      type: object
+      description: A batch of pending TTL removal timers in response to a getTimers command.
+      properties:
+        type:
+          type: string
+          enum: [timers]
+        correlationId:
+          type: string
+        status:
+          $ref: '#/components/schemas/CacheOperationStatus'
+        timers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimerEntry'
+        endOfBatch:
+          type: boolean
+      required:
+        - type
+        - status
+        - endOfBatch
+    TimerEntry:
+      type: object
+      properties:
+        timerType:
+          type: string
+          enum: [CACHE, COUNTER]
+        cacheId:
+          type: string
+        key:
+          type: string
+        deadline:
+          type: integer
+          format: int64
+          description: The epoch time (millis) at which the removal is scheduled to fire.
     BidiError:
       type: object
       description: An error correlated to a client frame.
@@ -371,6 +408,7 @@ components:
         - CANCEL_CACHE_ITEM_REMOVAL
         - GET_CACHE_ENTRIES
         - GET_CACHE_STATS
+        - GET_TIMERS
         - CREATE_COUNTER_CACHE
         - ADD_COUNTER_ENTRY
         - GET_COUNTER_ENTRY

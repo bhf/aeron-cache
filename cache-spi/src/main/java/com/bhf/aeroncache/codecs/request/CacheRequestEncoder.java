@@ -58,5 +58,7 @@ public interface CacheRequestEncoder<I, K, V> {
 
     int encodeGetAllCacheStats(String requestId, MutableDirectBuffer msgBuffer);
 
+    int encodeGetAllTimers(String requestId, MutableDirectBuffer msgBuffer);
+
     int encodeBulkOperations(String requestId, BulkCacheOpsRequest request, MutableDirectBuffer msgBuffer);
 }

@@ -8,6 +8,8 @@ import com.bhf.aeroncache.gateway.messages.GatewayErrorEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayStatsEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayStreamUpdateEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewaySubscribeAckEncoder;
+import com.bhf.aeroncache.gateway.messages.GatewayTimersEncoder;
+import com.bhf.aeroncache.gateway.messages.TimerType;
 import com.bhf.aeroncache.gateway.messages.BooleanType;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderEncoder;
 import com.bhf.aeroncache.gateway.messages.OperationStatus;
@@ -42,11 +44,18 @@ public class GatewayResponseWriter {
     private final GatewayErrorEncoder errorEncoder = new GatewayErrorEncoder();
     private final GatewaySubscribeAckEncoder subscribeAckEncoder = new GatewaySubscribeAckEncoder();
     private final GatewayBulkResponseEncoder bulkResponseEncoder = new GatewayBulkResponseEncoder();
+    private final GatewayTimersEncoder timersEncoder = new GatewayTimersEncoder();
 
     /**
      * A single cache stats record, decoupled from the cluster domain types.
      */
     public record StatEntry(String cacheId, long addedCount, long removedCount, long clearedCount, long size) {
+    }
+
+    /**
+     * A single pending TTL removal timer, decoupled from the cluster domain types.
+     */
+    public record TimerEntry(String timerType, String cacheId, String key, long deadline) {
     }
 
     /**
@@ -119,6 +128,36 @@ public class GatewayResponseWriter {
         }
         statsEnc.correlationId(nullSafe(correlationId));
         offer(publication, statsEncoder.limit());
+    }
+
+    /**
+     * Encode and publish a batch of pending TTL removal timers in response to a getTimers command.
+     * <p>
+     * Mirrors the cluster {@code AllTimersResult}: timers are delivered as a group, and the final
+     * batch for a request carries {@code endOfBatch=true}.
+     *
+     * @param timers     the timer records in this batch.
+     * @param endOfBatch {@code true} when this is the final batch for the request.
+     */
+    public void writeTimers(Publication publication, String correlationId, CacheOperationStatus status,
+                            List<TimerEntry> timers, boolean endOfBatch) {
+        var timersEnc = timersEncoder.wrapAndApplyHeader(buffer, 0, headerEncoder)
+                .status(mapStatus(status))
+                .endOfBatch(mapBoolean(endOfBatch));
+        var groupEnc = timersEnc.timersCount(timers.size());
+        for (TimerEntry timer : timers) {
+            groupEnc.next()
+                    .timerType(mapTimerType(timer.timerType()))
+                    .deadline(timer.deadline())
+                    .cacheId(nullSafe(timer.cacheId()))
+                    .key(nullSafe(timer.key()));
+        }
+        timersEnc.correlationId(nullSafe(correlationId));
+        offer(publication, timersEncoder.limit());
+    }
+
+    private static TimerType mapTimerType(String timerType) {
+        return "COUNTER".equals(timerType) ? TimerType.COUNTER : TimerType.CACHE;
     }
 
     /**

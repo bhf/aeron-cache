@@ -174,6 +174,17 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     }
 
     @Override
+    public void getAllTimers(String requestId) {
+        rbPublisher.getAllTimers(requestId);
+    }
+
+    @Override
+    public void getAllTimers(String requestId, Consumer<AllTimersResult<I, K>> c) {
+        cacheResponseObservers.getAllTimers(requestId, c);
+        rbPublisher.getAllTimers(requestId);
+    }
+
+    @Override
     public void sendCacheSubscribe(String requestId, List<BI> cacheId, boolean sendSnapshot) {
         rbPublisher.sendCacheSubscribe(requestId, cacheId, sendSnapshot);
     }
@@ -298,6 +309,11 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     @Override
     public void handleAllCacheStats(CacheStatsResult<I> statsResult) {
         cacheResponseHandler.handleAllCacheStats(statsResult);
+    }
+
+    @Override
+    public void handleAllTimers(AllTimersResult<I, K> allTimersResult) {
+        cacheResponseHandler.handleAllTimers(allTimersResult);
     }
 
     @Override

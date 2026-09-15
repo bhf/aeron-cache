@@ -17,7 +17,7 @@ public class ReusableStringTimersCodec implements CacheTimersCodec<ReusableStrin
     private final MultiTypeStreamingHasher<String, Long> hasher;
 
     @Override
-    public int encodeCacheTimer(MutableDirectBuffer timersBuffer, int offset, long timerCorrelationId, ReusableString key, ReusableString cacheId) {
+    public int encodeCacheTimer(MutableDirectBuffer timersBuffer, int offset, long timerCorrelationId, ReusableString key, ReusableString cacheId, long deadline) {
         int startOffset = offset;
 
         timersBuffer.putLong(offset, timerCorrelationId);
@@ -28,8 +28,11 @@ public class ReusableStringTimersCodec implements CacheTimersCodec<ReusableStrin
         var timerCacheId = cacheId.value();
         offset += timersBuffer.putStringUtf8(offset, timerCacheId);
 
+        timersBuffer.putLong(offset, deadline);
+        offset += 8;
+
         hasher.reset();
-        hasher.addFirstTypeToHash(itemKey).addFirstTypeToHash(timerCacheId).addSecondTypeToHash(timerCorrelationId);
+        hasher.addFirstTypeToHash(itemKey).addFirstTypeToHash(timerCacheId).addSecondTypeToHash(timerCorrelationId).addSecondTypeToHash(deadline);
         long hash = hasher.getHash();
 
         timersBuffer.putLong(offset, hash);
@@ -52,6 +55,9 @@ public class ReusableStringTimersCodec implements CacheTimersCodec<ReusableStrin
             var cacheIdStr = buffer.getStringUtf8(offset);
             offset += 4 + cacheIdLength;
 
+            long deadline = buffer.getLong(offset);
+            offset += 8;
+
             long recordedHash = buffer.getLong(offset);
             offset += 8;
 
@@ -62,7 +68,7 @@ public class ReusableStringTimersCodec implements CacheTimersCodec<ReusableStrin
             cacheId.copyFrom(cacheIdStr);
 
             hasher.reset();
-            hasher.addFirstTypeToHash(keyStr).addFirstTypeToHash(cacheIdStr).addSecondTypeToHash(timerCorrelationId);
+            hasher.addFirstTypeToHash(keyStr).addFirstTypeToHash(cacheIdStr).addSecondTypeToHash(timerCorrelationId).addSecondTypeToHash(deadline);
             var recalculatedHash = hasher.getHash();
 
             if (recordedHash != recalculatedHash) {
@@ -70,7 +76,7 @@ public class ReusableStringTimersCodec implements CacheTimersCodec<ReusableStrin
                         "key {}, timer ID {}", recordedHash, recalculatedHash, cacheIdStr, keyStr, timerCorrelationId);
             }
 
-            PendingRemove<ReusableString, ReusableString> pendingRemove = new PendingRemove<>(timerCorrelationId, cacheId, key);
+            PendingRemove<ReusableString, ReusableString> pendingRemove = new PendingRemove<>(timerCorrelationId, cacheId, key, deadline);
 
             pendingRemoves.put(timerCorrelationId, pendingRemove);
 

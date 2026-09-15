@@ -1,11 +1,14 @@
 package com.bhf.aeroncache.services;
 
+import com.bhf.aeroncache.models.PendingRemove;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cache.Cache;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 import io.aeron.cluster.service.Cluster;
 import org.agrona.MutableDirectBuffer;
+
+import java.util.function.Consumer;
 
 public interface CacheTimerService<I extends Reusable,K extends Reusable> {
 
@@ -46,4 +49,12 @@ public interface CacheTimerService<I extends Reusable,K extends Reusable> {
      * @param timestamp
      */
     void onTimerEvent(final long correlationId, final long timestamp);
+
+    /**
+     * Visit every pending removal timer currently held by this service. Used to enumerate all
+     * scheduled TTL removals (for example to expose them to a client).
+     *
+     * @param consumer invoked once per pending removal timer.
+     */
+    void forEachTimer(Consumer<PendingRemove<I, K>> consumer);
 }

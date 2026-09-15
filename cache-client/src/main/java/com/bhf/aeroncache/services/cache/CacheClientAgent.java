@@ -60,6 +60,7 @@ public class CacheClientAgent extends AbstractClientAgent {
                 case SUBSCRIBE_TO_CACHE_MSG_ID -> handleSubscribeToCache(buffer, index, cacheOpsPublisher);
                 case UNSUBSCRIBE_TO_CACHE_MSG_ID -> handleUnsubscribeToCache(buffer, index, cacheOpsPublisher);
                 case GET_CACHE_STATS_MSG_ID -> handleGetCacheStats(buffer, index, cacheOpsPublisher);
+                case GET_TIMERS_MSG_ID -> handleGetAllTimers(buffer, index, cacheOpsPublisher);
                 case REMOVE_CACHE_ENTRY_MSG_ID -> handleRemoveCacheEntry(buffer, index, cacheOpsPublisher);
                 case CANCEL_CACHE_ITEM_REMOVAL_MSG_ID -> handleCancelItemRemoval(buffer, index, cacheOpsPublisher);
                 case PATCH_CACHE_ENTRY_MSG_ID -> handlePatchValue(buffer, index, cacheOpsPublisher);
@@ -146,6 +147,12 @@ public class CacheClientAgent extends AbstractClientAgent {
         var requestId = buffer.getStringUtf8(index);
         log.debug("GET CACHE STATS Request has ID " + requestId);
         cacheOpsPublisher.getAllCacheStats(requestId);
+    }
+
+    private <BV> void handleGetAllTimers(MutableDirectBuffer buffer, int index, ClusterMessagePublisher<String, String, BV> cacheOpsPublisher) {
+        var requestId = buffer.getStringUtf8(index);
+        log.debug("GET ALL TIMERS Request has ID " + requestId);
+        cacheOpsPublisher.getAllTimers(requestId);
     }
 
     private <BV> void handleUnsubscribeToCache(MutableDirectBuffer buffer, int index, ClusterMessagePublisher<String, String, BV> cacheOpsPublisher) {

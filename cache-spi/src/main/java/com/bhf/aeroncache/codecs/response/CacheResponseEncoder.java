@@ -38,6 +38,8 @@ public interface CacheResponseEncoder<I extends Reusable, K extends Reusable, V 
 
     int encodeCacheStatsResult(CacheStatsResult<I> cacheStatsResult, MutableDirectBuffer egressBuffer);
 
+    int encodeAllTimersResult(AllTimersResult<I, K> allTimersResult, MutableDirectBuffer egressBuffer);
+
     <VT extends Reusable> void encodeCacheSubscriptionResult(CacheSubscriptionResult<I, K, VT> subscriptionRequestResult,
                                        MutableDirectBuffer egressBuffer, Comparator<K> keyComparator, HydratingPublicationConsumer consumer);
 

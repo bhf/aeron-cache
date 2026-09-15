@@ -58,6 +58,34 @@ public abstract class AbstractRouteHandlers<V extends Reusable, BV> {
     }
 
     /**
+     * Handle a request to get all pending TTL removal timers across caches and counter caches.
+     *
+     * @param ctx The request context.
+     */
+    public void handleGetTimersRequest(Context ctx) {
+        log.info("Got request to get all timers");
+
+        try {
+            var requestId = getRequestId(ctx);
+            CompletableFuture<GetTimersResponse> future = new CompletableFuture<>();
+            Consumer<AllTimersResult<ReusableString, ReusableString>> consumer = HTTPConsumerUtils.getAllTimersResultConsumer(future);
+
+            CompletableFuture.runAsync(() -> publisher.getAllTimers(requestId, consumer));
+            var response = future.get();
+
+            ctx.status(HTTPStatusUtils.OK);
+            ctx.json(response);
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to get all timers";
+            log.warn(errorMsg);
+            HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
+    /**
      * Handle getting details of available caches.
      *
      * @param context The context.

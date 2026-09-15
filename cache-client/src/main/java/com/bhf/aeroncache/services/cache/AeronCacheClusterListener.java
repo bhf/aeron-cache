@@ -58,6 +58,7 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
     private final BulkCacheOpsResult<I,K,V> bulkCacheOpsResult;
     private final ClusterSessionEventHandler sessionEventHandler = new NoOpClusterSessionEventHandler();
     private final CacheStatsResult<I> cacheStatsResult = new CacheStatsResult<>();
+    private final AllTimersResult<I, K> allTimersResult = new AllTimersResult<>();
 
     private final IncrementCounterResult<I, K> incrementCounterResult;
     private final DecrementCounterResult<I, K> decrementCounterResult;
@@ -126,6 +127,8 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
             handleAllCacheEntriesResult(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getAllCacheStatsResultId()) {
             handleAllCacheStatsResult(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
+        } else if (templateId == schemaDetails.getAllTimersResultId()) {
+            handleAllTimersResult(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheSubscriptionResponseId()) {
             handleCacheSubscribeResult(buffer, offset, cacheResponseDecoder, cacheResultsCallbacks);
         } else if (templateId == schemaDetails.getCacheUnsubscribeResponseId()) {
@@ -357,6 +360,23 @@ public class AeronCacheClusterListener<I extends Reusable, K extends Reusable, V
 
         if (cacheResultsCallbacks != null) {
             cacheResultsCallbacks.handleAllCacheStats(cacheStatsResult);
+        }
+    }
+
+    /**
+     * Handle the result of getting all pending TTL removal timers.
+     *
+     * @param buffer                The buffer to decode from.
+     * @param offset                The offset at which to start decoding.
+     * @param decoder               The decoder to use.
+     * @param cacheResultsCallbacks The callbacks to notify.
+     */
+    private void handleAllTimersResult(DirectBuffer buffer, int offset, CacheResponseDecoder<I, K, ?> decoder, CacheResponseHandler<I, K, V> cacheResultsCallbacks) {
+        decoder.decodeAllTimersResult(buffer, offset, allTimersResult);
+        log.debug("Got all timers result, requestId: {}", allTimersResult.getRequestId());
+
+        if (cacheResultsCallbacks != null) {
+            cacheResultsCallbacks.handleAllTimers(allTimersResult);
         }
     }
 

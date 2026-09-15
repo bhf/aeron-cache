@@ -121,6 +121,41 @@ public abstract class AbstractBidiCommandTests {
     }
 
     @Test
+    @DisplayName("Should list a pending cache timer with its type and target in an end-of-batch frame for getTimers")
+    protected void shouldReturnTimersOverSocket() {
+        // Arrange - a cache entry with a ttl so a removal timer is pending
+        var cacheId = cacheIdPrefix() + "-timers";
+        helper.command(WsOp.CREATE_CACHE, helper.newCorrelationId(), cacheId, null, null, 0, 0);
+        var addId = helper.newCorrelationId();
+        helper.command(WsOp.ADD_CACHE_ENTRY, addId, cacheId, "tk", "tv", 60000, 0);
+        awaitCommandResponse(addId);
+
+        var timersId = helper.newCorrelationId();
+
+        // Act
+        helper.command(WsOp.GET_TIMERS, timersId, null, null, null, 0, 0);
+
+        // Assert - the scheduled removal is listed, tagged as a CACHE timer for our cache/key
+        await().atMost(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .until(() -> helper.firstFrame(timersId, "timers")
+                        .filter(f -> f.get("endOfBatch").asBoolean())
+                        .filter(f -> hasTimer(f, cacheId, "tk"))
+                        .isPresent());
+    }
+
+    private static boolean hasTimer(JsonNode frame, String cacheId, String key) {
+        for (JsonNode timer : frame.get("timers")) {
+            if (cacheId.equals(timer.path("cacheId").asText())
+                    && key.equals(timer.path("key").asText())
+                    && "CACHE".equals(timer.path("timerType").asText())
+                    && timer.path("deadline").asLong() > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Test
     @DisplayName("Should increment a counter over the BIDI socket")
     protected void shouldIncrementCounterOverSocket() {
         // Arrange
