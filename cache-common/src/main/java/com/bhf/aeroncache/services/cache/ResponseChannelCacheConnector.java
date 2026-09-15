@@ -142,7 +142,13 @@ public final class ResponseChannelCacheConnector {
 
             @Override
             public boolean isConnected() {
-                return requestPublication.isConnected() && responseSubscription.isConnected();
+                // Readiness means "can reach the cache to send requests". Gate on the request
+                // publication only: with Aeron response channels the response subscription stays
+                // disconnected until the server sends the first response (lazy connect), which never
+                // happens if we wait for it before sending - a chicken-and-egg deadlock. The request
+                // publication connects on its own once the cache's request subscription is up, and the
+                // response subscription then connects when the first response is routed back.
+                return requestPublication.isConnected();
             }
 
             @Override
