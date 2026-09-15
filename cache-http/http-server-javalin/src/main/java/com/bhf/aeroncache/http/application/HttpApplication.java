@@ -81,6 +81,7 @@ import static com.bhf.aeroncache.http.handlers.AbstractRouteHandlers.getRequestI
 public class HttpApplication {
 
     public static final String PROMO_MICROMETER_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
+    public static final int TERM_SIZE_MULTIPLE = 4;
     @Setter
     private static int CLUSTER_TOOLS_PORT = 7080;
     @Setter
@@ -131,7 +132,7 @@ public class HttpApplication {
         var app = startHTTPServer(port);
 
         try {
-            final ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(ClusterUtils.getConfiguredTermLength(16777216));
+            final ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(ClusterUtils.getConfiguredTermLength(16777216* TERM_SIZE_MULTIPLE));
             System.out.println("Starting AeronCache Cluster Interface");
 
             CacheClientFactory clientFactory = getCacheClientFactory();

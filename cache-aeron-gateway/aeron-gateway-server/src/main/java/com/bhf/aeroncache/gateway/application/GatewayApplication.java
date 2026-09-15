@@ -63,6 +63,7 @@ public class GatewayApplication {
     private static final int RESPONSE_STREAM_ID = 101;
 
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
+    public static final int TERM_SIZE_MULTIPLE = 4;
 
     private static AeronCache cache;
     private static AeronCacheClusterListener client;
@@ -111,10 +112,7 @@ public class GatewayApplication {
         var app = startHTTPServer(httpPort);
 
         try {
-            // Sized to match the HTTP edge: large enough that a batched bulk-operations request (many
-            // operations in one frame) stays under the ring buffer's max message length. A small buffer
-            // caps maxMsgLength at capacity/8, which a realistic bulk request easily exceeds.
-            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(ClusterUtils.getConfiguredTermLength(16777216));
+            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(ClusterUtils.getConfiguredTermLength(16777216* TERM_SIZE_MULTIPLE));
 
             CacheClientFactory clientFactory = getCacheClientFactory();
             var cacheRequestEncoder = clientFactory.getCacheRequestEncoder();

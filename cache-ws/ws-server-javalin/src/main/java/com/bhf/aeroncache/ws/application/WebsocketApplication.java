@@ -52,6 +52,7 @@ import java.util.function.Consumer;
 public class WebsocketApplication {
 
     public static final String PROMO_MICROMETER_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
+    public static final int TERM_SIZE_MULTIPLE = 4;
     @Setter
     private static int DEFAULT_WS_PORT = 7071;
     private static final String CACHE_API_PREFIX = "/api/ws/v1/cache/";
@@ -87,10 +88,7 @@ public class WebsocketApplication {
         var app = startHTTPServer(port);
 
         try {
-            // Sized to match the HTTP edge: large enough that a batched bulk-operations request (many
-            // operations in one frame) stays under the ring buffer's max message length. A small buffer
-            // caps maxMsgLength at capacity/8, which a realistic bulk request easily exceeds.
-            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(ClusterUtils.getConfiguredTermLength(16777216));
+            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(ClusterUtils.getConfiguredTermLength(16777216* TERM_SIZE_MULTIPLE));
             System.out.println("Starting AeronCache Cluster Interface");
 
             CacheClientFactory clientFactory = getCacheClientFactory();
