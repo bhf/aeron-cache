@@ -15,6 +15,7 @@ import com.bhf.aeroncache.models.results.CreateCacheResult;
 import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
 import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
+import com.bhf.aeroncache.services.cache.ResponseChannelCacheConnector;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.GroupedResponseHandler;
@@ -175,8 +176,7 @@ public class NearCacheApplication {
                 final Aeron.Context aeronCtx = new Aeron.Context()
                         .aeronDirectoryName(aeronDir);
                 final Aeron aeron = Aeron.connect(aeronCtx);
-                var requestPubHost = System.getenv("REQUEST_PUB_HOST");
-                buildUnclusteredConnection(aeron, requestPubHost);
+                buildUnclusteredConnection(aeron);
             }
 
             System.out.println("Building cluster agent for http near cache service");
@@ -209,68 +209,22 @@ public class NearCacheApplication {
         }
     }
 
-    private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {
-
-        var requestPublicationChannel = "aeron:udp?endpoint=" + requestPubHost + ":8008|alias=AC-nc-unclustered-requests";
-        int requestPublicationStream = 1;
-        var requestPublication = aeron.addPublication(requestPublicationChannel,
-                requestPublicationStream);
-
-        var hostname = DNSUtils.getThisHostName();
-        var responseSubscriptionChannel = "aeron:udp?endpoint=" + hostname + ":8007|alias=AC-nc-unclustered-responses";
-        int responseSubscriptionStream = 2;
-        var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
-                responseSubscriptionStream);
-
-        cache = new AeronCache() {
-            @Override
-            public void sendKeepAlive() {
-            }
-
-            @Override
-            public int pollEgress() {
-                return 0;
-            }
-
-            @Override
-            public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
-                long res = 0;
-                while ((res = requestPublication.offer(msgBuffer, msgBufferOffset, i)) < 0) {
-                    aeron.context().idleStrategy().idle();
-                }
-                return res;
-            }
-
-            @Override
-            public boolean isConnected() {
-                return true;
-            }
-        };
-
-        AeronCacheClusterListener egressListener = client;
-        FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
+    private static void buildUnclusteredConnection(Aeron aeron) {
+        final AeronCacheClusterListener egressListener = client;
+        final FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
                 -> egressListener.onMessage(header.sessionId(),
                 System.currentTimeMillis(),
                 buffer, offset, length, header);
 
-        Agent serverAgent = new Agent() {
-            @Override
-            public int doWork() throws Exception {
-                return responseSubscription.poll(egressFragmentHandler, Integer.MAX_VALUE);
-            }
-
-            @Override
-            public String roleName() {
-                return "AC-Unclustered-requests-listener";
-            }
-        };
-
-        IdleStrategy unclusteredAgentIdleStrategy = HttpNearCacheIdleStrategies.unclusteredAgentIdleStrategy.get();
-        final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy,
-                Throwable::printStackTrace,
-                null, serverAgent);
-
-        AgentRunner.startOnThread(serverAgentRunner);
+        cache = ResponseChannelCacheConnector.connect(aeron,
+                ResponseChannelCacheConnector.requestEndpoint(),
+                ResponseChannelCacheConnector.requestStreamId(),
+                ResponseChannelCacheConnector.responseControlEndpoint(),
+                ResponseChannelCacheConnector.responseStreamId(),
+                egressFragmentHandler,
+                HttpNearCacheIdleStrategies.unclusteredAgentIdleStrategy.get(),
+                aeron.context().idleStrategy(),
+                "AC-Unclustered-requests-listener");
 
         clusterConnected.set(true);
     }

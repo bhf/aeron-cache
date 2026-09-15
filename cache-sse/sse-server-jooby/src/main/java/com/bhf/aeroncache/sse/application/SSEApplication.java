@@ -5,6 +5,7 @@ import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.http.responses.SubscriptionAck;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
+import com.bhf.aeroncache.services.cache.ResponseChannelCacheConnector;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
@@ -35,7 +36,6 @@ import io.jooby.netty.NettyServer;
 import io.opentelemetry.api.trace.Span;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.IdleStrategy;
@@ -449,68 +449,23 @@ public class SSEApplication extends Jooby {
                 serverSentEmitter.getId(), requestId, true, consumer);
     }
 
-    private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {
-
-        var requestPublicationChannel = "aeron:udp?endpoint=" + requestPubHost + ":6008|alias=AC-unclustered-requests";
-        int requestPublicationStream = 1;
-        var requestPublication = aeron.addPublication(requestPublicationChannel,
-                requestPublicationStream);
-
-        var hostname = DNSUtils.getThisHostName();
-        String responseSubscriptionChannel = "aeron:udp?endpoint=" + hostname + ":6007|alias=AC-unclustered-responses";
-        int responseSubscriptionStream = 2;
-        var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
-                responseSubscriptionStream);
-
-        cache = new AeronCache() {
-            @Override
-            public void sendKeepAlive() {
-            }
-
-            @Override
-            public int pollEgress() {
-                return 0;
-            }
-
-            @Override
-            public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
-                long res = 0;
-                while ((res = requestPublication.offer(msgBuffer, msgBufferOffset, i)) < 0) {
-                    aeron.context().idleStrategy().idle();
-                }
-                return res;
-            }
-
-            @Override
-            public boolean isConnected() {
-                return true;
-            }
-        };
-
-        AeronCacheClusterListener egressListener = client;
-        FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
+    private static void buildUnclusteredConnection(Aeron aeron) {
+        final AeronCacheClusterListener egressListener = client;
+        final FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
                 -> egressListener.onMessage(header.sessionId(),
                 System.currentTimeMillis(),
                 buffer, offset, length, header);
 
-        Agent serverAgent = new Agent() {
-            @Override
-            public int doWork() throws Exception {
-                return responseSubscription.poll(egressFragmentHandler, Integer.MAX_VALUE);
-            }
+        cache = ResponseChannelCacheConnector.connect(aeron,
+                ResponseChannelCacheConnector.requestEndpoint(),
+                ResponseChannelCacheConnector.requestStreamId(),
+                ResponseChannelCacheConnector.responseControlEndpoint(),
+                ResponseChannelCacheConnector.responseStreamId(),
+                egressFragmentHandler,
+                SSEIdleStrategies.unclusteredIdleStrategy.get(),
+                aeron.context().idleStrategy(),
+                "AC-Unclustered-requests-listener");
 
-            @Override
-            public String roleName() {
-                return "AC-Unclustered-requests-listener";
-            }
-        };
-
-        IdleStrategy unclusteredAgentIdleStrategy = SSEIdleStrategies.unclusteredIdleStrategy.get();
-        final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy,
-                Throwable::printStackTrace,
-                null, serverAgent);
-
-        AgentRunner.startOnThread(serverAgentRunner);
         clusterConnected.set(true);
     }
 
@@ -595,8 +550,7 @@ public class SSEApplication extends Jooby {
                 buildClusterConnection(egressIP, ingressEndpoints, aeronCtx.aeronDirectoryName());
             } else {
                 final Aeron aeron = Aeron.connect(aeronCtx);
-                var requestPubHost = System.getenv("REQUEST_PUB_HOST");
-                buildUnclusteredConnection(aeron, requestPubHost);
+                buildUnclusteredConnection(aeron);
             }
 
             System.out.println("Building cluster agent for SSE service");

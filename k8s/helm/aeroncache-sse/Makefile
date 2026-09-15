@@ -6,7 +6,7 @@ install:
 	helm install -n aeroncache aeroncache-sse -f values.yaml . $(MEDIA_DRIVER_FLAG)
 
 install-ephemeral:
-	helm install -n aeroncache aeroncache-sse -f values.yaml --set cacheMode=SINGLE --set clusterAddresses=aeroncache-ephemeral-0.aeroncache-ephemeral.aeroncache.svc.cluster.local --set requestPubHost=aeroncache-ephemeral-0.aeroncache-ephemeral.aeroncache.svc.cluster.local --set service.type=ClusterIP --set service.clusterIP=None --set service.publishNotReadyAddresses=true . $(MEDIA_DRIVER_FLAG)
+	helm install -n aeroncache aeroncache-sse -f values.yaml --set cacheMode=SINGLE --set clusterAddresses=aeroncache-ephemeral-0.aeroncache-ephemeral.aeroncache.svc.cluster.local --set ephemeralRequestEndpoint=aeroncache-ephemeral-0.aeroncache-ephemeral.aeroncache.svc.cluster.local:8075 --set ephemeralResponseControlEndpoint=aeroncache-ephemeral-0.aeroncache-ephemeral.aeroncache.svc.cluster.local:8076 --set service.type=ClusterIP . $(MEDIA_DRIVER_FLAG)
 
 upgrade:
 	helm upgrade -n aeroncache aeroncache-sse -f values.yaml

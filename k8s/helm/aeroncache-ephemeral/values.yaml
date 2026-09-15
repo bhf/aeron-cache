@@ -88,12 +88,32 @@ securityContext: {}
 # runAsUser: 1000
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+# Headless (clusterIP: None) so the cache is addressed by its stable per-pod DNS name. Aeron UDP does
+# NOT traverse a virtual ClusterIP (kube-proxy DNAT breaks it), so clients must reach the pod directly.
+# Response channels (control-mode=response) remove the OLD requirement for the cache to dial each
+# interface back by name; the cache now routes responses to each request's real source address, so the
+# interfaces themselves no longer need to be headless.
 service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   type: ClusterIP
-  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
-  port: 80
   clusterIP: None
+  # Publish the pod's DNS name before it is Ready so clients (and the cache itself) can resolve the
+  # response control endpoint during startup.
+  publishNotReadyAddresses: true
+  # Aeron request endpoint (UDP) clients dial.
+  requestPort: 8075
+  # Aeron response control endpoint (UDP) for control-mode=response.
+  responseControlPort: 8076
+
+# Aeron response-channel endpoints advertised via the configmap. The request endpoint binds all
+# interfaces on the pod; the response control endpoint is the cache's own per-pod DNS name (headless),
+# which resolves to the pod IP for both the cache (to bind) and the clients (to subscribe).
+ephemeralRequestEndpoint: "0.0.0.0:8075"
+ephemeralResponseControlEndpoint: "aeroncache-ephemeral-0.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local:8076"
+
+# Aeron image liveness timeout (seconds) for the response-channel transport. Low so a cache restart is
+# detected quickly and the channel rebuilt before a request is sent into the stale channel.
+aeronImageLivenessTimeoutSeconds: 2
 
 # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:

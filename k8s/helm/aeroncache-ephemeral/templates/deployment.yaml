@@ -64,6 +64,13 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ .Values.aeroncacheClusterConfigmap }}
+          ports:
+            - name: aeron-req
+              containerPort: {{ .Values.service.requestPort }}
+              protocol: UDP
+            - name: aeron-resp
+              containerPort: {{ .Values.service.responseControlPort }}
+              protocol: UDP
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
