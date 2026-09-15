@@ -6,6 +6,9 @@ metadata:
 data:
   EPHEMERAL_REQUEST_ENDPOINT: {{ tpl .Values.ephemeralRequestEndpoint . | quote }}
   EPHEMERAL_RESPONSE_CONTROL_ENDPOINT: {{ tpl .Values.ephemeralResponseControlEndpoint . | quote }}
+  # Shorten Aeron image liveness so a cache restart is detected quickly and the response channel is
+  # rebuilt before clients would send a request into the stale (still "connected") channel.
+  AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS: {{ .Values.aeronImageLivenessTimeoutSeconds | quote }}
   DNS_DELAY: "true"
   CACHE_MODE: {{ .Values.cacheMode | quote }}
   CLUSTER_ADDRESSES: "aeroncache-ephemeral-0.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-ephemeral-1.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-ephemeral-2.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local"

@@ -10,6 +10,7 @@ data:
   {{- if .Values.ephemeralRequestEndpoint }}
   EPHEMERAL_REQUEST_ENDPOINT: {{ tpl .Values.ephemeralRequestEndpoint . | quote }}
   EPHEMERAL_RESPONSE_CONTROL_ENDPOINT: {{ tpl .Values.ephemeralResponseControlEndpoint . | quote }}
+  AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS: {{ .Values.aeronImageLivenessTimeoutSeconds | default "2" | quote }}
   {{- end }}
   {{- if .Values.corsAllowedOrigins }}
   CORS_ALLOWED_ORIGINS: {{ tpl .Values.corsAllowedOrigins . | quote }}

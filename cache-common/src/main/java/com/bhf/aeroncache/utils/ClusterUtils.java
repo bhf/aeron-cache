@@ -9,6 +9,7 @@ import org.agrona.SystemUtil;
 import org.agrona.concurrent.status.AtomicCounter;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Helpers for starting and configuring an {@link AeronCluster}.
@@ -63,7 +64,31 @@ public class ClusterUtils {
                     .ipcTermBufferLength(configured)
                     .termBufferSparseFile(true);
         }
+        applyConfiguredImageLivenessTimeout(context);
         return context;
+    }
+
+    /**
+     * Optionally shorten the media driver's image liveness timeout via {@code AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS}.
+     * <p>
+     * The ephemeral (response-channel) deployments set this low so that, when the cache restarts, the
+     * interface detects the dead response session quickly and rebuilds its channel - rather than the
+     * default ~10s during which the stale channel still reports connected and a request would be lost.
+     * Left unset (the default) Aeron's normal image liveness applies, so clustered deployments are
+     * unaffected.
+     */
+    private static void applyConfiguredImageLivenessTimeout(MediaDriver.Context context) {
+        final String seconds = System.getenv("AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS");
+        if (seconds != null && !seconds.isBlank()) {
+            try {
+                final long value = Long.parseLong(seconds.trim());
+                if (value > 0) {
+                    context.imageLivenessTimeoutNs(TimeUnit.SECONDS.toNanos(value));
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Couldn't parse AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS: " + seconds);
+            }
+        }
     }
 
     /**

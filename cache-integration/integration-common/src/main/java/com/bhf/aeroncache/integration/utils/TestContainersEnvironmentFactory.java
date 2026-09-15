@@ -252,7 +252,8 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("CACHE_DATA_DIR", "/tmp/data")
                 .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "0.0.0.0:8075")
-                .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", name + ":8076");
+                .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", name + ":8076")
+                .withEnv("AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS", "2");
     }
 
     /**
@@ -278,7 +279,8 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("CACHE_DATA_DIR", "/tmp/data")
                 .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "0.0.0.0:8075")
-                .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", name + ":8076");
+                .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", name + ":8076")
+                .withEnv("AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS", "2");
     }
 
     /**
@@ -298,6 +300,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "node0:8075")
                 .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", "node0:8076")
+                .withEnv("AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS", "2")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -318,6 +321,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "node0:8075")
                 .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", "node0:8076")
+                .withEnv("AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS", "2")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -338,6 +342,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "node0:8075")
                 .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", "node0:8076")
+                .withEnv("AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS", "2")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -358,6 +363,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "node0:8075")
                 .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", "node0:8076")
+                .withEnv("AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS", "2")
                 .waitingFor(Wait.forHttp("/readiness/"));
     }
 

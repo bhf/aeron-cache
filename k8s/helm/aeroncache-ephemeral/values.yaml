@@ -111,6 +111,10 @@ service:
 ephemeralRequestEndpoint: "0.0.0.0:8075"
 ephemeralResponseControlEndpoint: "aeroncache-ephemeral-0.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local:8076"
 
+# Aeron image liveness timeout (seconds) for the response-channel transport. Low so a cache restart is
+# detected quickly and the channel rebuilt before a request is sent into the stale channel.
+aeronImageLivenessTimeoutSeconds: 2
+
 # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:
   enabled: false
