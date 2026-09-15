@@ -82,6 +82,13 @@ public class GroupedResponseHandler<I extends Reusable, K extends Reusable, V ex
     }
 
     @Override
+    public void handleAllTimers(AllTimersResult<I, K> allTimersResult) {
+        for(CacheResponseHandler handler : handlers){
+            handler.handleAllTimers(allTimersResult);
+        }
+    }
+
+    @Override
     public void handleCacheSubscribeResponse(CacheSubscriptionResult<I,K,V> cacheSubscriptionResult) {
         for(CacheResponseHandler handler : handlers){
             handler.handleCacheSubscribeResponse(cacheSubscriptionResult);

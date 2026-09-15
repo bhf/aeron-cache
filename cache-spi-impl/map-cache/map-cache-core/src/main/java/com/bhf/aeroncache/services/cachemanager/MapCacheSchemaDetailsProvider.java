@@ -55,6 +55,11 @@ public class MapCacheSchemaDetailsProvider implements CacheSchemaDetailsProvider
     }
 
     @Override
+    public int getGetAllTimersId() {
+        return GetAllTimersEncoder.TEMPLATE_ID;
+    }
+
+    @Override
     public int getCacheSubscriptionRequestId() {
         return CacheSubscriptionRequestEncoder.TEMPLATE_ID;
     }

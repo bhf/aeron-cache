@@ -602,6 +602,42 @@ abstract class AbstractGatewayEndToEndTest {
     }
 
     @Test
+    @DisplayName("Should list all pending timers across caches and counter caches with their type, target and deadline")
+    void shouldGetAllTimers() {
+        // Arrange: a cache entry and a counter entry, each with a (long) scheduled removal so both timers are pending.
+        var cacheId = uniqueCache("timers-cache");
+        var counterCacheId = uniqueCache("timers-counter");
+        var createCacheCorr = correlationId();
+        var addEntryCorr = correlationId();
+        var createCounterCorr = correlationId();
+        var addCounterCorr = correlationId();
+        var timersCorr = correlationId();
+
+        client.createCache(createCacheCorr, cacheId);
+        awaitCommandSuccess(createCacheCorr);
+        client.addEntry(addEntryCorr, cacheId, "k1", "v1", TTL_SCHEDULED);
+        awaitCommandSuccess(addEntryCorr);
+
+        client.createCounterCache(createCounterCorr, counterCacheId);
+        awaitCommandSuccess(createCounterCorr);
+        client.addCounterEntry(addCounterCorr, counterCacheId, "hits", 5L, TTL_SCHEDULED);
+        awaitCommandSuccess(addCounterCorr);
+
+        // Act
+        client.getTimers(timersCorr);
+        await().atMost(30, SECONDS).until(() -> listener.timersComplete.containsKey(timersCorr));
+
+        // Assert: both timers are listed, each tagged with the right type, target and a real deadline.
+        var timers = listener.timersAccumulated.get(timersCorr);
+        assertTrue(timers.stream().anyMatch(t -> "CACHE".equals(t.timerType())
+                        && cacheId.equals(t.cacheId()) && "k1".equals(t.key()) && t.deadline() > 0),
+                "expected a CACHE timer for the scheduled cache entry removal");
+        assertTrue(timers.stream().anyMatch(t -> "COUNTER".equals(t.timerType())
+                        && counterCacheId.equals(t.cacheId()) && "hits".equals(t.key()) && t.deadline() > 0),
+                "expected a COUNTER timer for the scheduled counter removal");
+    }
+
+    @Test
     @DisplayName("Should increment a counter, return the new value and stream it to subscribers")
     void shouldIncrementCounterAndStreamUpdate() {
         // Arrange

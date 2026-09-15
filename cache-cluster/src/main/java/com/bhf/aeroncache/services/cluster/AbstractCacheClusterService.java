@@ -72,6 +72,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     final AddCacheEntryResult<I, K> patchEntryUpdateResult;
     final PatchValueResult<I, K, V> addMergePatchResult;
     final GetCacheStatsRequestDetails getCacheStatsRequestDetails;
+    final GetAllTimersRequestDetails getAllTimersRequestDetails = new GetAllTimersRequestDetails();
+    final AllTimersResult<I, K> allTimersResult = new AllTimersResult<>();
     final CacheSubscriptionRequestDetails<I, K> cacheSubscribeRequestDetails;
     final CacheUnsubscribeRequestDetails<I> cacheUnsubscribeRequestDetails;
     final BulkCacheOpsRequestDetails<I,K,V> bulkCacheOpsRequestDetails;
@@ -192,6 +194,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
             handleGetAllCacheEntries(session, buffer, offset, decoder, encoder, cacheManager);
         } else if (templateId == schemaDetails.getGetCacheStatsId()) {
             handleGetCacheStats(session, buffer, offset, decoder, encoder, cacheManager);
+        } else if (templateId == schemaDetails.getGetAllTimersId()) {
+            handleGetAllTimers(session, buffer, offset);
         } else if (templateId == schemaDetails.getCacheSubscriptionRequestId()) {
             handleCacheSubscriptionRequest(session, buffer, offset, decoder, encoder, subscriptionService, patchSubscriptionService, cacheManager);
         } else if (templateId == schemaDetails.getCacheUnsubscribeRequestId()) {
@@ -745,6 +749,41 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         cacheStatsResult.setRequestId(requestId);
         handlePostGetCacheStats(cacheStatsResult, session, encoder);
         tracingService.endGetAllStatsRequest(requestDetails);
+    }
+
+    /**
+     * Handle a request to get all pending TTL removal timers across both caches and counter caches.
+     * Each timer is tagged with its {@link TimerType} so the caller can distinguish cache timers
+     * from counter timers.
+     *
+     * @param session The client session to respond on.
+     * @param buffer  The buffer holding the request.
+     * @param offset  The offset of the request in the buffer.
+     */
+    void handleGetAllTimers(ClientSession session, DirectBuffer buffer, int offset) {
+        decoder.decodeGetAllTimersRequest(buffer, offset, getAllTimersRequestDetails);
+        var requestId = getAllTimersRequestDetails.getRequestId();
+        log.info("Got request for all timers, request Id: {}", requestId);
+
+        allTimersResult.clear();
+        allTimersResult.setOperationStatus(CacheOperationStatus.SUCCESS);
+        allTimersResult.setEndOfBatch(true);
+        allTimersResult.setRequestId(requestId);
+
+        collectTimers(cacheTimerService, TimerType.CACHE);
+        collectTimers(cacheCountersTimerService, TimerType.COUNTER);
+
+        var length = encoder.encodeAllTimersResult(allTimersResult, egressBuffer);
+        sendMessage(session, egressBuffer, length);
+    }
+
+    private void collectTimers(CacheTimerService<I, K> timerService, TimerType timerType) {
+        timerService.forEachTimer(pendingRemove -> {
+            var timerDetails = new TimerDetails<>(pendingRemove.getCacheToRemoveOn(), pendingRemove.getKeyToRemove());
+            timerDetails.timerType = timerType;
+            timerDetails.deadline = pendingRemove.getDeadline();
+            allTimersResult.getTimers().add(timerDetails);
+        });
     }
 
     /**

@@ -377,6 +377,26 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/CacheStatsResponse'
+  /api/v1/timers:
+    get:
+      tags:
+        - Timers
+      summary: Get all pending timers
+      description: Get all pending TTL removal timers across both caches and counter caches
+      operationId: getTimers
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/GetTimersResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/shutdown:
     post:
       tags:
@@ -479,6 +499,34 @@ components:
           type: string
         value:
           type: string
+    GetTimersResponse:
+      type: object
+      properties:
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+        timers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimerInfo'
+    TimerInfo:
+      type: object
+      properties:
+        timerType:
+          type: string
+          enum:
+            - CACHE
+            - COUNTER
+          example: "CACHE"
+        cacheId:
+          type: string
+          example: "myCache"
+        key:
+          type: string
+          example: "myKey"
+        deadline:
+          type: integer
+          format: int64
+          description: The epoch time (millis) at which the removal is scheduled to fire.
     ClearCacheResponse:
       type: object
       properties:

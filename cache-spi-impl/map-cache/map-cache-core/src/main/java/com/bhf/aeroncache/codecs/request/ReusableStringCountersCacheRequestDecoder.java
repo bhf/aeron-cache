@@ -236,4 +236,14 @@ public class ReusableStringCountersCacheRequestDecoder implements CountersCacheR
         setCounterRequest.setTtl(ttl);
         setCounterRequest.setRequestId(requestId);
     }
+
+    private final GetAllTimersDecoder getAllTimersDecoder = new GetAllTimersDecoder();
+
+    @Override
+    public void decodeGetAllTimersRequest(DirectBuffer buffer, int offset, GetAllTimersRequestDetails getAllTimersRequestDetails) {
+        getAllTimersRequestDetails.clear();
+        getAllTimersDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var requestId = getAllTimersDecoder.requestId();
+        getAllTimersRequestDetails.setRequestId(requestId);
+    }
 }

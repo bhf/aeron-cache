@@ -14,11 +14,13 @@ import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
 import com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
+import com.bhf.aeroncache.models.results.AllTimersResult;
 import com.bhf.aeroncache.models.results.BulkCacheOpsResult;
 import com.bhf.aeroncache.models.results.CacheOperationResultDetails;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.CacheStats;
 import com.bhf.aeroncache.models.results.CacheStatsResult;
+import com.bhf.aeroncache.models.results.TimerDetails;
 import com.bhf.aeroncache.models.results.CancelItemRemovalResult;
 import com.bhf.aeroncache.models.results.ClearCacheResult;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
@@ -280,6 +282,8 @@ public class GatewayIngressAgent implements Agent {
                     (Consumer<GetAllCacheEntriesResult>) o -> streamEntries(responsePublication, correlationId, (GetAllCacheEntriesResult) o));
             case GET_CACHE_STATS_MSG_ID -> cacheSubs.getAllCacheStats(correlationId,
                     (Consumer<CacheStatsResult>) o -> streamStats(responsePublication, correlationId, (CacheStatsResult) o));
+            case GET_TIMERS_MSG_ID -> cacheSubs.getAllTimers(correlationId,
+                    (Consumer<AllTimersResult>) o -> streamTimers(responsePublication, correlationId, (AllTimersResult) o));
 
             case CREATE_COUNTER_CACHE_MSG_ID -> countersSubs.sendCreateCache(correlationId, cacheId,
                     (Consumer<CreateCacheResult>) o -> respondStatus(responsePublication, correlationId, ((CreateCacheResult) o).getStatus(), cacheId));
@@ -402,6 +406,19 @@ public class GatewayIngressAgent implements Agent {
                     stat.addedCount, stat.removedCount, stat.clearedCount, stat.size));
         }
         egressWriter.writeStats(publication, correlationId, result.getOperationStatus(), stats, true);
+    }
+
+    private void streamTimers(Publication publication, String correlationId, AllTimersResult result) {
+        final List<GatewayResponseWriter.TimerEntry> timers = new ArrayList<>();
+        for (Object o : result.getTimers()) {
+            final TimerDetails timer = (TimerDetails) o;
+            timers.add(new GatewayResponseWriter.TimerEntry(
+                    timer.timerType.name(),
+                    String.valueOf(timer.getCacheId().value()),
+                    String.valueOf(timer.getKey().value()),
+                    timer.deadline));
+        }
+        egressWriter.writeTimers(publication, correlationId, result.getOperationStatus(), timers, result.isEndOfBatch());
     }
 
     private void respondCounter(Publication publication, String correlationId, CacheOperationStatus status,

@@ -30,6 +30,7 @@ public abstract class AbstractRBRequestPublisher<BV> implements CacheRequestPubl
     protected abstract int removeCacheEntryMsgId();
     protected abstract int getCacheEntriesMsgId();
     protected abstract int getCacheStatsMsgId();
+    protected abstract int getAllTimersMsgId();
     protected abstract int subscribeToCacheMsgId();
     protected abstract int unsubscribeToCacheMsgId();
     protected abstract int addCacheEntryMsgId();
@@ -354,6 +355,33 @@ public abstract class AbstractRBRequestPublisher<BV> implements CacheRequestPubl
         } catch (Exception e) {
             rb.abort(claimIndex);
             log.error("Error whilst trying to write get cache stats to RingBuffer", e);
+        }
+    }
+
+    @Override
+    public void getAllTimers(String requestId) {
+        byte[] requestIdBytes = requestId.getBytes(StandardCharsets.UTF_8);
+        var desiredLength = (requestIdBytes.length + 4);
+        log.trace("DESIRED LENGTH=" + desiredLength);
+
+        var claimIndex = -1;
+        while ((claimIndex = rb.tryClaim(getAllTimersMsgId(), desiredLength)) < 0) {
+        }
+
+        try {
+            var buffer = rb.buffer();
+            int writeCursor = claimIndex;
+
+            buffer.putInt(writeCursor, requestIdBytes.length);
+            writeCursor += 4;
+            buffer.putBytes(writeCursor, requestIdBytes);
+            writeCursor += requestIdBytes.length;
+
+            log.trace("TOTAL WRITTEN=" + (writeCursor - claimIndex));
+            rb.commit(claimIndex);
+        } catch (Exception e) {
+            rb.abort(claimIndex);
+            log.error("Error whilst trying to write get all timers to RingBuffer", e);
         }
     }
 

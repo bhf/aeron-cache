@@ -142,7 +142,7 @@ class CacheClusterTimerServiceTest {
         when(cluster.scheduleTimer(anyLong(), eq(deadline))).thenReturn(true);
         sut.scheduleItemRemoval(cacheId, key, cache, deadline);
 
-        when(cacheTimersCodec.encodeCacheTimer(any(), anyInt(), anyLong(), any(), any())).thenReturn(10);
+        when(cacheTimersCodec.encodeCacheTimer(any(), anyInt(), anyLong(), any(), any(), anyLong())).thenReturn(10);
         
         ExclusivePublication snapshotPublication = mock(ExclusivePublication.class);
         MutableDirectBuffer buffer = new UnsafeBuffer(new byte[128]);
@@ -154,7 +154,7 @@ class CacheClusterTimerServiceTest {
         assertEquals(1, buffer.getInt(0));
         assertEquals(14, length);
         verify(cacheTimersCodec).encodeCacheTimer
-                (eq(buffer), eq(4), eq(1L), any(ReusableString.class), any(ReusableString.class));
+                (eq(buffer), eq(4), eq(1L), any(ReusableString.class), any(ReusableString.class), eq(deadline));
     }
     
     @Test

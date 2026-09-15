@@ -1,9 +1,9 @@
 package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.codecs.CacheTimersCodec;
+import com.bhf.aeroncache.models.CompoundCacheKey;
 import com.bhf.aeroncache.models.PendingRemove;
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.CompoundCacheKey;
 import com.bhf.aeroncache.services.CacheTimerService;
 import com.bhf.aeroncache.services.cache.Cache;
 import io.aeron.ExclusivePublication;
@@ -79,7 +79,7 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
         final var cacheToRemoveOn = indexSupplier.get();
         cacheToRemoveOn.copyFrom(cacheId);
 
-        var pendingRemove = new PendingRemove(timerCorrelationId, cacheToRemoveOn, keyToRemove);
+        var pendingRemove = new PendingRemove(timerCorrelationId, cacheToRemoveOn, keyToRemove, deadline);
         pendingRemoves.put(timerCorrelationId, pendingRemove);
         cacheKeyToTimerId.put(new CompoundCacheKey<>(cacheToRemoveOn, keyToRemove), timerCorrelationId);
     }
@@ -119,8 +119,9 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
                 var correlationId = pendingTimer.getTimerCorrelationId();
                 var key = pendingTimer.getKeyToRemove();
                 var cacheId = pendingTimer.getCacheToRemoveOn();
+                var deadline = pendingTimer.getDeadline();
                 var codec = timersCodec;
-                int length = codec.encodeCacheTimer(timersBuffer, cumulativeLength, correlationId, key, cacheId);
+                int length = codec.encodeCacheTimer(timersBuffer, cumulativeLength, correlationId, key, cacheId, deadline);
                 cumulativeLength += length;
                 timersSnapshotted++;
 
@@ -186,6 +187,13 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
         }
         else{
             log.warn("No pending remove on timer event found for correlationId {}", correlationId);
+        }
+    }
+
+    @Override
+    public void forEachTimer(Consumer<PendingRemove<I, K>> consumer) {
+        for (var pendingRemove : pendingRemoves.values()) {
+            consumer.accept(pendingRemove);
         }
     }
 

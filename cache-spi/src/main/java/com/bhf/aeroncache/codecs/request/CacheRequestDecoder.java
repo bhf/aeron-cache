@@ -27,6 +27,8 @@ public interface CacheRequestDecoder<I extends Reusable, K extends Reusable, V e
 
     void decodeGetCacheStatsRequest(DirectBuffer buffer, int offset, GetCacheStatsRequestDetails getCacheStatsRequestDetails);
 
+    void decodeGetAllTimersRequest(DirectBuffer buffer, int offset, GetAllTimersRequestDetails getAllTimersRequestDetails);
+
     void decodeGetCacheUnsubscribeRequest(DirectBuffer buffer, int offset, CacheUnsubscribeRequestDetails<I> cacheUnsubscribeRequestDetails);
 
     void decodeBulkCacheOperationsRequest(DirectBuffer buffer, int offset, BulkCacheOpsRequestDetails<I,K,V> bulkCacheOpsRequestDetails);

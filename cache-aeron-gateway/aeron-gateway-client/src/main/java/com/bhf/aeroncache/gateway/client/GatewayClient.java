@@ -5,6 +5,7 @@ import com.bhf.aeroncache.gateway.messages.GatewayCommandResponseDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayEntriesDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayErrorDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayStatsDecoder;
+import com.bhf.aeroncache.gateway.messages.GatewayTimersDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayStreamUpdateDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewaySubscribeAckDecoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderDecoder;
@@ -77,6 +78,7 @@ public class GatewayClient implements Agent, AutoCloseable {
     private final GatewayCommandResponseDecoder commandResponseDecoder = new GatewayCommandResponseDecoder();
     private final GatewayEntriesDecoder entriesDecoder = new GatewayEntriesDecoder();
     private final GatewayStatsDecoder statsDecoder = new GatewayStatsDecoder();
+    private final GatewayTimersDecoder timersDecoder = new GatewayTimersDecoder();
     private final GatewayStreamUpdateDecoder streamUpdateDecoder = new GatewayStreamUpdateDecoder();
     private final GatewayErrorDecoder errorDecoder = new GatewayErrorDecoder();
     private final GatewaySubscribeAckDecoder subscribeAckDecoder = new GatewaySubscribeAckDecoder();
@@ -214,6 +216,10 @@ public class GatewayClient implements Agent, AutoCloseable {
 
     public long getStats(String correlationId) {
         return sendCommand(CacheRequestMessageTypes.GET_CACHE_STATS_MSG_ID, 0L, 0L, correlationId, null, null, null);
+    }
+
+    public long getTimers(String correlationId) {
+        return sendCommand(CacheRequestMessageTypes.GET_TIMERS_MSG_ID, 0L, 0L, correlationId, null, null, null);
     }
 
     // ------------------------------------------------------------------ counter commands
@@ -378,6 +384,8 @@ public class GatewayClient implements Agent, AutoCloseable {
             decodeEntries(buffer, bodyOffset, blockLength, version);
         } else if (templateId == GatewayStatsDecoder.TEMPLATE_ID) {
             decodeStats(buffer, bodyOffset, blockLength, version);
+        } else if (templateId == GatewayTimersDecoder.TEMPLATE_ID) {
+            decodeTimers(buffer, bodyOffset, blockLength, version);
         } else if (templateId == GatewayStreamUpdateDecoder.TEMPLATE_ID) {
             decodeStreamUpdate(buffer, bodyOffset, blockLength, version);
         } else if (templateId == GatewayErrorDecoder.TEMPLATE_ID) {
@@ -466,6 +474,24 @@ public class GatewayClient implements Agent, AutoCloseable {
         final String correlationId = statsDecoder.correlationId();
         for (GatewayClientListener listener : listeners) {
             listener.onStats(correlationId, status, stats, endOfBatch);
+        }
+    }
+
+    private void decodeTimers(DirectBuffer buffer, int offset, int blockLength, int version) {
+        timersDecoder.wrap(buffer, offset, blockLength, version);
+        final var status = timersDecoder.status();
+        final boolean endOfBatch = timersDecoder.endOfBatch() == com.bhf.aeroncache.gateway.messages.BooleanType.T;
+        final List<GatewayTimer> timers = new java.util.ArrayList<>();
+        for (GatewayTimersDecoder.TimersDecoder timer : timersDecoder.timers()) {
+            final String timerType = timer.timerType().name();
+            final long deadline = timer.deadline();
+            final String cacheId = timer.cacheId();
+            final String key = timer.key();
+            timers.add(new GatewayTimer(timerType, cacheId, key, deadline));
+        }
+        final String correlationId = timersDecoder.correlationId();
+        for (GatewayClientListener listener : listeners) {
+            listener.onTimers(correlationId, status, timers, endOfBatch);
         }
     }
 

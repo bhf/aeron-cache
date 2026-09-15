@@ -320,4 +320,41 @@ public class ReusableStringCountersCacheResponseDecoder implements CountersCache
         }
     }
 
+    private final AllTimersResultDecoder allTimersResultDecoder = new AllTimersResultDecoder();
+
+    @Override
+    public void decodeAllTimersResult(DirectBuffer buffer, int offset, AllTimersResult<ReusableString, ReusableString> allTimersResult) {
+        allTimersResultDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        var status = getOperationStatus(allTimersResultDecoder.status());
+        allTimersResult.clear();
+        allTimersResult.setOperationStatus(status);
+        allTimersResult.setEndOfBatch(allTimersResultDecoder.endOfBatch() == BooleanType.T);
+
+        for (AllTimersResultDecoder.TimersDecoder item : allTimersResultDecoder.timers()) {
+            var timerType = getTimerType(item.timerType());
+            var deadline = item.deadline();
+            var cacheIdStr = item.cacheId();
+            var keyStr = item.key();
+
+            var cacheId = new ReusableString();
+            cacheId.copyFrom(cacheIdStr);
+            var key = new ReusableString();
+            key.copyFrom(keyStr);
+
+            var timerDetails = new TimerDetails<>(cacheId, key);
+            timerDetails.timerType = timerType;
+            timerDetails.deadline = deadline;
+            allTimersResult.getTimers().add(timerDetails);
+        }
+
+        var requestId = allTimersResultDecoder.requestId();
+        allTimersResult.setRequestId(requestId);
+    }
+
+    private static com.bhf.aeroncache.models.results.TimerType getTimerType(com.bhf.aeroncache.messages.TimerType timerType) {
+        return timerType == com.bhf.aeroncache.messages.TimerType.COUNTER
+                ? com.bhf.aeroncache.models.results.TimerType.COUNTER
+                : com.bhf.aeroncache.models.results.TimerType.CACHE;
+    }
+
 }

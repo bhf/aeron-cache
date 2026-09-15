@@ -89,6 +89,14 @@ public interface CacheResponseHandler<I extends Reusable, K extends Reusable, V 
     void handleAllCacheStats(CacheStatsResult<I> statsResult);
 
     /**
+     * Handle a message with all pending TTL removal timers (for both caches and counter caches),
+     * delegating it to any relevant consumer.
+     *
+     * @param allTimersResult The result of getting all timers.
+     */
+    default void handleAllTimers(AllTimersResult<I, K> allTimersResult) {}
+
+    /**
      * Handle a message about a subscription request to a cache.
      *
      * @param cacheSubscriptionResult The result of subscribing to a cache.
