@@ -6,6 +6,7 @@ import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
 import com.bhf.aeroncache.codecs.response.CountersCacheResponseEncoder;
 import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
 import com.bhf.aeroncache.handlers.PublicationFailureHandler;
+import com.bhf.aeroncache.models.PendingRemove;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.ReusableLong;
 import com.bhf.aeroncache.models.consumer.HydratingPublicationConsumer;
@@ -74,6 +75,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     final GetCacheStatsRequestDetails getCacheStatsRequestDetails;
     final GetAllTimersRequestDetails getAllTimersRequestDetails = new GetAllTimersRequestDetails();
     final AllTimersResult<I, K> allTimersResult = new AllTimersResult<>();
+
     final CacheSubscriptionRequestDetails<I, K> cacheSubscribeRequestDetails;
     final CacheUnsubscribeRequestDetails<I> cacheUnsubscribeRequestDetails;
     final BulkCacheOpsRequestDetails<I,K,V> bulkCacheOpsRequestDetails;
@@ -111,6 +113,15 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     private CacheTimerService<I, K> cacheTimerService;
     private CacheTimerService<I, K> cacheCountersTimerService;
 
+    private final Consumer<PendingRemove<I, K>> cacheTimerCollector = pendingRemove -> addTimer(pendingRemove, TimerType.CACHE);
+    private final Consumer<PendingRemove<I, K>> counterTimerCollector = pendingRemove -> addTimer(pendingRemove, TimerType.COUNTER);
+    private ClientSession timersResponseSession;
+    private final HydratingPublicationConsumer timersResponseConsumer = new HydratingPublicationConsumer() {
+        @Override
+        public void accept(MutableDirectBuffer mutableDirectBuffer) {
+            sendMessage(timersResponseSession, mutableDirectBuffer, this.getLength());
+        }
+    };
 
     protected AbstractCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory) {
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
@@ -770,20 +781,18 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         allTimersResult.setEndOfBatch(true);
         allTimersResult.setRequestId(requestId);
 
-        collectTimers(cacheTimerService, TimerType.CACHE);
-        collectTimers(cacheCountersTimerService, TimerType.COUNTER);
+        cacheTimerService.forEachTimer(cacheTimerCollector);
+        cacheCountersTimerService.forEachTimer(counterTimerCollector);
 
-        var length = encoder.encodeAllTimersResult(allTimersResult, egressBuffer);
-        sendMessage(session, egressBuffer, length);
+        timersResponseSession = session;
+        encoder.encodeAllTimersResult(allTimersResult, egressBuffer, timersResponseConsumer);
     }
 
-    private void collectTimers(CacheTimerService<I, K> timerService, TimerType timerType) {
-        timerService.forEachTimer(pendingRemove -> {
-            var timerDetails = new TimerDetails<>(pendingRemove.getCacheToRemoveOn(), pendingRemove.getKeyToRemove());
-            timerDetails.timerType = timerType;
-            timerDetails.deadline = pendingRemove.getDeadline();
-            allTimersResult.getTimers().add(timerDetails);
-        });
+    private void addTimer(PendingRemove<I, K> pendingRemove, TimerType timerType) {
+        var timerDetails = new TimerDetails<>(pendingRemove.getCacheToRemoveOn(), pendingRemove.getKeyToRemove());
+        timerDetails.timerType = timerType;
+        timerDetails.deadline = pendingRemove.getDeadline();
+        allTimersResult.getTimers().add(timerDetails);
     }
 
     /**

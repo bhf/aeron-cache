@@ -195,24 +195,49 @@ public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<
     }
 
     @Override
-    public int encodeAllTimersResult(AllTimersResult<ReusableString, ReusableString> allTimersResult, MutableDirectBuffer egressBuffer) {
-        allTimersResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
-        allTimersResultEncoder.status(getOperationStatus(allTimersResult.getOperationStatus()));
-        allTimersResultEncoder.endOfBatch(allTimersResult.isEndOfBatch() ? BooleanType.T : BooleanType.F);
-
+    public void encodeAllTimersResult(AllTimersResult<ReusableString, ReusableString> allTimersResult, MutableDirectBuffer egressBuffer, HydratingPublicationConsumer consumer) {
         var timers = allTimersResult.getTimers();
-        var itemsEncoder = allTimersResultEncoder.timersCount(timers.size());
-        timers.forEach(t -> {
+        var status = getOperationStatus(allTimersResult.getOperationStatus());
+        var requestId = allTimersResult.getRequestId();
+        boolean isResultEob = allTimersResult.isEndOfBatch();
+        int totalSize = timers.size();
+        int batchSize = 100;
+
+        if (totalSize == 0) {
+            encodeTimersBatch(egressBuffer, consumer, status, isResultEob, requestId, timers, 0, 0);
+            return;
+        }
+
+        for (int i = 0; i < totalSize; i += batchSize) {
+            int currentBatchSize = Math.min(batchSize, totalSize - i);
+            boolean isLastBatch = (i + currentBatchSize) == totalSize;
+            encodeTimersBatch(egressBuffer, consumer, status, isLastBatch && isResultEob, requestId, timers, i, currentBatchSize);
+        }
+    }
+
+    private void encodeTimersBatch(MutableDirectBuffer egressBuffer, HydratingPublicationConsumer consumer, OperationStatus status,
+                                   boolean endOfBatch, String requestId, java.util.List<com.bhf.aeroncache.models.results.TimerDetails<ReusableString, ReusableString>> timers,
+                                   int fromIndex, int count) {
+        allTimersResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        allTimersResultEncoder.status(status);
+        allTimersResultEncoder.endOfBatch(endOfBatch ? BooleanType.T : BooleanType.F);
+
+        var itemsEncoder = allTimersResultEncoder.timersCount(count);
+        for (int j = 0; j < count; j++) {
+            var t = timers.get(fromIndex + j);
             itemsEncoder.next();
             itemsEncoder.timerType(getTimerType(t.timerType));
             itemsEncoder.deadline(t.deadline);
             itemsEncoder.cacheId(t.getCacheId().value());
             itemsEncoder.key(t.getKey().value());
-        });
+        }
 
-        allTimersResultEncoder.requestId(allTimersResult.getRequestId());
+        allTimersResultEncoder.requestId(requestId);
 
-        return allTimersResultEncoder.encodedLength() + headerEncoder.encodedLength();
+        int length = allTimersResultEncoder.encodedLength() + headerEncoder.encodedLength();
+        consumer.setBuffer(egressBuffer);
+        consumer.setLength(length);
+        consumer.accept(egressBuffer);
     }
 
     private static com.bhf.aeroncache.messages.TimerType getTimerType(com.bhf.aeroncache.models.results.TimerType timerType) {
