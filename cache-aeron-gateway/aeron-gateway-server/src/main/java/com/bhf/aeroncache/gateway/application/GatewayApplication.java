@@ -1,12 +1,21 @@
 package com.bhf.aeroncache.gateway.application;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.ServiceLoader;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.agrona.concurrent.AgentRunner;
+import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
+
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.gateway.codec.GatewayResponseWriter;
 import com.bhf.aeroncache.gateway.config.GatewayIdleStrategies;
+import com.bhf.aeroncache.services.ReconnectingAeronCache;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
-import com.bhf.aeroncache.services.ReconnectingAeronCache;
+import com.bhf.aeroncache.services.cache.ResponseChannelCacheConnector;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCountersRequestPublisher;
 import com.bhf.aeroncache.services.cacheclient.CacheClientFactory;
@@ -14,8 +23,8 @@ import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
+
 import io.aeron.Aeron;
-import io.aeron.FragmentAssembler;
 import io.aeron.RethrowingErrorHandler;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.FragmentHandler;
@@ -23,16 +32,6 @@ import io.javalin.Javalin;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import lombok.extern.log4j.Log4j2;
-import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.AgentRunner;
-import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.ServiceLoader;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Entry point for the Aeron gateway.
@@ -174,10 +173,7 @@ public class GatewayApplication {
                 buildClusterConnection(egressIP, ingressEndpoints, aeronCtx.aeronDirectoryName());
             } else {
                 final Aeron aeron = Aeron.connect(new Aeron.Context().aeronDirectoryName(aeronCtx.aeronDirectoryName()));
-                // Default the request publication host to this node's hostname, which is where a
-                // co-located ephemeral cache binds its request subscription.
-                var requestPubHost = envOrDefault("REQUEST_PUB_HOST", DNSUtils.getThisHostName());
-                buildUnclusteredConnection(aeron, requestPubHost);
+                buildUnclusteredConnection(aeron);
             }
 
             var clusterClientAgentIdleStrategy = clusteredMode ? GatewayIdleStrategies.clusterClientAgentIdleStrategy.get() : GatewayIdleStrategies.unclusteredIdleStrategy.get();
@@ -231,61 +227,21 @@ public class GatewayApplication {
         cache = reconnectingCache;
     }
 
-    private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {
-        var requestPublicationChannel = "aeron:udp?endpoint=" + requestPubHost + ":7008|alias=AC-unclustered-requests";
-        var requestPublication = aeron.addPublication(requestPublicationChannel, 1);
-
-        var hostname = DNSUtils.getThisHostName();
-        var responseSubscriptionChannel = "aeron:udp?endpoint=" + hostname + ":7007|alias=AC-unclustered-responses";
-        var responseSubscription = aeron.addSubscription(responseSubscriptionChannel, 2);
-
-        cache = new AeronCache() {
-            @Override
-            public void sendKeepAlive() {
-            }
-
-            @Override
-            public int pollEgress() {
-                return 0;
-            }
-
-            @Override
-            public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int length) {
-                long res;
-                while ((res = requestPublication.offer(msgBuffer, msgBufferOffset, length)) < 0) {
-                    aeron.context().idleStrategy().idle();
-                }
-                return res;
-            }
-
-            @Override
-            public boolean isConnected() {
-                return true;
-            }
-        };
-
-        AeronCacheClusterListener egressListener = client;
-        FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
+    private static void buildUnclusteredConnection(Aeron aeron) {
+        final AeronCacheClusterListener egressListener = client;
+        final FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
                 -> egressListener.onMessage(header.sessionId(), System.currentTimeMillis(), buffer, offset, length, header);
-        // Reassemble multi-fragment egress messages so responses larger than a single MTU
-        // (e.g. large cache values or batched entries) are delivered as a complete message.
-        final FragmentAssembler egressAssembler = new FragmentAssembler(egressFragmentHandler);
 
-        Agent serverAgent = new Agent() {
-            @Override
-            public int doWork() {
-                return responseSubscription.poll(egressAssembler, Integer.MAX_VALUE);
-            }
+        cache = ResponseChannelCacheConnector.connect(aeron,
+                ResponseChannelCacheConnector.requestEndpoint(),
+                ResponseChannelCacheConnector.requestStreamId(),
+                ResponseChannelCacheConnector.responseControlEndpoint(),
+                ResponseChannelCacheConnector.responseStreamId(),
+                egressFragmentHandler,
+                GatewayIdleStrategies.unclusteredIdleStrategy.get(),
+                aeron.context().idleStrategy(),
+                "AC-Unclustered-requests-listener");
 
-            @Override
-            public String roleName() {
-                return "AC-Unclustered-requests-listener";
-            }
-        };
-
-        IdleStrategy unclusteredAgentIdleStrategy = GatewayIdleStrategies.unclusteredIdleStrategy.get();
-        final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy, Throwable::printStackTrace, null, serverAgent);
-        AgentRunner.startOnThread(serverAgentRunner);
         clusterConnected.set(true);
     }
 

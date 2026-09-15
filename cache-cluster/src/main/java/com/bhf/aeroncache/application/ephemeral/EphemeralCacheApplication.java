@@ -18,7 +18,6 @@ import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.IdleStrategy;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +28,14 @@ import java.util.function.Consumer;
  */
 public class EphemeralCacheApplication {
 
+    /** Default request subscription endpoint (bind all interfaces). */
+    public static final String DEFAULT_REQUEST_ENDPOINT = "0.0.0.0:8075";
+    /** Default response control port; the host defaults to this node's hostname. */
+    public static final int DEFAULT_RESPONSE_CONTROL_PORT = 8076;
+    /** Default request/response stream ids (distinct from the gateway's 100/101). */
+    public static final int DEFAULT_REQUEST_STREAM_ID = 200;
+    public static final int DEFAULT_RESPONSE_STREAM_ID = 201;
+
     public static void main(String[] args) {
 
         boolean dynamicCacheCreation = parseDynamicCacheCreation();
@@ -36,44 +43,40 @@ public class EphemeralCacheApplication {
         var hostname = DNSUtils.getThisHostName();
         System.out.println("Single node cache hostname: "+hostname);
 
-        var httpResponseHost = System.getenv("HTTP_RESPONSE_PUB_HOST");
-        var wsResponseHost = System.getenv("WS_RESPONSE_PUB_HOST");
-        var sseResponseHost = System.getenv("SSE_RESPONSE_PUB_HOST");
+        final String requestEndpoint = System.getenv().getOrDefault(
+                "EPHEMERAL_REQUEST_ENDPOINT", DEFAULT_REQUEST_ENDPOINT);
+        final String responseControlEndpoint = System.getenv().getOrDefault(
+                "EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", hostname + ":" + DEFAULT_RESPONSE_CONTROL_PORT);
+        final int requestStreamId = parseIntEnv("EPHEMERAL_REQUEST_STREAM_ID", DEFAULT_REQUEST_STREAM_ID);
+        final int responseStreamId = parseIntEnv("EPHEMERAL_RESPONSE_STREAM_ID", DEFAULT_RESPONSE_STREAM_ID);
 
-        System.out.println("HTTP Response host: "+httpResponseHost);
-        System.out.println("WS Response host: "+wsResponseHost);
-        System.out.println("SSE Response host: "+sseResponseHost);
+        System.out.println("Ephemeral request endpoint: "+requestEndpoint);
+        System.out.println("Ephemeral response control endpoint: "+responseControlEndpoint);
 
-        final List<String> hostAddresses = List.of(httpResponseHost, wsResponseHost, sseResponseHost);
-
-        for (int i = 0; i < hostAddresses.size(); i++) {
-            DNSUtils.awaitDnsResolution(hostAddresses, i);
-        }
-
-        System.out.println("Finished DNS resolution on "+hostAddresses);
-
-        start(hostname, httpResponseHost, wsResponseHost, sseResponseHost, dynamicCacheCreation);
+        start(requestEndpoint, responseControlEndpoint, requestStreamId, responseStreamId, dynamicCacheCreation);
     }
 
     /**
      * Launch an unclustered (ephemeral) cache in-process, launching a dedicated embedded media driver
      * and starting the service agent on its own thread.
      * <p>
-     * The request subscriptions are bound to {@code bindHost} and the response publications are sent to
-     * the supplied per-interface response hosts. The agent's {@code onStart} blocks (on the agent thread)
-     * until at least one response publication connects, so this method returns promptly to the caller.
+     * Clients connect over Aeron response channels ({@code control-mode=response}): a single request
+     * subscription bound to {@code requestEndpoint} accepts any number of clients, and each client's
+     * responses are routed back over a per-session response publication advertised on
+     * {@code responseControlEndpoint}. Response publications are created on demand as clients connect,
+     * so this method returns as soon as the agent thread is launched.
      *
-     * @param bindHost            host the request subscriptions bind to (typically this node's hostname).
-     * @param httpResponseHost    host the HTTP response publication targets.
-     * @param wsResponseHost      host the websocket/gateway response publication targets.
-     * @param sseResponseHost     host the SSE response publication targets.
-     * @param dynamicCacheCreation whether caches may be created dynamically on first write.
+     * @param requestEndpoint          endpoint the request subscription binds to (e.g. {@code 0.0.0.0:8075}).
+     * @param responseControlEndpoint  the response control endpoint advertised to clients (host:port).
+     * @param requestStreamId          the request stream id.
+     * @param responseStreamId         the response stream id.
+     * @param dynamicCacheCreation     whether caches may be created dynamically on first write.
      * @return the {@link AgentRunner} driving the cache service agent.
      */
-    public static AgentRunner start(String bindHost,
-                                    String httpResponseHost,
-                                    String wsResponseHost,
-                                    String sseResponseHost,
+    public static AgentRunner start(String requestEndpoint,
+                                    String responseControlEndpoint,
+                                    int requestStreamId,
+                                    int responseStreamId,
                                     boolean dynamicCacheCreation) {
 
         // LAUNCH_EMBEDDED=false attaches to an external media driver at AERON_DIR (default unset
@@ -101,27 +104,30 @@ public class EphemeralCacheApplication {
         final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0",
                 new NoOpTracingService(), cacheManagerFactory, dynamicCacheCreation);
         final EphemeralTimerService timerService = new EphemeralTimerService(service::onTimerEvent);
-        Cluster cluster = getCluster(aeron, timerService);
+        final EphemeralSessionRegistry registry =
+                new EphemeralSessionRegistry(aeron, responseControlEndpoint, responseStreamId);
+        Cluster cluster = getCluster(aeron, timerService, registry);
         service.onStart(cluster, null);
 
-        final var httpRequests = "aeron:udp?endpoint="+bindHost+":8008|alias=AC-unclustered-http-requests";
-        final var wsRequests = "aeron:udp?endpoint="+bindHost+":7008|alias=AC-unclustered-ws-requests";
-        final var sseRequests = "aeron:udp?endpoint="+bindHost+":6008|alias=AC-unclustered-sse-requests";
-        final int requestStream = 1;
-
-        final var httpResponses = "aeron:udp?endpoint="+httpResponseHost+":8007|alias=AC-unclustered-http-responses";
-        final var wsResponses = "aeron:udp?endpoint="+wsResponseHost+":7007|alias=AC-unclustered-ws-responses";
-        final var sseResponses = "aeron:udp?endpoint="+sseResponseHost+":6007|alias=AC-unclustered-sse-responses";
-        final int responsesStream = 2;
-
         final EphemeralCacheServiceAgent serverAgent = new EphemeralCacheServiceAgent(aeron, service, timerService,
-                httpRequests, wsRequests, sseRequests, requestStream,
-                httpResponses, wsResponses, sseResponses, responsesStream);
+                requestEndpoint, responseControlEndpoint, requestStreamId, responseStreamId, registry);
         final IdleStrategy idleStrategy = EphemeralCacheIdleStrategies.unclusteredAgentIdleStrategy.get();
         final AgentRunner serverAgentRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace,
                 null, serverAgent);
         AgentRunner.startOnThread(serverAgentRunner);
         return serverAgentRunner;
+    }
+
+    private static int parseIntEnv(String name, int defaultValue) {
+        var value = System.getenv(name);
+        if (value != null) {
+            try {
+                return Integer.parseInt(value.trim());
+            } catch (NumberFormatException e) {
+                System.out.println("Couldn't parse value of "+name+" as int, using default "+defaultValue);
+            }
+        }
+        return defaultValue;
     }
 
     private static boolean parseDynamicCacheCreation() {
@@ -147,7 +153,8 @@ public class EphemeralCacheApplication {
         }
     }
 
-    private static Cluster getCluster(Aeron aeron, EphemeralTimerService timerService) {
+    private static Cluster getCluster(Aeron aeron, EphemeralTimerService timerService,
+                                      EphemeralSessionRegistry registry) {
         Cluster cluster = new Cluster() {
             @Override
             public int memberId() {
@@ -176,22 +183,23 @@ public class EphemeralCacheApplication {
 
             @Override
             public ClientSession getClientSession(long clusterSessionId) {
-                return null;
+                return registry.get(clusterSessionId);
             }
 
             @Override
             public Collection<ClientSession> clientSessions() {
-                return null;
+                return registry.values();
             }
 
             @Override
             public void forEachClientSession(Consumer<? super ClientSession> action) {
-
+                registry.values().forEach(action);
             }
 
             @Override
             public boolean closeClientSession(long clusterSessionId) {
-                return false;
+                registry.remove(clusterSessionId);
+                return true;
             }
 
             @Override

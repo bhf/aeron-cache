@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.http.application;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.services.cache.ResponseChannelCacheConnector;
 import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.handlers.CacheRouteHandlers;
 import com.bhf.aeroncache.http.handlers.CountersRouteHandlers;
@@ -36,7 +37,6 @@ import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aeron.Aeron;
-import io.aeron.FragmentAssembler;
 import io.aeron.RethrowingErrorHandler;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.FragmentHandler;
@@ -57,8 +57,6 @@ import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
@@ -211,8 +209,7 @@ public class HttpApplication {
             } else {
 
                 final Aeron aeron = Aeron.connect(aeronCtx);
-                var requestPubHost = System.getenv("REQUEST_PUB_HOST");
-                buildUnclusteredConnection(aeron, requestPubHost);
+                buildUnclusteredConnection(aeron);
             }
 
             System.out.println("Building cluster agent for http service, cluster connected: "+clusterConnected.get());
@@ -253,71 +250,22 @@ public class HttpApplication {
         }
     }
 
-    private static void buildUnclusteredConnection(Aeron aeron, String requestPubHost) {
-
-        var requestPublicationChannel = "aeron:udp?endpoint=" + requestPubHost + ":8008|alias=AC-unclustered-requests";
-        int requestPublicationStream = 1;
-        var requestPublication = aeron.addPublication(requestPublicationChannel,
-                requestPublicationStream);
-
-        var hostname = DNSUtils.getThisHostName();
-        var responseSubscriptionChannel = "aeron:udp?endpoint=" + hostname + ":8007|alias=AC-unclustered-responses";
-        int responseSubscriptionStream = 2;
-        var responseSubscription = aeron.addSubscription(responseSubscriptionChannel,
-                responseSubscriptionStream);
-
-        cache = new AeronCache() {
-            @Override
-            public void sendKeepAlive() {
-            }
-
-            @Override
-            public int pollEgress() {
-                return 0;
-            }
-
-            @Override
-            public long offer(MutableDirectBuffer msgBuffer, int msgBufferOffset, int i) {
-                long res = 0;
-                while ((res = requestPublication.offer(msgBuffer, msgBufferOffset, i)) < 0) {
-                    aeron.context().idleStrategy().idle();
-                }
-                return res;
-            }
-
-            @Override
-            public boolean isConnected() {
-                return true;
-            }
-        };
-
-        AeronCacheClusterListener egressListener = client;
-        FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
+    private static void buildUnclusteredConnection(Aeron aeron) {
+        final AeronCacheClusterListener egressListener = client;
+        final FragmentHandler egressFragmentHandler = (buffer, offset, length, header)
                 -> egressListener.onMessage(header.sessionId(),
                 System.currentTimeMillis(),
                 buffer, offset, length, header);
-        // Reassemble multi-fragment egress messages so responses larger than a single MTU
-        // (e.g. large cache values) are delivered as a complete message.
-        final FragmentAssembler egressAssembler = new FragmentAssembler(egressFragmentHandler);
 
-        Agent serverAgent = new Agent() {
-            @Override
-            public int doWork() throws Exception {
-                return responseSubscription.poll(egressAssembler, Integer.MAX_VALUE);
-            }
-
-            @Override
-            public String roleName() {
-                return "AC-Unclustered-requests-listener";
-            }
-        };
-
-        IdleStrategy unclusteredAgentIdleStrategy = HttpIdleStrategies.unclusteredIdleStrategy.get();
-        final AgentRunner serverAgentRunner = new AgentRunner(unclusteredAgentIdleStrategy,
-                Throwable::printStackTrace,
-                null, serverAgent);
-
-        AgentRunner.startOnThread(serverAgentRunner);
+        cache = ResponseChannelCacheConnector.connect(aeron,
+                ResponseChannelCacheConnector.requestEndpoint(),
+                ResponseChannelCacheConnector.requestStreamId(),
+                ResponseChannelCacheConnector.responseControlEndpoint(),
+                ResponseChannelCacheConnector.responseStreamId(),
+                egressFragmentHandler,
+                HttpIdleStrategies.unclusteredIdleStrategy.get(),
+                aeron.context().idleStrategy(),
+                "AC-Unclustered-requests-listener");
 
         clusterConnected.set(true);
     }

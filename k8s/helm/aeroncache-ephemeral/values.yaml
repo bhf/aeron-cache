@@ -88,12 +88,22 @@ securityContext: {}
 # runAsUser: 1000
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+# Clients connect over Aeron response channels (control-mode=response): a single request endpoint
+# accepts any number of clients and responses are routed back to each client's real source address,
+# so a virtual ClusterIP is sufficient (no headless per-pod DNS is needed, unlike the old fixed
+# per-interface response-host wiring).
 service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   type: ClusterIP
-  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
-  port: 80
-  clusterIP: None
+  # Aeron request endpoint (UDP) any number of clients dial.
+  requestPort: 8075
+  # Aeron response control endpoint (UDP) for control-mode=response.
+  responseControlPort: 8076
+
+# Aeron response-channel endpoints advertised via the configmap. The request endpoint binds all
+# interfaces; the response control endpoint is the address clients subscribe to for responses.
+ephemeralRequestEndpoint: "0.0.0.0:8075"
+ephemeralResponseControlEndpoint: "aeroncache-ephemeral:8076"
 
 # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:

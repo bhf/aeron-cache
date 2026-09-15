@@ -42,10 +42,10 @@ jobs:
         working-directory: ./k8s/helm
         run: |
           # Deploy the single-node (ephemeral/SINGLE) cache plus the http/ws/sse interfaces.
-          # The ephemeral install targets render the interface services headless and point the
-          # interface REQUEST_PUB_HOST (and the node's per-interface response hosts) at pod IPs,
-          # which Aeron's pod-to-pod UDP requires - a virtual ClusterIP does not forward it.
-          # http-near and gateway are intentionally omitted; the core ephemeral suite does not use them.
+          # The cache exposes a single Aeron request + response-control UDP endpoint (control-mode=response)
+          # behind a ClusterIP; the interfaces dial those endpoints and the cache routes responses back to
+          # each interface pod's real source address, so no headless/per-interface response-host wiring is
+          # needed. http-near and gateway are intentionally omitted; the core ephemeral suite does not use them.
           make install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral
 
       - name: Verify Ephemeral Component Readiness (Wait)

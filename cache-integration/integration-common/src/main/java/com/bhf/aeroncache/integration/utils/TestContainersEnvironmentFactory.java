@@ -251,9 +251,8 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CLUSTER_NODE", "0")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("CACHE_DATA_DIR", "/tmp/data")
-                .withEnv("HTTP_RESPONSE_PUB_HOST", "cache-http-client")
-                .withEnv("WS_RESPONSE_PUB_HOST", "cache-ws-client")
-                .withEnv("SSE_RESPONSE_PUB_HOST", "cache-sse-client");
+                .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "0.0.0.0:8075")
+                .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", name + ":8076");
     }
 
     /**
@@ -278,9 +277,8 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("DYNAMIC_CACHE_CREATION", "true")
                 .withEnv("CACHE_MODE", "SINGLE")
                 .withEnv("CACHE_DATA_DIR", "/tmp/data")
-                .withEnv("HTTP_RESPONSE_PUB_HOST", "cache-http-client")
-                .withEnv("WS_RESPONSE_PUB_HOST", "cache-ws-client")
-                .withEnv("SSE_RESPONSE_PUB_HOST", "cache-sse-client");
+                .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "0.0.0.0:8075")
+                .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", name + ":8076");
     }
 
     /**
@@ -298,7 +296,8 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
-                .withEnv("REQUEST_PUB_HOST", "node0")
+                .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "node0:8075")
+                .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", "node0:8076")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -317,7 +316,8 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
-                .withEnv("REQUEST_PUB_HOST", "node0")
+                .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "node0:8075")
+                .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", "node0:8076")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -336,7 +336,8 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
-                .withEnv("REQUEST_PUB_HOST", "node0")
+                .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "node0:8075")
+                .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", "node0:8076")
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -355,7 +356,8 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
                 .withEnv("CLUSTER_ADDRESSES", "node0")
                 .withEnv("CACHE_MODE", "SINGLE")
-                .withEnv("REQUEST_PUB_HOST", "node0")
+                .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "node0:8075")
+                .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", "node0:8076")
                 .waitingFor(Wait.forHttp("/readiness/"));
     }
 

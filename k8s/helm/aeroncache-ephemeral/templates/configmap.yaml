@@ -4,9 +4,8 @@ metadata:
   name: aeroncache-ephemeral-config
   namespace: {{ .Release.Namespace }}
 data:
-  HTTP_RESPONSE_PUB_HOST: aeroncache-http
-  WS_RESPONSE_PUB_HOST: aeroncache-ws
-  SSE_RESPONSE_PUB_HOST: aeroncache-sse
+  EPHEMERAL_REQUEST_ENDPOINT: {{ tpl .Values.ephemeralRequestEndpoint . | quote }}
+  EPHEMERAL_RESPONSE_CONTROL_ENDPOINT: {{ tpl .Values.ephemeralResponseControlEndpoint . | quote }}
   DNS_DELAY: "true"
   CACHE_MODE: {{ .Values.cacheMode | quote }}
   CLUSTER_ADDRESSES: "aeroncache-ephemeral-0.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-ephemeral-1.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-ephemeral-2.aeroncache-ephemeral.{{ .Release.Namespace }}.svc.cluster.local"

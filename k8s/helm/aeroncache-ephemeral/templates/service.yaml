@@ -6,6 +6,14 @@ metadata:
     {{- include "aeroncache-ephemeral.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
-  clusterIP: {{ .Values.service.clusterIP }}
+  ports:
+    - port: {{ .Values.service.requestPort }}
+      targetPort: {{ .Values.service.requestPort }}
+      protocol: UDP
+      name: aeron-req
+    - port: {{ .Values.service.responseControlPort }}
+      targetPort: {{ .Values.service.responseControlPort }}
+      protocol: UDP
+      name: aeron-resp
   selector:
     {{- include "aeroncache-ephemeral.selectorLabels" . | nindent 4 }}

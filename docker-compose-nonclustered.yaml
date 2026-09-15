@@ -70,9 +70,8 @@ services:
       - OTEL_SERVICE_NAME=aeron-cache-cluster-node
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
       - CACHE_MODE=SINGLE
-      - HTTP_RESPONSE_PUB_HOST=cache-http-client
-      - WS_RESPONSE_PUB_HOST=cache-ws-client
-      - SSE_RESPONSE_PUB_HOST=cache-sse-client
+      - EPHEMERAL_REQUEST_ENDPOINT=0.0.0.0:8075
+      - EPHEMERAL_RESPONSE_CONTROL_ENDPOINT=node0:8076
   cache-http-client:
     shm_size: '1gb'
     build:
@@ -91,7 +90,8 @@ services:
       - OTEL_JAVAAGENT_LOGGING=none
       - CLUSTER_ADDRESSES=node0
       - CACHE_MODE=SINGLE
-      - REQUEST_PUB_HOST=node0
+      - EPHEMERAL_REQUEST_ENDPOINT=node0:8075
+      - EPHEMERAL_RESPONSE_CONTROL_ENDPOINT=node0:8076
   cache-ws-client:
     shm_size: '1gb'
     build:
@@ -110,7 +110,8 @@ services:
       - OTEL_JAVAAGENT_LOGGING=none
       - CLUSTER_ADDRESSES=node0
       - CACHE_MODE=SINGLE
-      - REQUEST_PUB_HOST=node0
+      - EPHEMERAL_REQUEST_ENDPOINT=node0:8075
+      - EPHEMERAL_RESPONSE_CONTROL_ENDPOINT=node0:8076
   cache-sse-client:
     shm_size: '1gb'
     build:
@@ -129,7 +130,8 @@ services:
       - OTEL_JAVAAGENT_LOGGING=none
       - CLUSTER_ADDRESSES=node0
       - CACHE_MODE=SINGLE
-      - REQUEST_PUB_HOST=node0
+      - EPHEMERAL_REQUEST_ENDPOINT=node0:8075
+      - EPHEMERAL_RESPONSE_CONTROL_ENDPOINT=node0:8076
   cache-ui:
     build:
       context: cache-ui/nextjs

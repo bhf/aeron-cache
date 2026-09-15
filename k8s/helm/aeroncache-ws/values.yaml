@@ -7,7 +7,11 @@ cacheMode: "RAFT"
 
 # Set the configmap to use for the cluster config
 aeroncacheWSConfigmap: aeroncache-ws-config
-requestPubHost: "aeroncache-ws"
+
+# Ephemeral (SINGLE mode) cache response-channel endpoints. Left blank in clustered (RAFT) mode; set
+# by the install-ephemeral target to the ephemeral cache service's request/response-control endpoints.
+ephemeralRequestEndpoint: ""
+ephemeralResponseControlEndpoint: ""
 
 # Comma separated list of allowed CORS origins for the web facing interface. Leave blank to fall
 # back to the application default (localhost dev origins).
