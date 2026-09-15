@@ -175,12 +175,14 @@ public class HTTPConsumerUtils {
     }
 
     public static Consumer<AllTimersResult<ReusableString, ReusableString>> getAllTimersResultConsumer(CompletableFuture<GetTimersResponse> future) {
+        final List<TimerInfo> accumulated = new ArrayList<>();
         return c -> {
-            log.info("Get all timers response from cluster, requestId {}", c.getRequestId());
-            List<TimerInfo> timers = new ArrayList<>();
-            c.getTimers().forEach(t -> timers.add(
+            log.info("Get all timers response batch from cluster, requestId {}, endOfBatch {}", c.getRequestId(), c.isEndOfBatch());
+            c.getTimers().forEach(t -> accumulated.add(
                     new TimerInfo(t.timerType.name(), t.getCacheId().value(), t.getKey().value(), t.deadline)));
-            future.complete(new GetTimersResponse(c.getOperationStatus(), timers));
+            if (c.isEndOfBatch()) {
+                future.complete(new GetTimersResponse(c.getOperationStatus(), new ArrayList<>(accumulated)));
+            }
         };
     }
 }

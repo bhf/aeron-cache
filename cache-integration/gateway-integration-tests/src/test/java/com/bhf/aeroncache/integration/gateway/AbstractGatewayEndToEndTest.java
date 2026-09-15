@@ -4,6 +4,7 @@ import com.bhf.aeroncache.gateway.client.GatewayBulkOp;
 import com.bhf.aeroncache.gateway.client.GatewayBulkOpResult;
 import com.bhf.aeroncache.gateway.client.GatewayClient;
 import com.bhf.aeroncache.gateway.client.GatewayStat;
+import com.bhf.aeroncache.gateway.client.GatewayTimer;
 import com.bhf.aeroncache.gateway.messages.BulkOperationType;
 import com.bhf.aeroncache.gateway.messages.OperationStatus;
 import com.bhf.aeroncache.gateway.messages.UpdateEventType;
@@ -635,6 +636,37 @@ abstract class AbstractGatewayEndToEndTest {
         assertTrue(timers.stream().anyMatch(t -> "COUNTER".equals(t.timerType())
                         && counterCacheId.equals(t.cacheId()) && "hits".equals(t.key()) && t.deadline() > 0),
                 "expected a COUNTER timer for the scheduled counter removal");
+    }
+
+    @Test
+    @DisplayName("Should return all timers accumulated across multiple batches when more than one batch is needed")
+    void shouldReturnAllTimersAcrossMultipleBatches() {
+        // Arrange - schedule more timers than fit in a single 100-entry batch so the result spans multiple frames.
+        var cacheId = uniqueCache("timers-batched");
+        var createCorr = correlationId();
+        var timersCorr = correlationId();
+        int timerCount = 150;
+
+        client.createCache(createCorr, cacheId);
+        awaitCommandSuccess(createCorr);
+        for (int i = 0; i < timerCount; i++) {
+            var addCorr = correlationId();
+            client.addEntry(addCorr, cacheId, "k" + i, "v" + i, TTL_SCHEDULED);
+            awaitCommandSuccess(addCorr);
+        }
+
+        // Act
+        client.getTimers(timersCorr);
+        await().atMost(30, SECONDS).until(() -> listener.timersComplete.containsKey(timersCorr));
+
+        // Assert - every scheduled timer for our cache is present, so nothing was dropped across batch boundaries.
+        var ourTimers = listener.timersAccumulated.get(timersCorr).stream()
+                .filter(t -> cacheId.equals(t.cacheId()))
+                .toList();
+        assertEquals(timerCount, ourTimers.size(),
+                "expected all " + timerCount + " timers for the cache to be accumulated across batches");
+        var keys = ourTimers.stream().map(GatewayTimer::key).collect(java.util.stream.Collectors.toSet());
+        assertEquals(timerCount, keys.size(), "expected every timer key to be distinct and present");
     }
 
     @Test
