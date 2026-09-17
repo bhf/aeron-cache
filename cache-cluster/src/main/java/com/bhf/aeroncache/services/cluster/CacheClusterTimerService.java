@@ -90,12 +90,13 @@ public class CacheClusterTimerService<I extends Reusable,K extends Reusable,V ex
         lookupKey.getCacheId().copyFrom(cacheId);
         lookupKey.getKey().copyFrom(key);
 
-        var correlationId = cacheKeyToTimerId.get(lookupKey);
+        var correlationId = cacheKeyToTimerId.remove(lookupKey);
 
         if (correlationId != null) {
             while(!cluster.cancelTimer(correlationId)){
 
             }
+            pendingRemoves.remove(correlationId.longValue());
             return true;
         }
 

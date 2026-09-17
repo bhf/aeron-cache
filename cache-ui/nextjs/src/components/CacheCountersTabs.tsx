@@ -6,18 +6,19 @@ import {Button} from "@/components/ui/button";
 interface CacheCountersTabsProps {
     caches: React.ReactNode
     counters: React.ReactNode
+    timers: React.ReactNode
 }
 
 /**
  * A lightweight tab switcher for the main panel that toggles between
- * the caches and counters views. Both panels stay mounted (hidden via
+ * the caches, counters and timers views. Both panels stay mounted (hidden via
  * CSS) so their async content and any streaming state is preserved when
  * switching tabs.
  * @constructor
  */
 export default function CacheCountersTabs(props: CacheCountersTabsProps) {
 
-    const [tab, setTab] = useState<"caches" | "counters">("caches")
+    const [tab, setTab] = useState<"caches" | "counters" | "timers">("caches")
 
     return (
         <div>
@@ -36,12 +37,22 @@ export default function CacheCountersTabs(props: CacheCountersTabsProps) {
                 >
                     Counters
                 </Button>
+                <Button
+                    variant={tab === "timers" ? "default" : "outline"}
+                    onClick={() => setTab("timers")}
+                    data-testid="timers-tab"
+                >
+                    Timers
+                </Button>
             </div>
             <div className={tab === "caches" ? "" : "hidden"} data-testid="caches-tab-panel">
                 {props.caches}
             </div>
             <div className={tab === "counters" ? "" : "hidden"} data-testid="counters-tab-panel">
                 {props.counters}
+            </div>
+            <div className={tab === "timers" ? "" : "hidden"} data-testid="timers-tab-panel">
+                {props.timers}
             </div>
         </div>
     );

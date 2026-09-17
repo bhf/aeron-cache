@@ -22,6 +22,8 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.anyInt;
@@ -102,6 +104,52 @@ class CacheClusterTimerServiceTest {
         verify(cluster).scheduleTimer(1L, deadline1);
         verify(cluster).cancelTimer(1L);
         verify(cluster).scheduleTimer(2L, deadline2);
+    }
+
+    @Test
+    @HappyPath
+    @DisplayName("Should cancel item removal and stop reporting the timer")
+    void shouldCancelItemRemoval() {
+        // Arrange
+        ReusableString cacheId = new ReusableString();
+        cacheId.copyFrom("cache1");
+        ReusableString key = new ReusableString();
+        key.copyFrom("key1");
+        long deadline = 1000L;
+
+        when(cluster.scheduleTimer(anyLong(), eq(deadline))).thenReturn(true);
+        when(cluster.cancelTimer(anyLong())).thenReturn(true);
+        sut.scheduleItemRemoval(cacheId, key, cache, deadline);
+
+        // Act
+        boolean cancelled = sut.cancelItemRemoval(cacheId, key);
+
+        // Assert
+        assertTrue(cancelled);
+        verify(cluster).cancelTimer(1L);
+
+        @SuppressWarnings("unchecked")
+        Consumer<com.bhf.aeroncache.models.PendingRemove<ReusableString, ReusableString>> timerConsumer = mock(Consumer.class);
+        sut.forEachTimer(timerConsumer);
+        verify(timerConsumer, never()).accept(any());
+    }
+
+    @Test
+    @HappyPath
+    @DisplayName("Should not cancel item removal for an unknown key")
+    void shouldNotCancelUnknownItemRemoval() {
+        // Arrange
+        ReusableString cacheId = new ReusableString();
+        cacheId.copyFrom("cache1");
+        ReusableString key = new ReusableString();
+        key.copyFrom("key1");
+
+        // Act
+        boolean cancelled = sut.cancelItemRemoval(cacheId, key);
+
+        // Assert
+        assertFalse(cancelled);
+        verify(cluster, never()).cancelTimer(anyLong());
     }
 
     @Test

@@ -404,6 +404,35 @@ export async function setCounterRequest(props: { cacheId: number, key: string, v
 }
 
 /**
+ * Cancel a pending TTL removal timer.
+ *
+ * A timer represents a scheduled removal of a single key from a cache or
+ * counter cache. Cancelling it maps to the backend's cancel-removal endpoint,
+ * choosing the cache or counters route based on the timer's type.
+ * @param props The timer to cancel.
+ */
+export async function cancelTimerRequest(props: { timerType: string, cacheId: string, key: string }) {
+    const prefix = props.timerType === "COUNTER" ? "/counters/" : "/cache/"
+    const url = AERON_CACHE_API + prefix + props.cacheId + "/" + encodeURIComponent(props.key) + "/cancel-removal"
+    logger.info("Cancel timer request (" + props.timerType + ") for cache " + props.cacheId + " on key " + props.key)
+    try {
+        const rawResponse = await fetch(url, {
+            method: 'POST',
+            headers,
+            cache: "no-cache"
+        });
+        const content = await rawResponse.json();
+        logger.info("Got response from sending request to cancel timer ", content)
+        updateTag("Cache-" + props.cacheId)
+        updateTag("Counters-" + props.cacheId)
+        revalidatePath("/")
+        return content
+    } catch (err) {
+        logger.error("Error whilst sending request to cancel timer ", err);
+    }
+}
+
+/**
  * Request a snapshot.
  */
 export async function snapshotCacheRequest() {
