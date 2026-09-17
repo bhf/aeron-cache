@@ -196,16 +196,20 @@ public class GatewayResponseWriter {
     }
 
     /**
-     * Encode and publish a bulk operations response frame.
+     * Encode and publish a batch of bulk operation results.
      * <p>
-     * Carries one result per requested operation, in request order; each entry echoes its operation's own
-     * {@code requestId} so the client can correlate individual operations.
+     * Mirrors the cluster {@code BulkCacheOpsResult}: results are delivered in one or more batches (each
+     * result in request order, echoing its operation's own {@code requestId}), and the final batch for a
+     * request carries {@code endOfBatch=true}.
      *
      * @param correlationId the correlation id echoed from the bulk request.
-     * @param operations    the per-operation results, in request order.
+     * @param operations    the per-operation results in this batch, in request order.
+     * @param endOfBatch    {@code true} when this is the final batch for the request.
      */
-    public void writeBulkResponse(Publication publication, String correlationId, List<BulkOpResultEntry> operations) {
-        var bulkEnc = bulkResponseEncoder.wrapAndApplyHeader(buffer, 0, headerEncoder);
+    public void writeBulkResponse(Publication publication, String correlationId, List<BulkOpResultEntry> operations,
+                                  boolean endOfBatch) {
+        var bulkEnc = bulkResponseEncoder.wrapAndApplyHeader(buffer, 0, headerEncoder)
+                .endOfBatch(mapBoolean(endOfBatch));
         var groupEnc = bulkEnc.operationsCount(operations.size());
         for (BulkOpResultEntry op : operations) {
             groupEnc.next()

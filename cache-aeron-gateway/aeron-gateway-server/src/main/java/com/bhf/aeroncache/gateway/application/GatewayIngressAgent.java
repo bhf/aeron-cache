@@ -221,29 +221,26 @@ public class GatewayIngressAgent implements Agent {
         final String correlationId = requestId(bulkRequestDecoder.correlationId());
 
         final BulkCacheOpsRequest request = new BulkCacheOpsRequest(correlationId, operations);
-        final List<GatewayResponseWriter.BulkOpResultEntry> accumulated = new ArrayList<>();
         cacheSubs.sendBulkOperationsRequest(correlationId, request,
-                (Consumer<BulkCacheOpsResult>) o -> respondBulk(responsePublication, correlationId, accumulated, (BulkCacheOpsResult) o));
+                (Consumer<BulkCacheOpsResult>) o -> respondBulk(responsePublication, correlationId, (BulkCacheOpsResult) o));
     }
 
     /**
-     * Accumulate the per-operation results the cluster streams back (in one or more batches, mirroring
-     * {@code BulkCacheOpsResult}) and forward them as a single bulk response once the final batch
-     * ({@code endOfBatch=true}) arrives.
+     * Forward a batch of bulk operation results to the client. The cluster streams the results in one or
+     * more batches (mirroring {@code BulkCacheOpsResult}); this fires once per batch and forwards the
+     * batch's results together with the {@code endOfBatch} flag so the client can detect completion.
      */
-    private void respondBulk(Publication publication, String correlationId,
-                             List<GatewayResponseWriter.BulkOpResultEntry> accumulated, BulkCacheOpsResult result) {
+    private void respondBulk(Publication publication, String correlationId, BulkCacheOpsResult result) {
+        final List<GatewayResponseWriter.BulkOpResultEntry> entries = new ArrayList<>();
         for (Object o : result.getOperations()) {
             final CacheOperationResultDetails details = (CacheOperationResultDetails) o;
             final String cacheId = details.getCacheId() == null ? null : String.valueOf(details.getCacheId().value());
             final String key = details.getKey() == null ? null : String.valueOf(details.getKey().value());
             final String value = details.getValue() == null ? null : String.valueOf(details.getValue().value());
-            accumulated.add(new GatewayResponseWriter.BulkOpResultEntry(
+            entries.add(new GatewayResponseWriter.BulkOpResultEntry(
                     details.getOperationStatus(), details.getRequestId(), cacheId, key, value));
         }
-        if (result.isEndOfBatch()) {
-            egressWriter.writeBulkResponse(publication, correlationId, accumulated);
-        }
+        egressWriter.writeBulkResponse(publication, correlationId, entries, result.isEndOfBatch());
     }
 
     private static BulkOperationType mapBulkOperationType(com.bhf.aeroncache.gateway.messages.BulkOperationType type) {

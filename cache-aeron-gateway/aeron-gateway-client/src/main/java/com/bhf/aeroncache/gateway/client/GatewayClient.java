@@ -401,6 +401,7 @@ public class GatewayClient implements Agent, AutoCloseable {
 
     private void decodeBulkResponse(DirectBuffer buffer, int offset, int blockLength, int version) {
         bulkResponseDecoder.wrap(buffer, offset, blockLength, version);
+        final boolean endOfBatch = bulkResponseDecoder.endOfBatch() == com.bhf.aeroncache.gateway.messages.BooleanType.T;
         final List<GatewayBulkOpResult> results = new ArrayList<>();
         for (GatewayBulkResponseDecoder.OperationsDecoder op : bulkResponseDecoder.operations()) {
             final var status = op.status();
@@ -412,7 +413,7 @@ public class GatewayClient implements Agent, AutoCloseable {
         }
         final String correlationId = bulkResponseDecoder.correlationId();
         for (GatewayClientListener listener : listeners) {
-            listener.onBulkResponse(correlationId, results);
+            listener.onBulkResponse(correlationId, results, endOfBatch);
         }
     }
 

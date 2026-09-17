@@ -40,6 +40,7 @@ final class RecordingListener implements GatewayClientListener {
     final Map<String, Boolean> timersComplete = new ConcurrentHashMap<>();
     final Queue<StreamUpdate> streamUpdates = new ConcurrentLinkedQueue<>();
     final Map<String, SubscribeAck> subscribeAcks = new ConcurrentHashMap<>();
+    final Map<String, List<GatewayBulkOpResult>> bulkAccumulated = new ConcurrentHashMap<>();
     final Map<String, List<GatewayBulkOpResult>> bulkResponses = new ConcurrentHashMap<>();
     final Map<String, String> errors = new ConcurrentHashMap<>();
 
@@ -84,8 +85,12 @@ final class RecordingListener implements GatewayClientListener {
     }
 
     @Override
-    public void onBulkResponse(String correlationId, List<GatewayBulkOpResult> results) {
-        bulkResponses.put(correlationId, List.copyOf(results));
+    public void onBulkResponse(String correlationId, List<GatewayBulkOpResult> results, boolean endOfBatch) {
+        var accumulated = bulkAccumulated.computeIfAbsent(correlationId, k -> new CopyOnWriteArrayList<>());
+        accumulated.addAll(results);
+        if (endOfBatch) {
+            bulkResponses.put(correlationId, List.copyOf(accumulated));
+        }
     }
 
     @Override

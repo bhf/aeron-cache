@@ -204,7 +204,8 @@
     </sbe:message>
 
     <sbe:message name="GatewayBulkResponse" id="16" semanticType="GatewayBulkResponse"
-                 description="The response to a GatewayBulkRequest, correlated via correlationId. Carries one result per requested operation, in request order; each result echoes its operation's per-operation requestId.">
+                 description="A batch of per-operation results in response to a GatewayBulkRequest, correlated via correlationId. Mirrors the cluster BulkCacheOpsResult: results are delivered in one or more batches (each result in request order, echoing its operation's per-operation requestId), and the final batch for a request has endOfBatch=T.">
+        <field name="endOfBatch" id="2" type="BooleanType"/>
         <group name="operations" id="60" dimensionType="groupSizeEncoding">
             <field name="status" id="61" type="OperationStatus"/>
             <data name="requestId" id="62" type="varStringEncoding"/>
