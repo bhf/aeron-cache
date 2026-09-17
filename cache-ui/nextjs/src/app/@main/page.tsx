@@ -1,6 +1,8 @@
 import {allCachesColumns} from "@/components/cache-summary/AllCachesColumns";
 import {AllCachesDataTable} from "@/components/cache-summary/AllCachesTable";
 import {allCounterCachesColumns} from "@/components/counters-summary/AllCounterCachesColumns";
+import {timersColumns} from "@/components/timers-summary/TimersColumns";
+import {TimersDataTable} from "@/components/timers-summary/TimersTable";
 import CreateCacheRequest from "@/components/CreateCache";
 import CreateCounterCacheRequest from "@/components/CreateCounterCache";
 import CacheCountersTabs from "@/components/CacheCountersTabs";
@@ -109,6 +111,36 @@ function CreateCounterCache() {
     );
 }
 
+/**
+ * A component to display a table of pending TTL removal timers across
+ * caches and counter caches.
+ * @constructor
+ */
+async function TimersTable() {
+
+    const apiUri = await getCacheAPIURI();
+
+    let rawResponse
+    try {
+        rawResponse = await fetch(apiUri + '/timers', {
+                method: 'GET',
+                headers,
+                cache: "no-cache"
+            },
+        )
+    } catch (err) {
+        logger.warn("Error whilst sending request to get timers ", err);
+        return
+    }
+
+    const content = await rawResponse.json();
+    logger.info("Got response from get all timers ", content)
+
+    return (
+        <TimersDataTable columns={timersColumns} data={content.timers ?? []}/>
+    );
+}
+
 const LoadingSkeleton: () => JSX.Element = () => (
     <div className="space-y-2">
         <Skeleton className="h-10 w-full" />
@@ -172,6 +204,25 @@ export default async function Page() {
                                     <CardContent>
                                         <Suspense fallback={<LoadingSkeleton/>}>
                                             <CounterCacheTable/>
+                                        </Suspense>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    }
+                    timers={
+                        <div>
+                            <div className="pb-6 px-6">
+                                <Card className={"shadow-lg"}>
+                                    <CardHeader>
+                                        <CardTitle>Pending Timers</CardTitle>
+                                        <CardDescription>
+                                            Scheduled TTL removals across caches and counter caches
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Suspense fallback={<LoadingSkeleton/>}>
+                                            <TimersTable/>
                                         </Suspense>
                                     </CardContent>
                                 </Card>
