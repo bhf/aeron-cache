@@ -20,13 +20,20 @@ gatewayResponseControlEndpoint: "aeroncache-gateway:7076"
 # blank to use the application default (backoff).
 idleStrategy: "backoff"
 
+# Aeron term buffer length for the cache data channels. The maximum Aeron message size is
+# termLength / 8, so 128m is required to support values up to ~16MB (see LargeItemTests) and to
+# carry large requests such as big bulk-operation batches. Must match the cluster's term length.
+# Leave blank to fall back to the application default (64k). Buffers are sparse, so the resident
+# memory cost of a larger term length is small.
+aeronCacheTermLength: "128m"
+
 # External Aeron C media driver (aeronmd) sidecar. When enabled, the C driver runs as a native
 # sidecar and this app attaches to it as a pure Aeron client (LAUNCH_EMBEDDED=false) instead of
-# launching an embedded Java MediaDriver. Both containers share the `shm` volume at aeronDir. No
-# aeronCacheTermLength is set for the gateway, so the driver uses its default term length (which
-# matches the gateway's embedded-driver default). The app image runs as root, so it can map the
-# driver's CnC/term files even though the driver runs as uid 1000; pin both containers to a
-# matching non-root uid via podSecurityContext for a hardened deployment.
+# launching an embedded Java MediaDriver. Both containers share the `shm` volume at aeronDir, and
+# the driver's term buffers are sized from aeronCacheTermLength above (single source of truth). The
+# app image runs as root, so it can map the driver's CnC/term files even though the driver runs as
+# uid 1000; pin both containers to a matching non-root uid via podSecurityContext for a hardened
+# deployment.
 externalMediaDriver:
   enabled: false
   # Aeron dir shared between the driver and app containers via the `shm` emptyDir.

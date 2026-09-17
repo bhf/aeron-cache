@@ -125,9 +125,8 @@ public class HTTPConsumerUtils {
 
     @NotNull
     public static Consumer<BulkCacheOpsResult<ReusableString, ReusableString, ReusableString>> getBulkCacheOpsResultConsumer(CompletableFuture<BulkCacheOpsResponse> future, String requestId) {
+        final List<CacheOperationResponse> accumulated = new ArrayList<>();
         return c -> {
-            List<CacheOperationResponse> operationResponses = new ArrayList<>();
-
             List<CacheOperationResultDetails<ReusableString, ReusableString, ReusableString>> ops = c.getOperations();
             for(var o : ops){
                 var opRequestId = o.getRequestId();
@@ -135,11 +134,12 @@ public class HTTPConsumerUtils {
                 var value = o.getValue();
                 var key = o.getKey();
                 var status = o.getOperationStatus();
-                operationResponses.add(new CacheOperationResponse(opRequestId, status, cacheId.value(), key.value(), value.value()));
+                accumulated.add(new CacheOperationResponse(opRequestId, status, cacheId.value(), key.value(), value.value()));
             }
 
-            BulkCacheOpsResponse response = new BulkCacheOpsResponse(requestId, operationResponses);
-            future.complete(response);
+            if (c.isEndOfBatch()) {
+                future.complete(new BulkCacheOpsResponse(requestId, new ArrayList<>(accumulated)));
+            }
         };
     }
 
@@ -155,23 +155,24 @@ public class HTTPConsumerUtils {
 
     @NotNull
     public static Consumer<GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableString>> getGetAllCacheEntriesResultConsumer(CompletableFuture<GetCacheResponse> future) {
+        final List<CacheItem> accumulated = new ArrayList<>();
         return c -> {
-            log.info("Get cache content response from cluster on cacheId {}", c.getCacheId());
+            log.info("Get cache content response batch from cluster on cacheId {}, endOfBatch {}", c.getCacheId(), c.isEndOfBatch());
             var noCache = c.getStatus() == CacheOperationStatus.UNKNOWN_CACHE;
-            var response = noCache ?
-                    new GetCacheResponse(c.getCacheId().toString(), CacheOperationStatus.UNKNOWN_CACHE, List.of()) :
-                    new GetCacheResponse(c.getCacheId().toString(), c.getStatus(), buildItemsList(c));
-            future.complete(response);
+            if (noCache) {
+                future.complete(new GetCacheResponse(c.getCacheId().toString(), CacheOperationStatus.UNKNOWN_CACHE, List.of()));
+                return;
+            }
+            addItems(accumulated, c);
+            if (c.isEndOfBatch()) {
+                future.complete(new GetCacheResponse(c.getCacheId().toString(), c.getStatus(), new ArrayList<>(accumulated)));
+            }
         };
     }
 
-    public static List<CacheItem> buildItemsList(GetAllCacheEntriesResult<ReusableString, ReusableString,
+    public static void addItems(List<CacheItem> accumulated, GetAllCacheEntriesResult<ReusableString, ReusableString,
             ReusableString> c) {
-        List<CacheItem> res = new ArrayList<>();
-        c.getValues().forEach((key, value) -> {
-            res.add(new CacheItem(key.value(), value.value()));
-        });
-        return res;
+        c.getValues().forEach((key, value) -> accumulated.add(new CacheItem(key.value(), value.value())));
     }
 
     public static Consumer<AllTimersResult<ReusableString, ReusableString>> getAllTimersResultConsumer(CompletableFuture<GetTimersResponse> future) {

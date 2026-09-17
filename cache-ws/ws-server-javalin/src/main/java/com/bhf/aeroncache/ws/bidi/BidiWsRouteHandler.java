@@ -3,7 +3,6 @@ package com.bhf.aeroncache.ws.bidi;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
-import com.bhf.aeroncache.models.bulk.responses.BulkCacheOpsResponse;
 import com.bhf.aeroncache.models.bulk.responses.CacheOperationResponse;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
@@ -260,9 +259,10 @@ public class BidiWsRouteHandler {
 
     /**
      * Forward a bulk request to the cluster as a single {@link BulkCacheOpsRequest} and stream the
-     * per-operation results back as a bulk response. A bulk request may mix regular-cache and counter
-     * operations; the cluster dispatches each to the right cache manager, so the batch is always routed
-     * through the regular-cache publisher (the cluster egress delivers the single combined result there).
+     * per-operation results back as one or more bulk-response batches. A bulk request may mix regular-cache
+     * and counter operations; the cluster dispatches each to the right cache manager, so the batch is
+     * always routed through the regular-cache publisher (the cluster egress delivers the combined result
+     * there, split into end-of-batch-terminated frames).
      */
     private void handleBulk(BidiSession session, BidiBulk bulk) {
         final String correlationId = requestId(bulk.correlationId());
@@ -272,6 +272,11 @@ public class BidiWsRouteHandler {
                 (Consumer<BulkCacheOpsResult>) o -> respondBulk(session, correlationId, (BulkCacheOpsResult) o));
     }
 
+    /**
+     * Forward a batch of bulk-operation results to the client. The cluster streams the results in one or
+     * more batches (mirroring {@code BulkCacheOpsResult}); this fires once per batch and forwards the
+     * batch's results together with the {@code endOfBatch} flag so the client can detect completion.
+     */
     private void respondBulk(BidiSession session, String correlationId, BulkCacheOpsResult result) {
         final List<CacheOperationResponse> operationResponses = new ArrayList<>();
         for (Object o : result.getOperations()) {
@@ -281,8 +286,7 @@ public class BidiWsRouteHandler {
             final String value = details.getValue() == null ? null : String.valueOf(details.getValue().value());
             operationResponses.add(new CacheOperationResponse(details.getRequestId(), details.getOperationStatus(), cacheId, key, value));
         }
-        final BulkCacheOpsResponse response = new BulkCacheOpsResponse(correlationId, operationResponses);
-        session.send(codec.write(BidiBulkResponse.of(response.requestId(), response.operationResponses())));
+        session.send(codec.write(BidiBulkResponse.of(correlationId, operationResponses, result.isEndOfBatch())));
     }
 
     // ------------------------------------------------------------------ response helpers

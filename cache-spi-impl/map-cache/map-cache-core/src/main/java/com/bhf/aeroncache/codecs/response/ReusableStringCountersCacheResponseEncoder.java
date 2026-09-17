@@ -9,9 +9,14 @@ import com.bhf.aeroncache.types.ReusableString;
 import org.agrona.MutableDirectBuffer;
 import org.apache.logging.log4j.util.Strings;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 
 public class ReusableStringCountersCacheResponseEncoder implements CountersCacheResponseEncoder<ReusableString, ReusableString, ReusableLong> {
+
+    private static final int RESPONSE_BATCH_SIZE = 100;
 
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final CreateCounterCacheResponseEncoder cacheCreatedEncoder = new CreateCounterCacheResponseEncoder();
@@ -123,26 +128,49 @@ public class ReusableStringCountersCacheResponseEncoder implements CountersCache
     }
 
     @Override
-    public <VT extends Reusable> int encodeAllCacheEntriesResult(ReusableString cacheId, GetAllCacheEntriesResult<ReusableString, ReusableString, VT> getAllCacheEntriesResult, MutableDirectBuffer egressBuffer) {
-        allCacheEntriesResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
-        allCacheEntriesResultEncoder.status(getOperationStatus(getAllCacheEntriesResult.getStatus()));
-        allCacheEntriesResultEncoder.endOfBatch(BooleanType.T);
+    public <VT extends Reusable> void encodeAllCacheEntriesResult(ReusableString cacheId, GetAllCacheEntriesResult<ReusableString, ReusableString, VT> getAllCacheEntriesResult, MutableDirectBuffer egressBuffer, HydratingPublicationConsumer consumer) {
+        var values = getAllCacheEntriesResult.getValues();
+        var entries = values == null ? new ArrayList<Map.Entry<ReusableString, VT>>() : new ArrayList<>(values.entrySet());
+        var status = getOperationStatus(getAllCacheEntriesResult.getStatus());
+        var requestId = getAllCacheEntriesResult.getRequestId();
+        var cacheIdValue = cacheId.value();
+        boolean isResultEob = getAllCacheEntriesResult.isEndOfBatch();
+        int totalSize = entries.size();
 
-        if (getAllCacheEntriesResult.getValues() != null) {
-            AllCounterCacheEntriesResultEncoder.ItemsEncoder entriesEncoder = allCacheEntriesResultEncoder.itemsCount(getAllCacheEntriesResult.getValues().size());
-            for (var entry : getAllCacheEntriesResult.getValues().entrySet()) {
-                entriesEncoder.next();
-                entriesEncoder.counterValue(((ReusableLong) entry.getValue()).value());
-                entriesEncoder.key(entry.getKey().value());
-            }
-        } else {
-            allCacheEntriesResultEncoder.itemsCount(0);
+        if (totalSize == 0) {
+            encodeEntriesBatch(egressBuffer, consumer, status, isResultEob, requestId, cacheIdValue, entries, 0, 0);
+            return;
         }
 
-        allCacheEntriesResultEncoder.requestId(getAllCacheEntriesResult.getRequestId());
-        allCacheEntriesResultEncoder.cacheId(cacheId.value());
+        for (int i = 0; i < totalSize; i += RESPONSE_BATCH_SIZE) {
+            int currentBatchSize = Math.min(RESPONSE_BATCH_SIZE, totalSize - i);
+            boolean isLastBatch = (i + currentBatchSize) == totalSize;
+            encodeEntriesBatch(egressBuffer, consumer, status, isLastBatch && isResultEob, requestId, cacheIdValue, entries, i, currentBatchSize);
+        }
+    }
 
-        return allCacheEntriesResultEncoder.encodedLength() + headerEncoder.encodedLength();
+    private <VT extends Reusable> void encodeEntriesBatch(MutableDirectBuffer egressBuffer, HydratingPublicationConsumer consumer, OperationStatus status,
+                                                          boolean endOfBatch, String requestId, String cacheId,
+                                                          List<Map.Entry<ReusableString, VT>> entries, int fromIndex, int count) {
+        allCacheEntriesResultEncoder.wrapAndApplyHeader(egressBuffer, 0, headerEncoder);
+        allCacheEntriesResultEncoder.status(status);
+        allCacheEntriesResultEncoder.endOfBatch(endOfBatch ? BooleanType.T : BooleanType.F);
+
+        AllCounterCacheEntriesResultEncoder.ItemsEncoder entriesEncoder = allCacheEntriesResultEncoder.itemsCount(count);
+        for (int j = 0; j < count; j++) {
+            var entry = entries.get(fromIndex + j);
+            entriesEncoder.next();
+            entriesEncoder.counterValue(((ReusableLong) entry.getValue()).value());
+            entriesEncoder.key(entry.getKey().value());
+        }
+
+        allCacheEntriesResultEncoder.requestId(requestId);
+        allCacheEntriesResultEncoder.cacheId(cacheId);
+
+        int length = allCacheEntriesResultEncoder.encodedLength() + headerEncoder.encodedLength();
+        consumer.setBuffer(egressBuffer);
+        consumer.setLength(length);
+        consumer.accept(egressBuffer);
     }
 
     @Override
@@ -289,8 +317,9 @@ public class ReusableStringCountersCacheResponseEncoder implements CountersCache
     }
 
     @Override
-    public int encodeBulkOpsResponse(BulkCacheOpsResult<ReusableString, ReusableString, ReusableLong> bulkCacheOpsResult, MutableDirectBuffer egressBuffer) {
-        return 0;
+    public void encodeBulkOpsResponse(BulkCacheOpsResult<ReusableString, ReusableString, ReusableLong> bulkCacheOpsResult, MutableDirectBuffer egressBuffer, HydratingPublicationConsumer consumer) {
+        // Bulk responses are always encoded via the regular-cache encoder; counter bulk ops are folded into
+        // that single response, so there is nothing to encode here.
     }
 
 

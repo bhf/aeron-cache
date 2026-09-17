@@ -221,21 +221,29 @@ public class GatewayIngressAgent implements Agent {
         final String correlationId = requestId(bulkRequestDecoder.correlationId());
 
         final BulkCacheOpsRequest request = new BulkCacheOpsRequest(correlationId, operations);
+        final List<GatewayResponseWriter.BulkOpResultEntry> accumulated = new ArrayList<>();
         cacheSubs.sendBulkOperationsRequest(correlationId, request,
-                (Consumer<BulkCacheOpsResult>) o -> respondBulk(responsePublication, correlationId, (BulkCacheOpsResult) o));
+                (Consumer<BulkCacheOpsResult>) o -> respondBulk(responsePublication, correlationId, accumulated, (BulkCacheOpsResult) o));
     }
 
-    private void respondBulk(Publication publication, String correlationId, BulkCacheOpsResult result) {
-        final List<GatewayResponseWriter.BulkOpResultEntry> entries = new ArrayList<>();
+    /**
+     * Accumulate the per-operation results the cluster streams back (in one or more batches, mirroring
+     * {@code BulkCacheOpsResult}) and forward them as a single bulk response once the final batch
+     * ({@code endOfBatch=true}) arrives.
+     */
+    private void respondBulk(Publication publication, String correlationId,
+                             List<GatewayResponseWriter.BulkOpResultEntry> accumulated, BulkCacheOpsResult result) {
         for (Object o : result.getOperations()) {
             final CacheOperationResultDetails details = (CacheOperationResultDetails) o;
             final String cacheId = details.getCacheId() == null ? null : String.valueOf(details.getCacheId().value());
             final String key = details.getKey() == null ? null : String.valueOf(details.getKey().value());
             final String value = details.getValue() == null ? null : String.valueOf(details.getValue().value());
-            entries.add(new GatewayResponseWriter.BulkOpResultEntry(
+            accumulated.add(new GatewayResponseWriter.BulkOpResultEntry(
                     details.getOperationStatus(), details.getRequestId(), cacheId, key, value));
         }
-        egressWriter.writeBulkResponse(publication, correlationId, entries);
+        if (result.isEndOfBatch()) {
+            egressWriter.writeBulkResponse(publication, correlationId, accumulated);
+        }
     }
 
     private static BulkOperationType mapBulkOperationType(com.bhf.aeroncache.gateway.messages.BulkOperationType type) {

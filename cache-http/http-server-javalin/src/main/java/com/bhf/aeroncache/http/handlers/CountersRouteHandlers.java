@@ -131,15 +131,17 @@ public class CountersRouteHandlers extends AbstractRouteHandlers<ReusableLong, L
 
             var requestId = getRequestId(ctx);
             CompletableFuture<GetCountersResponse> future = new CompletableFuture<>();
+            final List<CounterItem> accumulated = new ArrayList<>();
             Consumer<GetAllCacheEntriesResult<ReusableString, ReusableString, ReusableLong>> consumer = c -> {
-                log.info("Get counter cache content response from cluster on cacheId {}", c.getCacheId());
+                log.info("Get counter cache content response batch from cluster on cacheId {}, endOfBatch {}", c.getCacheId(), c.isEndOfBatch());
                 var noCache = c.getStatus() == CacheOperationStatus.UNKNOWN_CACHE;
                 if (noCache) {
                     future.complete(new GetCountersResponse(c.getCacheId().toString(), CacheOperationStatus.UNKNOWN_CACHE, List.of()));
-                } else {
-                    List<CounterItem> items = new ArrayList<>();
-                    c.getValues().forEach((key, value) -> items.add(new CounterItem(key.value(), value.value())));
-                    future.complete(new GetCountersResponse(c.getCacheId().toString(), c.getStatus(), items));
+                    return;
+                }
+                c.getValues().forEach((key, value) -> accumulated.add(new CounterItem(key.value(), value.value())));
+                if (c.isEndOfBatch()) {
+                    future.complete(new GetCountersResponse(c.getCacheId().toString(), c.getStatus(), new ArrayList<>(accumulated)));
                 }
             };
             CompletableFuture.runAsync(() -> publisher.getCacheEntries(requestId, cacheId, consumer));

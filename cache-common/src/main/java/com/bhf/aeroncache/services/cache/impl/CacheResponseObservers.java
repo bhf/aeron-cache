@@ -254,7 +254,9 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     public void handleAllCacheEntries(GetAllCacheEntriesResult<I, K, V> getCacheEntriesResult) {
         var targetId = getCacheEntriesResult.getRequestId();
         getCacheEntriesObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(getCacheEntriesResult));
-        getCacheEntriesObservers.removeIf(p -> p.getId().equals(targetId));
+        if (getCacheEntriesResult.isEndOfBatch()) {
+            getCacheEntriesObservers.removeIf(p -> p.getId().equals(targetId));
+        }
         if (getCacheEntriesConsumer != null) {
             getCacheEntriesConsumer.accept(getCacheEntriesResult);
         }
@@ -362,6 +364,8 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
         var targetId = bulkCacheOpsResult.getRequestId();
         log.info("Got bulk ops response on requestId {}", targetId);
         bulkOpsObservers.stream().filter(p -> targetId.equals(p.getId())).forEach(c -> c.accept(bulkCacheOpsResult));
-        bulkOpsObservers.removeIf(p -> p.getId().equals(targetId));
+        if (bulkCacheOpsResult.isEndOfBatch()) {
+            bulkOpsObservers.removeIf(p -> p.getId().equals(targetId));
+        }
     }
 }

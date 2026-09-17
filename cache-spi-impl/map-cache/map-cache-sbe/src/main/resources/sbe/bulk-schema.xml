@@ -89,6 +89,7 @@
 
     <sbe:message name="BulkOperationResponse" id="23" semanticType="BulkOpsResponse"
                  description="Response from a bulk operation request">
+        <field name="endOfBatch" id="1" type="BooleanType"/>
         <group name="items" id="30" dimensionType="groupSizeEncoding">
             <field name="operationStatus" id="30" type="OperationStatus"/>
             <field name="counterValue" id="43" type="int64"/>

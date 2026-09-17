@@ -2,9 +2,9 @@ package com.bhf.aeroncache.models.results;
 
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.requests.CacheOperationRequestDetails;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +16,9 @@ public class BulkCacheOpsResult <I extends Reusable, K extends Reusable, V exten
     @Getter
     final List<CacheOperationResultDetails<I,K,V>> operations = new ArrayList<>();
     final RequestId requestId = new RequestId();
+    @Getter
+    @Setter
+    boolean endOfBatch = true;
     final Supplier<I> indexSupplier;
     final Supplier<K> keySupplier;
     final Supplier<V> valueSupplier;
@@ -33,12 +36,14 @@ public class BulkCacheOpsResult <I extends Reusable, K extends Reusable, V exten
     public void clear() {
         requestId.clear();
         operations.clear();
+        endOfBatch = true;
     }
 
     @Override
     public void copyFrom(BulkCacheOpsResult<I, K, V> source) {
         this.requestId.copyFrom(source.requestId);
         this.operations.addAll(source.operations);
+        this.endOfBatch = source.endOfBatch;
     }
 
     @Override

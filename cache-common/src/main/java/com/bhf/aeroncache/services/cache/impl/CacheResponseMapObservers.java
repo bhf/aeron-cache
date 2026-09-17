@@ -155,7 +155,8 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     @Override
     public void handleAllCacheEntries(GetAllCacheEntriesResult<I, K, V> getCacheEntriesResult) {
         var targetId = getCacheEntriesResult.getRequestId();
-        var observer = getCacheEntriesObservers.remove(targetId);
+        var observer = getCacheEntriesResult.isEndOfBatch() ? getCacheEntriesObservers.remove(targetId) :
+                getCacheEntriesObservers.get(targetId);
         if (observer != null) {
             observer.accept(getCacheEntriesResult);
         }
@@ -301,7 +302,8 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     public void handleBulkOperationsResult(BulkCacheOpsResult<I, K, V> bulkCacheOpsResult) {
         var targetId = bulkCacheOpsResult.getRequestId();
         log.info("Got bulk ops response on requestId {}", targetId);
-        var observer = bulkOpsObservers.remove(targetId);
+        var observer = bulkCacheOpsResult.isEndOfBatch() ? bulkOpsObservers.remove(targetId) :
+                bulkOpsObservers.get(targetId);
         if (observer != null) {
             observer.accept(bulkCacheOpsResult);
         }

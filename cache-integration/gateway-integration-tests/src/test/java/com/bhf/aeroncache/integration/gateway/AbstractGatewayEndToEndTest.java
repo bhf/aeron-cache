@@ -8,6 +8,7 @@ import com.bhf.aeroncache.gateway.client.GatewayTimer;
 import com.bhf.aeroncache.gateway.messages.BulkOperationType;
 import com.bhf.aeroncache.gateway.messages.OperationStatus;
 import com.bhf.aeroncache.gateway.messages.UpdateEventType;
+import com.bhf.aeroncache.utils.ClusterUtils;
 import io.aeron.Aeron;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -77,13 +79,15 @@ abstract class AbstractGatewayEndToEndTest {
     void startBackendAndClient() throws Exception {
         startBackend();
 
-        // The client uses its own dedicated media driver to avoid colliding with the gateway's.
+        // The client uses its own dedicated media driver to avoid colliding with the gateway's. Apply
+        // the configured term length so the client's request publications can carry large messages
+        // (e.g. big bulk-operation batches), matching the cluster, ephemeral cache and gateway drivers.
         var clientAeronDir = Files.createTempDirectory("gw-client-aeron").toString();
-        clientMediaDriver = MediaDriver.launchEmbedded(new MediaDriver.Context()
+        clientMediaDriver = MediaDriver.launchEmbedded(ClusterUtils.applyConfiguredTermLength(new MediaDriver.Context()
                 .aeronDirectoryName(clientAeronDir)
                 .threadingMode(ThreadingMode.SHARED)
                 .dirDeleteOnStart(true)
-                .dirDeleteOnShutdown(true));
+                .dirDeleteOnShutdown(true)));
         clientAeron = Aeron.connect(new Aeron.Context()
                 .aeronDirectoryName(clientMediaDriver.aeronDirectoryName()));
 
@@ -899,6 +903,65 @@ abstract class AbstractGatewayEndToEndTest {
         client.getCounterEntry(getCounterCorr, cntCache, "hits");
         await().atMost(30, SECONDS).until(() -> listener.commandResponses.containsKey(getCounterCorr));
         assertEquals("8", listener.commandResponses.get(getCounterCorr).value());
+    }
+
+    @Test
+    @DisplayName("Should return all entries accumulated across multiple batches when more than one batch is needed")
+    void shouldReturnAllEntriesAcrossMultipleBatches() {
+        // Arrange - add more entries than fit in a single 100-entry batch so the result spans multiple frames.
+        var cacheId = uniqueCache("entries-batched");
+        var createCorr = correlationId();
+        var getCorr = correlationId();
+        int entryCount = 250;
+
+        client.createCache(createCorr, cacheId);
+        awaitCommandSuccess(createCorr);
+        for (int i = 0; i < entryCount; i++) {
+            var addCorr = correlationId();
+            client.addEntry(addCorr, cacheId, "k" + i, "v" + i, TTL_NONE);
+            awaitCommandSuccess(addCorr);
+        }
+
+        // Act
+        client.getEntries(getCorr, cacheId);
+        await().atMost(30, SECONDS).until(() -> listener.entriesComplete.containsKey(getCorr));
+
+        // Assert - every entry is present, so nothing was dropped across batch boundaries.
+        var entries = listener.entriesAccumulated.get(getCorr);
+        assertEquals(entryCount, entries.size(),
+                "expected all " + entryCount + " entries to be accumulated across batches");
+        for (int i = 0; i < entryCount; i++) {
+            assertEquals("v" + i, entries.get("k" + i), "missing or wrong value for k" + i);
+        }
+    }
+
+    @Test
+    @DisplayName("Should return all bulk operation results accumulated across multiple batches when more than one batch is needed")
+    void shouldReturnAllBulkResultsAcrossMultipleBatches() {
+        // Arrange - a bulk request whose response spans more than a single 100-entry batch. This relies on
+        // the 128m term length configured for the harness so the ~15k request fits in one Aeron message.
+        var cacheId = uniqueCache("bulk-batched");
+        var bulkCorr = correlationId();
+        int itemCount = 250;
+
+        var operations = new ArrayList<GatewayBulkOp>();
+        operations.add(new GatewayBulkOp(BulkOperationType.CREATE_CACHE, 0L, 0L, "op-create", cacheId, null, null));
+        for (int i = 0; i < itemCount; i++) {
+            operations.add(new GatewayBulkOp(BulkOperationType.ADD_ITEM, 0L, 0L, "op-add-" + i, cacheId, "k" + i, "v" + i));
+        }
+
+        // Act
+        client.bulkOperations(bulkCorr, operations);
+        await().atMost(30, SECONDS).until(() -> listener.bulkResponses.containsKey(bulkCorr));
+
+        // Assert - one result per operation, all successful, nothing dropped across batch boundaries.
+        List<GatewayBulkOpResult> results = listener.bulkResponses.get(bulkCorr);
+        assertEquals(operations.size(), results.size(), "expected one result per bulk operation across batches");
+        for (GatewayBulkOpResult result : results) {
+            assertEquals(OperationStatus.SUCCESS, result.status(), "bulk op " + result.requestId() + " did not succeed");
+        }
+        var requestIds = results.stream().map(GatewayBulkOpResult::requestId).collect(java.util.stream.Collectors.toSet());
+        assertEquals(operations.size(), requestIds.size(), "expected every per-operation requestId to be present and distinct");
     }
 
     // ------------------------------------------------------------------ helpers
