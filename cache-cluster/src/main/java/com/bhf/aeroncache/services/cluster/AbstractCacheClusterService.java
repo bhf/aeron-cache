@@ -115,11 +115,15 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
     private final Consumer<PendingRemove<I, K>> cacheTimerCollector = pendingRemove -> addTimer(pendingRemove, TimerType.CACHE);
     private final Consumer<PendingRemove<I, K>> counterTimerCollector = pendingRemove -> addTimer(pendingRemove, TimerType.COUNTER);
-    private ClientSession timersResponseSession;
-    private final HydratingPublicationConsumer timersResponseConsumer = new HydratingPublicationConsumer() {
+
+    private ClientSession responseSession;
+    private final HydratingPublicationConsumer responseConsumer = new HydratingPublicationConsumer() {
         @Override
         public void accept(MutableDirectBuffer mutableDirectBuffer) {
-            sendMessage(timersResponseSession, mutableDirectBuffer, this.getLength());
+            sendMessage(responseSession, mutableDirectBuffer, this.getLength());
+            if (idleStrategy != null) {
+                idleStrategy.idle();
+            }
         }
     };
 
@@ -784,8 +788,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         cacheTimerService.forEachTimer(cacheTimerCollector);
         cacheCountersTimerService.forEachTimer(counterTimerCollector);
 
-        timersResponseSession = session;
-        encoder.encodeAllTimersResult(allTimersResult, egressBuffer, timersResponseConsumer);
+        responseSession = session;
+        encoder.encodeAllTimersResult(allTimersResult, egressBuffer, responseConsumer);
     }
 
     private void addTimer(PendingRemove<I, K> pendingRemove, TimerType timerType) {
@@ -911,9 +915,9 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         log.info("Got bulk operations request with Id: {}", requestId);
         BulkCacheOpsResult<I,K,V> res = processBulkOperations(requestDetails, cacheManager, countersCacheManager_, encoder, countersEncoder, subscriptionService, countersSubscriptionService_, cacheValueSupplier, counterCacheValueSupplier, cacheTimerService_, cacheCountersTimerService_);
         res.setRequestId(requestId);
+        res.setEndOfBatch(true);
 
-        var length = encoder.encodeBulkOpsResponse(res, egressBuffer);
-        sendMessage(session, egressBuffer, length);
+        handlePostBulkOpsRequest(res, session, encoder);
 
         tracingService.endBulkOpsRequest(requestDetails);
     }
@@ -1383,8 +1387,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param encoder
      */
     protected <VT extends Reusable> void handlePostGetAllCacheEntries(I cacheId, GetAllCacheEntriesResult<I, K, VT> getAllCacheEntriesResult, ClientSession session, CacheResponseEncoder<I, K, VT> encoder) {
-        var length = encoder.encodeAllCacheEntriesResult(cacheId, getAllCacheEntriesResult, egressBuffer);
-        sendMessage(session, egressBuffer, length);
+        responseSession = session;
+        encoder.encodeAllCacheEntriesResult(cacheId, getAllCacheEntriesResult, egressBuffer, responseConsumer);
     }
 
     /**
@@ -1462,13 +1466,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param encoder
      */
     protected <VT extends Reusable> void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<I,K,VT> subscriptionRequestResult, ClientSession session, CacheResponseEncoder<I, K, VT> encoder) {
-        encoder.encodeCacheSubscriptionResult(subscriptionRequestResult, egressBuffer, keyComparator, new HydratingPublicationConsumer() {
-            @Override
-            public void accept(MutableDirectBuffer mutableDirectBuffer) {
-                var l = this.getLength();
-                sendMessage(session, mutableDirectBuffer, l);
-            }
-        });
+        responseSession = session;
+        encoder.encodeCacheSubscriptionResult(subscriptionRequestResult, egressBuffer, keyComparator, responseConsumer);
     }
 
     /**
@@ -1491,8 +1490,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      * @param encoder
      */
     protected void handlePostBulkOpsRequest(BulkCacheOpsResult<I, K, V> bulkCacheOpsResult, ClientSession session, CacheResponseEncoder<I, K, V> encoder) {
-        var length = encoder.encodeBulkOpsResponse(bulkCacheOpsResult, egressBuffer);
-        sendMessage(session, egressBuffer, length);
+        responseSession = session;
+        encoder.encodeBulkOpsResponse(bulkCacheOpsResult, egressBuffer, responseConsumer);
     }
 
 

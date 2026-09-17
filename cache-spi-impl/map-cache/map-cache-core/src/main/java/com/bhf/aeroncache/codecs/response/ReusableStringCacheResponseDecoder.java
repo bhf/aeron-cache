@@ -341,6 +341,7 @@ public class ReusableStringCacheResponseDecoder implements CacheResponseDecoder<
     public void decodeBulkCacheOpsResult(DirectBuffer buffer, int offset, BulkCacheOpsResult<ReusableString, ReusableString, ReusableString> bulkCacheOpsResult) {
         bulkCacheOpsResult.clear();
         bulkOperationResponseDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+        bulkCacheOpsResult.setEndOfBatch(bulkOperationResponseDecoder.endOfBatch() == BooleanType.T);
         var itemsDecoder = bulkOperationResponseDecoder.items();
 
         for(var op: itemsDecoder) {

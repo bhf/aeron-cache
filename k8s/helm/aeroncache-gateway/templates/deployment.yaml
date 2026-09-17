@@ -51,6 +51,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            {{- if .Values.aeronCacheTermLength }}
+            - name: AERON_CACHE_TERM_LENGTH
+              value: {{ .Values.aeronCacheTermLength | quote }}
+            {{- end }}
             {{- if .Values.externalMediaDriver.enabled }}
             - name: LAUNCH_EMBEDDED
               value: "false"

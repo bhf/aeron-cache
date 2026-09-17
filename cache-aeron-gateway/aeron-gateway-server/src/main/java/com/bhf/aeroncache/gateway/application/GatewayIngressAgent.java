@@ -225,6 +225,11 @@ public class GatewayIngressAgent implements Agent {
                 (Consumer<BulkCacheOpsResult>) o -> respondBulk(responsePublication, correlationId, (BulkCacheOpsResult) o));
     }
 
+    /**
+     * Forward a batch of bulk operation results to the client. The cluster streams the results in one or
+     * more batches (mirroring {@code BulkCacheOpsResult}); this fires once per batch and forwards the
+     * batch's results together with the {@code endOfBatch} flag so the client can detect completion.
+     */
     private void respondBulk(Publication publication, String correlationId, BulkCacheOpsResult result) {
         final List<GatewayResponseWriter.BulkOpResultEntry> entries = new ArrayList<>();
         for (Object o : result.getOperations()) {
@@ -235,7 +240,7 @@ public class GatewayIngressAgent implements Agent {
             entries.add(new GatewayResponseWriter.BulkOpResultEntry(
                     details.getOperationStatus(), details.getRequestId(), cacheId, key, value));
         }
-        egressWriter.writeBulkResponse(publication, correlationId, entries);
+        egressWriter.writeBulkResponse(publication, correlationId, entries, result.isEndOfBatch());
     }
 
     private static BulkOperationType mapBulkOperationType(com.bhf.aeroncache.gateway.messages.BulkOperationType type) {

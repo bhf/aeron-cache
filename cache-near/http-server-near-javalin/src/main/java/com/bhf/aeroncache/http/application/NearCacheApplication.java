@@ -456,24 +456,25 @@ public class NearCacheApplication {
 
     @NotNull
     private static Consumer<GetAllCacheEntriesResult> getGetAllCacheEntriesResultConsumer(CompletableFuture<GetCacheResponse> future) {
+        final List<CacheItem> accumulated = new java.util.ArrayList<>();
         Consumer<GetAllCacheEntriesResult> consumer = c -> {
-            log.info("Get cache content response from cluster on cacheId {}", c.getCacheId());
+            log.info("Get cache content response batch from cluster on cacheId {}, endOfBatch {}", c.getCacheId(), c.isEndOfBatch());
             var noCache = c.getStatus() == CacheOperationStatus.UNKNOWN_CACHE;
-            var response = noCache ?
-                    new GetCacheResponse(c.getCacheId().toString(), CacheOperationStatus.UNKNOWN_CACHE, List.of()) :
-                    new GetCacheResponse(c.getCacheId().toString(), c.getStatus(), buildItemsList(c));
-            future.complete(response);
+            if (noCache) {
+                future.complete(new GetCacheResponse(c.getCacheId().toString(), CacheOperationStatus.UNKNOWN_CACHE, List.of()));
+                return;
+            }
+            addItems(accumulated, c);
+            if (c.isEndOfBatch()) {
+                future.complete(new GetCacheResponse(c.getCacheId().toString(), c.getStatus(), new java.util.ArrayList<>(accumulated)));
+            }
         };
         return consumer;
     }
 
-    private static List<CacheItem> buildItemsList(GetAllCacheEntriesResult<ReusableString, ReusableString,
+    private static void addItems(List<CacheItem> accumulated, GetAllCacheEntriesResult<ReusableString, ReusableString,
             ReusableString> c) {
-        List<CacheItem> res = new java.util.ArrayList<>();
-        c.getValues().forEach((key, value) -> {
-            res.add(new CacheItem(key.value(), value.value()));
-        });
-        return res;
+        c.getValues().forEach((key, value) -> accumulated.add(new CacheItem(key.value(), value.value())));
     }
 
     /**

@@ -64,6 +64,7 @@ class CacheResponseMapObserversTest {
 
         var result = Mockito.mock(GetAllCacheEntriesResult.class);
         when(result.getRequestId()).thenReturn(requestId);
+        when(result.isEndOfBatch()).thenReturn(true);
 
         // Act
         sut.handleAllCacheEntries(result);

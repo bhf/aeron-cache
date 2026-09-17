@@ -23,12 +23,18 @@ info:
       frames carrying the subscription's `correlationId`. `sendSnapshot: true` replays current state as
       `streamUpdate` `ADD_ITEM` events.
     - `unsubscribe` — remove this connection's subscription to a cache.
+    - `bulk` — apply a batch of cache/counter operations in one frame; correlated by a single
+      `bulkResponse`. A batch may freely mix regular-cache and counter operations, which the cluster
+      applies in request order.
 
     ### Server -> Client frames (`type`)
     - `commandResponse` — the result of a `command`.
     - `streamUpdate` — a streamed cache update for a subscription.
     - `entries` — a batch of entries in response to a `getEntries` command.
     - `stats` — a batch of cache stats in response to a `getStats` command.
+    - `bulkResponse` — the per-operation results of a `bulk` request, in request order, streamed as one or
+      more batches ending with `endOfBatch: true` (mirroring `entries`/`stats`/`timers`). Clients
+      accumulate across frames with the same `correlationId` until the end-of-batch frame.
     - `subscribed` — confirms a `subscribe` is live (the cluster has registered it); updates for the
       requested caches will now be delivered. Clients can use it as a barrier before issuing mutations they
       expect to be streamed back, rather than guessing with a fixed delay.
@@ -53,8 +59,9 @@ paths:
       summary: Open a bidirectional cache/counter connection
       description: |
         Establish a WebSocket connection carrying the full command surface plus dynamic
-        subscribe/unsubscribe. Send `command`, `subscribe` and `unsubscribe` frames; receive
-        `commandResponse`, `streamUpdate`, `entries`, `stats` and `error` frames.
+        subscribe/unsubscribe and bulk operations. Send `command`, `subscribe`, `unsubscribe` and `bulk`
+        frames; receive `commandResponse`, `streamUpdate`, `entries`, `stats`, `bulkResponse` and `error`
+        frames.
       requestBody:
         description: A frame sent by the client over the established connection.
         required: true
@@ -86,12 +93,14 @@ components:
         - $ref: '#/components/schemas/BidiCommand'
         - $ref: '#/components/schemas/BidiSubscribe'
         - $ref: '#/components/schemas/BidiUnsubscribe'
+        - $ref: '#/components/schemas/BidiBulk'
       discriminator:
         propertyName: type
         mapping:
           command: '#/components/schemas/BidiCommand'
           subscribe: '#/components/schemas/BidiSubscribe'
           unsubscribe: '#/components/schemas/BidiUnsubscribe'
+          bulk: '#/components/schemas/BidiBulk'
     BidiCommand:
       type: object
       description: A request/response cache or counter command.
@@ -182,6 +191,26 @@ components:
       required:
         - type
         - cacheId
+    BidiBulk:
+      type: object
+      description: |
+        A batch of cache/counter operations applied in one frame. Each operation carries its own
+        `requestId`, echoed on the matching `bulkResponse` entry (results are also returned in request
+        order). A single batch may freely mix regular-cache and counter operations.
+      properties:
+        type:
+          type: string
+          enum: [bulk]
+        correlationId:
+          type: string
+          description: Client correlation id, echoed on the bulkResponse.
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CacheOperationRequest'
+      required:
+        - type
+        - operations
     # ---------------------------------------------------------------- server -> client
     BidiServerMessage:
       description: A frame sent by the server, discriminated on `type`.
@@ -193,6 +222,7 @@ components:
         - $ref: '#/components/schemas/BidiTimers'
         - $ref: '#/components/schemas/BidiError'
         - $ref: '#/components/schemas/BidiSubscribeAck'
+        - $ref: '#/components/schemas/BidiBulkResponse'
       discriminator:
         propertyName: type
         mapping:
@@ -203,6 +233,7 @@ components:
           timers: '#/components/schemas/BidiTimers'
           error: '#/components/schemas/BidiError'
           subscribed: '#/components/schemas/BidiSubscribeAck'
+          bulkResponse: '#/components/schemas/BidiBulkResponse'
     BidiCommandResponse:
       type: object
       description: The result of a command, correlated via correlationId.
@@ -391,6 +422,32 @@ components:
           description: The caches the subscription now covers.
       required:
         - type
+    BidiBulkResponse:
+      type: object
+      description: |
+        A batch of per-operation results in response to a bulk request, correlated via correlationId.
+        Results are delivered in one or more batches ending with `endOfBatch: true`; each entry is in
+        request order and echoes its operation's own requestId. Clients accumulate across frames with the
+        same correlationId until an end-of-batch frame. Read operations (GET_ITEM/GET_COUNTER) and counter
+        arithmetic report their value in the entry's `value`.
+      properties:
+        type:
+          type: string
+          enum: [bulkResponse]
+        correlationId:
+          type: string
+        operationResponses:
+          type: array
+          items:
+            $ref: '#/components/schemas/CacheOperationResponse'
+          description: The per-operation results in this batch (may be empty on a terminal frame).
+        endOfBatch:
+          type: boolean
+          description: True when this is the final batch for the request.
+      required:
+        - type
+        - operationResponses
+        - endOfBatch
     # ---------------------------------------------------------------- enums / shared
     WsOp:
       type: string
@@ -450,6 +507,76 @@ components:
         - DUPLICATE_SUBSCRIPTION
         - UNKNOWN_SUBSCRIPTION
         - NULL_VAL
+    CacheOperationRequest:
+      type: object
+      description: A single operation within a bulk request.
+      properties:
+        operationType:
+          $ref: '#/components/schemas/BulkOperationType'
+        ttl:
+          type: integer
+          format: int64
+          default: 0
+          description: Entry time-to-live in milliseconds (0 = none), where applicable.
+        counterValue:
+          type: integer
+          format: int64
+          default: 0
+          description: Counter amount/value for counter operations.
+        requestId:
+          type: string
+          description: Per-operation id, echoed on the matching response entry.
+        cacheId:
+          type: string
+        key:
+          type: string
+          nullable: true
+        value:
+          type: string
+          nullable: true
+    CacheOperationResponse:
+      type: object
+      description: A single operation's result within a bulk response.
+      properties:
+        requestId:
+          type: string
+          description: Echoed from the originating operation.
+        status:
+          $ref: '#/components/schemas/CacheOperationStatus'
+        cacheId:
+          type: string
+        key:
+          type: string
+          nullable: true
+        value:
+          type: string
+          nullable: true
+          description: The entry value, or the resulting counter value (as a string) for counter operations.
+    BulkOperationType:
+      type: string
+      description: |
+        The operation to apply for a bulk entry. Cache operations act on regular caches; counter
+        operations (containing `COUNTER`) act on the counters cache flavour.
+      enum:
+        - NONE
+        - CREATE_CACHE
+        - ADD_ITEM
+        - REMOVE_ITEM
+        - CLEAR_CACHE
+        - GET_ITEM
+        - DELETE_CACHE
+        - PATCH_ITEM
+        - CREATE_COUNTER_CACHE
+        - ADD_COUNTER
+        - REMOVE_COUNTER
+        - CLEAR_COUNTER_CACHE
+        - GET_COUNTER
+        - DELETE_COUNTER_CACHE
+        - INCREMENT_COUNTER
+        - DECREMENT_COUNTER
+        - SET_COUNTER
+        - CANCEL_ITEM
+        - CANCEL_COUNTER
     RequestErrorResponse:
       type: object
       properties:

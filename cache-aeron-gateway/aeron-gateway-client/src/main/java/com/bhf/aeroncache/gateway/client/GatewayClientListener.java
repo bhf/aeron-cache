@@ -94,15 +94,17 @@ public interface GatewayClientListener {
     }
 
     /**
-     * The response to a bulk operations request, correlated via {@code correlationId}.
+     * A batch of bulk operation results, correlated via {@code correlationId}.
      * <p>
-     * Carries one {@link GatewayBulkOpResult} per requested operation, in request order (each also echoes
-     * its operation's own {@code requestId}). Default is a no-op for listeners that do not issue bulk
-     * requests.
+     * Results are delivered in one or more batches; the final batch carries {@code endOfBatch=true}. Each
+     * batch carries its {@link GatewayBulkOpResult}s in request order (each also echoes its operation's own
+     * {@code requestId}). Clients accumulate across batches for the same {@code correlationId} until an
+     * end-of-batch frame. Default is a no-op for listeners that do not issue bulk requests.
      *
      * @param correlationId the correlation id echoed from the bulk request.
-     * @param results       the per-operation results, in request order.
+     * @param results       the per-operation results in this batch, in request order.
+     * @param endOfBatch    {@code true} when this is the final batch for the request.
      */
-    default void onBulkResponse(String correlationId, List<GatewayBulkOpResult> results) {
+    default void onBulkResponse(String correlationId, List<GatewayBulkOpResult> results, boolean endOfBatch) {
     }
 }
