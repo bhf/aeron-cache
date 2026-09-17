@@ -230,7 +230,7 @@
         <data name="requestId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="AllCounterCacheEntriesResult" id="44" semanticType="AllCounterCacheEntriesResult"
+    <sbe:message name="AllCounterCacheEntriesResult" id="57" semanticType="AllCounterCacheEntriesResult"
                  description="Get all the entries from a counter cache">
         <field name="status" id="1" type="OperationStatus"/>
         <field name="endOfBatch" id="2" type="BooleanType"/>
@@ -242,7 +242,7 @@
         <data name="cacheId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="GetAllCounterCacheEntries" id="45" semanticType="GetAllCounterCacheEntries"
+    <sbe:message name="GetAllCounterCacheEntries" id="58" semanticType="GetAllCounterCacheEntries"
                  description="Get all entries in the specified counter cache">
         <data name="cacheId" id="1" type="varStringEncoding"/>
         <data name="requestId" id="2" type="varStringEncoding"/>
