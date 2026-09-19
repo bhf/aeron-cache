@@ -32,6 +32,12 @@ jobs:
       - name: Build Backend (Shadow JAR)
         run: ./gradlew :cache-monolith:shadowJar
 
+      - name: Pull Jib Base Image
+        # The Jib config references the base image as docker://eclipse-temurin:25-jre, which loads it
+        # from the local Docker daemon rather than pulling it. A fresh runner has no such image, so
+        # pull it explicitly before the Jib builds below.
+        run: docker pull eclipse-temurin:25-jre
+
       - name: Build Backend Images For Snapshot Capture
         # The capture harness boots a single-node cluster (node + clustertools sidecar + http) from
         # these locally-built images, so build them into the runner's Docker daemon first.
