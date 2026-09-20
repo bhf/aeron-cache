@@ -2,16 +2,18 @@ package com.bhf.aeroncache.models.results;
 
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.pool.DequeReusableObjectPool;
+import com.bhf.aeroncache.pool.ReusableObjectPool;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-@RequiredArgsConstructor
 public class BulkCacheOpsResult <I extends Reusable, K extends Reusable, V extends Reusable> implements Reusable<BulkCacheOpsResult<I,K,V>>{
+
+    private static final int OPERATION_RESULT_POOL_INITIAL_SIZE = 16;
 
     @Getter
     final List<CacheOperationResultDetails<I,K,V>> operations = new ArrayList<>();
@@ -23,6 +25,24 @@ public class BulkCacheOpsResult <I extends Reusable, K extends Reusable, V exten
     final Supplier<K> keySupplier;
     final Supplier<V> valueSupplier;
 
+    private final ReusableObjectPool<CacheOperationResultDetails<I, K, V>> operationPool;
+
+    /**
+     * Create a bulk result flyweight backed by a pool that reuses the operation result instances
+     * gathered while building the response.
+     *
+     * @param indexSupplier Factory for cache id instances.
+     * @param keySupplier   Factory for key instances.
+     * @param valueSupplier Factory for value instances.
+     */
+    public BulkCacheOpsResult(final Supplier<I> indexSupplier, final Supplier<K> keySupplier, final Supplier<V> valueSupplier) {
+        this.indexSupplier = indexSupplier;
+        this.keySupplier = keySupplier;
+        this.valueSupplier = valueSupplier;
+        this.operationPool = new DequeReusableObjectPool<>(
+                () -> new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier),
+                OPERATION_RESULT_POOL_INITIAL_SIZE, true);
+    }
 
     public String getRequestId(){
         return requestId.getRequestId();
@@ -35,8 +55,15 @@ public class BulkCacheOpsResult <I extends Reusable, K extends Reusable, V exten
     @Override
     public void clear() {
         requestId.clear();
-        operations.clear();
+        recycle();
         endOfBatch = true;
+    }
+
+    private void recycle() {
+        for (CacheOperationResultDetails<I, K, V> operation : operations) {
+            operationPool.release(operation);
+        }
+        operations.clear();
     }
 
     @Override
@@ -56,117 +83,50 @@ public class BulkCacheOpsResult <I extends Reusable, K extends Reusable, V exten
         return this;
     }
 
+    /**
+     * Acquire a cleared operation result from the pool and populate the fields common to every bulk
+     * operation: the operation status, request id and cache id.
+     */
+    private CacheOperationResultDetails<I, K, V> acquireResult(CacheOperationStatus operationStatus, String requestId, I cacheId) {
+        var cacheOpResult = operationPool.acquire();
+        cacheOpResult.setRequestId(requestId);
+        cacheOpResult.getCacheId().copyFrom(cacheId);
+        cacheOpResult.operationStatus = operationStatus;
+        return cacheOpResult;
+    }
 
-    public void addResult(DeleteCacheResult<I> result) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.copyFrom(result.requestId);
-        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
-        cacheOpResult.operationStatus = result.status;
+    /**
+     * Add the result of a cache-level operation (create, clear, delete) that carries no key or value.
+     */
+    public void addResult(CacheOperationStatus operationStatus, String requestId, I cacheId) {
+        operations.add(acquireResult(operationStatus, requestId, cacheId));
+    }
+
+    /**
+     * Add the result of a keyed operation (add, remove, patch, cancel, counter ops) that carries no value.
+     */
+    public void addResult(CacheOperationStatus operationStatus, String requestId, I cacheId, K key) {
+        var cacheOpResult = acquireResult(operationStatus, requestId, cacheId);
+        cacheOpResult.getKey().copyFrom(key);
         operations.add(cacheOpResult);
     }
 
-    public void addResult(ClearCacheResult<I> result) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.copyFrom(result.requestId);
-        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
-        cacheOpResult.operationStatus = result.status;
-        operations.add(cacheOpResult);
-    }
-
-    public void addResult(CreateCacheResult<I> result) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.copyFrom(result.requestId);
-        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
-        cacheOpResult.operationStatus = result.status;
-        operations.add(cacheOpResult);
-    }
-
-    public void addResult(RemoveCacheEntryResult<I, K> result) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.copyFrom(result.requestId);
-        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
-        cacheOpResult.operationStatus = result.status;
-        cacheOpResult.key.copyFrom(result.getKey());
-        operations.add(cacheOpResult);
-    }
-
-    public void addResult(CancelItemRemovalResult<I, K> result) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.copyFrom(result.requestId);
-        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
-        cacheOpResult.operationStatus = result.status;
-        cacheOpResult.key.copyFrom(result.getKey());
-        operations.add(cacheOpResult);
-    }
-
-    public void addResult(IncrementCounterResult<I, K> result) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.copyFrom(result.requestId);
-        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
-        cacheOpResult.operationStatus = result.status;
-        cacheOpResult.getKey().copyFrom(result.getKey());
-        operations.add(cacheOpResult);
-    }
-
-    public void addResult(DecrementCounterResult<I, K> result) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.copyFrom(result.requestId);
-        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
-        cacheOpResult.operationStatus = result.status;
-        cacheOpResult.getKey().copyFrom(result.getKey());
-        operations.add(cacheOpResult);
-    }
-
-    public void addResult(SetCounterResult<I, K> result) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.copyFrom(result.requestId);
-        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
-        cacheOpResult.operationStatus = result.status;
-        cacheOpResult.getKey().copyFrom(result.getKey());
-        operations.add(cacheOpResult);
-    }
-
-    public void addResult(AddCacheEntryResult<I, K> result) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.copyFrom(result.requestId);
-        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
-        cacheOpResult.operationStatus = result.status;
-        cacheOpResult.getKey().copyFrom(result.getEntryKey());
-        operations.add(cacheOpResult);
-    }
-
-    @SuppressWarnings("unchecked")
-    public <VT extends Reusable> void addResult(GetCacheEntryResult<I, K, VT> result) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.copyFrom(result.requestId);
-        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
-        cacheOpResult.operationStatus = result.status;
-        cacheOpResult.getKey().copyFrom(result.getEntryKey());
-        // The bulk result carries a single (string) value type, but the read value may be of a different
-        // type (e.g. a numeric counter). Marshal it as its string form rather than copying the raw
-        // Reusable across value types; clients decode counter values as string-encoded numbers, exactly
-        // as the non-bulk GET_COUNTER path already returns them.
-        var entryValue = result.getEntryValue();
-        if (entryValue != null && entryValue.value() != null) {
-            cacheOpResult.getValue().copyFrom(String.valueOf(entryValue.value()));
+    /**
+     * Add the result of a keyed read operation whose value is carried as its string form. The bulk
+     * result carries a single (string) value type, so a read value of a different type (e.g. a numeric
+     * counter) is marshalled as its string form, exactly as the non-bulk GET path returns it.
+     */
+    public void addResult(CacheOperationStatus operationStatus, String requestId, I cacheId, K key, String value) {
+        var cacheOpResult = acquireResult(operationStatus, requestId, cacheId);
+        cacheOpResult.getKey().copyFrom(key);
+        if (value != null) {
+            cacheOpResult.getValue().copyFrom(value);
         }
         operations.add(cacheOpResult);
     }
 
-    public <VT extends Reusable> void addResult(PatchValueResult<I, K, VT> result) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.copyFrom(result.requestId);
-        cacheOpResult.getCacheId().copyFrom(result.getCacheId());
-        cacheOpResult.operationStatus = result.status;
-        cacheOpResult.getKey().copyFrom(result.getEntryKey());
-        operations.add(cacheOpResult);
-    }
-
     public void addOperationResult(CacheOperationStatus cacheOperationStatus, String requestId, I cacheId, K key, V value) {
-        var cacheOpResult = new CacheOperationResultDetails<>(indexSupplier, keySupplier, valueSupplier);
-        cacheOpResult.requestId.setRequestId(requestId);
-        cacheOpResult.getCacheId().copyFrom(cacheId);
-        cacheOpResult.operationStatus = cacheOperationStatus;
+        var cacheOpResult = acquireResult(cacheOperationStatus, requestId, cacheId);
         cacheOpResult.getKey().copyFrom(key);
         cacheOpResult.getValue().copyFrom(value);
         operations.add(cacheOpResult);
