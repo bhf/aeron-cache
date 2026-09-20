@@ -149,7 +149,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         this.patchEntryUpdateResult = new AddCacheEntryResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
         this.addMergePatchResult = new PatchValueResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get(), cacheManagerFactory.getValueSupplier().get());
         this.getCacheStatsRequestDetails = new GetCacheStatsRequestDetails();
-        this.cacheSubscribeRequestDetails = new CacheSubscriptionRequestDetails<>();
+        this.cacheSubscribeRequestDetails = new CacheSubscriptionRequestDetails<>(cacheManagerFactory.getIndexSupplier(), cacheManagerFactory.getKeySupplier());
         this.cacheUnsubscribeRequestDetails = new CacheUnsubscribeRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.bulkCacheOpsRequestDetails = new BulkCacheOpsRequestDetails<>(cacheManagerFactory.getIndexSupplier(), cacheManagerFactory.getKeySupplier(), cacheManagerFactory.getValueSupplier());
         this.subscribeResult = new CacheSubscriptionResult<>(cacheManagerFactory.getIndexSupplier().get());
@@ -870,6 +870,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
             handlePostCacheSubscriptionRequest(result, session, encoder);
         }
+
+        requestDetails.recycle();
 
         tracingService.endCacheSubscriptionRequest(requestDetails);
     }

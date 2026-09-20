@@ -8,7 +8,7 @@ import com.bhf.aeroncache.models.Reusable;
  *
  * @param <T> The concrete {@link Reusable} type held by this pool.
  */
-public interface ReusableObjectPool<T extends Reusable<?>> {
+public interface ReusableObjectPool<T extends Reusable> {
 
     /**
      * Acquire an instance from the pool. If the pool is empty a new instance is created on demand.
