@@ -946,6 +946,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         handlePostBulkOpsRequest(res, session, encoder);
 
         tracingService.endBulkOpsRequest(requestDetails);
+
+        requestDetails.recycle();
     }
 
     private BulkCacheOpsResult<I,K,V> processBulkOperations(BulkCacheOpsRequestDetails<I,K,V> requestDetails,

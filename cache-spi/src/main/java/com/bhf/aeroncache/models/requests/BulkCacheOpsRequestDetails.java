@@ -4,8 +4,9 @@ import com.bhf.aeroncache.annotations.Flyweight;
 import com.bhf.aeroncache.models.RequestId;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
+import com.bhf.aeroncache.pool.DequeReusableObjectPool;
+import com.bhf.aeroncache.pool.ReusableObjectPool;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 import java.util.ArrayList;
@@ -14,9 +15,10 @@ import java.util.function.Supplier;
 
 @Getter
 @Setter
-@RequiredArgsConstructor
 @Flyweight
 public class BulkCacheOpsRequestDetails <I extends Reusable, K extends Reusable, V extends Reusable> implements Reusable<BulkCacheOpsRequestDetails<I,K,V>>{
+
+    private static final int OPERATION_POOL_INITIAL_SIZE = 16;
 
     final Supplier<I> indexSupplier;
     final Supplier<K> keySupplier;
@@ -24,7 +26,26 @@ public class BulkCacheOpsRequestDetails <I extends Reusable, K extends Reusable,
 
     final List<CacheOperationRequestDetails<I,K,V>> operations = new ArrayList<>();
 
+    private final ReusableObjectPool<CacheOperationRequestDetails<I, K, V>> operationPool;
+
     final RequestId requestId = new RequestId();
+
+    /**
+     * Create a bulk request details flyweight backed by a pool that reuses the operation instances
+     * gathered while decoding.
+     *
+     * @param indexSupplier Factory for cache id instances.
+     * @param keySupplier   Factory for key instances.
+     * @param valueSupplier Factory for value instances.
+     */
+    public BulkCacheOpsRequestDetails(final Supplier<I> indexSupplier, final Supplier<K> keySupplier, final Supplier<V> valueSupplier) {
+        this.indexSupplier = indexSupplier;
+        this.keySupplier = keySupplier;
+        this.valueSupplier = valueSupplier;
+        this.operationPool = new DequeReusableObjectPool<>(
+                () -> new CacheOperationRequestDetails<>(indexSupplier, keySupplier, valueSupplier),
+                OPERATION_POOL_INITIAL_SIZE, true);
+    }
 
     public String getRequestId(){
         return requestId.getRequestId();
@@ -57,7 +78,7 @@ public class BulkCacheOpsRequestDetails <I extends Reusable, K extends Reusable,
     }
 
     public void addOperation(BulkOperationType opType, long ttl, long counterValue, String requestId, I cacheId, K key, V value) {
-        var details = new CacheOperationRequestDetails(indexSupplier, keySupplier, valueSupplier);
+        var details = operationPool.acquire();
         details.operationType = opType;
         details.ttl = ttl;
         details.counterValue = counterValue;
@@ -66,6 +87,13 @@ public class BulkCacheOpsRequestDetails <I extends Reusable, K extends Reusable,
         details.getKey().copyFrom(key);
         details.getValue().copyFrom(value);
         operations.add(details);
+    }
+
+    public void recycle() {
+        for (CacheOperationRequestDetails<I, K, V> operation : operations) {
+            operationPool.release(operation);
+        }
+        operations.clear();
     }
 
 }
