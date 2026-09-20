@@ -39,11 +39,27 @@ tasks.jmh {
     val pMode = project.findProperty("jmhMode")?.toString() ?: "throughput"
     val mappedMode = if (pMode == "latency") "sample" else "thrpt"
     benchmarkMode.set(listOf(mappedMode))
-    
-    iterations.set(1)
-    timeOnIteration.set("10s")
-    warmupIterations.set(1)
-    warmup.set("10s")
+
+    // Run parameters are overridable via -P properties so different workflows can trade run time
+    // against statistical rigour. The defaults below match a full local run; the per-PR CI job
+    // passes shorter times for a quick regression signal, while the manually triggered job passes
+    // longer times and more forks for publishable numbers.
+    fun jmhProp(name: String, default: String) = project.findProperty(name)?.toString() ?: default
+
+    iterations.set(jmhProp("jmhIterations", "1").toInt())
+    timeOnIteration.set(jmhProp("jmhTime", "10s"))
+    warmupIterations.set(jmhProp("jmhWarmupIterations", "1").toInt())
+    warmup.set(jmhProp("jmhWarmup", "10s"))
+    fork.set(jmhProp("jmhForks", "1").toInt())
+
+    // Optional benchmark name filters (comma separated regexes) used to shard the run across
+    // parallel CI jobs, e.g. -PjmhIncludes=".*Counter.*" or -PjmhExcludes=".*Counter.*".
+    (project.findProperty("jmhIncludes") as String?)?.let { value ->
+        includes.set(value.split(",").map(String::trim).filter(String::isNotEmpty))
+    }
+    (project.findProperty("jmhExcludes") as String?)?.let { value ->
+        excludes.set(value.split(",").map(String::trim).filter(String::isNotEmpty))
+    }
 
     jvmArgs.set(listOf(
         "-Xms4g",
