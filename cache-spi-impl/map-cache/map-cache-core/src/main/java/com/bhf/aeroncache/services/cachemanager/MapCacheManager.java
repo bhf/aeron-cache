@@ -223,7 +223,7 @@ public class MapCacheManager<I extends Reusable, K extends Reusable, V extends R
         var cache = getCache(cacheId);
         if (cache != null) {
             getAllCacheEntriesResult.setStatus(CacheOperationStatus.SUCCESS);
-            getAllCacheEntriesResult.getValues().putAll(cache.getAllEntries());
+            getAllCacheEntriesResult.setValues(cache.getAllEntries());
         } else {
             getAllCacheEntriesResult.setStatus(CacheOperationStatus.UNKNOWN_CACHE);
         }
