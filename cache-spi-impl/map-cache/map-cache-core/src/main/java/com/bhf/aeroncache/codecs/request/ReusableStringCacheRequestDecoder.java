@@ -24,6 +24,10 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
     private final CacheUnsubscribeRequestDecoder cacheUnsubscribeRequestDecoder = new CacheUnsubscribeRequestDecoder();
     private final BulkOperationRequestDecoder bulkOperationRequestDecoder = new BulkOperationRequestDecoder();
 
+    private final ReusableString reusableCacheId = new ReusableString();
+    private final ReusableString reusableKey = new ReusableString();
+    private final ReusableString reusableValue = new ReusableString();
+
     @Override
     public void decodeGetCreateCacheRequestDetails(DirectBuffer buffer, int offset, CreateCacheRequestDetails<ReusableString> createCacheRequestDetails) {
         createCacheRequestDetails.clear();
@@ -210,7 +214,7 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
         bulkCacheOpsRequestDetails.setRequestId(requestId);
     }
 
-    private static void decodeCacheOperations(BulkCacheOpsRequestDetails<ReusableString, ReusableString, ReusableString> bulkCacheOpsRequestDetails, BulkOperationRequestDecoder.ItemsDecoder itemsDecoder) {
+    private void decodeCacheOperations(BulkCacheOpsRequestDetails<ReusableString, ReusableString, ReusableString> bulkCacheOpsRequestDetails, BulkOperationRequestDecoder.ItemsDecoder itemsDecoder) {
         for(var op: itemsDecoder) {
             var opType = op.operationType();
             var ttl = op.ttl();
@@ -219,9 +223,11 @@ public class ReusableStringCacheRequestDecoder implements CacheRequestDecoder<Re
             var cacheId = op.cacheId();
             var key = op.key();
             var value = op.value();
-            ReusableString reusableCacheId = new ReusableString();
-            ReusableString reusableKey = new ReusableString();
-            ReusableString reusableValue = new ReusableString();
+
+            reusableCacheId.clear();
+            reusableKey.clear();
+            reusableValue.clear();
+
             reusableCacheId.copyFrom(cacheId);
             reusableKey.copyFrom(key);
             reusableValue.copyFrom(value);

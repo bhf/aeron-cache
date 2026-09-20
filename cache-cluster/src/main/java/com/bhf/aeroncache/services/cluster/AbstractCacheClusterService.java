@@ -54,6 +54,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     private final CacheSchemaDetailsProvider schemaDetails;
     private Cluster cluster;
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
+    private final MutableDirectBuffer snapshotBuffer = new ExpandableArrayBuffer();
     private final CacheTracingService tracingService;
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
     private final TimerCorrelationIdProvider timerCorrelationIdProvider = new TimerCorrelationIdProvider();
@@ -1515,14 +1516,12 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      */
     @Override
     public void onTakeSnapshot(final ExclusivePublication snapshotPublication) {
-        MutableDirectBuffer timersBuffer = new ExpandableArrayBuffer();
-
         log.info("Taking timers service snapshot");
-        int cumulativeLength = cacheTimerService.onTakeSnapshot(snapshotPublication, timersBuffer);
-        snapshotPublication.offer(timersBuffer, 0, cumulativeLength);
+        int cumulativeLength = cacheTimerService.onTakeSnapshot(snapshotPublication, snapshotBuffer);
+        snapshotPublication.offer(snapshotBuffer, 0, cumulativeLength);
 
-        cumulativeLength = cacheCountersTimerService.onTakeSnapshot(snapshotPublication, timersBuffer);
-        snapshotPublication.offer(timersBuffer, 0, cumulativeLength);
+        cumulativeLength = cacheCountersTimerService.onTakeSnapshot(snapshotPublication, snapshotBuffer);
+        snapshotPublication.offer(snapshotBuffer, 0, cumulativeLength);
 
         log.info("Taking cache manager snapshot");
         cacheManager.takeSnapshot(snapshotPublication, cluster);
