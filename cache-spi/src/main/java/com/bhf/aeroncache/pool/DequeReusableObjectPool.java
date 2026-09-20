@@ -25,7 +25,7 @@ import java.util.function.Supplier;
  *
  * @param <T> The concrete {@link Reusable} type held by this pool.
  */
-public class DequeReusableObjectPool<T extends Reusable<?>> implements ReusableObjectPool<T> {
+public class DequeReusableObjectPool<T extends Reusable> implements ReusableObjectPool<T> {
 
     private final Supplier<? extends T> factory;
     private final Deque<T> pool;

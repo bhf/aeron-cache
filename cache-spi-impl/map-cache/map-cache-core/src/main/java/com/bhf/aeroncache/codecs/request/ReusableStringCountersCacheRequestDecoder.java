@@ -49,32 +49,13 @@ public class ReusableStringCountersCacheRequestDecoder implements CountersCacheR
         var sendSnapshot = cacheSubscriptionRequestDecoder.sendSnapshot();
         boolean shouldSendInitialState = sendSnapshot==BooleanType.T;
 
-        cacheSubscribeRequestDetails.getCacheId().clear();
-        var cacheIds = cacheSubscribeRequestDetails.getCacheId();
-        var keys = cacheSubscribeRequestDetails.getSubscriptionKey();
-        var modes = cacheSubscribeRequestDetails.getSubscriptionMode();
-
         var itemsDecoder = cacheSubscriptionRequestDecoder.cacheIds();
 
         for(var op: itemsDecoder) {
-            var mode = op.mode();
-            ReusableString reusableCacheId = new ReusableString();
-            var cacheId = op.cacheId();
-            reusableCacheId.copyFrom(cacheId);
-            cacheIds.add(reusableCacheId);
-
-            var key = op.key();
-            if (key == null || key.isEmpty()) {
-                keys.add(null);
-            } else {
-                ReusableString reusableKey = new ReusableString();
-                reusableKey.copyFrom(key);
-                keys.add(reusableKey);
-            }
-
-            modes.add(mode == com.bhf.aeroncache.messages.SubscriptionMode.PATCH
+            var mode = op.mode() == com.bhf.aeroncache.messages.SubscriptionMode.PATCH
                     ? com.bhf.aeroncache.models.requests.SubscriptionMode.PATCH
-                    : com.bhf.aeroncache.models.requests.SubscriptionMode.FULL);
+                    : com.bhf.aeroncache.models.requests.SubscriptionMode.FULL;
+            cacheSubscribeRequestDetails.addSubscription(op.cacheId(), op.key(), mode);
         }
 
         var requestId = cacheSubscriptionRequestDecoder.requestId();
