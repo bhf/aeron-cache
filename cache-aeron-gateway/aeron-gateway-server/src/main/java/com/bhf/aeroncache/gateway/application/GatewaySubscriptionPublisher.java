@@ -39,6 +39,13 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
      */
     private final Set<String> clusterSubscriptions = ConcurrentHashMap.newKeySet();
 
+    /**
+     * A single reused update carrier. Streaming events are produced and dispatched only on the cluster
+     * egress thread and consumed synchronously by each session's writer, so one instance can be populated
+     * once per update and fanned out to every subscriber without allocating (see {@link GatewayStreamUpdate}).
+     */
+    private final GatewayStreamUpdate streamUpdate = new GatewayStreamUpdate();
+
     public GatewaySubscriptionPublisher(CacheRequestPublisher rbPublisher) {
         super(rbPublisher);
     }
@@ -51,12 +58,12 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
      * A subscriber consumer that only receives events for the specific keys it subscribed to. A {@code null}
      * or empty key set denotes a whole-cache subscription that receives updates for every key.
      */
-    private static final class KeyFilteredConsumer implements IdentifiableConsumer<String, CacheUpdateEvent> {
+    private static final class KeyFilteredConsumer implements IdentifiableConsumer<String, GatewayStreamUpdate> {
         private final String sessionId;
         private final Set<String> keys;
-        private final Consumer<CacheUpdateEvent> delegate;
+        private final Consumer<GatewayStreamUpdate> delegate;
 
-        KeyFilteredConsumer(String sessionId, Set<String> keys, Consumer<CacheUpdateEvent> delegate) {
+        KeyFilteredConsumer(String sessionId, Set<String> keys, Consumer<GatewayStreamUpdate> delegate) {
             this.sessionId = sessionId;
             this.keys = keys;
             this.delegate = delegate;
@@ -68,8 +75,8 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         }
 
         @Override
-        public void accept(CacheUpdateEvent cacheUpdateEvent) {
-            delegate.accept(cacheUpdateEvent);
+        public void accept(GatewayStreamUpdate streamUpdate) {
+            delegate.accept(streamUpdate);
         }
 
         boolean matches(String key) {
@@ -79,14 +86,14 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
 
     @Override
     public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, List<String> cacheIds,
-                                 String sessionId, String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
+                                 String sessionId, String requestId, boolean sendSnapshot, Consumer<GatewayStreamUpdate> consumer) {
         subscribeToCache(cluster, subscriptionFailureHandler, () -> {}, cacheIds, null, SubscriptionMode.FULL, sessionId, requestId, sendSnapshot, consumer);
     }
 
     @Override
     public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, Runnable subscriptionAckHandler,
                                  List<String> cacheIds, List<String> keys, SubscriptionMode mode, String sessionId,
-                                 String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
+                                 String requestId, boolean sendSnapshot, Consumer<GatewayStreamUpdate> consumer) {
         var effectiveMode = mode == null ? SubscriptionMode.FULL : mode;
 
         // Group the requested keys per cache; an empty key set denotes a whole-cache subscription.
@@ -147,7 +154,7 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
     private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, List<String> cacheId, List<String> keys,
                                               List<SubscriptionMode> modes, boolean sendSnapshot,
                                               Consumer<Void> subscriptionFailureHandler, Runnable subscriptionAckHandler,
-                                              Consumer<CacheUpdateEvent> streamingEventConsumer) {
+                                              Consumer<GatewayStreamUpdate> streamingEventConsumer) {
         // The whole subscribe is one atomic cluster command, so the first confirmed result means every
         // requested subscription in the batch is live. Ack exactly once for the request.
         var acked = new java.util.concurrent.atomic.AtomicBoolean(false);
@@ -171,11 +178,12 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
             }
 
             if (subscriptionResult.getEntries() != null && !subscriptionResult.getEntries().isEmpty()) {
+                var snapshotCacheId = subscriptionResult.getCacheId().toString();
                 subscriptionResult.getEntries().forEach((k, v) -> {
-                    CacheUpdateEvent.EventType eventType = CacheUpdateEvent.EventType.ADD_ITEM;
                     var ik = String.valueOf(k.value());
                     var iv = (v.value());
-                    streamingEventConsumer.accept(new CacheUpdateEvent(subscriptionResult.getCacheId().toString(), eventType, ik, iv, requestId));
+                    streamUpdate.set(snapshotCacheId, CacheUpdateEvent.EventType.ADD_ITEM, ik, iv, requestId);
+                    streamingEventConsumer.accept(streamUpdate);
                 });
             }
         });
@@ -243,10 +251,10 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         var subscribers = cacheSubscriptions.get(clearCacheResult.getCacheId().value());
         if (subscribers != null) {
             var cacheId = String.valueOf(clearCacheResult.getCacheId());
-            var eventType = CacheUpdateEvent.EventType.CLEAR_CACHE;
+            streamUpdate.set(cacheId, CacheUpdateEvent.EventType.CLEAR_CACHE, null, null, clearCacheResult.getRequestId());
             subscribers.forEach(c -> {
                 try {
-                    c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, clearCacheResult.getRequestId()));
+                    c.accept(streamUpdate);
                 } catch (Exception e) {
                     log.warn("Error dispatching clear cache event", e);
                 }
@@ -262,10 +270,10 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         var subscribers = cacheSubscriptions.get(deleteCacheResult.getCacheId().value());
         if (subscribers != null) {
             var cacheId = String.valueOf(deleteCacheResult.getCacheId());
-            var eventType = CacheUpdateEvent.EventType.DELETE_CACHE;
+            streamUpdate.set(cacheId, CacheUpdateEvent.EventType.DELETE_CACHE, null, null, deleteCacheResult.getRequestId());
             subscribers.forEach(c -> {
                 try {
-                    c.accept(new CacheUpdateEvent(cacheId, eventType, null, null, deleteCacheResult.getRequestId()));
+                    c.accept(streamUpdate);
                 } catch (Exception e) {
                     log.warn("Error dispatching delete cache event", e);
                 }
@@ -281,14 +289,14 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         var subscribers = cacheSubscriptions.get(removeCacheEntryResult.getCacheId().value());
         if (subscribers != null) {
             var cacheId = String.valueOf(removeCacheEntryResult.getCacheId());
-            var eventType = CacheUpdateEvent.EventType.REMOVE_ITEM;
             var key = removeCacheEntryResult.getKey().value().toString();
+            streamUpdate.set(cacheId, CacheUpdateEvent.EventType.REMOVE_ITEM, key, null, removeCacheEntryResult.getRequestId());
             subscribers.forEach(c -> {
                 if (!c.matches(key)) {
                     return;
                 }
                 try {
-                    c.accept(new CacheUpdateEvent(cacheId, eventType, key, null, removeCacheEntryResult.getRequestId()));
+                    c.accept(streamUpdate);
                 } catch (Exception e) {
                     log.warn("Error dispatching remove entry event", e);
                 }
@@ -304,12 +312,13 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
             var eventType = cacheEntryUpdateResult.isPatch() ? CacheUpdateEvent.EventType.PATCH_ITEM : CacheUpdateEvent.EventType.ADD_ITEM;
             var key = cacheEntryUpdateResult.getKey().value().toString();
             var value = cacheEntryUpdateResult.getValue().value();
+            streamUpdate.set(cacheId, eventType, key, value, cacheEntryUpdateResult.getRequestId());
             subscribers.forEach(c -> {
                 if (!c.matches(key)) {
                     return;
                 }
                 try {
-                    c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, cacheEntryUpdateResult.getRequestId()));
+                    c.accept(streamUpdate);
                 } catch (Exception e) {
                     log.warn("Error dispatching entry update event", e);
                 }
@@ -339,14 +348,14 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         var subscribers = cacheSubscriptions.get(cacheIdReusable.value());
         if (subscribers != null) {
             var cacheId = String.valueOf(cacheIdReusable);
-            var eventType = CacheUpdateEvent.EventType.ADD_ITEM;
             var key = keyReusable.value().toString();
+            streamUpdate.set(cacheId, CacheUpdateEvent.EventType.ADD_ITEM, key, counterValue, requestId);
             subscribers.forEach(c -> {
                 if (!c.matches(key)) {
                     return;
                 }
                 try {
-                    c.accept(new CacheUpdateEvent(cacheId, eventType, key, counterValue, requestId));
+                    c.accept(streamUpdate);
                 } catch (Exception e) {
                     log.warn("Error dispatching counter event", e);
                 }

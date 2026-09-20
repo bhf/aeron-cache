@@ -48,20 +48,140 @@ public class GatewayResponseWriter {
 
     /**
      * A single cache stats record, decoupled from the cluster domain types.
+     * <p>
+     * A mutable carrier (rather than a record) so callers on the single response-writing thread can reuse
+     * instances across batches via a {@link com.bhf.aeroncache.gateway.application.FlyweightList} instead
+     * of allocating one per stat. The all-args constructor is retained for one-off construction and tests.
      */
-    public record StatEntry(String cacheId, long addedCount, long removedCount, long clearedCount, long size) {
+    public static final class StatEntry {
+        private String cacheId;
+        private long addedCount;
+        private long removedCount;
+        private long clearedCount;
+        private long size;
+
+        public StatEntry() {
+        }
+
+        public StatEntry(String cacheId, long addedCount, long removedCount, long clearedCount, long size) {
+            set(cacheId, addedCount, removedCount, clearedCount, size);
+        }
+
+        public void set(String cacheId, long addedCount, long removedCount, long clearedCount, long size) {
+            this.cacheId = cacheId;
+            this.addedCount = addedCount;
+            this.removedCount = removedCount;
+            this.clearedCount = clearedCount;
+            this.size = size;
+        }
+
+        public String cacheId() {
+            return cacheId;
+        }
+
+        public long addedCount() {
+            return addedCount;
+        }
+
+        public long removedCount() {
+            return removedCount;
+        }
+
+        public long clearedCount() {
+            return clearedCount;
+        }
+
+        public long size() {
+            return size;
+        }
     }
 
     /**
-     * A single pending TTL removal timer, decoupled from the cluster domain types.
+     * A single pending TTL removal timer, decoupled from the cluster domain types. Mutable so response-side
+     * callers can reuse instances across batches; see {@link StatEntry}.
      */
-    public record TimerEntry(String timerType, String cacheId, String key, long deadline) {
+    public static final class TimerEntry {
+        private String timerType;
+        private String cacheId;
+        private String key;
+        private long deadline;
+
+        public TimerEntry() {
+        }
+
+        public TimerEntry(String timerType, String cacheId, String key, long deadline) {
+            set(timerType, cacheId, key, deadline);
+        }
+
+        public void set(String timerType, String cacheId, String key, long deadline) {
+            this.timerType = timerType;
+            this.cacheId = cacheId;
+            this.key = key;
+            this.deadline = deadline;
+        }
+
+        public String timerType() {
+            return timerType;
+        }
+
+        public String cacheId() {
+            return cacheId;
+        }
+
+        public String key() {
+            return key;
+        }
+
+        public long deadline() {
+            return deadline;
+        }
     }
 
     /**
-     * A single bulk operation result, decoupled from the cluster domain types.
+     * A single bulk operation result, decoupled from the cluster domain types. Mutable so response-side
+     * callers can reuse instances across batches; see {@link StatEntry}.
      */
-    public record BulkOpResultEntry(CacheOperationStatus status, String requestId, String cacheId, String key, String value) {
+    public static final class BulkOpResultEntry {
+        private CacheOperationStatus status;
+        private String requestId;
+        private String cacheId;
+        private String key;
+        private String value;
+
+        public BulkOpResultEntry() {
+        }
+
+        public BulkOpResultEntry(CacheOperationStatus status, String requestId, String cacheId, String key, String value) {
+            set(status, requestId, cacheId, key, value);
+        }
+
+        public void set(CacheOperationStatus status, String requestId, String cacheId, String key, String value) {
+            this.status = status;
+            this.requestId = requestId;
+            this.cacheId = cacheId;
+            this.key = key;
+            this.value = value;
+        }
+
+        public CacheOperationStatus status() {
+            return status;
+        }
+
+        public String requestId() {
+            return requestId;
+        }
+
+        public String cacheId() {
+            return cacheId;
+        }
+
+        public String key() {
+            return key;
+        }
+
+        public String value() {
+            return value;
+        }
     }
 
     /**
@@ -164,13 +284,22 @@ public class GatewayResponseWriter {
      * Encode and publish a streaming update frame.
      */
     public void writeStreamUpdate(Publication publication, CacheUpdateEvent<?> event) {
-        var value = event.itemValue() == null ? null : String.valueOf(event.itemValue());
+        writeStreamUpdate(publication, event.eventType(), event.cacheId(), event.itemKey(), event.itemValue(), event.requestId());
+    }
+
+    /**
+     * Encode and publish a streaming update frame from raw fields, so callers can drive it from a reused
+     * flyweight without allocating a {@link CacheUpdateEvent} per update.
+     */
+    public void writeStreamUpdate(Publication publication, CacheUpdateEvent.EventType eventType,
+                                  String cacheId, String key, Object itemValue, String requestId) {
+        var value = itemValue == null ? null : String.valueOf(itemValue);
         streamUpdateEncoder.wrapAndApplyHeader(buffer, 0, headerEncoder)
-                .eventType(mapEventType(event.eventType()))
-                .cacheId(nullSafe(event.cacheId()))
-                .key(nullSafe(event.itemKey()))
+                .eventType(mapEventType(eventType))
+                .cacheId(nullSafe(cacheId))
+                .key(nullSafe(key))
                 .value(nullSafe(value))
-                .correlationId(nullSafe(event.requestId()));
+                .correlationId(nullSafe(requestId));
         offer(publication, streamUpdateEncoder.limit());
     }
 
