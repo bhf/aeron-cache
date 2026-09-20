@@ -1,0 +1,80 @@
+name: JMH Full
+
+# Manually triggered, longer-running JMH benchmarks for publishable numbers. Unlike the per-PR
+# "JMH CI" workflow (short 5s/5s single-fork run), this defaults to a multi-fork run with longer
+# warmup and multiple measurement iterations. All parameters are overridable at dispatch time.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Benchmark mode'
+        type: choice
+        options:
+          - throughput
+          - latency
+        default: throughput
+      warmup:
+        description: 'Warmup time per iteration (e.g. 10s)'
+        type: string
+        default: '10s'
+      warmupIterations:
+        description: 'Number of warmup iterations'
+        type: string
+        default: '3'
+      measurementTime:
+        description: 'Measurement time per iteration (e.g. 10s)'
+        type: string
+        default: '10s'
+      measurementIterations:
+        description: 'Number of measurement iterations'
+        type: string
+        default: '5'
+      forks:
+        description: 'Number of JVM forks'
+        type: string
+        default: '2'
+
+jobs:
+  jmh-benchmark:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Same cache vs counters sharding as the per-PR workflow so the long run is parallelised too.
+        shard:
+          - name: cache
+            args: "-PjmhExcludes=.*counters.*"
+          - name: counters
+            args: "-PjmhIncludes=.*counters.*"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Run JMH benchmark (${{ matrix.shard.name }})
+        run: >-
+          ./gradlew :cache-integration:microbenchmarks:jmh
+          -PjmhMode=${{ inputs.mode }}
+          -PjmhWarmup=${{ inputs.warmup }}
+          -PjmhWarmupIterations=${{ inputs.warmupIterations }}
+          -PjmhTime=${{ inputs.measurementTime }}
+          -PjmhIterations=${{ inputs.measurementIterations }}
+          -PjmhForks=${{ inputs.forks }}
+          "${{ matrix.shard.args }}"
+
+      - name: Rename and Prepare Artifact
+        run: |
+          SHA="${{ github.sha }}"
+          mv cache-integration/microbenchmarks/build/reports/jmh/results.json "cache-integration/microbenchmarks/build/reports/jmh/${SHA}-${{ inputs.mode }}-${{ matrix.shard.name }}-full.json"
+
+      - name: Upload JMH Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmh-results-${{ inputs.mode }}-${{ matrix.shard.name }}-full
+          path: cache-integration/microbenchmarks/build/reports/jmh/${{ github.sha }}-${{ inputs.mode }}-${{ matrix.shard.name }}-full.json
