@@ -9,7 +9,6 @@ import com.bhf.aeroncache.gateway.messages.GatewaySubscribeDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayUnsubscribeDecoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.AllTimersResult;
@@ -96,6 +95,7 @@ public class GatewayIngressAgent implements Agent {
     // before the structure is rebuilt, so nothing escapes the thread that owns it.
     private final FlyweightList<ReusableCacheOperation> bulkRequestOps =
             new FlyweightList<>(ReusableCacheOperation::new);
+    private final GatewayBulkOpsRequest bulkRequest = new GatewayBulkOpsRequest();
     private final FlyweightList<GatewayResponseWriter.BulkOpResultEntry> bulkResultEntries =
             new FlyweightList<>(GatewayResponseWriter.BulkOpResultEntry::new);
     private final FlyweightList<GatewayResponseWriter.StatEntry> statEntries =
@@ -234,9 +234,9 @@ public class GatewayIngressAgent implements Agent {
 
         // The operations are encoded onward to the cluster synchronously inside sendBulkOperationsRequest,
         // and the result consumer captures only the correlation id and response publication, so the reused
-        // flyweight operations never escape this thread and can be rebuilt on the next bulk request.
-        final BulkCacheOpsRequest request = new BulkCacheOpsRequest(correlationId, bulkRequestOps.view());
-        cacheSubs.sendBulkOperationsRequest(correlationId, request,
+        // flyweight operations and request never escape this thread and can be rebuilt on the next bulk request.
+        bulkRequest.set(correlationId, bulkRequestOps.view());
+        cacheSubs.sendBulkOperationsRequest(correlationId, bulkRequest,
                 (Consumer<BulkCacheOpsResult>) o -> respondBulk(responsePublication, correlationId, (BulkCacheOpsResult) o));
     }
 

@@ -5,7 +5,7 @@ import com.bhf.aeroncache.codecs.request.CacheRequestEncoder;
 import com.bhf.aeroncache.codecs.request.CountersCacheRequestEncoder;
 import com.bhf.aeroncache.handlers.NoOpPublicationFailureHandler;
 import com.bhf.aeroncache.handlers.PublicationFailureHandler;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOpsRequest;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
@@ -198,13 +198,13 @@ public class ClusterMessagePublisher<BI, BK, BV> implements CacheRequestPublishe
     }
 
     @Override
-    public void sendBulkOperationsBlocking(String requestId, BulkCacheOpsRequest request) {
+    public void sendBulkOperationsBlocking(String requestId, BulkOpsRequest request) {
         sendBulkOperationsRequest(requestId, request);
         waitForResult(cluster);
     }
 
     @Override
-    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request) {
+    public void sendBulkOperationsRequest(String requestId, BulkOpsRequest request) {
         var length = cacheRequestEncoder.encodeBulkOperations(requestId, request, msgBuffer);
         publishToCache(msgBuffer, 0, length);
         log.info("Sent bulk operation request with request Id {}",      requestId);

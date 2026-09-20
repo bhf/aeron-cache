@@ -2,7 +2,7 @@ package com.bhf.aeroncache.services.cache.impl;
 
 
 import com.bhf.aeroncache.models.CacheRequestMessageTypes;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOpsRequest;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
@@ -85,7 +85,7 @@ public class RBCacheRequestPublisher extends AbstractRBRequestPublisher<String> 
     }
 
     @Override
-    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request) {
+    public void sendBulkOperationsRequest(String requestId, BulkOpsRequest request) {
 
         var buffer = writeBuffer;
         int writeCursor = 0;
