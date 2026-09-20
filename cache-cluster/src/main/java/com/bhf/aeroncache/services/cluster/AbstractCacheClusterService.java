@@ -12,6 +12,8 @@ import com.bhf.aeroncache.models.ReusableLong;
 import com.bhf.aeroncache.models.consumer.HydratingPublicationConsumer;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.pool.DequeReusableObjectPool;
+import com.bhf.aeroncache.pool.ReusableObjectPool;
 import com.bhf.aeroncache.services.CacheTimerService;
 import com.bhf.aeroncache.services.cache.Cache;
 import com.bhf.aeroncache.services.cachemanager.CacheManager;
@@ -49,6 +51,8 @@ import java.util.function.Supplier;
 @Log4j2
 public class AbstractCacheClusterService<I extends Reusable, K extends Reusable, V extends Reusable> implements ClusteredService {
 
+    private static final int TIMER_DETAILS_POOL_INITIAL_SIZE = 128;
+
     private String nodeId;
     private final Supplier<I> indexSupplier;
     private final CacheSchemaDetailsProvider schemaDetails;
@@ -76,6 +80,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     final GetCacheStatsRequestDetails getCacheStatsRequestDetails;
     final GetAllTimersRequestDetails getAllTimersRequestDetails = new GetAllTimersRequestDetails();
     final AllTimersResult<I, K> allTimersResult = new AllTimersResult<>();
+
+    final ReusableObjectPool<TimerDetails<I, K>> timerDetailsPool;
 
     final CacheSubscriptionRequestDetails<I, K> cacheSubscribeRequestDetails;
     final CacheUnsubscribeRequestDetails<I> cacheUnsubscribeRequestDetails;
@@ -174,6 +180,12 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         this.incrementCounterResult = new IncrementCounterResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
         this.decrementCounterResult = new DecrementCounterResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
         this.setCounterResult = new SetCounterResult<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
+
+        final Supplier<I> timerIndexSupplier = cacheManagerFactory.getIndexSupplier();
+        final Supplier<K> timerKeySupplier = cacheManagerFactory.getKeySupplier();
+        this.timerDetailsPool = new DequeReusableObjectPool<>(
+                () -> new TimerDetails<>(timerIndexSupplier.get(), timerKeySupplier.get()),
+                TIMER_DETAILS_POOL_INITIAL_SIZE, true);
     }
 
     /**
@@ -791,10 +803,21 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
         responseSession = session;
         encoder.encodeAllTimersResult(allTimersResult, egressBuffer, responseConsumer);
+
+        returnTimerDetailsToPool();
+    }
+
+    private void returnTimerDetailsToPool() {
+        var timers = allTimersResult.getTimers();
+        for (TimerDetails<I, K> timer : timers) {
+            timerDetailsPool.release(timer);
+        }
     }
 
     private void addTimer(PendingRemove<I, K> pendingRemove, TimerType timerType) {
-        var timerDetails = new TimerDetails<>(pendingRemove.getCacheToRemoveOn(), pendingRemove.getKeyToRemove());
+        var timerDetails = timerDetailsPool.acquire();
+        timerDetails.getCacheId().copyFrom(pendingRemove.getCacheToRemoveOn());
+        timerDetails.getKey().copyFrom(pendingRemove.getKeyToRemove());
         timerDetails.timerType = timerType;
         timerDetails.deadline = pendingRemove.getDeadline();
         allTimersResult.getTimers().add(timerDetails);
