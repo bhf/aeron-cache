@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache.impl;
 
 import com.bhf.aeroncache.models.CacheRequestMessageTypes;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOpsRequest;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.concurrent.ringbuffer.RingBuffer;
 
@@ -79,7 +79,7 @@ public class RBCountersRequestPublisher extends AbstractRBRequestPublisher<Long>
     }
 
     @Override
-    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request) {
+    public void sendBulkOperationsRequest(String requestId, BulkOpsRequest request) {
         throw new UnsupportedOperationException("Bulk operations are not supported for counters");
     }
 

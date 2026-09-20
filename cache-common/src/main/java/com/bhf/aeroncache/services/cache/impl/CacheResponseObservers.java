@@ -2,7 +2,7 @@ package com.bhf.aeroncache.services.cache.impl;
 
 import com.bhf.aeroncache.models.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOpsRequest;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.CacheRequestConsumingPublisher;
 import com.bhf.aeroncache.services.cache.CacheResponseHandler;
@@ -226,7 +226,7 @@ public class CacheResponseObservers<I extends Reusable, K extends Reusable, V ex
     }
 
     @Override
-    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request, Consumer<BulkCacheOpsResult<I,K,V>> c) {
+    public void sendBulkOperationsRequest(String requestId, BulkOpsRequest request, Consumer<BulkCacheOpsResult<I,K,V>> c) {
         bulkOpsObservers.add(new IdentifiableConsumer<>() {
             @Override
             public String getId() {

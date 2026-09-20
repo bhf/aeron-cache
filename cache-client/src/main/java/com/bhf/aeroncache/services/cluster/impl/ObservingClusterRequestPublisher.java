@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cluster.impl;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOpsRequest;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.services.cluster.BlockingClusterRequestPublisher;
@@ -65,7 +65,7 @@ public class ObservingClusterRequestPublisher<I extends Reusable, K extends Reus
     }
 
     @Override
-    public void sendBulkOperationsBlocking(String requestId, BulkCacheOpsRequest request) {
+    public void sendBulkOperationsBlocking(String requestId, BulkOpsRequest request) {
         blockingPublisher.sendBulkOperationsBlocking(requestId, request);
     }
 

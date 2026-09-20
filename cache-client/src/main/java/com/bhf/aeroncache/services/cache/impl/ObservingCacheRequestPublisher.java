@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.services.cache.impl;
 
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOpsRequest;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.*;
@@ -218,12 +218,12 @@ public class ObservingCacheRequestPublisher<I extends Reusable, K extends Reusab
     }
 
     @Override
-    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request) {
+    public void sendBulkOperationsRequest(String requestId, BulkOpsRequest request) {
         rbPublisher.sendBulkOperationsRequest(requestId, request);
     }
 
     @Override
-    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request, Consumer<BulkCacheOpsResult<I,K,V>> consumer) {
+    public void sendBulkOperationsRequest(String requestId, BulkOpsRequest request, Consumer<BulkCacheOpsResult<I,K,V>> consumer) {
         cacheResponseObservers.sendBulkOperationsRequest(requestId, request, consumer);
         rbPublisher.sendBulkOperationsRequest(requestId, request);
     }

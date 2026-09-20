@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.services.cluster;
 
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOpsRequest;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
 
 import java.util.List;
@@ -86,7 +86,7 @@ public interface BlockingClusterRequestPublisher<BI, BK, BV> {
      * @param requestId The Id of this request.
      * @param request The bulk request.
      */
-    void sendBulkOperationsBlocking(String requestId, BulkCacheOpsRequest request);
+    void sendBulkOperationsBlocking(String requestId, BulkOpsRequest request);
 
     /**
      * Send a message to get all cache stats from the cluster in a blocking manner.

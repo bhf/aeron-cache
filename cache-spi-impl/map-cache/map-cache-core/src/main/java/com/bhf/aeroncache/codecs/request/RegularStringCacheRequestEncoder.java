@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.codecs.request;
 
 import com.bhf.aeroncache.messages.*;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOpsRequest;
 import org.agrona.MutableDirectBuffer;
 
 import java.util.List;
@@ -138,7 +138,7 @@ public class RegularStringCacheRequestEncoder implements CacheRequestEncoder<Str
     }
 
     @Override
-    public int encodeBulkOperations(String requestId, BulkCacheOpsRequest request, MutableDirectBuffer msgBuffer) {
+    public int encodeBulkOperations(String requestId, BulkOpsRequest request, MutableDirectBuffer msgBuffer) {
         bulkOpsEncoder.wrapAndApplyHeader(msgBuffer, 0, headerEncoder);
         var itemsEncoder = bulkOpsEncoder.itemsCount(request.operations().size());
 

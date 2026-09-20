@@ -1,7 +1,6 @@
 package com.bhf.aeroncache.gateway.application;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 
 import java.util.List;
@@ -22,10 +21,10 @@ public interface GatewaySubscriptions {
      * @param sessionId                  The gateway client session ID (image correlation id).
      * @param requestId                  The request ID.
      * @param sendSnapshot               Whether to request initial state hydration.
-     * @param consumer                   The consumer of {@link CacheUpdateEvent}.
+     * @param consumer                   The consumer of {@link GatewayStreamUpdate}.
      */
     void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, List<String> cacheIds,
-                          String sessionId, String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer);
+                          String sessionId, String requestId, boolean sendSnapshot, Consumer<GatewayStreamUpdate> consumer);
 
     /**
      * Subscribe a gateway client session to streaming updates for specific keys and a specific mode.
@@ -39,9 +38,9 @@ public interface GatewaySubscriptions {
      * @param sessionId                  The gateway client session ID (image correlation id).
      * @param requestId                  The request ID.
      * @param sendSnapshot               Whether to request initial state hydration.
-     * @param consumer                   The consumer of {@link CacheUpdateEvent}.
+     * @param consumer                   The consumer of {@link GatewayStreamUpdate}.
      */
     void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, Runnable subscriptionAckHandler,
                           List<String> cacheIds, List<String> keys, SubscriptionMode mode, String sessionId,
-                          String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer);
+                          String requestId, boolean sendSnapshot, Consumer<GatewayStreamUpdate> consumer);
 }

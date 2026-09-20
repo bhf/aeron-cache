@@ -11,6 +11,11 @@ import java.util.Map;
  * <p>
  * All callbacks are invoked on the {@link GatewayClient}'s agent thread (the thread driving
  * {@link GatewayClient#doWork()}), so implementations must not block.
+ * <p>
+ * Any {@link java.util.List} or {@link java.util.Map} passed to a callback is owned by the client and
+ * reused across frames: it is valid only for the duration of the callback. An implementation that needs
+ * to retain the contents beyond the callback must copy them (a shallow copy suffices; the elements are
+ * immutable), exactly as accumulating batches for the same {@code correlationId} already requires.
  */
 public interface GatewayClientListener {
 

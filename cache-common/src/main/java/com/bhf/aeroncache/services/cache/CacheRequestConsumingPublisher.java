@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOpsRequest;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.*;
 
@@ -159,7 +159,7 @@ public interface CacheRequestConsumingPublisher<RI extends Reusable, RK extends 
      * @param request   The details of the bulk request
      * @param consumer  The consumer that will handle the result.
      */
-    void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request, Consumer<BulkCacheOpsResult<RI, RK, RV>> consumer);
+    void sendBulkOperationsRequest(String requestId, BulkOpsRequest request, Consumer<BulkCacheOpsResult<RI, RK, RV>> consumer);
 
     /**
      * Send a message to increment a counter and handle the result via a consumer.

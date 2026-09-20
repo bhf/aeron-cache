@@ -8,11 +8,8 @@ import com.bhf.aeroncache.gateway.messages.GatewayCommandDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewaySubscribeDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayUnsubscribeDecoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderDecoder;
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
-import com.bhf.aeroncache.models.bulk.requests.CacheOperationRequest;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.AllTimersResult;
 import com.bhf.aeroncache.models.results.BulkCacheOpsResult;
@@ -91,6 +88,21 @@ public class GatewayIngressAgent implements Agent {
     private final GatewayUnsubscribeDecoder unsubscribeDecoder = new GatewayUnsubscribeDecoder();
     private final GatewayBulkRequestDecoder bulkRequestDecoder = new GatewayBulkRequestDecoder();
     private final FragmentAssembler fragmentAssembler = new FragmentAssembler(this::onFragment);
+
+    // Reused intermediate structures. The ingress agent thread decodes requests (bulkRequestOps); the
+    // cluster egress listener thread builds responses (the remaining flyweight lists and the entries map).
+    // The two thread domains never share an instance, and each request/response is encoded synchronously
+    // before the structure is rebuilt, so nothing escapes the thread that owns it.
+    private final FlyweightList<ReusableCacheOperation> bulkRequestOps =
+            new FlyweightList<>(ReusableCacheOperation::new);
+    private final GatewayBulkOpsRequest bulkRequest = new GatewayBulkOpsRequest();
+    private final FlyweightList<GatewayResponseWriter.BulkOpResultEntry> bulkResultEntries =
+            new FlyweightList<>(GatewayResponseWriter.BulkOpResultEntry::new);
+    private final FlyweightList<GatewayResponseWriter.StatEntry> statEntries =
+            new FlyweightList<>(GatewayResponseWriter.StatEntry::new);
+    private final FlyweightList<GatewayResponseWriter.TimerEntry> timerEntries =
+            new FlyweightList<>(GatewayResponseWriter.TimerEntry::new);
+    private final Map<String, String> streamEntryItems = new HashMap<>();
 
     private Subscription subscription;
 
@@ -207,21 +219,24 @@ public class GatewayIngressAgent implements Agent {
      * through the regular-cache publisher (the cluster egress delivers the single combined result there).
      */
     private void handleBulkRequest(Publication responsePublication) {
-        final List<CacheOperationRequest> operations = new ArrayList<>();
+        bulkRequestOps.reset();
         for (GatewayBulkRequestDecoder.OperationsDecoder op : bulkRequestDecoder.operations()) {
-            final BulkOperationType operationType = mapBulkOperationType(op.operationType());
-            final long ttl = op.ttl();
-            final long counterValue = op.counterValue();
-            final String opRequestId = op.requestId();
-            final String opCacheId = op.cacheId();
-            final String opKey = op.key();
-            final String opValue = op.value();
-            operations.add(new CacheOperationRequest(operationType, ttl, counterValue, opRequestId, opCacheId, opKey, opValue));
+            bulkRequestOps.next().set(
+                    mapBulkOperationType(op.operationType()),
+                    op.ttl(),
+                    op.counterValue(),
+                    op.requestId(),
+                    op.cacheId(),
+                    op.key(),
+                    op.value());
         }
         final String correlationId = requestId(bulkRequestDecoder.correlationId());
 
-        final BulkCacheOpsRequest request = new BulkCacheOpsRequest(correlationId, operations);
-        cacheSubs.sendBulkOperationsRequest(correlationId, request,
+        // The operations are encoded onward to the cluster synchronously inside sendBulkOperationsRequest,
+        // and the result consumer captures only the correlation id and response publication, so the reused
+        // flyweight operations and request never escape this thread and can be rebuilt on the next bulk request.
+        bulkRequest.set(correlationId, bulkRequestOps.view());
+        cacheSubs.sendBulkOperationsRequest(correlationId, bulkRequest,
                 (Consumer<BulkCacheOpsResult>) o -> respondBulk(responsePublication, correlationId, (BulkCacheOpsResult) o));
     }
 
@@ -231,16 +246,15 @@ public class GatewayIngressAgent implements Agent {
      * batch's results together with the {@code endOfBatch} flag so the client can detect completion.
      */
     private void respondBulk(Publication publication, String correlationId, BulkCacheOpsResult result) {
-        final List<GatewayResponseWriter.BulkOpResultEntry> entries = new ArrayList<>();
+        bulkResultEntries.reset();
         for (Object o : result.getOperations()) {
             final CacheOperationResultDetails details = (CacheOperationResultDetails) o;
             final String cacheId = details.getCacheId() == null ? null : String.valueOf(details.getCacheId().value());
             final String key = details.getKey() == null ? null : String.valueOf(details.getKey().value());
             final String value = details.getValue() == null ? null : String.valueOf(details.getValue().value());
-            entries.add(new GatewayResponseWriter.BulkOpResultEntry(
-                    details.getOperationStatus(), details.getRequestId(), cacheId, key, value));
+            bulkResultEntries.next().set(details.getOperationStatus(), details.getRequestId(), cacheId, key, value);
         }
-        egressWriter.writeBulkResponse(publication, correlationId, entries, result.isEndOfBatch());
+        egressWriter.writeBulkResponse(publication, correlationId, bulkResultEntries.view(), result.isEndOfBatch());
     }
 
     private static BulkOperationType mapBulkOperationType(com.bhf.aeroncache.gateway.messages.BulkOperationType type) {
@@ -349,8 +363,9 @@ public class GatewayIngressAgent implements Agent {
                 egressWriter.writeError(responsePublication, correlationId, CacheOperationStatus.ERROR, "Subscription failed");
         final Runnable ackHandler = () ->
                 egressWriter.writeSubscribeAck(responsePublication, correlationId, CacheOperationStatus.SUCCESS, cacheIds);
-        final Consumer<CacheUpdateEvent> updateConsumer = event ->
-                egressWriter.writeStreamUpdate(responsePublication, event);
+        final Consumer<GatewayStreamUpdate> updateConsumer = update ->
+                egressWriter.writeStreamUpdate(responsePublication, update.eventType(), update.cacheId(),
+                        update.key(), update.value(), update.requestId());
 
         log.info("Gateway subscribe session {}, caches {}, keys {}, mode {}, snapshot {}, counters {}", sessionId, cacheIds, keys, mode, sendSnapshot, counters);
         publisher.subscribeToCache(cluster, failureHandler, ackHandler, cacheIds, keys, mode, sessionId, correlationId, sendSnapshot, updateConsumer);
@@ -391,11 +406,11 @@ public class GatewayIngressAgent implements Agent {
      */
     private void streamEntries(Publication publication, String correlationId, GetAllCacheEntriesResult result) {
         final String cacheId = String.valueOf(result.getCacheId().value());
-        final Map<String, String> items = new HashMap<>();
-        result.getValues().forEach((k, v) -> items.put(
+        streamEntryItems.clear();
+        result.getValues().forEach((k, v) -> streamEntryItems.put(
                 String.valueOf(((Reusable) k).value()),
                 v == null ? null : String.valueOf(((Reusable) v).value())));
-        egressWriter.writeEntries(publication, correlationId, result.getStatus(), cacheId, items, result.isEndOfBatch());
+        egressWriter.writeEntries(publication, correlationId, result.getStatus(), cacheId, streamEntryItems, result.isEndOfBatch());
     }
 
     /**
@@ -403,27 +418,27 @@ public class GatewayIngressAgent implements Agent {
      * {@code AllCacheStatsResult} frame, so this is streamed as one end-of-batch stats frame.
      */
     private void streamStats(Publication publication, String correlationId, CacheStatsResult result) {
-        final List<GatewayResponseWriter.StatEntry> stats = new ArrayList<>();
+        statEntries.reset();
         for (Object o : result.getStats()) {
             final CacheStats stat = (CacheStats) o;
-            stats.add(new GatewayResponseWriter.StatEntry(
+            statEntries.next().set(
                     String.valueOf(stat.getCacheId().value()),
-                    stat.addedCount, stat.removedCount, stat.clearedCount, stat.size));
+                    stat.addedCount, stat.removedCount, stat.clearedCount, stat.size);
         }
-        egressWriter.writeStats(publication, correlationId, result.getOperationStatus(), stats, true);
+        egressWriter.writeStats(publication, correlationId, result.getOperationStatus(), statEntries.view(), true);
     }
 
     private void streamTimers(Publication publication, String correlationId, AllTimersResult result) {
-        final List<GatewayResponseWriter.TimerEntry> timers = new ArrayList<>();
+        timerEntries.reset();
         for (Object o : result.getTimers()) {
             final TimerDetails timer = (TimerDetails) o;
-            timers.add(new GatewayResponseWriter.TimerEntry(
+            timerEntries.next().set(
                     timer.timerType.name(),
                     String.valueOf(timer.getCacheId().value()),
                     String.valueOf(timer.getKey().value()),
-                    timer.deadline));
+                    timer.deadline);
         }
-        egressWriter.writeTimers(publication, correlationId, result.getOperationStatus(), timers, result.isEndOfBatch());
+        egressWriter.writeTimers(publication, correlationId, result.getOperationStatus(), timerEntries.view(), result.isEndOfBatch());
     }
 
     private void respondCounter(Publication publication, String correlationId, CacheOperationStatus status,

@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache.impl;
 
 import com.bhf.aeroncache.models.Reusable;
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOpsRequest;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.cache.ConsumingResponseHandler;
 import lombok.Getter;
@@ -120,7 +120,7 @@ public class CacheResponseMapObservers<I extends Reusable, K extends Reusable, V
     }
 
     @Override
-    public void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request, Consumer<BulkCacheOpsResult<I,K,V>> c) {
+    public void sendBulkOperationsRequest(String requestId, BulkOpsRequest request, Consumer<BulkCacheOpsResult<I,K,V>> c) {
         bulkOpsObservers.put(requestId, c);
     }
 

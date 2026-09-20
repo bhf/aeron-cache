@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache;
 
 
-import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
+import com.bhf.aeroncache.models.bulk.requests.BulkOpsRequest;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 
 import java.util.List;
@@ -145,7 +145,7 @@ public interface CacheRequestPublisher<BI,BK,BV> {
      * @param requestId The Id of this request.
      * @param request   The bulk request.
      */
-    void sendBulkOperationsRequest(String requestId, BulkCacheOpsRequest request);
+    void sendBulkOperationsRequest(String requestId, BulkOpsRequest request);
 
     /**
      * Send a message to increment a counter by a given amount.
