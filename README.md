@@ -16,7 +16,7 @@ Features:
 * Key-value and counter caches with item level TTL support
 * Bulk atomic operations across caches and counters
 * Streaming multi-cache (and key) subscriptions
-* HTTP (Request-Response), WS (UNIDI and BIDI), SSE (UNIDI) and SBE-Aeron (BIDI) APIs
+* HTTP (Request-Response), WS (UniDi and BiDi), SSE (UniDi) and SBE-Aeron (BiDi) APIs
 * PATCH support for writing partial updates to JSON values including partial streaming subscriptions (JSON Merge Patch RFC 7386)
 * Clustered and single node modes
 * Run as a single monolith or separate horizontally scalable services
