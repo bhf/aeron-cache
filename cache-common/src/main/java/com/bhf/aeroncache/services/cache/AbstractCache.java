@@ -13,15 +13,15 @@ import java.util.function.Supplier;
  * @param <V> The type of the value of entries in the cache.
  */
 public abstract class AbstractCache<I extends Reusable, K extends Reusable, V extends Reusable> implements Cache<I, K, V> {
-    final AddCacheEntryResult<I, K> addCacheEntryResult;
-    final RemoveCacheEntryResult<I, K> removeCacheEntryResult;
-    final ClearCacheResult<I> clearCacheResult;
-    final GetCacheEntryResult<I, K, V> getCacheEntryResult;
-    final PatchValueResult<I, K, V> patchValueResult;
-    final Supplier<I> indexSupplier;
-    final Supplier<K> keySupplier;
-    final Supplier<V> valueSupplier;
-    final CacheStats<I> stats;
+    protected final AddCacheEntryResult<I, K> addCacheEntryResult;
+    protected final RemoveCacheEntryResult<I, K> removeCacheEntryResult;
+    protected final ClearCacheResult<I> clearCacheResult;
+    protected final GetCacheEntryResult<I, K, V> getCacheEntryResult;
+    protected final PatchValueResult<I, K, V> patchValueResult;
+    protected final Supplier<I> indexSupplier;
+    protected final Supplier<K> keySupplier;
+    protected final Supplier<V> valueSupplier;
+    protected final CacheStats<I> stats;
 
     public AbstractCache(Supplier<I> indexSupplier, Supplier<K> keySupplier, Supplier<V> valueSupplier) {
         this.addCacheEntryResult = new AddCacheEntryResult<>(indexSupplier.get(), keySupplier.get());
