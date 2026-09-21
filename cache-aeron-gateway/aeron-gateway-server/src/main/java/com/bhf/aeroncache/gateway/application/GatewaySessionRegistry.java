@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.gateway.application;
 
+import com.bhf.aeroncache.transport.TransportMedia;
 import io.aeron.Aeron;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.Image;
@@ -27,13 +28,10 @@ public class GatewaySessionRegistry {
     private final int responseStreamId;
     private final Long2ObjectHashMap<Publication> sessions = new Long2ObjectHashMap<>();
 
-    public GatewaySessionRegistry(Aeron aeron, String responseControlEndpoint, int responseStreamId) {
+    public GatewaySessionRegistry(Aeron aeron, TransportMedia media, String responseControlEndpoint, int responseStreamId) {
         this.aeron = aeron;
         this.responseStreamId = responseStreamId;
-        this.responseUriBuilder = new ChannelUriStringBuilder()
-                .media("udp")
-                .controlMode("response")
-                .controlEndpoint(responseControlEndpoint);
+        this.responseUriBuilder = media.responseChannel(responseControlEndpoint);
     }
 
     /**

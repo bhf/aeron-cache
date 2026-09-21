@@ -20,6 +20,7 @@ import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCountersRequestPublisher;
 import com.bhf.aeroncache.services.cacheclient.CacheClientFactory;
 import com.bhf.aeroncache.services.cluster.impl.ClusterMessagePublisher;
+import com.bhf.aeroncache.transport.TransportMedia;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.RingBufferUtils;
@@ -198,15 +199,21 @@ public class GatewayApplication {
     private static void startIngress(String aeronDir) {
         gatewayAeron = Aeron.connect(new Aeron.Context().aeronDirectoryName(aeronDir));
 
+        var media = TransportMedia.fromEnv();
         var requestEndpoint = envOrDefault("GATEWAY_REQUEST_ENDPOINT", "0.0.0.0:" + DEFAULT_REQUEST_PORT);
         var responseControlEndpoint = envOrDefault("GATEWAY_RESPONSE_CONTROL_ENDPOINT",
                 DNSUtils.getThisHostName() + ":" + DEFAULT_RESPONSE_CONTROL_PORT);
 
         var egressWriter = new GatewayResponseWriter();
-        var ingressAgent = new GatewayIngressAgent(gatewayAeron, requestEndpoint, responseControlEndpoint,
+        var ingressAgent = new GatewayIngressAgent(gatewayAeron, media, requestEndpoint, responseControlEndpoint,
                 REQUEST_STREAM_ID, RESPONSE_STREAM_ID, cache, cacheSubs, countersSubs, egressWriter);
 
-        log.info("Gateway ingress request endpoint {}, response control endpoint {}", requestEndpoint, responseControlEndpoint);
+        if (media.isIpc()) {
+            log.info("Gateway ingress transport media IPC (endpoints ignored; client must share this media driver)");
+        } else {
+            log.info("Gateway ingress transport media UDP, request endpoint {}, response control endpoint {}",
+                    requestEndpoint, responseControlEndpoint);
+        }
         ingressAgentRunner = new AgentRunner(GatewayIdleStrategies.ingressAgentIdleStrategy.get(),
                 new RethrowingErrorHandler(), null, ingressAgent);
         AgentRunner.startOnThread(ingressAgentRunner);

@@ -29,6 +29,7 @@ import com.bhf.aeroncache.models.results.IncrementCounterResult;
 import com.bhf.aeroncache.models.results.PatchValueResult;
 import com.bhf.aeroncache.models.results.RemoveCacheEntryResult;
 import com.bhf.aeroncache.models.results.SetCounterResult;
+import com.bhf.aeroncache.transport.TransportMedia;
 import io.aeron.Aeron;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.FragmentAssembler;
@@ -107,6 +108,7 @@ public class GatewayIngressAgent implements Agent {
     private Subscription subscription;
 
     public GatewayIngressAgent(Aeron aeron,
+                               TransportMedia media,
                                String requestEndpoint,
                                String responseControlEndpoint,
                                int requestStreamId,
@@ -121,11 +123,8 @@ public class GatewayIngressAgent implements Agent {
         this.cacheSubs = cacheSubs;
         this.countersSubs = countersSubs;
         this.egressWriter = egressWriter;
-        this.requestUriBuilder = new ChannelUriStringBuilder()
-                .media("udp")
-                .endpoint(requestEndpoint)
-                .responseEndpoint(responseControlEndpoint);
-        this.registry = new GatewaySessionRegistry(aeron, responseControlEndpoint, responseStreamId);
+        this.requestUriBuilder = media.requestSubscription(requestEndpoint, responseControlEndpoint);
+        this.registry = new GatewaySessionRegistry(aeron, media, responseControlEndpoint, responseStreamId);
     }
 
     @Override
