@@ -6,6 +6,7 @@ import com.bhf.aeroncache.clustertools.application.ClusterToolsHTTPApplication;
 import com.bhf.aeroncache.gateway.application.GatewayApplication;
 import com.bhf.aeroncache.http.application.HttpApplication;
 import com.bhf.aeroncache.sse.application.SSEApplication;
+import com.bhf.aeroncache.transport.TransportMedia;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.ws.application.WebsocketApplication;
 import org.agrona.concurrent.ShutdownSignalBarrier;
@@ -83,7 +84,9 @@ public class Main {
             }
 
             if (aeronEnabled) {
-                System.out.println("Launching Aeron Gateway");
+                TransportMedia gatewayMedia = TransportMedia.fromEnv();
+                System.out.println("Launching Aeron Gateway using " + gatewayMedia.media().toUpperCase()
+                        + " transport (set " + TransportMedia.MEDIA_ENV + "=ipc|udp to change; default udp)");
                 int gatewayHealthPort = GatewayApplication.start(0);
                 System.out.println("Aeron Gateway HTTP health server bound to port " + gatewayHealthPort);
             } else {

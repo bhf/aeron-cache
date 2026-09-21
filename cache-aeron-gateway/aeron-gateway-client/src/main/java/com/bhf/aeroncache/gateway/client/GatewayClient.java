@@ -10,6 +10,7 @@ import com.bhf.aeroncache.gateway.messages.GatewayStreamUpdateDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewaySubscribeAckDecoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.models.CacheRequestMessageTypes;
+import com.bhf.aeroncache.transport.TransportMedia;
 import io.aeron.Aeron;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.ExclusivePublication;
@@ -98,6 +99,8 @@ public class GatewayClient implements Agent, AutoCloseable {
     private Subscription subscription;
 
     /**
+     * Connect over UDP (the default transport media).
+     *
      * @param aeron             the Aeron client connected to the same media driver.
      * @param requestEndpoint   the gateway server's request endpoint (host:port).
      * @param requestStreamId   the gateway request stream id.
@@ -111,16 +114,31 @@ public class GatewayClient implements Agent, AutoCloseable {
                          String responseControl,
                          int responseStreamId,
                          GatewayClientListener listener) {
+        this(aeron, TransportMedia.UDP, requestEndpoint, requestStreamId, responseControl, responseStreamId, listener);
+    }
+
+    /**
+     * @param aeron             the Aeron client connected to the same media driver.
+     * @param media             the transport media (UDP or IPC); IPC requires the client and gateway
+     *                          server to share the same media driver, and ignores the endpoints below.
+     * @param requestEndpoint   the gateway server's request endpoint (host:port); ignored for IPC.
+     * @param requestStreamId   the gateway request stream id.
+     * @param responseControl   the gateway server's response control endpoint (host:port); ignored for IPC.
+     * @param responseStreamId  the gateway response stream id.
+     * @param listener          the initial listener (may be {@code null}); more can be added later.
+     */
+    public GatewayClient(Aeron aeron,
+                         TransportMedia media,
+                         String requestEndpoint,
+                         int requestStreamId,
+                         String responseControl,
+                         int responseStreamId,
+                         GatewayClientListener listener) {
         this.aeron = aeron;
         this.requestStreamId = requestStreamId;
         this.responseStreamId = responseStreamId;
-        this.requestUriBuilder = new ChannelUriStringBuilder()
-                .media("udp")
-                .endpoint(requestEndpoint);
-        this.responseUriBuilder = new ChannelUriStringBuilder()
-                .media("udp")
-                .controlMode("response")
-                .controlEndpoint(responseControl);
+        this.requestUriBuilder = media.requestPublication(requestEndpoint);
+        this.responseUriBuilder = media.responseChannel(responseControl);
         if (listener != null) {
             listeners.add(listener);
         }

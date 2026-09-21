@@ -14,6 +14,7 @@ import com.bhf.aeroncache.gateway.messages.MessageHeaderEncoder;
 import com.bhf.aeroncache.gateway.messages.OperationStatus;
 import com.bhf.aeroncache.gateway.messages.UpdateEventType;
 import com.bhf.aeroncache.models.CacheRequestMessageTypes;
+import com.bhf.aeroncache.transport.TransportMedia;
 import io.aeron.Aeron;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.FragmentAssembler;
@@ -72,17 +73,16 @@ class LoopbackGatewayServer implements Agent {
 
     LoopbackGatewayServer(Aeron aeron, String requestEndpoint, String responseControl,
                           int requestStreamId, int responseStreamId) {
+        this(aeron, TransportMedia.UDP, requestEndpoint, responseControl, requestStreamId, responseStreamId);
+    }
+
+    LoopbackGatewayServer(Aeron aeron, TransportMedia media, String requestEndpoint, String responseControl,
+                          int requestStreamId, int responseStreamId) {
         this.aeron = aeron;
         this.requestStreamId = requestStreamId;
         this.responseStreamId = responseStreamId;
-        this.requestUriBuilder = new ChannelUriStringBuilder()
-                .media("udp")
-                .endpoint(requestEndpoint)
-                .responseEndpoint(responseControl);
-        this.responseUriBuilder = new ChannelUriStringBuilder()
-                .media("udp")
-                .controlMode("response")
-                .controlEndpoint(responseControl);
+        this.requestUriBuilder = media.requestSubscription(requestEndpoint, responseControl);
+        this.responseUriBuilder = media.responseChannel(responseControl);
     }
 
     @Override
