@@ -31,6 +31,10 @@ spec:
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.externalMediaDriver.enabled }}
+      initContainers:
+        {{- include "aeroncache-monolith.mediadriver" . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           {{- with .Values.securityContext }}
@@ -54,6 +58,14 @@ spec:
             {{- if .Values.aeronCacheTermLength }}
             - name: AERON_CACHE_TERM_LENGTH
               value: {{ .Values.aeronCacheTermLength | quote }}
+            {{- end }}
+            {{- if .Values.externalMediaDriver.enabled }}
+            # Attach to the aeronmd sidecar instead of launching an embedded driver in-process.
+            # These override the configmap's embedded defaults (AERON_DIR, MONOLITH_EMBEDDED_DRIVER).
+            - name: MONOLITH_EMBEDDED_DRIVER
+              value: "false"
+            - name: AERON_DIR
+              value: {{ .Values.externalMediaDriver.aeronDir | quote }}
             {{- end }}
           envFrom:
             - configMapRef:

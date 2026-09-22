@@ -5,6 +5,7 @@
 [![Frontend CI](https://github.com/bhf/aeron-cache/actions/workflows/ui-ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/ui-ci.yaml)
 [![Helm CI](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci.yaml)
 [![Helm CI Ephemeral](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-ephemeral.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-ephemeral.yaml)
+[![K8s CI Monolith Cache](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-monolith.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-monolith.yaml)
 [![Microbenchmarks](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks.yml)
 
 A key value store with counters built using Aeron, Agrona and SBE. RAFT clustered or single node - fast by design. UI with NextJS, Shadcn and Tailwind. 

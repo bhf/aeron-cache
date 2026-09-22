@@ -49,6 +49,28 @@ aeronCacheTermLength: "128m"
 # (localhost dev origins).
 corsAllowedOrigins: "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost"
 
+# External Aeron C media driver (aeronmd) sidecar. By default the monolith launches a single
+# embedded Java media driver in-process (MONOLITH_EMBEDDED_DRIVER=true) that all its components
+# share. When enabled here, the C driver runs as a native sidecar instead and the monolith attaches
+# to it (MONOLITH_EMBEDDED_DRIVER=false) as a pure Aeron client. Both containers share the `shm`
+# volume at aeronDir, and the driver's term buffers are sized from aeronCacheTermLength above
+# (single source of truth). The app image runs as root, so it can map the driver's CnC/term files
+# even though the driver runs as uid 1000; pin both containers to a matching non-root uid via
+# podSecurityContext for a hardened deployment.
+externalMediaDriver:
+  enabled: false
+  # Aeron dir shared between the driver and app containers via the `shm` emptyDir.
+  aeronDir: /dev/shm/aeron
+  # Driver threading mode: SHARED, SHARED_NETWORK, or DEDICATED.
+  threadingMode: SHARED
+  image:
+    repository: aeroncache-media-driver
+    pullPolicy: Never
+    tag: "latest"
+  # Extra AERON_* env for the driver (e.g. AERON_DRIVER_TIMEOUT, *_IDLE_STRATEGY).
+  extraEnv: []
+  resources: {}
+
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   repository: aeroncache-monolith
