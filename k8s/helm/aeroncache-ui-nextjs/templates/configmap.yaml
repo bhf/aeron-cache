@@ -4,7 +4,9 @@ metadata:
   name: aeroncache-ui-config
   namespace: {{ .Values.namespace }}
 data:
-  AERON_CACHE_API: http://aeroncache-http:7070/api/v1
-  JAEGER: http://jaeger:16686
-  PROMETHEUS: http://prometheus:9090
+  AERON_CACHE_API: {{ .Values.endpoints.api | quote }}
+  AERON_CACHE_WS_API: {{ .Values.endpoints.ws | quote }}
+  AERON_CACHE_SSE_API: {{ .Values.endpoints.sse | quote }}
+  JAEGER: {{ .Values.endpoints.jaeger | quote }}
+  PROMETHEUS: {{ .Values.endpoints.prometheus | quote }}
   {{ printf "environments/configmap.%s.yaml" .Values.env | .Files.Get | indent 2 }}

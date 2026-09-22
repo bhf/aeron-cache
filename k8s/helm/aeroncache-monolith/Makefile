@@ -10,3 +10,9 @@ upgrade:
 
 uninstall:
 	helm uninstall -n aeroncache aeroncache-monolith --ignore-not-found
+
+# Forward the http (7070), ws (7071) and sse (7072) interface ports to localhost. Runs in the
+# foreground; press Ctrl+C to stop. The UI reaches the http API in-cluster, but the browser opens
+# the ws/sse connections directly, so these are needed for the UI to work end to end.
+port-forward:
+	kubectl port-forward -n aeroncache svc/aeroncache-monolith 7070:7070 7071:7071 7072:7072
