@@ -80,6 +80,12 @@ install-ui:
 uninstall-ui:
 	$(MAKE) -C aeroncache-ui-nextjs uninstall
 
+install-ui-monolith:
+	$(MAKE) -C aeroncache-ui-nextjs install-monolith
+
+uninstall-ui-monolith:
+	$(MAKE) -C aeroncache-ui-nextjs uninstall
+
 install-http-clustertools:
 	$(MAKE) -C aeroncache-http-clustertools install
 
@@ -91,3 +97,11 @@ install-monolith:
 
 uninstall-monolith:
 	$(MAKE) -C aeroncache-monolith uninstall
+
+# Deploy the monolith backend together with the UI pointed at the monolith service.
+install-monolith-all: install-monolith install-ui-monolith
+uninstall-monolith-all: uninstall-monolith uninstall-ui-monolith
+
+# Forward the monolith's http/ws/sse ports to localhost (foreground; Ctrl+C to stop).
+port-forward-monolith:
+	$(MAKE) -C aeroncache-monolith port-forward

@@ -8,6 +8,21 @@ replicaCount: 1
 # Set the configmap to use for the UI config
 aeroncacheUIConfigmap: aeroncache-ui-config
 
+# Backend endpoints the UI targets. These default to the split (per-interface) backend deployment.
+# For the monolith, override `api` to the monolith service (see the install-monolith Make target);
+# ws/sse stay on localhost because the browser opens those connections directly (via port-forward)
+# and the monolith exposes the same ws/sse ports.
+#
+#   * api  - fetched server-side from the UI pod, so it uses an in-cluster service DNS name.
+#   * ws   - opened by the browser, so it uses a host reachable from the browser (localhost).
+#   * sse  - opened by the browser, so it uses a host reachable from the browser (localhost).
+endpoints:
+  api: "http://aeroncache-http:7070/api/v1"
+  ws: "ws:localhost:7071"
+  sse: "http://localhost:7072"
+  jaeger: "http://jaeger:16686"
+  prometheus: "http://prometheus:9090"
+
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   repository: aeroncache-ui-nextjs
