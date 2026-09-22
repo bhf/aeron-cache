@@ -1,0 +1,163 @@
+# The monolith runs a single-node Aeron Cache cluster together with the HTTP, WS and SSE
+# interfaces (and, optionally, the Aeron transport gateway) inside one process. It is a single,
+# self-contained pod: everything talks to itself over localhost, and Main launches its own
+# embedded Aeron media driver, so there is no external cluster or media-driver sidecar to wire up.
+
+# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+# The monolith embeds a single-node cluster, so it only ever runs one replica.
+replicaCount: 1
+
+# Cache mode for the embedded single-node cluster. One of RAFT or SINGLE.
+cacheMode: "RAFT"
+
+# Set the configmap to use for the monolith config.
+aeroncacheMonolithConfigmap: aeroncache-monolith-config
+
+# Interface ports. These are passed to the monolith as program arguments
+# (clusterTools, http, ws, sse - in that order) so the interfaces bind to fixed,
+# service-addressable ports instead of ephemeral ones.
+ports:
+  http: 7070
+  ws: 7071
+  sse: 7072
+  clusterTools: 7080
+
+# Enable the WS and SSE interfaces (both on by default in the monolith).
+websocketEnabled: true
+sseEnabled: true
+
+# Aeron transport gateway. Off by default in the monolith; when enabled the gateway's HTTP health
+# server binds to an ephemeral port, so it is not exposed as a service port.
+aeronGatewayEnabled: false
+# Aeron transport gateway media. One of udp or ipc.
+gatewayTransportMedia: "udp"
+
+# Idle strategy for the Aeron and agent threads. One of: backoff, spin, noop, yield,
+# sleep-ns[:nanos], sleep-ms[:millis], or a fully qualified IdleStrategy class name. Applies to all
+# roles; individual roles can be overridden with IDLE_STRATEGY_<ROLE> environment variables. Leave
+# blank to use the application default (backoff).
+idleStrategy: "backoff"
+
+# Aeron term buffer length for the cache data channels. The maximum Aeron message size is
+# termLength / 8, so 128m is required to support values up to ~16MB (see LargeItemTests) and to
+# carry large requests such as big bulk-operation batches. Leave blank to fall back to the
+# application default (64k). Buffers are sparse, so the resident memory cost of a larger term
+# length is small.
+aeronCacheTermLength: "128m"
+
+# CORS origins allowed by the HTTP interface. Leave blank to fall back to the application default
+# (localhost dev origins).
+corsAllowedOrigins: "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost"
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  repository: aeroncache-monolith
+  # This sets the pull policy for images.
+  pullPolicy: Never
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+# This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: "aeroncache-monolith"
+
+# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "aeroncache-monolith"
+
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+podAnnotations: {}
+# This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: {}
+
+podSecurityContext: {}
+# fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+# runAsNonRoot: true
+# runAsUser: 1000
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: LoadBalancer
+
+# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # kubernetes.io/ingress.class: nginx
+  # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+#   cpu: 100m
+#   memory: 128Mi
+
+# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# The HTTP interface exposes /liveness/ and /readiness/ on its http port.
+livenessProbe:
+  httpGet:
+    path: /liveness/
+    port: http
+readinessProbe:
+  httpGet:
+    path: /readiness/
+    port: http
+
+# This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+# The monolith embeds a single-node cluster and cannot be horizontally scaled.
+autoscaling:
+  enabled: false
+
+# Additional volumes on the output Deployment definition. The `shm` volume backs the embedded
+# Aeron media driver's shared memory.
+volumes:
+  - emptyDir:
+      medium: Memory
+      sizeLimit: 1Gi
+    name: shm
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts:
+  - mountPath: /dev/shm
+    name: shm
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
