@@ -18,6 +18,15 @@ public class Main {
     static void main(String[] args) {
         String aeronDirectory = System.getProperty("aeron.dir", System.getenv().getOrDefault("AERON_DIR", "aeron"));
 
+        // The monolith always runs its in-process components (the cluster node and the http/ws/sse
+        // interfaces) with LAUNCH_EMBEDDED=false so they attach to a single shared media driver at
+        // AERON_DIR rather than each launching their own. This flag controls who provides that
+        // shared driver: true (default) launches an embedded driver in this process; false attaches
+        // to an external media driver (the aeronmd sidecar) already running at AERON_DIR.
+        boolean launchEmbeddedDriver = Boolean.parseBoolean(
+                System.getProperty("monolith.embedded.driver",
+                        System.getenv().getOrDefault("MONOLITH_EMBEDDED_DRIVER", "true")));
+
         boolean aeronEnabled = Boolean.parseBoolean(
                 System.getProperty("aeron.gateway.enabled", System.getenv().getOrDefault("AERON_GATEWAY_ENABLED", "false")));
 
@@ -45,7 +54,11 @@ public class Main {
         System.out.println("Launching with CluserToolsPort: " + toolsPort + ", HttpPort: " + httpInterfacePort
                 + ", WSPort: " + wsInterfacePort + ", SSEPort:" + sseInterfacePort);
 
-        try (var mediaDriver = ClusterUtils.launchEmbeddedMediaDriver(aeronDirectory);
+        System.out.println(launchEmbeddedDriver
+                ? "Launching embedded Aeron media driver at " + aeronDirectory
+                : "Attaching to external Aeron media driver at " + aeronDirectory + " (MONOLITH_EMBEDDED_DRIVER=false)");
+
+        try (var mediaDriver = launchEmbeddedDriver ? ClusterUtils.launchEmbeddedMediaDriver(aeronDirectory) : null;
              final ShutdownSignalBarrier barrier = new ShutdownSignalBarrier()) {
             System.out.println("Launching single node Aeron Cache cluster");
             ClusterLauncher.main(new String[]{});

@@ -85,3 +85,9 @@ install-http-clustertools:
 
 uninstall-http-clustertools:
 	$(MAKE) -C aeroncache-http-clustertools uninstall
+
+install-monolith:
+	$(MAKE) -C aeroncache-monolith install
+
+uninstall-monolith:
+	$(MAKE) -C aeroncache-monolith uninstall

@@ -43,6 +43,9 @@ build-ui:
 deploy-cluster:
 	helm upgrade --install aeroncache-cluster k8s/helm/aeroncache-cluster/ --set image.tag=latest --set image.pullPolicy=Never
 
+deploy-monolith:
+	helm upgrade --install aeroncache-monolith k8s/helm/aeroncache-monolith/ --set image.tag=latest --set image.pullPolicy=Never
+
 testcontainers-build-all:
 	# Builds to the local host daemon (for Testcontainers)
 	./gradlew jibDockerBuild

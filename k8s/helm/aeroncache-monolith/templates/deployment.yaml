@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "aeroncache-monolith.fullname" . }}
+  labels:
+    {{- include "aeroncache-monolith.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: {{ include "aeroncache-monolith.fullname" . }}
+  selector:
+    matchLabels:
+      {{- include "aeroncache-monolith.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "aeroncache-monolith.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "aeroncache-monolith.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.externalMediaDriver.enabled }}
+      initContainers:
+        {{- include "aeroncache-monolith.mediadriver" . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Main expects four program arguments: clusterTools, http, ws and sse ports (in that
+          # order) so the interfaces bind to fixed, service-addressable ports.
+          args:
+            - {{ .Values.ports.clusterTools | quote }}
+            - {{ .Values.ports.http | quote }}
+            - {{ .Values.ports.ws | quote }}
+            - {{ .Values.ports.sse | quote }}
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            {{- if .Values.aeronCacheTermLength }}
+            - name: AERON_CACHE_TERM_LENGTH
+              value: {{ .Values.aeronCacheTermLength | quote }}
+            {{- end }}
+            {{- if .Values.externalMediaDriver.enabled }}
+            # Attach to the aeronmd sidecar instead of launching an embedded driver in-process.
+            # These override the configmap's embedded defaults (AERON_DIR, MONOLITH_EMBEDDED_DRIVER).
+            - name: MONOLITH_EMBEDDED_DRIVER
+              value: "false"
+            - name: AERON_DIR
+              value: {{ .Values.externalMediaDriver.aeronDir | quote }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.aeroncacheMonolithConfigmap }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.ports.http }}
+              protocol: TCP
+            {{- if .Values.websocketEnabled }}
+            - name: ws
+              containerPort: {{ .Values.ports.ws }}
+              protocol: TCP
+            {{- end }}
+            {{- if .Values.sseEnabled }}
+            - name: sse
+              containerPort: {{ .Values.ports.sse }}
+              protocol: TCP
+            {{- end }}
+            - name: cluster-tools
+              containerPort: {{ .Values.ports.clusterTools }}
+              protocol: TCP
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
