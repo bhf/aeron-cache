@@ -1,0 +1,129 @@
+name: Publish Images to GHCR
+
+# Builds and pushes all container images to the GitHub Container Registry (ghcr.io)
+# on every version tag. Backend images are built with Jib (no Docker build needed);
+# the Next.js UI is built from its Dockerfile with Buildx.
+#
+# Images published (owner is lower-cased for GHCR):
+#   ghcr.io/<owner>/aeroncache-monolith
+#   ghcr.io/<owner>/aeroncache-cluster
+#   ghcr.io/<owner>/aeroncache-http
+#   ghcr.io/<owner>/aeroncache-http-clustertools
+#   ghcr.io/<owner>/aeroncache-http-near
+#   ghcr.io/<owner>/aeroncache-ws
+#   ghcr.io/<owner>/aeroncache-sse
+#   ghcr.io/<owner>/aeroncache-gateway
+#   ghcr.io/<owner>/aeroncache-ui
+# Each is tagged with the release version (tag without the leading "v") and "latest".
+#
+# Auth uses the built-in GITHUB_TOKEN via docker/login-action; Jib and Buildx both
+# pick those credentials up from ~/.docker/config.json. No extra secrets required,
+# but the job needs `packages: write` (granted below).
+
+on:
+  push:
+    tags:
+      - 'v*' # e.g. v1.0.0 — matches the existing release trigger
+
+concurrency:
+  group: publish-ghcr-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  publish-backend:
+    name: Backend images (Jib)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Derive version and owner
+        id: meta
+        run: |
+          # Strip the leading "v" from the tag so image tags are plain semver (v1.2.3 -> 1.2.3).
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          # GHCR image paths must be lower-case.
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Jib base image
+        # The Jib configs reference the base as docker://eclipse-temurin:25-jre, which loads it from
+        # the local Docker daemon rather than pulling it. A fresh runner has no such image, so pull
+        # it explicitly before the Jib builds below.
+        run: docker pull eclipse-temurin:25-jre
+
+      - name: Build & push backend images
+        # `jib` (not `jibDockerBuild`) builds and pushes straight to the registry over HTTPS.
+        # -PdockerRegistry sets the `to.image` prefix (ghcr.io/<owner>) in each module's Jib config;
+        # -Pversion overrides the Gradle project version so images are tagged <version> + latest.
+        run: |
+          ./gradlew --no-daemon \
+            :cache-monolith:jib \
+            :cache-cluster:jib \
+            :cache-http:http-server-javalin:jib \
+            :cache-http:http-clustertools:jib \
+            :cache-near:http-server-near-javalin:jib \
+            :cache-ws:ws-server-javalin:jib \
+            :cache-sse:sse-server-jooby:jib \
+            :cache-aeron-gateway:aeron-gateway-server:jib \
+            -Pversion=${{ steps.meta.outputs.version }} \
+            -PdockerRegistry=${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }} \
+            -PskipIntegrationTests=true
+
+  publish-ui:
+    name: UI image (Buildx)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Derive version and owner
+        id: meta
+        run: |
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push UI image
+        uses: docker/build-push-action@v6
+        with:
+          # Context/dockerfile match how docker-compose builds the UI service.
+          context: cache-ui/nextjs
+          file: cache-ui/nextjs/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/aeroncache-ui:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/aeroncache-ui:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
