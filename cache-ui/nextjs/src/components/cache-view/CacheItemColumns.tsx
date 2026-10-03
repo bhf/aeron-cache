@@ -4,9 +4,8 @@ import {ColumnDef} from "@tanstack/react-table"
 import {CacheInfo} from "@/lib/types";
 import {RemoveCacheItem} from "@/app/@cacheview/cache/[slug]/RemoveCacheItem";
 import CopyToClipboard from "@/components/cache-view/CopyToClipboard";
-
-const MAX_CHARACTERS_MD_PLUS = 37
-const MAX_CHARACTERS_SM_PLUS = 20
+import TruncatedText from "@/components/cache-view/TruncatedText";
+import JsonViewer from "@/components/cache-view/JsonViewer";
 
 export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
     {
@@ -27,15 +26,9 @@ export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
         header: "Key",
         cell: ({row}) => {
             const itemKey = row.getValue("key") as string
-            const formattedKeyMD = itemKey.length > MAX_CHARACTERS_MD_PLUS ?
-                itemKey.substring(0, MAX_CHARACTERS_MD_PLUS) + "....." : itemKey
-            const formattedKeySM = itemKey.length > MAX_CHARACTERS_SM_PLUS ?
-                itemKey.substring(0, MAX_CHARACTERS_SM_PLUS) + "....." : itemKey
-
             return (
                 <div className={"mb-2"}>
-                    <div className={"max-md:hidden"}>{formattedKeyMD}</div>
-                    <div className={"min-md:hidden"}>{formattedKeySM}</div>
+                    <TruncatedText text={itemKey}/>
                 </div>
             )
         }
@@ -45,15 +38,10 @@ export const cacheItemColumns: ColumnDef<CacheInfo>[] = [
         header: "Value",
         cell: ({row}) => {
             const itemValue = row.getValue("value") as string
-            const formattedValueMD = itemValue.length > MAX_CHARACTERS_MD_PLUS ?
-                itemValue.substring(0, MAX_CHARACTERS_MD_PLUS) + "....." : itemValue
-            const formattedValueSM = itemValue.length > MAX_CHARACTERS_MD_PLUS ?
-                itemValue.substring(0, MAX_CHARACTERS_SM_PLUS) + "....." : itemValue
-
             return (
-                <div className={"mb-2"}>
-                    <div className={"max-md:hidden"}>{formattedValueMD}</div>
-                    <div className={"min-md:hidden"}>{formattedValueSM}</div>
+                <div className={"mb-2 flex items-center gap-2"}>
+                    <TruncatedText text={itemValue}/>
+                    <JsonViewer value={itemValue}/>
                 </div>
             )
         },
