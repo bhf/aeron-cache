@@ -1,12 +1,9 @@
-package com.bhf.aeroncache.integration.soak;
+package com.bhf.aeroncache.integration.soak.bidi;
 
-import com.bhf.aeroncache.gateway.client.GatewayClient;
-import com.bhf.aeroncache.gateway.messages.OperationStatus;
+import com.bhf.aeroncache.integration.soak.bidi.BidiSoakClient.CommandResponse;
 import com.bhf.aeroncache.integration.soak.common.SoakOracle;
-import com.bhf.aeroncache.integration.soak.common.SoakRecordingListener;
 import com.bhf.aeroncache.integration.soak.common.SoakReport;
-import com.bhf.aeroncache.integration.soak.common.SoakRun;
-import io.aeron.Aeron;
+import com.bhf.aeroncache.ws.bidi.messages.WsOp;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -18,49 +15,37 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
-import java.util.function.LongSupplier;
 
 /**
- * The single-writer, time-bounded soak workload.
+ * The command/oracle phase of the bidi soak: a single-writer, time-bounded driver that issues a weighted,
+ * seeded-random mix of key-value and counter commands over the bidi socket, keeping a {@link SoakOracle} in
+ * lock-step and reconciling the full model against the cluster every {@link BidiSoakConfig#verifyEvery}
+ * operations (and once at the end). It is the bidi counterpart of the core-cache gateway soak - identical
+ * cache surface and oracle, driven over the websocket command protocol instead of Aeron.
  *
- * <p>One thread drives a weighted, seeded-random mix of core key-value and counter operations against a
- * bounded key space spread over a handful of caches, keeping a {@link SoakOracle} model in lock-step with
- * every applied mutation. Each operation is verified immediately where the gateway echoes a value (gets,
- * counter inc/dec/set), and the full model is reconciled against the cluster every
- * {@link SoakConfig#verifyEvery} operations and once more at the end. Any divergence - or a gateway
- * disconnect, error, or stalled operation - fails the run with a reproducible detail (the seed is logged).
- *
- * <p>Because the key space is bounded, the data held by both the cluster and the oracle is bounded too, so
- * heap that grows with <em>time</em> rather than with the key space is a genuine leak - which is the point.
+ * <p>Because the key space is bounded, both the cluster's and the oracle's data are bounded, so heap that
+ * grows with <em>time</em> is a genuine leak - the point of the soak.
  */
-final class SoakWorkload implements SoakRun {
+final class BidiCommandSoakPhase {
 
-    /** The operations the workload issues; weights and applicability are resolved in {@link #buildOpTable}. */
     enum OpType {
-        KV_PUT,
-        KV_GET,
-        KV_REMOVE,
-        KV_CLEAR,
-        KV_DELETE_RECREATE,
-        COUNTER_INC,
-        COUNTER_DEC,
-        COUNTER_SET,
-        COUNTER_GET
+        KV_PUT, KV_GET, KV_REMOVE, KV_CLEAR, KV_DELETE_RECREATE,
+        COUNTER_INC, COUNTER_DEC, COUNTER_SET, COUNTER_GET
     }
 
-    private static final Logger log = LogManager.getLogger(SoakWorkload.class);
+    private static final Logger log = LogManager.getLogger(BidiCommandSoakPhase.class);
 
     private static final long TTL_NONE = 0L;
     private static final long PARK_NANOS = 50_000L;
     private static final long PROGRESS_EVERY = 5_000L;
     private static final char[] ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray();
+    private static final String OK = "SUCCESS";
+    private static final String UNKNOWN_KEY = "UNKNOWN_KEY";
 
-    private final GatewayClient client;
-    private final SoakRecordingListener listener;
-    private final SoakConfig cfg;
+    private final BidiSoakClient client;
+    private final BidiSoakConfig cfg;
     private final SoakReport report;
     private final SoakOracle oracle = new SoakOracle();
-
     private final Random rnd;
     private final long opTimeoutNanos;
     private final OpType[] opTable;
@@ -70,68 +55,59 @@ final class SoakWorkload implements SoakRun {
 
     private long corrSeq;
 
-    SoakWorkload(GatewayClient client, SoakRecordingListener listener, SoakConfig cfg) {
+    BidiCommandSoakPhase(BidiSoakClient client, BidiSoakConfig cfg, SoakReport report, Random rnd) {
         this.client = client;
-        this.listener = listener;
         this.cfg = cfg;
-        this.report = new SoakReport(cfg.seed, cfg.durationSeconds, cfg.toConfigMap());
-        this.rnd = new Random(cfg.seed);
+        this.report = report;
+        this.rnd = rnd;
         this.opTimeoutNanos = TimeUnit.SECONDS.toNanos(cfg.opTimeoutSeconds);
         this.opTable = buildOpTable(cfg);
     }
 
-    @Override
-    public SoakReport report() {
-        return report;
-    }
-
-    @Override
-    public void run() {
-        log.info("Starting soak run with {}", cfg);
+    void run(long deadlineNanos) {
+        log.info("Starting bidi command phase with {}", cfg);
         setupCaches();
 
-        final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(cfg.durationSeconds);
-        while (System.nanoTime() < deadline) {
-            final OpType op = opTable[rnd.nextInt(opTable.length)];
+        while (System.nanoTime() < deadlineNanos) {
+            var op = opTable[rnd.nextInt(opTable.length)];
             execute(op);
-            report.recordCount(op.name());
+            report.recordCount("cmd." + op.name());
 
-            final long ops = report.total();
+            var ops = report.total();
             if (ops % cfg.verifyEvery == 0) {
                 reconcileAll();
             }
             if (ops % PROGRESS_EVERY == 0) {
                 report.sampleHeap();
                 checkHealth();
-                log.info(report.progressLine());
+                log.info("command phase: {}", report.progressLine());
             }
         }
 
-        // Final full reconciliation so the run ends on a verified-consistent state.
         reconcileAll();
         report.sampleHeap();
-        log.info("Soak run complete: {}", report.progressLine());
+        log.info("Bidi command phase complete: {}", report.progressLine());
     }
 
     // ---------------------------------------------------------------- setup
 
     private void setupCaches() {
         for (int i = 0; i < cfg.kvCacheCount; i++) {
-            var id = "soak-kv-" + i;
-            createCache(id);
+            var id = "soak-bidi-kv-" + i;
+            command(WsOp.CREATE_CACHE, id, null, null, TTL_NONE, 0, "createCache " + id);
             oracle.registerKvCache(id);
             kvCacheIds.add(id);
         }
         for (int i = 0; i < cfg.counterCacheCount; i++) {
-            var id = "soak-ctr-" + i;
-            createCounterCache(id);
+            var id = "soak-bidi-ctr-" + i;
+            command(WsOp.CREATE_COUNTER_CACHE, id, null, null, TTL_NONE, 0, "createCounterCache " + id);
             oracle.registerCounterCache(id);
             counterCacheIds.add(id);
         }
         log.info("Created {} kv caches and {} counter caches", kvCacheIds.size(), counterCacheIds.size());
     }
 
-    // ---------------------------------------------------------------- operation dispatch
+    // ---------------------------------------------------------------- dispatch
 
     private void execute(OpType op) {
         switch (op) {
@@ -151,9 +127,7 @@ final class SoakWorkload implements SoakRun {
         var cache = randomKvCache();
         var key = randomKey();
         var value = randomValue();
-        var corr = nextCorr();
-        sendWithRetry(() -> client.addEntry(corr, cache, key, value, TTL_NONE));
-        expectSuccess(awaitCommand(corr), "addEntry " + cache + "/" + key);
+        command(WsOp.ADD_CACHE_ENTRY, cache, key, value, TTL_NONE, 0, "addEntry " + cache + "/" + key);
         oracle.kvPut(cache, key, value);
     }
 
@@ -161,11 +135,11 @@ final class SoakWorkload implements SoakRun {
         var cache = randomKvCache();
         var key = randomKey();
         var corr = nextCorr();
-        sendWithRetry(() -> client.getEntry(corr, cache, key));
+        client.command(WsOp.GET_CACHE_ENTRY, corr, cache, key, null, TTL_NONE, 0);
         var response = awaitCommand(corr);
         var expected = oracle.kvGet(cache, key);
         if (expected == null) {
-            if (response.status() != OperationStatus.UNKNOWN_KEY) {
+            if (!UNKNOWN_KEY.equals(response.status())) {
                 throw fail("getEntry " + cache + "/" + key + " expected UNKNOWN_KEY (modelled absent) but got "
                         + response.status() + " value='" + response.value() + "'");
             }
@@ -182,10 +156,9 @@ final class SoakWorkload implements SoakRun {
         var cache = randomKvCache();
         var key = randomKey();
         var corr = nextCorr();
-        sendWithRetry(() -> client.removeEntry(corr, cache, key));
+        client.command(WsOp.REMOVE_CACHE_ENTRY, corr, cache, key, null, TTL_NONE, 0);
         var response = awaitCommand(corr);
-        // The key may or may not have been present; both outcomes are valid for a blind remove.
-        if (response.status() != OperationStatus.SUCCESS && response.status() != OperationStatus.UNKNOWN_KEY) {
+        if (!OK.equals(response.status()) && !UNKNOWN_KEY.equals(response.status())) {
             throw fail("removeEntry " + cache + "/" + key + " unexpected status " + response.status());
         }
         oracle.kvRemove(cache, key);
@@ -193,21 +166,14 @@ final class SoakWorkload implements SoakRun {
 
     private void kvClear() {
         var cache = randomKvCache();
-        var corr = nextCorr();
-        sendWithRetry(() -> client.clearCache(corr, cache));
-        expectSuccess(awaitCommand(corr), "clearCache " + cache);
+        command(WsOp.CLEAR_CACHE, cache, null, null, TTL_NONE, 0, "clearCache " + cache);
         oracle.kvClear(cache);
     }
 
     private void kvDeleteRecreate() {
         var cache = randomKvCache();
-        var deleteCorr = nextCorr();
-        sendWithRetry(() -> client.deleteCache(deleteCorr, cache));
-        expectSuccess(awaitCommand(deleteCorr), "deleteCache " + cache);
-
-        var createCorr = nextCorr();
-        sendWithRetry(() -> client.createCache(createCorr, cache));
-        expectSuccess(awaitCommand(createCorr), "recreateCache " + cache);
+        command(WsOp.DELETE_CACHE, cache, null, null, TTL_NONE, 0, "deleteCache " + cache);
+        command(WsOp.CREATE_CACHE, cache, null, null, TTL_NONE, 0, "recreateCache " + cache);
         oracle.kvClear(cache);
     }
 
@@ -218,7 +184,7 @@ final class SoakWorkload implements SoakRun {
         var delta = (long) (rnd.nextInt(10) + 1);
         var expected = oracle.counterValue(cache, key) + delta;
         var corr = nextCorr();
-        sendWithRetry(() -> client.incrementCounter(corr, cache, key, delta, TTL_NONE));
+        client.command(WsOp.INCREMENT_COUNTER_ENTRY, corr, cache, key, null, TTL_NONE, delta);
         var response = awaitCommand(corr);
         expectSuccess(response, "incrementCounter " + cache + "/" + key);
         assertCounterValue(response.value(), expected, "incrementCounter " + cache + "/" + key);
@@ -232,7 +198,7 @@ final class SoakWorkload implements SoakRun {
         var delta = (long) (rnd.nextInt(10) + 1);
         var expected = oracle.counterValue(cache, key) - delta;
         var corr = nextCorr();
-        sendWithRetry(() -> client.decrementCounter(corr, cache, key, delta, TTL_NONE));
+        client.command(WsOp.DECREMENT_COUNTER_ENTRY, corr, cache, key, null, TTL_NONE, delta);
         var response = awaitCommand(corr);
         expectSuccess(response, "decrementCounter " + cache + "/" + key);
         assertCounterValue(response.value(), expected, "decrementCounter " + cache + "/" + key);
@@ -245,7 +211,7 @@ final class SoakWorkload implements SoakRun {
         ensureCounter(cache, key);
         var value = (long) rnd.nextInt(1_000_000);
         var corr = nextCorr();
-        sendWithRetry(() -> client.setCounter(corr, cache, key, value, TTL_NONE));
+        client.command(WsOp.SET_COUNTER_ENTRY, corr, cache, key, null, TTL_NONE, value);
         var response = awaitCommand(corr);
         expectSuccess(response, "setCounter " + cache + "/" + key);
         assertCounterValue(response.value(), value, "setCounter " + cache + "/" + key);
@@ -256,12 +222,12 @@ final class SoakWorkload implements SoakRun {
         var cache = randomCounterCache();
         var key = randomKey();
         var corr = nextCorr();
-        sendWithRetry(() -> client.getCounterEntry(corr, cache, key));
+        client.command(WsOp.GET_COUNTER_ENTRY, corr, cache, key, null, TTL_NONE, 0);
         var response = awaitCommand(corr);
         if (oracle.counterContains(cache, key)) {
             expectSuccess(response, "getCounterEntry " + cache + "/" + key);
             assertCounterValue(response.value(), oracle.counterValue(cache, key), "getCounterEntry " + cache + "/" + key);
-        } else if (response.status() != OperationStatus.UNKNOWN_KEY) {
+        } else if (!UNKNOWN_KEY.equals(response.status())) {
             throw fail("getCounterEntry " + cache + "/" + key + " expected UNKNOWN_KEY (modelled absent) but got "
                     + response.status() + " value='" + response.value() + "'");
         }
@@ -272,9 +238,7 @@ final class SoakWorkload implements SoakRun {
         if (oracle.counterContains(cache, key)) {
             return;
         }
-        var corr = nextCorr();
-        sendWithRetry(() -> client.addCounterEntry(corr, cache, key, 0L, TTL_NONE));
-        expectSuccess(awaitCommand(corr), "addCounterEntry " + cache + "/" + key);
+        command(WsOp.ADD_COUNTER_ENTRY, cache, key, null, TTL_NONE, 0, "addCounterEntry " + cache + "/" + key);
         oracle.counterPut(cache, key, 0L);
     }
 
@@ -282,14 +246,14 @@ final class SoakWorkload implements SoakRun {
 
     private void reconcileAll() {
         for (var cache : kvCacheIds) {
-            var actual = fetchEntries(cache);
+            var actual = fetchEntries(WsOp.GET_CACHE_ENTRIES, cache);
             var expected = oracle.kvSnapshot(cache);
             if (!expected.equals(actual)) {
                 throw fail("KV reconciliation mismatch for " + cache + ": " + diff(expected, actual));
             }
         }
         for (var cache : counterCacheIds) {
-            var actual = fetchCounterEntries(cache);
+            var actual = fetchEntries(WsOp.GET_COUNTER_ENTRIES, cache);
             var expected = new HashMap<String, String>();
             oracle.counterSnapshot(cache).forEach((k, v) -> expected.put(k, Long.toString(v)));
             if (!expected.equals(actual)) {
@@ -299,24 +263,39 @@ final class SoakWorkload implements SoakRun {
         report.recordVerification();
     }
 
-    private Map<String, String> fetchEntries(String cache) {
+    private Map<String, String> fetchEntries(WsOp op, String cache) {
         var corr = nextCorr();
-        sendWithRetry(() -> client.getEntries(corr, cache));
-        return awaitEntries(corr, "getEntries " + cache);
-    }
-
-    private Map<String, String> fetchCounterEntries(String cache) {
-        var corr = nextCorr();
-        sendWithRetry(() -> client.getCounterEntries(corr, cache));
-        return awaitEntries(corr, "getCounterEntries " + cache);
-    }
-
-    // ---------------------------------------------------------------- await + health (with cleanup)
-
-    private SoakRecordingListener.CommandResponse awaitCommand(String corr) {
+        client.command(op, corr, cache, null, null, TTL_NONE, 0);
         var deadline = System.nanoTime() + opTimeoutNanos;
-        SoakRecordingListener.CommandResponse response;
-        while ((response = listener.commandResponses.remove(corr)) == null) {
+        while (!client.entriesComplete.containsKey(corr)) {
+            checkHealth();
+            if (System.nanoTime() > deadline) {
+                throw fail("timed out after " + cfg.opTimeoutSeconds + "s awaiting " + op + " " + cache);
+            }
+            LockSupport.parkNanos(PARK_NANOS);
+        }
+        var status = client.entriesStatus.remove(corr);
+        client.entriesComplete.remove(corr);
+        var items = client.entriesAccumulated.remove(corr);
+        if (!OK.equals(status)) {
+            throw fail(op + " " + cache + " returned status " + status);
+        }
+        return items == null ? Map.of() : items;
+    }
+
+    // ---------------------------------------------------------------- await + health
+
+    /** Sends a command expecting SUCCESS, awaiting its response. */
+    private void command(WsOp op, String cacheId, String key, String value, long ttl, long counterValue, String what) {
+        var corr = nextCorr();
+        client.command(op, corr, cacheId, key, value, ttl, counterValue);
+        expectSuccess(awaitCommand(corr), what);
+    }
+
+    private CommandResponse awaitCommand(String corr) {
+        var deadline = System.nanoTime() + opTimeoutNanos;
+        CommandResponse response;
+        while ((response = client.commandResponses.remove(corr)) == null) {
             checkHealth();
             if (System.nanoTime() > deadline) {
                 throw fail("timed out after " + cfg.opTimeoutSeconds + "s awaiting response for " + corr);
@@ -326,48 +305,20 @@ final class SoakWorkload implements SoakRun {
         return response;
     }
 
-    private Map<String, String> awaitEntries(String corr, String what) {
-        var deadline = System.nanoTime() + opTimeoutNanos;
-        while (!listener.entriesComplete.containsKey(corr)) {
-            checkHealth();
-            if (System.nanoTime() > deadline) {
-                throw fail("timed out after " + cfg.opTimeoutSeconds + "s awaiting " + what);
-            }
-            LockSupport.parkNanos(PARK_NANOS);
-        }
-        var status = listener.entriesStatus.remove(corr);
-        listener.entriesComplete.remove(corr);
-        var items = listener.entriesAccumulated.remove(corr);
-        if (status != OperationStatus.SUCCESS) {
-            throw fail(what + " returned status " + status);
-        }
-        return items == null ? Map.of() : items;
-    }
-
     private void checkHealth() {
-        if (!client.isConnected()) {
-            throw fail("gateway client disconnected during soak run");
+        if (!client.isHealthy()) {
+            throw fail("bidi socket unhealthy during command phase");
         }
-        if (!listener.errors.isEmpty()) {
-            var error = listener.errors.entrySet().iterator().next();
-            throw fail("gateway reported an error for " + error.getKey() + ": " + error.getValue());
-        }
-    }
-
-    private void sendWithRetry(LongSupplier send) {
-        var deadline = System.nanoTime() + opTimeoutNanos;
-        while (send.getAsLong() == Aeron.NULL_VALUE) {
-            if (System.nanoTime() > deadline) {
-                throw fail("timed out offering a request frame (sustained backpressure)");
-            }
-            LockSupport.parkNanos(PARK_NANOS);
+        if (!client.errors.isEmpty()) {
+            var error = client.errors.entrySet().iterator().next();
+            throw fail("bidi gateway reported an error for " + error.getKey() + ": " + error.getValue());
         }
     }
 
     // ---------------------------------------------------------------- assertions + helpers
 
-    private void expectSuccess(SoakRecordingListener.CommandResponse response, String what) {
-        if (response.status() != OperationStatus.SUCCESS) {
+    private void expectSuccess(CommandResponse response, String what) {
+        if (!OK.equals(response.status())) {
             throw fail(what + " expected SUCCESS but got " + response.status());
         }
     }
@@ -428,27 +379,10 @@ final class SoakWorkload implements SoakRun {
     }
 
     private String nextCorr() {
-        return "c" + (++corrSeq);
+        return "cmd-c" + (++corrSeq);
     }
 
-    private void createCache(String id) {
-        var corr = nextCorr();
-        sendWithRetry(() -> client.createCache(corr, id));
-        expectSuccess(awaitCommand(corr), "createCache " + id);
-    }
-
-    private void createCounterCache(String id) {
-        var corr = nextCorr();
-        sendWithRetry(() -> client.createCounterCache(corr, id));
-        expectSuccess(awaitCommand(corr), "createCounterCache " + id);
-    }
-
-    /**
-     * Expands the (applicable) operation weights into a flat table that {@link #run()} indexes with a single
-     * bounded random draw. Operations for a cache category with zero caches configured are dropped so the
-     * workload never targets a category it cannot serve.
-     */
-    private static OpType[] buildOpTable(SoakConfig cfg) {
+    private static OpType[] buildOpTable(BidiSoakConfig cfg) {
         var weights = new HashMap<OpType, Integer>();
         if (cfg.kvCacheCount > 0) {
             weights.put(OpType.KV_PUT, 45);
@@ -464,10 +398,8 @@ final class SoakWorkload implements SoakRun {
             weights.put(OpType.COUNTER_GET, 2);
         }
         if (weights.isEmpty()) {
-            throw new IllegalArgumentException("Soak requires at least one kv or counter cache (kvCacheCount="
-                    + cfg.kvCacheCount + ", counterCacheCount=" + cfg.counterCacheCount + ")");
+            throw new IllegalArgumentException("Bidi command phase requires at least one kv or counter cache");
         }
-
         var table = new ArrayList<OpType>();
         weights.forEach((op, weight) -> {
             for (int i = 0; i < weight; i++) {

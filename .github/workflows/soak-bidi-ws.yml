@@ -1,0 +1,75 @@
+name: Soak Bidi WS
+
+# Manually triggered, long-running soak of the bidirectional websocket interface. A single-writer workload
+# drives both halves of the bidi protocol over real websockets against a real in-process 3-node RAFT cluster
+# fronted by the Javalin WS server (its own cluster client - no SBE gateway):
+#   1. a command/oracle phase that mirrors the core-cache soak over the bidi command surface, reconciling
+#      against an in-memory oracle; and
+#   2. a streaming phase that cycles the full subscription coverage matrix (kind, mode, scope, hydration,
+#      cardinality) over the bidi subscribe/stream path, asserting every streamed update (and the absence of
+#      spurious ones) against a per-subscription expectation model.
+# The run is time-bounded per phase and the report records per-matrix-cell coverage; a green run proves the
+# command oracle stayed consistent and every streaming cell was exercised.
+#
+# Deliberately NOT part of the push/PR CI (ci.yaml only discovers :cache-integration:(clustered|ephemeral)
+# and the gateway module), so it runs only on demand.
+on:
+  workflow_dispatch:
+    inputs:
+      commandDurationSeconds:
+        description: 'Wall-clock duration of the command/oracle phase (seconds)'
+        type: string
+        default: '900'
+      streamingDurationSeconds:
+        description: 'Wall-clock duration of the streaming-coverage phase (seconds)'
+        type: string
+        default: '900'
+      seed:
+        description: 'PRNG seed (blank = random; the resolved seed is recorded for reproduction)'
+        type: string
+        default: ''
+      mutationsPerRound:
+        description: 'Live mutations applied per streaming round'
+        type: string
+        default: '8'
+      includeCounters:
+        description: 'Include counter-cache variants in the command mix and streaming matrix'
+        type: boolean
+        default: true
+
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: gradle
+
+      # No Docker/jib needed: the cluster, WS server and client sockets all run in-process in the test JVM.
+      - name: Run bidi WS soak
+        run: >-
+          ./gradlew :cache-integration:soak:bidi-ws-soak-tests:test
+          -PskipIntegrationTests=false
+          -Psoak.commandDurationSeconds=${{ inputs.commandDurationSeconds }}
+          -Psoak.streamingDurationSeconds=${{ inputs.streamingDurationSeconds }}
+          -Psoak.seed=${{ inputs.seed }}
+          -Psoak.mutationsPerRound=${{ inputs.mutationsPerRound }}
+          -Psoak.includeCounters=${{ inputs.includeCounters }}
+
+      - name: Upload soak report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-bidi-ws-report
+          path: |
+            cache-integration/soak/bidi-ws-soak-tests/build/reports/soak/
+            cache-integration/soak/bidi-ws-soak-tests/build/reports/tests/
+            cache-integration/soak/bidi-ws-soak-tests/build/test-results/
+          if-no-files-found: warn
