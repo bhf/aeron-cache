@@ -2,6 +2,9 @@ package com.bhf.aeroncache.integration.soak;
 
 import com.bhf.aeroncache.gateway.client.GatewayClient;
 import com.bhf.aeroncache.gateway.messages.OperationStatus;
+import com.bhf.aeroncache.integration.soak.common.SoakRecordingListener;
+import com.bhf.aeroncache.integration.soak.common.SoakReport;
+import com.bhf.aeroncache.integration.soak.common.SoakRun;
 import io.aeron.Aeron;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,7 +32,7 @@ import java.util.function.LongSupplier;
  * <p>Because the key space is bounded, the data held by both the cluster and the oracle is bounded too, so
  * heap that grows with <em>time</em> rather than with the key space is a genuine leak - which is the point.
  */
-final class SoakWorkload {
+final class SoakWorkload implements SoakRun {
 
     /** The operations the workload issues; weights and applicability are resolved in {@link #buildOpTable}. */
     enum OpType {
@@ -66,17 +69,23 @@ final class SoakWorkload {
 
     private long corrSeq;
 
-    SoakWorkload(GatewayClient client, SoakRecordingListener listener, SoakConfig cfg, SoakReport report) {
+    SoakWorkload(GatewayClient client, SoakRecordingListener listener, SoakConfig cfg) {
         this.client = client;
         this.listener = listener;
         this.cfg = cfg;
-        this.report = report;
+        this.report = new SoakReport(cfg.seed, cfg.durationSeconds, cfg.toConfigMap());
         this.rnd = new Random(cfg.seed);
         this.opTimeoutNanos = TimeUnit.SECONDS.toNanos(cfg.opTimeoutSeconds);
         this.opTable = buildOpTable(cfg);
     }
 
-    void run() {
+    @Override
+    public SoakReport report() {
+        return report;
+    }
+
+    @Override
+    public void run() {
         log.info("Starting soak run with {}", cfg);
         setupCaches();
 
@@ -84,9 +93,9 @@ final class SoakWorkload {
         while (System.nanoTime() < deadline) {
             final OpType op = opTable[rnd.nextInt(opTable.length)];
             execute(op);
-            report.recordOp(op);
+            report.recordCount(op.name());
 
-            final long ops = report.totalOps();
+            final long ops = report.total();
             if (ops % cfg.verifyEvery == 0) {
                 reconcileAll();
             }

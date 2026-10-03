@@ -32,38 +32,31 @@ tasks.test {
     systemProperty("aeron.dir.delete.on.shutdown", "true")
     systemProperty("aeron.cluster.message.timeout", "30000000000")
 
-    // The soak harness drives a long, single-writer workload against one in-process cluster + gateway
-    // bound to fixed endpoints (7075/7076) with static singleton state. Fork a fresh JVM for the suite
-    // so it cannot collide with anything else, matching the gateway e2e module.
+    // One in-process cluster + gateway + client bound to fixed endpoints with static singleton state;
+    // fork a fresh JVM for the suite so it cannot collide with anything else.
     setForkEvery(1)
 
-    // Everything runs in one JVM (a 3-node in-process RAFT cluster + the gateway + the client), so size
-    // the heap for the smallest standard GitHub runner (private repos: 8GB RAM / 2 CPU; public: 16GB / 4).
-    // A deliberately modest cap also makes a genuine leak OOM *sooner* - a clearer soak signal - and the
-    // heap dump (written to the 14GB runner disk) is the artifact for triage. Overridable via -Psoak.maxHeap.
+    // Everything runs in one JVM; size the heap for the smallest standard GitHub runner (8GB/2CPU) and
+    // let a genuine leak OOM sooner. Overridable via -Psoak.maxHeap. Heap dump -> the 14GB runner disk.
     val soakMaxHeap = (project.findProperty("soak.maxHeap") as String?)?.takeIf { it.isNotBlank() } ?: "2g"
     doFirst { layout.buildDirectory.dir("reports/soak").get().asFile.mkdirs() }
     jvmArgs("-Xmx$soakMaxHeap")
     jvmArgs("-XX:+HeapDumpOnOutOfMemoryError")
     jvmArgs("-XX:HeapDumpPath=build/reports/soak")
 
-    // Run parameters are overridable via -Psoak.* so the manually triggered workflow can set the run
-    // duration and workload shape at dispatch time. Anything left unset falls back to the defaults in
-    // SoakConfig. Blank values (e.g. an unset "seed" input) are ignored so the default still applies.
+    // Run parameters overridable via -Psoak.* so the manually triggered workflow can set the run duration
+    // and workload shape at dispatch time. Blank values are ignored so defaults in StreamingSoakConfig apply.
     fun soakProp(name: String) = (project.findProperty(name) as String?)?.takeIf { it.isNotBlank() }
     listOf(
         "soak.durationSeconds",
         "soak.seed",
-        "soak.kvCacheCount",
-        "soak.counterCacheCount",
-        "soak.keySpace",
-        "soak.valueSizeBytes",
-        "soak.verifyEvery",
-        "soak.opTimeoutSeconds"
+        "soak.mutationsPerRound",
+        "soak.hydrationEntries",
+        "soak.wholeCacheKeys",
+        "soak.opTimeoutSeconds",
+        "soak.includeCounters"
     ).forEach { prop -> soakProp(prop)?.let { systemProperty(prop, it) } }
 
-    // Surface each test's outcome in the console/CI log, and fail loudly if none are discovered, so a
-    // green build unambiguously proves the soak actually executed.
     failOnNoDiscoveredTests = true
     testLogging {
         events("passed", "skipped", "failed")
@@ -75,7 +68,7 @@ tasks.test {
         override fun afterSuite(suite: TestDescriptor, result: TestResult) {
             if (suite.parent == null) {
                 logger.lifecycle(
-                    "Soak test summary: ${result.testCount} executed, " +
+                    "Streaming soak test summary: ${result.testCount} executed, " +
                         "${result.successfulTestCount} passed, ${result.failedTestCount} failed, " +
                         "${result.skippedTestCount} skipped"
                 )
@@ -89,9 +82,9 @@ tasks.test {
 
 tasks.register<Delete>("cleanTestNodes") {
     delete(
-        "soak_core_0",
-        "soak_core_1",
-        "soak_core_2"
+        "soak_stream_0",
+        "soak_stream_1",
+        "soak_stream_2"
     )
 }
 
