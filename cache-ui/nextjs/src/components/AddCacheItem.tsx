@@ -114,6 +114,28 @@ export default function AddItemRequest(props: AddItemProps) {
             required
             data-testid="add-item-value-input"
           />
+          <div className="flex gap-2">
+            <Input
+              id="ttl"
+              type="number"
+              min="0"
+              placeholder="TTL (optional)"
+              name="ttl"
+              className="flex-1"
+              data-testid="add-item-ttl-input"
+            />
+            <select
+              id="ttlUnit"
+              name="ttlUnit"
+              defaultValue="ms"
+              data-testid="add-item-ttl-unit-select"
+              className="border-input dark:bg-input/30 flex h-9 min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+            >
+              <option value="ms">ms</option>
+              <option value="s">secs</option>
+              <option value="m">mins</option>
+            </select>
+          </div>
           <Input
             id="cacheId"
             type="hidden"

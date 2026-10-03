@@ -138,12 +138,28 @@ export async function addItemToCacheRequest(formState: { message: string; error:
     const cacheId = formData.get('cacheId')
     const key = formData.get('key')
     const value = formData.get('value')
-    logger.info("Add item request for cache with id: " + cacheId + ", on key: " + key + " with value: " + value)
+    const rawTtl = formData.get('ttl')
+    const ttlUnit = formData.get('ttlUnit')
+
+    // Convert the TTL to milliseconds based on the selected unit. The backend
+    // expects the ttl in milliseconds on its timed add-item endpoint.
+    const unitToMillis: Record<string, number> = {ms: 1, s: 1000, m: 60000}
+    const ttlValue = rawTtl ? Number(rawTtl) : 0
+    const ttl = ttlValue > 0 ? ttlValue * (unitToMillis[ttlUnit as string] ?? 1) : 0
+
+    logger.info("Add item request for cache with id: " + cacheId + ", on key: " + key + " with value: " + value + ", ttl(ms): " + ttl)
     try {
-        const rawResponse = await fetch(AERON_CACHE_API + '/cache/' + cacheId, {
+        // Use the timed endpoint when a TTL has been specified, otherwise the item never expires.
+        const url = ttl > 0
+            ? AERON_CACHE_API + '/cache/timed/' + cacheId
+            : AERON_CACHE_API + '/cache/' + cacheId
+        const body = ttl > 0
+            ? JSON.stringify({key, value, ttl})
+            : JSON.stringify({key, value})
+        const rawResponse = await fetch(url, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({key, value}),
+                body,
                 cache: "no-cache"
             },
         );
