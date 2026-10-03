@@ -10,6 +10,8 @@
 [![Soak Core Cache](https://github.com/bhf/aeron-cache/actions/workflows/soak-core-cache.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/soak-core-cache.yml)
 [![Soak Streaming](https://github.com/bhf/aeron-cache/actions/workflows/soak-streaming.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/soak-streaming.yml)
 [![Soak Bidi WS](https://github.com/bhf/aeron-cache/actions/workflows/soak-bidi-ws.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/soak-bidi-ws.yml)
+[![Soak Streaming WS](https://github.com/bhf/aeron-cache/actions/workflows/soak-streaming-ws.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/soak-streaming-ws.yml)
+[![Soak SSE](https://github.com/bhf/aeron-cache/actions/workflows/soak-sse.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/soak-sse.yml)
 
 A key value store with counters built using Aeron, Agrona and SBE. RAFT clustered or single node - fast by design. UI with NextJS, Shadcn and Tailwind. 
 Includes HTTP, WS and SSE interfaces with support for multi-cache joins over WS and SSE.

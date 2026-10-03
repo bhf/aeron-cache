@@ -1,0 +1,67 @@
+name: Soak Streaming WS
+
+# Manually triggered, long-running soak of the one-directional streaming WebSocket interface. A single-writer
+# workload cycles the full matrix of subscription variations - cache kind, mode (full/patch), scope
+# (whole-cache/single-key), snapshot hydration and cardinality (single/multi-cache) - against a real in-process
+# 3-node RAFT cluster. Mutations are applied over the in-process Aeron gateway client; the subscription under
+# test is observed over real websockets, asserting every streamed update (and the absence of spurious ones)
+# against a per-subscription expectation model. The run is time-bounded and the report records per-matrix-cell
+# coverage; a green run proves every cell was exercised.
+#
+# Deliberately NOT part of the push/PR CI (ci.yaml only discovers :cache-integration:(clustered|ephemeral)
+# and the gateway module), so it runs only on demand.
+on:
+  workflow_dispatch:
+    inputs:
+      durationSeconds:
+        description: 'Wall-clock duration to drive rounds for (seconds)'
+        type: string
+        default: '1800'
+      seed:
+        description: 'PRNG seed (blank = random; the resolved seed is recorded for reproduction)'
+        type: string
+        default: ''
+      mutationsPerRound:
+        description: 'Live mutations applied per round'
+        type: string
+        default: '8'
+      includeCounters:
+        description: 'Include counter-cache subscription variants in the matrix'
+        type: boolean
+        default: true
+
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: gradle
+
+      # No Docker/jib needed: the cluster, gateway, WS server and client all run in-process in the test JVM.
+      - name: Run streaming WS soak
+        run: >-
+          ./gradlew :cache-integration:soak:streaming-ws-soak-tests:test
+          -PskipIntegrationTests=false
+          -Psoak.durationSeconds=${{ inputs.durationSeconds }}
+          -Psoak.seed=${{ inputs.seed }}
+          -Psoak.mutationsPerRound=${{ inputs.mutationsPerRound }}
+          -Psoak.includeCounters=${{ inputs.includeCounters }}
+
+      - name: Upload soak report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-streaming-ws-report
+          path: |
+            cache-integration/soak/streaming-ws-soak-tests/build/reports/soak/
+            cache-integration/soak/streaming-ws-soak-tests/build/reports/tests/
+            cache-integration/soak/streaming-ws-soak-tests/build/test-results/
+          if-no-files-found: warn
