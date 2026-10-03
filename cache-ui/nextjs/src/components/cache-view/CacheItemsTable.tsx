@@ -14,6 +14,7 @@ import {
 
 import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
+import {useResponsivePageSize} from "@/hooks/useResponsivePageSize"
 import * as React from "react"
 
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/components/ui/table"
@@ -42,6 +43,11 @@ export function CacheItemsDataTable<TData, TValue>({
 
     const [columnVisibility] = React.useState({'cacheId': false,});
 
+    // Scale the number of visible rows to fill the viewport so large screens
+    // aren't left mostly empty. 9 is the floor used on smaller screens. A
+    // slightly smaller rowHeight than the default packs in ~10% more rows.
+    const {ref: tableRef, pageSize} = useResponsivePageSize({min: 9, rowHeight: 48})
+
     const table = useReactTable({
         data,
         columns,
@@ -56,16 +62,15 @@ export function CacheItemsDataTable<TData, TValue>({
             columnFilters,
             columnVisibility: columnVisibility
         },
-        initialState: {
-            pagination: {
-                pageSize: 9, //custom default page size
-            },
-        },
     })
+
+    React.useEffect(() => {
+        table.setPageSize(pageSize)
+    }, [table, pageSize])
 
     return (
         <div>
-            <div className="rounded-md border">
+            <div className="rounded-md border" ref={tableRef}>
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (

@@ -14,6 +14,7 @@ import {
 
 import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
+import {useResponsivePageSize} from "@/hooks/useResponsivePageSize"
 import {useRouter} from "next/navigation"
 import * as React from "react"
 
@@ -73,6 +74,10 @@ export function TimersDataTable<TData, TValue>({
         return () => clearTimeout(timeout)
     }, [data, router])
 
+    // Scale the number of visible rows to fill the viewport so large screens
+    // aren't left mostly empty. 5 is the floor used on smaller screens.
+    const {ref: tableRef, pageSize} = useResponsivePageSize({min: 5})
+
     const table = useReactTable({
         data,
         columns,
@@ -86,16 +91,15 @@ export function TimersDataTable<TData, TValue>({
             sorting,
             columnFilters,
         },
-        initialState: {
-            pagination: {
-                pageSize: 5, //custom default page size
-            },
-        },
     })
+
+    React.useEffect(() => {
+        table.setPageSize(pageSize)
+    }, [table, pageSize])
 
     return (
         <div>
-            <div className="rounded-md border" data-testid="all-timers-table">
+            <div className="rounded-md border" data-testid="all-timers-table" ref={tableRef}>
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
