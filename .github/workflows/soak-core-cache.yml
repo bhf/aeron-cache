@@ -1,0 +1,78 @@
+name: Soak Core Cache
+
+# Manually triggered, long-running soak of the core key-value + counter functionality. A single-writer
+# workload injects a weighted, seeded-random mix of put/get/remove/clear/delete and counter
+# increment/decrement/set/get operations against a real in-process 3-node RAFT cluster fronted by the
+# gateway, asserting every value against an in-memory oracle (inline read-backs + periodic and final
+# reconciliation). The run is purely time-bounded; all parameters are overridable at dispatch time.
+#
+# Deliberately NOT part of the push/PR CI (ci.yaml only discovers :cache-integration:(clustered|ephemeral)
+# and the gateway module), so it runs only on demand. Other soak suites get their own soak-*.yml + badge.
+on:
+  workflow_dispatch:
+    inputs:
+      durationSeconds:
+        description: 'Wall-clock duration to drive load for (seconds)'
+        type: string
+        default: '1800'
+      seed:
+        description: 'PRNG seed (blank = random; the resolved seed is logged for reproduction)'
+        type: string
+        default: ''
+      kvCacheCount:
+        description: 'Number of key-value caches to spread load across'
+        type: string
+        default: '4'
+      counterCacheCount:
+        description: 'Number of counter caches to spread load across'
+        type: string
+        default: '4'
+      keySpace:
+        description: 'Key space per cache (smaller = more overwrites/removes/collisions)'
+        type: string
+        default: '500'
+      valueSizeBytes:
+        description: 'Size of randomly generated values (bytes)'
+        type: string
+        default: '160'
+
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    # Backstop above the default 30m run. Bump this if dispatching a longer durationSeconds; note the
+    # runner's 14GB disk (not RAM) is the binding constraint for very long runs, as the cluster persists
+    # an append-only Aeron archive of every operation.
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: gradle
+
+      # No Docker/jib needed: the cluster, gateway and client all run in-process in the test JVM.
+      - name: Run core cache soak
+        run: >-
+          ./gradlew :cache-integration:soak:core-cache-soak-tests:test
+          -PskipIntegrationTests=false
+          -Psoak.durationSeconds=${{ inputs.durationSeconds }}
+          -Psoak.seed=${{ inputs.seed }}
+          -Psoak.kvCacheCount=${{ inputs.kvCacheCount }}
+          -Psoak.counterCacheCount=${{ inputs.counterCacheCount }}
+          -Psoak.keySpace=${{ inputs.keySpace }}
+          -Psoak.valueSizeBytes=${{ inputs.valueSizeBytes }}
+
+      - name: Upload soak report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-core-cache-report
+          path: |
+            cache-integration/soak/core-cache-soak-tests/build/reports/soak/
+            cache-integration/soak/core-cache-soak-tests/build/reports/tests/
+            cache-integration/soak/core-cache-soak-tests/build/test-results/
+          if-no-files-found: warn

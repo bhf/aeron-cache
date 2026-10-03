@@ -63,7 +63,10 @@ subprojects {
 
         if (project.path.startsWith(":cache-integration:")) {
             enabled = !skipIntegrationTests
-            if (!skipIntegrationTests && jibOnBuild) {
+            // The soak suites run a fully in-process cluster + gateway + client (no containers), so they
+            // must not drag in the jib image builds that the container-based integration suites require.
+            val inProcessOnly = project.path.startsWith(":cache-integration:soak:")
+            if (!skipIntegrationTests && jibOnBuild && !inProcessOnly) {
                 dependsOn(":cache-http:http-server-javalin:jibDockerBuild")
                 dependsOn(":cache-http:http-clustertools:jibDockerBuild")
                 dependsOn(":cache-near:http-server-near-javalin:jibDockerBuild")
@@ -76,6 +79,7 @@ subprojects {
 
         if (project.path.startsWith(":cache-integration:clustered:") ||
             project.path.startsWith(":cache-integration:ephemeral:") ||
+            project.path.startsWith(":cache-integration:soak:") ||
             project.path == ":cache-integration:gateway-integration-tests") {
             maxParallelForks = 1
             usesService(testLock)
