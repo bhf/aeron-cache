@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-table"
 
 import {Button} from "@/components/ui/button"
+import {Input} from "@/components/ui/input"
 import * as React from "react"
 
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/components/ui/table"
@@ -108,23 +109,34 @@ export function CacheItemsDataTable<TData, TValue>({
                     </TableBody>
                 </Table>
             </div>
-            <div className="flex items-center justify-end space-x-2 py-4">
-                <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                >
-                    Previous
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                >
-                    Next
-                </Button>
+            <div className="flex items-center justify-between py-4">
+                <Input
+                    placeholder="Filter keys..."
+                    value={(table.getColumn("key")?.getFilterValue() as string) ?? ""}
+                    onChange={(event) =>
+                        table.getColumn("key")?.setFilterValue(event.target.value)
+                    }
+                    className="max-w-sm"
+                    data-testid="cache-items-filter-input"
+                />
+                <div className="flex items-center space-x-2">
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => table.previousPage()}
+                        disabled={!table.getCanPreviousPage()}
+                    >
+                        Previous
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.nextPage()}
+                        disabled={!table.getCanNextPage()}
+                    >
+                        Next
+                    </Button>
+                </div>
             </div>
         </div>
     )
