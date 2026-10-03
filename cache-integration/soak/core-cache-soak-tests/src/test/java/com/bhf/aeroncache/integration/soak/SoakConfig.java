@@ -1,14 +1,17 @@
 package com.bhf.aeroncache.integration.soak;
 
-import java.util.Random;
+import com.bhf.aeroncache.integration.soak.common.SoakProps;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * Configuration for a soak run, resolved from {@code -Psoak.*} system properties (forwarded by the
- * module build) with sensible defaults. The resolved values - crucially the seed - are logged at the
- * start of a run so any failure is fully reproducible by re-running with the same {@code -Psoak.seed}.
+ * Configuration for a core-cache soak run, resolved from {@code -Psoak.*} system properties (forwarded by
+ * the module build) with sensible defaults. The resolved values - crucially the seed - are recorded in the
+ * report so any failure is reproducible by re-running with the same {@code -Psoak.seed}.
  *
- * <p>The run is purely time-bounded: it drives a weighted, randomised workload until
- * {@link #durationSeconds} of wall-clock has elapsed.
+ * <p>The run is purely time-bounded: it drives a weighted, randomised workload until {@link #durationSeconds}
+ * of wall-clock has elapsed.
  */
 final class SoakConfig {
 
@@ -43,32 +46,26 @@ final class SoakConfig {
 
     static SoakConfig fromSystemProperties() {
         return new SoakConfig(
-                longProp("soak.durationSeconds", 1800L),
-                seedProp("soak.seed"),
-                intProp("soak.kvCacheCount", 4),
-                intProp("soak.counterCacheCount", 4),
-                intProp("soak.keySpace", 500),
-                intProp("soak.valueSizeBytes", 160),
-                intProp("soak.verifyEvery", 2000),
-                intProp("soak.opTimeoutSeconds", 30));
+                SoakProps.longProp("soak.durationSeconds", 1800L),
+                SoakProps.seed("soak.seed"),
+                SoakProps.intProp("soak.kvCacheCount", 4),
+                SoakProps.intProp("soak.counterCacheCount", 4),
+                SoakProps.intProp("soak.keySpace", 500),
+                SoakProps.intProp("soak.valueSizeBytes", 160),
+                SoakProps.intProp("soak.verifyEvery", 2000),
+                SoakProps.intProp("soak.opTimeoutSeconds", 30));
     }
 
-    private static long seedProp(String name) {
-        var raw = System.getProperty(name);
-        if (raw == null || raw.isBlank()) {
-            return new Random().nextLong();
-        }
-        return Long.parseLong(raw.trim());
-    }
-
-    private static long longProp(String name, long dflt) {
-        var raw = System.getProperty(name);
-        return (raw == null || raw.isBlank()) ? dflt : Long.parseLong(raw.trim());
-    }
-
-    private static int intProp(String name, int dflt) {
-        var raw = System.getProperty(name);
-        return (raw == null || raw.isBlank()) ? dflt : Integer.parseInt(raw.trim());
+    /** Ordered config fields for the run report. */
+    Map<String, Object> toConfigMap() {
+        var map = new LinkedHashMap<String, Object>();
+        map.put("kvCacheCount", kvCacheCount);
+        map.put("counterCacheCount", counterCacheCount);
+        map.put("keySpace", keySpace);
+        map.put("valueSizeBytes", valueSizeBytes);
+        map.put("verifyEvery", verifyEvery);
+        map.put("opTimeoutSeconds", opTimeoutSeconds);
+        return map;
     }
 
     @Override

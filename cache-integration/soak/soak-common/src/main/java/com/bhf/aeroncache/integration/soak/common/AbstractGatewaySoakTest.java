@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.integration.soak;
+package com.bhf.aeroncache.integration.soak.common;
 
 import com.bhf.aeroncache.gateway.client.GatewayClient;
 import com.bhf.aeroncache.utils.ClusterUtils;
@@ -23,19 +23,20 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 
 /**
- * Shared lifecycle harness for soak tests. Concrete subclasses supply the backend the gateway runs
- * against via {@link #startBackend()} (e.g. a real in-process RAFT cluster); everything downstream - the
+ * Shared lifecycle harness for gateway-driven soak suites. Concrete subclasses supply the backend the
+ * gateway runs against via {@link #startBackend()} (e.g. a real in-process RAFT cluster) and the workload
+ * to drive via {@link #createRun(GatewayClient, SoakRecordingListener)}; everything downstream - the
  * dedicated client media driver, the {@link GatewayClient}, the recording listener, the connection
- * warm-up and the single long-running {@link #runSoak()} driver - lives here and is identical to the
- * gateway e2e harness, so the soak exercises the same production path.
+ * warm-up, and writing the metrics summary - lives here and matches the gateway e2e harness, so the soak
+ * exercises the same production path.
  *
- * <p>The run is purely time-bounded (see {@link SoakConfig}); the metrics summary is always written in
- * {@code @AfterAll}, whether the run passed or failed, so a failing run still leaves a triage artifact.
+ * <p>The summary is always written in {@code @AfterAll}, whether the run passed or failed, so a failing
+ * run still leaves a triage artifact (including the seed to reproduce it).
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-abstract class AbstractSoakTest {
+public abstract class AbstractGatewaySoakTest {
 
-    private static final Logger log = LogManager.getLogger(AbstractSoakTest.class);
+    private static final Logger log = LogManager.getLogger(AbstractGatewaySoakTest.class);
 
     protected static final String REQUEST_ENDPOINT = "localhost:7075";
     protected static final String RESPONSE_CONTROL_ENDPOINT = "localhost:7076";
@@ -48,20 +49,19 @@ abstract class AbstractSoakTest {
     private Aeron clientAeron;
     private AgentRunner clientRunner;
 
-    private GatewayClient client;
-    private SoakRecordingListener listener;
-    private SoakConfig config;
-    private SoakReport report;
+    protected GatewayClient client;
+    protected SoakRecordingListener listener;
+
+    private SoakRun run;
 
     /** Starts the backend (cluster/ephemeral cache) and the gateway the client will drive. */
     protected abstract void startBackend() throws Exception;
 
+    /** Builds the suite-specific workload. Called once; its {@link SoakRun#report()} must be ready immediately. */
+    protected abstract SoakRun createRun(GatewayClient client, SoakRecordingListener listener);
+
     @BeforeAll
     void startBackendAndClient() throws Exception {
-        config = SoakConfig.fromSystemProperties();
-        report = new SoakReport(config);
-        log.info("Resolved soak configuration: {}", config);
-
         startBackend();
 
         // The client uses its own dedicated media driver (its own Aeron directory) to avoid colliding with
@@ -98,8 +98,8 @@ abstract class AbstractSoakTest {
 
     @AfterAll
     void stopClient() {
-        if (report != null) {
-            report.writeTo(REPORT_PATH);
+        if (run != null) {
+            run.report().writeTo(REPORT_PATH);
             log.info("Wrote soak report to {}", REPORT_PATH.toAbsolutePath());
         }
         CloseHelper.quietClose(clientRunner);
@@ -109,7 +109,8 @@ abstract class AbstractSoakTest {
     }
 
     @Test
-    void runSoak() {
-        new SoakWorkload(client, listener, config, report).run();
+    void soak() {
+        run = createRun(client, listener);
+        run.run();
     }
 }
