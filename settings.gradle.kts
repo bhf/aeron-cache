@@ -45,5 +45,7 @@ include("cache-integration:soak:soak-common")
 include("cache-integration:soak:core-cache-soak-tests")
 include("cache-integration:soak:streaming-soak-tests")
 include("cache-integration:soak:bidi-ws-soak-tests")
+include("cache-integration:soak:streaming-ws-soak-tests")
+include("cache-integration:soak:sse-soak-tests")
 
 include("cache-integration:microbenchmarks")
