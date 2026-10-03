@@ -41,4 +41,5 @@ include("cache-integration:ephemeral:shutdown-integration-tests")
 
 include("cache-integration:gateway-integration-tests")
 
+include("cache-integration:soak:core-cache-soak-tests")
 include("cache-integration:microbenchmarks")
