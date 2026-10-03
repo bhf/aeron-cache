@@ -27,7 +27,7 @@ on:
       includeCounters:
         description: 'Include counter-cache subscription variants in the matrix'
         type: boolean
-        default: false
+        default: true
 
 jobs:
   soak:

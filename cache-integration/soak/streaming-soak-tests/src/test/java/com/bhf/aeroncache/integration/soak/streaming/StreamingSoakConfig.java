@@ -24,7 +24,13 @@ final class StreamingSoakConfig {
     final int wholeCacheKeys;
     /** Per-operation / per-verification timeout; a breach means the cluster stalled - a genuine finding. */
     final int opTimeoutSeconds;
-    /** Whether to include counter-cache subscription variants in the coverage matrix. */
+    /**
+     * Whether to include counter-cache subscription variants in the coverage matrix (on by default). Note:
+     * the gateway delivers each counter update TWICE to a session that both mutates and subscribes to the
+     * same counter cache (the cluster reuses the increment/decrement/set result as the subscriber broadcast;
+     * see handlePostIncrementCounter). This is a known, accepted behaviour - the workload models the two
+     * consecutive events rather than asserting one.
+     */
     final boolean includeCounters;
 
     private StreamingSoakConfig(long durationSeconds, long seed, int mutationsPerRound,
