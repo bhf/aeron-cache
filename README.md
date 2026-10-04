@@ -38,9 +38,10 @@ https://github.com/user-attachments/assets/cdbf0e54-2ff8-47c4-8a98-50a8104de6fd
 * Key-value and counter caches with item level TTL support
 * Bulk atomic operations across caches and counters
 * Streaming multi-cache (and key) subscriptions
-* HTTP (Request-Response), WS (UniDi and BiDi), SSE (UniDi) and SBE-Aeron (BiDi) APIs
 * PATCH support for writing partial updates to JSON values including partial streaming subscriptions (JSON Merge Patch RFC 7386)
 * Near cache implementation (read ahead)
+
+* HTTP (Request-Response), WS (UniDi and BiDi), SSE (UniDi) and SBE-Aeron (BiDi) APIs
 * Embedded cache [polyglot clients](https://github.com/bhf/aeron-cache-embedded):
   * Aeron Transport (BIDI) - Java and Rust
   * HTTP and WS - Java, Rust, Typescript and Python
