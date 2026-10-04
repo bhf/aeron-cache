@@ -39,39 +39,40 @@ https://github.com/user-attachments/assets/c602f365-2b6a-497c-a671-29508cc04155
 https://github.com/user-attachments/assets/cdbf0e54-2ff8-47c4-8a98-50a8104de6fd
 
 
-* [How To Run - Docker](#docker)
+* [How To Run - Brew](#brew)
 * [How To Run - K8s/Helm](#k8s-and-helm)
-* [API](#api)
-* [Project Structure](#structure)
-* [Overview](#overview)
-* [Testing](#testing)
-* [Roadmap](#future-work)
+* [API Specs](#api-specs)
 
 ## How To Run
 
-### Docker
+### Brew
 ```bash
-git clone https://github.com/bhf/aeron-cache
-cd aeron-cache/
-./gradlew build
-docker compose build
-docker compose up
+brew tap bhf/aeron-cache
+brew install aeron-cache
+aeron-cache
 ```
 
-You should see something like this once the UI is ready:
+You should see something like:
 
 ```bash
-cache-ws-client-1       | Starting Websocket interface
-cache-http-client-1     | Starting HTTP interface
-cache-ui-1              |    ▲ Next.js 15.2.3
-cache-ui-1              |    - Local:        http://localhost:3000
-cache-ui-1              |    - Network:      http://0.0.0.0:3000
-cache-ui-1              | 
-cache-ui-1              |  ✓ Starting...
+Initializing Aeron Cache...
 
+    ___    __________  ____  _   __   _________   ________  _________
+   /   |  / ____/ __ \/ __ \/ | / /  / ____/   | / ____/ / / / ____/
+  / /| | / __/ / /_/ / / / /  |/ /  / /   / /| |/ /   / /_/ / __/   
+ / ___ |/ /___/ _, _/ /_/ / /|  /  / /___/ ___ / /___/ __  / /___   
+/_/  |_/_____/_/ |_|\____/_/ |_/   \____/_/  |_\____/_/ /_/_____/   
+
+              🌲 https://github.com/bhf/aeron-cache 🌲
+
+✅ Aeron Cache is running!
+   UI      : http://localhost:3000
+   Backend : PID 6221
+   Config  : /home/user1/.aeron-cache
+   Log     : /home/user1/.aeron-cache/aeron-cache.log
+
+Press Ctrl+C to stop.
 ```
-
-You can also spin up a single node cache by using ```docker-compose-nonclustered.yaml```
 
 [Top](#aeron-cache)
 
@@ -91,102 +92,15 @@ make install-all
 
 [Top](#aeron-cache)
 
-## API
+## API Specs
 
-You can check out the [REST OpenAPI](cache-http/openapi.yml) or the [Websocket OpenAPI](cache-ws/ws-openapi.yaml).
+* [REST OpenAPI](cache-http/openapi.yml)
+* [Streaming Websocket OpenAPI](cache-ws/ws-openapi.yaml)
+* [SSE OpenAPI](cache-sse/sse-openapi.yaml)
+* [BiDi Websocket OpenAPI](cache-ws/bidi-ws-openapi.yaml)
+* [Aeron Transport Gateway SBE](cache-aeron-gateway/aeron-gateway-server/src/main/resources/sbe/gateway-schema.xml)
 
-### Multi Cache Subscriptions
-To subscribe to cache updates on caches with IDs 808 and 333:
-
-```bash
-uwsc http://localhost:7071/api/ws/v1/caches/808,333
-```
-
-You can also do this over SSE:
-
-```bash
-http://localhost:7072/api/sse/v1/caches/808,333
-```
-
-[Top](#aeron-cache)
-
-## Structure
-
-__cache-client__ - An Aeron cluster based client for the cache.
-
-__cache-cluster__ - The core cache cluster service.
-
-__cache-common__ - Common entities and classes used in cache implementations.
-
-__cache-http__ - REST interfaces around the cache-client.
-
-__cache-integration__ - Integration test suites.
-
-__cache-ws__ - Websocket interfaces around the cache-client.
-
-__cache-sse__ - SSE interfaces around the cache-client.
-
-__cache-messages-sbe__ - Core SBE messages used by the cache.
-
-__cache-messages-http__ - Messages used by HTTP interfaces to the cache.
-
-__cache-near__ - Near cache implementation with a HTTP interface.
-
-__cache-spi__ - Core service provider interface.
-
-__cache-spi-impl__ - Cache service provider implementations.
-
-__cache-ui__ - A UI that uses the REST API provided by cache-http-server
-
-__k8s__ - Helm charts and other K8s resources (work in progress)
-
-__hyperfoil__ - Some basic hyperfoil tests
-
-[Top](#aeron-cache)
-
-## Overview
-
-### Message Flow Overview
-
-![img_1.png](docs/images/msgFlow2.png)
-
-### Cluster Service Workflow
-
-![img.png](docs/images/cluster-flow2.png)
-
-### Client Flow
-
-![img_1.png](docs/images/client-flow.png)
 
 [Top](#aeron-cache)
 
 
-## Testing
-
-### Unit Tests
-There are a number of unit tests (including some param variation) using JUnit and Mockito across both ```cache-cluster``` 
-and ```cache-client``` which exercise the main functionality.
-
-Core coverage > 70% (as of 4th July 2025)
-
-![img.png](docs/images/coverage-core.png)
-
-
-### JMH
-There is an integration suite in ```cache-integration:microbenchmarks``` designed to be run on standard 
-Github runners within the typical time the rest of the CI tasks take.
-
-### Integration Tests
-
-There are various integration test suites in ```:cache-integration``` which use TestContainers. These are generally broken 
-down by environment/backend configuration combinations. 
-
-[Top](#aeron-cache)
-
-## Future Work
-
-* Industrialization and cache-ops
-
-https://sanjdev.atlassian.net/jira/software/projects/AC/boards/22
-
-[Top](#aeron-cache)
