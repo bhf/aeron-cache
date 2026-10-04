@@ -14,8 +14,9 @@
 [![Soak SSE](https://github.com/bhf/aeron-cache/actions/workflows/soak-sse.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/soak-sse.yml)
 
 A key value store with counters built using Aeron, Agrona and SBE. RAFT clustered or single node - fast by design. UI with NextJS, Shadcn and Tailwind. 
-Includes HTTP, WS and SSE interfaces with support for multi-cache joins over WS and SSE.
-Containerized and deployable with ```docker compose``` or on Kubernetes via ```helm``` or ```kubectl```.
+Includes HTTP, WS, SSE and Aeron transport (UDP and IPC) interfaces.
+
+Deployable on Kubernetes with ```helm``` or locally with ```brew```.
 
 Features:
 
