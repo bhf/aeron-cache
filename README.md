@@ -92,7 +92,6 @@ make all
 cd k8s/helm/
 make install-all
 ```
-
 ![img.png](docs/images/k9s-screenshot.png)
 
 [Top](#aeron-cache)
