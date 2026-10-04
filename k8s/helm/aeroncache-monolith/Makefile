@@ -2,8 +2,12 @@
 # on or off; leave unset to use the chart's values.yaml default (off).
 MEDIA_DRIVER_FLAG := $(if $(EXTERNAL_MEDIA_DRIVER),--set externalMediaDriver.enabled=$(EXTERNAL_MEDIA_DRIVER))
 
+# Set GHCR=true to pull the image from ghcr.io instead of the local Minikube image (see ../ghcr.mk).
+include ../ghcr.mk
+GHCR_FLAGS := $(call ghcr_image,aeroncache-monolith,image) $(call ghcr_image,aeroncache-media-driver,externalMediaDriver.image) $(ghcr_secret)
+
 install:
-	helm install -n aeroncache aeroncache-monolith -f values.yaml --create-namespace . $(MEDIA_DRIVER_FLAG)
+	helm install -n aeroncache aeroncache-monolith -f values.yaml --create-namespace . $(MEDIA_DRIVER_FLAG) $(GHCR_FLAGS)
 
 upgrade:
 	helm upgrade -n aeroncache aeroncache-monolith -f values.yaml .
