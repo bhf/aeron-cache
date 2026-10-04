@@ -62,3 +62,33 @@ Uninstall a Helm chart:
 ```bash
 helm uninstall aeroncache-http
 ```
+
+## Deploying from GHCR instead of local Minikube images
+
+The `make install-*` targets under `k8s/helm/` build and load images into Minikube by default
+(`image.pullPolicy: Never`). To instead pull the released images published to the GitHub Container
+Registry by `.github/workflows/publish-ghcr.yml`, pass `GHCR=true` to any install target - no
+`make build-backend` / `minikube image load` step is needed:
+
+```bash
+cd k8s/helm/
+make install-all GHCR=true                 # pull :latest from ghcr.io/bhf/*
+make install-all GHCR=true GHCR_TAG=1.2.3   # pull a specific release
+```
+
+Useful overrides (see `k8s/helm/ghcr.mk` for the full list):
+
+- `GHCR_OWNER=<owner>` - ghcr.io owner if different from `bhf` (e.g. a fork).
+- `GHCR_TAG=<tag>` - image tag; releases are tagged `1.2.3` plus `latest`.
+- `GHCR_PULL_POLICY=Always` - re-pull a moving tag such as `latest` on every rollout.
+- `IMAGE_PULL_SECRET=<name>` - name of a pre-created pull secret, only needed if the GHCR
+  packages are private. Create one with, e.g.:
+
+  ```bash
+  kubectl create secret docker-registry ghcr -n aeroncache \
+    --docker-server=ghcr.io --docker-username=<user> --docker-password=<token>
+  ```
+
+This also covers the external Aeron C media driver (`aeroncache-media-driver`): with `GHCR=true` the
+charts that can run it as a sidecar point at the GHCR image too, so `GHCR=true EXTERNAL_MEDIA_DRIVER=true`
+works without a local build. The sidecar still defaults to off.

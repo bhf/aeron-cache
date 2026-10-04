@@ -4,6 +4,16 @@
 #   embedded Java driver; EXTERNAL_MEDIA_DRIVER=false forces it off. Unset uses each
 #   chart's values.yaml default (off). Command-line variables propagate to the sub-makes.
 #   e.g.  make install-backend-ephemeral EXTERNAL_MEDIA_DRIVER=true
+#
+# GHCR image source:
+#   By default the install targets use the images built into Minikube (image.pullPolicy Never).
+#   Pass GHCR=true to any install target to instead pull the released images from ghcr.io
+#   (published by .github/workflows/publish-ghcr.yml) - no `make build-*` / minikube load needed.
+#   GHCR_OWNER (default bhf), GHCR_TAG (default latest) and IMAGE_PULL_SECRET (for private
+#   packages) tune it; see ghcr.mk for the full list. Like EXTERNAL_MEDIA_DRIVER these are
+#   command-line variables and propagate to the sub-makes.
+#   e.g.  make install-all GHCR=true
+#         make install-all GHCR=true GHCR_TAG=1.2.3
 
 install-backend: install-cluster install-http install-ws install-sse install-gateway install-http-near
 uninstall-backend: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-gateway uninstall-http-near
