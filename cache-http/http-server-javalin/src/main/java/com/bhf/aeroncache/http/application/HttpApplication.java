@@ -10,6 +10,7 @@ import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
 import com.bhf.aeroncache.http.responses.CacheDetails;
 import com.bhf.aeroncache.http.responses.ClusterToolsResponse;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
+import com.bhf.aeroncache.http.responses.SnapshotInfoResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.ReusableLong;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
@@ -307,6 +308,8 @@ public class HttpApplication {
                 .post(CACHE_API_PREFIX + "bulkops/", HttpApplication::handleBulkOpsRequest)
                 .post("/api/v1/shutdown", HttpApplication::handleShutdownCluster)
                 .post("/api/v1/snapshot", HttpApplication::handleTakeSnapshot)
+                .post("/api/v1/snapshot-and-purge", HttpApplication::handleSnapshotAndPurge)
+                .get("/api/v1/snapshot-info", HttpApplication::handleGetSnapshotInfo)
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
                 .get(READINESS, HttpApplication::handleGetReadiness)
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
@@ -388,6 +391,123 @@ public class HttpApplication {
     private static void handleTakeSnapshot(@NotNull Context context) {
         log.info("Got take snapshot request");
         makeClusterToolsRequest(context, "snapshot");
+    }
+
+    private static void handleSnapshotAndPurge(@NotNull Context context) {
+        log.info("Got snapshot-and-purge request");
+        relayClusterToolsResult(context, "snapshot-and-purge");
+    }
+
+    /**
+     * Relay a cluster tools command whose response is a {@link com.bhf.aeroncache.http.responses.RecordingPurgeResponse}
+     * (e.g. {@code purge} / {@code snapshot-and-purge}) to the UI. Unlike {@link #makeClusterToolsRequest}, the
+     * sidecar's JSON body and status are forwarded verbatim. Prefers the first host returning 2xx; otherwise
+     * forwards the last response received, or an error if no host responded.
+     *
+     * @param context the Javalin context.
+     * @param command the cluster tools command (the request body's {@code tool}).
+     */
+    private static void relayClusterToolsResult(Context context, String command) {
+        var clusterToolsFolder = System.getenv().getOrDefault("CLUSTER_FOLDER", "node0/cluster");
+        var requestBody = new ClusterToolsRequest(command, clusterToolsFolder);
+
+        try {
+            var jsonBody = OBJECT_MAPPER.writeValueAsString(requestBody);
+
+            HttpResponse<String> lastResponse = null;
+            for (String host : hostArray) {
+                try {
+                    String hostUri = "http://" + host + ":" + CLUSTER_TOOLS_PORT + "/api/v1/clustertools/";
+                    log.info("Sending {} request to host: {}", command, hostUri);
+
+                    var httpRequest = HttpRequest.newBuilder()
+                            .uri(URI.create(hostUri))
+                            .header("Content-Type", "application/json")
+                            .header("Accept", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                            .build();
+
+                    HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+                    lastResponse = httpResponse;
+
+                    if (httpResponse.statusCode() / 100 == 2) {
+                        context.status(httpResponse.statusCode());
+                        context.contentType("application/json");
+                        context.result(httpResponse.body());
+                        return;
+                    }
+                    log.error("{} request failed for host {} with status code: {}", command, host, httpResponse.statusCode());
+                } catch (IOException e) {
+                    log.error("{} request failed for host {}", command, host);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException(e);
+                }
+            }
+
+            if (lastResponse != null) {
+                context.status(lastResponse.statusCode());
+                context.contentType("application/json");
+                context.result(lastResponse.body());
+            } else {
+                context.status(HTTPStatusUtils.BAD_REQUEST);
+                context.json(new RequestErrorResponse("Error making cluster tools request for " + command,
+                        "no cluster tools host responded", CacheOperationStatus.ERROR));
+            }
+        } catch (Exception e) {
+            log.error("Error making cluster tools request for {}", command, e);
+            context.status(HTTPStatusUtils.BAD_REQUEST);
+            context.json(new RequestErrorResponse("Error making cluster tools request for " + command,
+                    e.getMessage(), CacheOperationStatus.ERROR));
+        }
+    }
+
+    /**
+     * Relay the latest snapshot info from a clustertools sidecar to the UI. Queries each cluster host's
+     * sidecar and returns the first that reports a present snapshot (all nodes snapshot together, so any
+     * is authoritative); otherwise returns the first 200 response, or an empty "no snapshot" result.
+     *
+     * @param context the Javalin context.
+     */
+    private static void handleGetSnapshotInfo(@NotNull Context context) {
+        SnapshotInfoResponse firstResponse = null;
+
+        for (String host : hostArray) {
+            try {
+                String hostUri = "http://" + host + ":" + CLUSTER_TOOLS_PORT + "/api/v1/clustertools/snapshot-info";
+                var httpRequest = HttpRequest.newBuilder()
+                        .uri(URI.create(hostUri))
+                        .header("Accept", "application/json")
+                        .GET()
+                        .build();
+
+                HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+
+                if (httpResponse.statusCode() == HTTPStatusUtils.OK) {
+                    var response = OBJECT_MAPPER.readValue(httpResponse.body(), SnapshotInfoResponse.class);
+                    if (response.snapshotPresent()) {
+                        context.status(HTTPStatusUtils.OK);
+                        context.json(response);
+                        return;
+                    }
+                    if (firstResponse == null) {
+                        firstResponse = response;
+                    }
+                } else {
+                    log.error("snapshot-info request failed for host {} with status code: {}", host, httpResponse.statusCode());
+                }
+            } catch (IOException e) {
+                log.error("snapshot-info request failed for host {}", host);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            }
+        }
+
+        context.status(HTTPStatusUtils.OK);
+        context.json(firstResponse != null
+                ? firstResponse
+                : new SnapshotInfoResponse(false, -1, -1, -1, -1, 0, 0, null));
     }
 
     private static void makeClusterToolsRequest(Context context, String command) {

@@ -3,7 +3,6 @@ import Link from "next/link";
 import {Button} from "@/components/ui/button";
 import {LayersIcon, KanbanIcon} from "lucide-react";
 import {getJaegerURL, getPrometheusURL, isUrlAccessible} from "@/lib/actions";
-import CacheAdminActions from "@/components/CacheAdminActions";
 
 export default async function MenuLinks() {
     const jaegerURL = await getJaegerURL()
@@ -27,7 +26,6 @@ export default async function MenuLinks() {
                     <Button variant="link"><KanbanIcon/>Prometheus</Button>
                 </Link>
             )}
-            <CacheAdminActions/>
         </div>
     )
 }

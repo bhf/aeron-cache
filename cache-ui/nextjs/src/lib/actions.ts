@@ -470,3 +470,36 @@ export async function snapshotCacheRequest() {
         return {message: "Error requesting snapshot", error: true};
     }
 }
+
+/**
+ * Trigger a snapshot and then purge old log recording segments to reclaim disk, in one request.
+ * Returns the purge result message and the bytes reclaimed when successful.
+ */
+export async function snapshotAndPurgeRequest() {
+    logger.info("Snapshot and purge request")
+    try {
+        const rawResponse = await fetch(AERON_CACHE_API + '/snapshot-and-purge', {
+            method: 'POST',
+            headers,
+            cache: "no-cache"
+        });
+
+        const body = await rawResponse.json().catch(() => null);
+
+        if (rawResponse.status != 200 || (body && body.success === false)) {
+            return {
+                message: body?.message ?? "Problem requesting snapshot and purge",
+                error: true
+            };
+        }
+
+        return {
+            message: body?.message ?? "Successfully requested snapshot and purge",
+            reclaimedBytes: body?.reclaimedBytes as number | undefined,
+            error: false
+        };
+    } catch (err) {
+        logger.error("Error whilst requesting snapshot and purge ", err);
+        return {message: "Error requesting snapshot and purge", error: true};
+    }
+}
