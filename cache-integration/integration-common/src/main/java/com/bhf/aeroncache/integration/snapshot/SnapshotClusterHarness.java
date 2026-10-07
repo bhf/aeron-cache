@@ -43,6 +43,14 @@ public final class SnapshotClusterHarness {
     /** Each recording-log entry is a fixed 64 bytes; a fresh log has one (the term log) entry. */
     private static final long RECORDING_LOG_ENTRY_BYTES = 64;
 
+    /**
+     * Shared memory for the purge flow's node + HTTP interface. The purge test deliberately pushes
+     * more than one 128MB archive segment of log through the cluster so a whole segment can be
+     * reclaimed; the default 512MB /dev/shm is exhausted by that burst (128MB term buffers) and the
+     * media driver wedges before the snapshot can persist, so the purge flow needs a larger /dev/shm.
+     */
+    private static final long PURGE_SHM_BYTES = 2L * 1024 * 1024 * 1024;
+
     private SnapshotClusterHarness() {
     }
 
@@ -92,6 +100,191 @@ public final class SnapshotClusterHarness {
         writeManifest(Path.of(hostPath, "manifest.json"), artifactVersion);
         tarGz(outputTar, hostPath, "node0", "manifest.json");
         deleteRecursively(Path.of(hostPath));
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Purge (disk reclamation)
+    // ---------------------------------------------------------------------------------------------
+
+    /** Measurements and outcome of a purge run against a live cluster. */
+    public record PurgeOutcome(
+            long archiveBytesBefore,
+            long archiveBytesAfter,
+            JSONObject purgeResponse,
+            boolean fixtureStillServed) {
+
+        public boolean purgeSucceeded() {
+            return purgeResponse.optBoolean("success", false);
+        }
+
+        public long reclaimedBytes() {
+            return purgeResponse.optLong("reclaimedBytes", 0);
+        }
+
+        public long purgedToPosition() {
+            return purgeResponse.optLong("purgedToPosition", -1);
+        }
+    }
+
+    /**
+     * Seed the fixture, grow the cluster log across several snapshot rounds, then purge old log
+     * segments down to the retained snapshot floor and confirm the cluster still serves the fixture.
+     *
+     * <p>The sidecar is co-located with {@code node0} sharing its network and IPC namespace (so the
+     * in-process Archive client can reach node0's archive over its IPC local control channel), and
+     * node0 additionally publishes the sidecar's {@code 7080} port so the purge endpoints are
+     * reachable from the host. Reclamation is only observable once the retained floor sits beyond a
+     * full archive segment, so {@code churnItemsPerRound} / {@code churnItemBytes} must push more
+     * than one segment of log before the oldest retained snapshot - tune them to the image's archive
+     * segment length if a strict reclamation assertion is required.
+     *
+     * @param snapshotRounds     number of snapshot rounds (must exceed {@code retentionCount} for any
+     *                           history to be purgeable).
+     * @param retentionCount     snapshots to retain (sets {@code SNAPSHOT_RETENTION_COUNT}).
+     * @param churnItemsPerRound large items written to the log before each snapshot.
+     * @param churnItemBytes     size of each churn item value, in bytes.
+     * @return the purge measurements and outcome.
+     */
+    public static PurgeOutcome purgeReclaimsDisk(
+            int snapshotRounds, int retentionCount, int churnItemsPerRound, int churnItemBytes)
+            throws IOException, InterruptedException {
+        String hostPath = HOST_ROOT + "/purge-" + UUID.randomUUID();
+        new File(hostPath).mkdirs();
+
+        Network network = Network.newNetwork();
+        GenericContainer<?> node = clusterNode(network, hostPath)
+                .withSharedMemorySize(PURGE_SHM_BYTES)
+                .withCreateContainerCmdModifier(cmd -> cmd.getHostConfig().withIpcMode("shareable"));
+        // Publish the sidecar's 7080 (the sidecar shares node0's network namespace) so the host can
+        // reach the snapshot-info / purge endpoints directly.
+        node.addExposedPort(7080);
+
+        try {
+            node.start();
+            String aeronDir = discoverAeronDir(node);
+            System.out.println("Discovered node0 aeron dir: " + aeronDir);
+
+            try (GenericContainer<?> clustertools = purgeSidecar(node, retentionCount, aeronDir);
+                 GenericContainer<?> http = httpInterface(network).withSharedMemorySize(PURGE_SHM_BYTES)) {
+                clustertools.start();
+                http.start();
+
+                String httpBase = "http://" + http.getHost() + ":" + http.getMappedPort(7070);
+                SnapshotHttp cache = new SnapshotHttp(httpBase);
+                cache.awaitReady(Duration.ofMinutes(2));
+                cache.seed();
+
+                String toolsBase = "http://" + node.getHost() + ":" + node.getMappedPort(7080);
+                ClusterToolsHttp tools = new ClusterToolsHttp(toolsBase);
+                tools.awaitReady(Duration.ofMinutes(1));
+
+                Path recordingLog = Path.of(hostPath, CLUSTER_DIR_IN_DATA, "recording.log");
+                cache.createCache("purge-churn");
+                String churnValue = "x".repeat(churnItemBytes);
+                for (int round = 0; round < snapshotRounds; round++) {
+                    for (int i = 0; i < churnItemsPerRound; i++) {
+                        cache.putItem("purge-churn", "r" + round + "-k" + i, churnValue);
+                    }
+                    long entriesBefore = recordingLogEntries(recordingLog);
+                    cache.triggerSnapshot();
+                    awaitSnapshotPersisted(recordingLog, entriesBefore, Duration.ofMinutes(2));
+                }
+
+                Path archiveDir = Path.of(hostPath, "node0", "archive");
+                long bytesBefore = directorySizeOf(archiveDir);
+                JSONObject purgeResponse = tools.purge();
+                long bytesAfter = directorySizeOf(archiveDir);
+
+                boolean fixtureStillServed;
+                try {
+                    cache.verifyFixture(SnapshotFixture.VERSION);
+                    fixtureStillServed = true;
+                } catch (AssertionError | RuntimeException e) {
+                    fixtureStillServed = false;
+                }
+
+                return new PurgeOutcome(bytesBefore, bytesAfter, purgeResponse, fixtureStillServed);
+            }
+        } finally {
+            node.stop();
+            network.close();
+            deleteRecursively(Path.of(hostPath));
+        }
+    }
+
+    /**
+     * The clustertools sidecar wired for purge: it shares node0's network + IPC namespace (so the
+     * Archive client reaches node0's archive IPC control channel and sees its aeron dir under
+     * {@code /dev/shm}), mounts the same data dir, and is told the archive dir, aeron dir and
+     * retention count.
+     */
+    private static GenericContainer<?> purgeSidecar(GenericContainer<?> node, int retentionCount, String aeronDir) {
+        String ref = "container:" + node.getContainerId();
+        GenericContainer<?> sidecar = new GenericContainer<>(
+                TestContainersEnvironmentFactory.getImageName("aeroncache-http-clustertools"))
+                .withCreateContainerCmdModifier(cmd -> cmd.getHostConfig()
+                        .withNetworkMode(ref)
+                        .withIpcMode(ref))
+                .withFileSystemBind(nodeHostPath(node), DATA_MOUNT, BindMode.READ_WRITE)
+                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
+                .withEnv("CLUSTER_FOLDER", DATA_MOUNT + "/" + CLUSTER_DIR_IN_DATA)
+                .withEnv("ARCHIVE_DIR", DATA_MOUNT + "/node0/archive")
+                .withEnv("SNAPSHOT_RETENTION_COUNT", Integer.toString(retentionCount))
+                .waitingFor(Wait.forLogMessage(".*Listening on.*", 1)
+                        .withStartupTimeout(Duration.ofMinutes(1)));
+        if (aeronDir != null) {
+            sidecar.withEnv("AERON_DIR", aeronDir);
+        }
+        return sidecar;
+    }
+
+    /**
+     * Find node0's aeron media driver directory by locating the driver's {@code cnc.dat} under
+     * {@code /dev/shm} - independent of the derived dir name (user / node-id / {@code -driver}
+     * suffix). Polls briefly because the embedded driver creates the file during node startup.
+     *
+     * @return the aeron directory (parent of {@code cnc.dat}), or null if not found.
+     */
+    private static String discoverAeronDir(GenericContainer<?> node) {
+        long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+        while (System.nanoTime() < deadline) {
+            try {
+                var result = node.execInContainer("sh", "-c",
+                        "f=$(find /dev/shm -maxdepth 2 -name cnc.dat 2>/dev/null | head -1); "
+                                + "[ -n \"$f\" ] && dirname \"$f\"");
+                String out = result.getStdout() == null ? "" : result.getStdout().trim();
+                if (!out.isEmpty()) {
+                    return out;
+                }
+            } catch (IOException e) {
+                // retry until the deadline
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static long directorySizeOf(Path dir) throws IOException {
+        if (!Files.exists(dir)) {
+            return 0L;
+        }
+        try (var paths = Files.walk(dir)) {
+            return paths.filter(Files::isRegularFile).mapToLong(p -> {
+                try {
+                    return Files.size(p);
+                } catch (IOException e) {
+                    return 0L;
+                }
+            }).sum();
+        }
     }
 
     // ---------------------------------------------------------------------------------------------

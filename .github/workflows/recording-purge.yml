@@ -1,0 +1,77 @@
+name: Recording Purge
+
+# Brings up a single-node clustered cache with a co-located clustertools sidecar, grows the Raft log
+# across several snapshot rounds, then purges old log segments down to the retained snapshot floor
+# and asserts (a) disk is actually reclaimed and (b) the live cluster still serves the fixture.
+#
+# This is a heavyweight Testcontainers test: it pushes >128MB of log per round so a whole archive
+# segment can be reclaimed, and the harness gives the node a 2GB /dev/shm so the burst does not wedge
+# the media driver. Run it manually to check it on GitHub-hosted runners; the churn is tunable below.
+on:
+  workflow_dispatch:
+    inputs:
+      snapshotRounds:
+        description: 'Snapshot rounds (must exceed retention)'
+        required: false
+        default: '3'
+      retention:
+        description: 'Snapshots to retain (purge keeps this many newest)'
+        required: false
+        default: '2'
+      churnItemsPerRound:
+        description: 'Large (64KB) items written to the log before each snapshot'
+        required: false
+        default: '2300'
+  pull_request:
+    branches: [ main ]
+    # Only run on PRs that touch the purge feature or something it depends on - this is a heavyweight
+    # Testcontainers test, so it should not run on every unrelated PR.
+    paths:
+      - 'cache-http/http-clustertools/**'
+      - 'cache-integration/clustered/recording-purge-tests/**'
+      - 'cache-integration/integration-common/**'
+      - 'cache-cluster/**'
+      - 'cache-messages-http/**'
+      - '.github/workflows/recording-purge.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Build Backend Images
+        # The purge harness boots node + http and a clustertools sidecar, all from the current build.
+        run: |
+          docker pull eclipse-temurin:25-jre
+          ./gradlew :cache-cluster:jibDockerBuild \
+                    :cache-http:http-server-javalin:jibDockerBuild \
+                    :cache-http:http-clustertools:jibDockerBuild
+
+      - name: Run Recording Purge Test
+        run: |
+          # inputs.* are empty on pull_request events, so fall back to the test's own defaults.
+          ./gradlew --console=plain \
+            :cache-integration:clustered:recording-purge-tests:test \
+            -PskipIntegrationTests=false \
+            -Dsnapshot.purge.snapshotRounds=${{ github.event.inputs.snapshotRounds || '3' }} \
+            -Dsnapshot.purge.retention=${{ github.event.inputs.retention || '2' }} \
+            -Dsnapshot.purge.churnItemsPerRound=${{ github.event.inputs.churnItemsPerRound || '2300' }}
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recording-purge-report
+          path: cache-integration/clustered/recording-purge-tests/build/reports/tests/test
+          if-no-files-found: ignore
