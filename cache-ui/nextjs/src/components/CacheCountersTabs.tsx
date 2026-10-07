@@ -7,6 +7,7 @@ interface CacheCountersTabsProps {
     caches: React.ReactNode
     counters: React.ReactNode
     timers: React.ReactNode
+    snapshot: React.ReactNode
 }
 
 /**
@@ -18,7 +19,7 @@ interface CacheCountersTabsProps {
  */
 export default function CacheCountersTabs(props: CacheCountersTabsProps) {
 
-    const [tab, setTab] = useState<"caches" | "counters" | "timers">("caches")
+    const [tab, setTab] = useState<"caches" | "counters" | "timers" | "snapshot">("caches")
 
     return (
         <div>
@@ -44,6 +45,13 @@ export default function CacheCountersTabs(props: CacheCountersTabsProps) {
                 >
                     Timers
                 </Button>
+                <Button
+                    variant={tab === "snapshot" ? "default" : "outline"}
+                    onClick={() => setTab("snapshot")}
+                    data-testid="snapshot-tab"
+                >
+                    Snapshot
+                </Button>
             </div>
             <div className={tab === "caches" ? "" : "hidden"} data-testid="caches-tab-panel">
                 {props.caches}
@@ -53,6 +61,9 @@ export default function CacheCountersTabs(props: CacheCountersTabsProps) {
             </div>
             <div className={tab === "timers" ? "" : "hidden"} data-testid="timers-tab-panel">
                 {props.timers}
+            </div>
+            <div className={tab === "snapshot" ? "" : "hidden"} data-testid="snapshot-tab-panel">
+                {props.snapshot}
             </div>
         </div>
     );

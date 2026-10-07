@@ -425,6 +425,34 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ClusterToolsResponse'
+  /api/v1/snapshot-and-purge:
+    post:
+      tags:
+        - ClusterTools
+      summary: Snapshot And Purge
+      description: Take a cluster snapshot, wait for it to persist, then purge old log segments to reclaim disk
+      operationId: snapshotAndPurge
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RecordingPurgeResponse'
+  /api/v1/snapshot-info:
+    get:
+      tags:
+        - ClusterTools
+      summary: Snapshot Info
+      description: Latest cluster snapshot info and archive disk usage, for display in the UI
+      operationId: getSnapshotInfo
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/SnapshotInfoResponse'
   /liveness/:
     get:
       tags:
@@ -567,6 +595,53 @@ components:
         exitCode:
           type: integer
           format: int32
+    RecordingPurgeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        logRecordingId:
+          type: integer
+          format: int64
+        purgedToPosition:
+          type: integer
+          format: int64
+        reclaimedBytes:
+          type: integer
+          format: int64
+        archiveDirBytesAfter:
+          type: integer
+          format: int64
+        timestamp:
+          type: integer
+          format: int64
+        message:
+          type: string
+    SnapshotInfoResponse:
+      type: object
+      properties:
+        snapshotPresent:
+          type: boolean
+        logPosition:
+          type: integer
+          format: int64
+        termBaseLogPosition:
+          type: integer
+          format: int64
+        timestamp:
+          type: integer
+          format: int64
+        recordingId:
+          type: integer
+          format: int64
+        snapshotCount:
+          type: integer
+          format: int32
+        archiveDirBytes:
+          type: integer
+          format: int64
+        lastPurge:
+          $ref: '#/components/schemas/RecordingPurgeResponse'
     PutItemRequest:
       type: object
       properties:
