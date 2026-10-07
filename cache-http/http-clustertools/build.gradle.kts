@@ -18,6 +18,10 @@ dependencies {
     implementation(libs.aeron)
     implementation(project(":cache-common"))
     implementation(project(":cache-messages-http"))
+
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.test {
