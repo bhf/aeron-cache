@@ -6,8 +6,6 @@ import {TimersDataTable} from "@/components/timers-summary/TimersTable";
 import CreateCacheRequest from "@/components/CreateCache";
 import CreateCounterCacheRequest from "@/components/CreateCounterCache";
 import CacheCountersTabs from "@/components/CacheCountersTabs";
-import {SnapshotInfo} from "@/components/snapshot-summary/SnapshotInfo";
-import TriggerSnapshot from "@/components/snapshot-summary/TriggerSnapshot";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card"
 import {getCacheAPIURI} from "@/lib/actions";
 import {getLogger} from "@/lib/loggingUtil";
@@ -143,35 +141,6 @@ async function TimersTable() {
     );
 }
 
-/**
- * A component to display the latest cluster snapshot info and archive disk usage.
- * @constructor
- */
-async function SnapshotPanel() {
-
-    const apiUri = await getCacheAPIURI();
-
-    let rawResponse
-    try {
-        rawResponse = await fetch(apiUri + '/snapshot-info', {
-                method: 'GET',
-                headers,
-                cache: "no-cache"
-            },
-        )
-    } catch (err) {
-        logger.warn("Error whilst sending request to get snapshot info ", err);
-        return
-    }
-
-    const content = await rawResponse.json();
-    logger.info("Got response from get snapshot info ", content)
-
-    return (
-        <SnapshotInfo {...content}/>
-    );
-}
-
 const LoadingSkeleton: () => JSX.Element = () => (
     <div className="space-y-2">
         <Skeleton className="h-10 w-full" />
@@ -257,29 +226,6 @@ export default async function Page() {
                                         </Suspense>
                                     </CardContent>
                                 </Card>
-                            </div>
-                        </div>
-                    }
-                    snapshot={
-                        <div>
-                            <div className="pb-6 px-6">
-                                <Card className={"shadow-lg"}>
-                                    <CardHeader>
-                                        <CardTitle>Take Snapshot</CardTitle>
-                                        <CardDescription>
-                                            Take a cluster snapshot, or snapshot and purge old log segments to
-                                            reclaim disk
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <TriggerSnapshot/>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                            <div className="pb-6 px-6">
-                                <Suspense fallback={<LoadingSkeleton/>}>
-                                    <SnapshotPanel/>
-                                </Suspense>
                             </div>
                         </div>
                     }

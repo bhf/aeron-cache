@@ -1,7 +1,7 @@
 import AboutAeronCache from "@/components/About";
 import Link from "next/link";
 import {Button} from "@/components/ui/button";
-import {LayersIcon, KanbanIcon} from "lucide-react";
+import {LayersIcon, KanbanIcon, CameraIcon} from "lucide-react";
 import {getJaegerURL, getPrometheusURL, isUrlAccessible} from "@/lib/actions";
 
 export default async function MenuLinks() {
@@ -26,6 +26,9 @@ export default async function MenuLinks() {
                     <Button variant="link"><KanbanIcon/>Prometheus</Button>
                 </Link>
             )}
+            <Link href="/snapshot" data-testid="menu-link-snapshot">
+                <Button variant="link"><CameraIcon/>Snapshot</Button>
+            </Link>
         </div>
     )
 }
