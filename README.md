@@ -171,9 +171,9 @@ make install-all GHCR=true GHCR_TAG=1.2.3          # a specific release
 
 * [REST OpenAPI](cache-http/openapi.yml)
 * [Streaming Websocket OpenAPI](cache-ws/ws-openapi.yaml)
-* [SSE OpenAPI](cache-sse/sse-openapi.yaml)
+* [Streaming SSE OpenAPI](cache-sse/sse-openapi.yaml)
 * [BiDi Websocket OpenAPI](cache-ws/bidi-ws-openapi.yaml)
-* [Aeron Transport Gateway SBE](cache-aeron-gateway/aeron-gateway-server/src/main/resources/sbe/gateway-schema.xml)
+* [BiDi Aeron Transport Gateway SBE](cache-aeron-gateway/aeron-gateway-server/src/main/resources/sbe/gateway-schema.xml)
 
 
 [Top](#aeron-cache)
