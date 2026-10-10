@@ -79,6 +79,38 @@ Initializing Aeron Cache...
 Press Ctrl+C to stop.
 ```
 
+  #### Configuring the monolith
+
+The brew install runs the monolith (cluster node plus the interfaces below) and the UI. On first run a default config is
+written to ```~/.aeron-cache/backend.env```
+
+| Interface | Variable | Default |
+|-----------|----------|---------|
+| HTTP (REST) and cluster tools | always on | enabled |
+| WebSocket gateway | ```WEBSOCKET_GATEWAY_ENABLED``` | ```true``` |
+| SSE gateway | ```SSE_GATEWAY_ENABLED``` | ```true``` |
+| Aeron (SBE) gateway | ```AERON_GATEWAY_ENABLED``` | ```false``` |
+
+Other options:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| ```GATEWAY_TRANSPORT_MEDIA``` | ```udp``` | Aeron gateway transport, ```udp``` or ```ipc``` (only used when the Aeron gateway is enabled) |
+| ```MONOLITH_EMBEDDED_DRIVER``` | ```true``` | ```true``` launches an embedded media driver; ```false``` attaches to an external ```aeronmd``` already running at ```AERON_DIR``` |
+| ```DYNAMIC_CACHE_CREATION``` | ```false``` | Allow caches to be created dynamically |
+| ```CACHE_MODE``` | ```RAFT``` | Cache mode (set in the generated config) |
+
+For example, to enable the Aeron gateway over IPC and disable SSE, add to ```~/.aeron-cache/backend.env```:
+
+```bash
+AERON_GATEWAY_ENABLED=true
+GATEWAY_TRANSPORT_MEDIA=ipc
+SSE_GATEWAY_ENABLED=false
+```
+
+A disabled gateway is not started, so the matching UI streaming features (WebSocket/SSE) will not connect.
+
+
 [Top](#aeron-cache)
 
 ### K8s and Helm
@@ -92,6 +124,45 @@ make all
 cd k8s/helm/
 make install-all
 ```
+
+All targets below are run from ```k8s/helm/```. Each ```install-*``` target has a matching ```uninstall-*```.
+
+```bash
+make install-backend              # backend only
+make install-frontend             # frontend (UI) only
+make install-backend-ephemeral    # ephemeral backend only
+make install-all-ephemeral        # ephemeral backend + UI
+make uninstall-all                # tear down
+```
+
+Individual components can also be installed on their own, e.g. ```make install-http``` or ```make install-ui```.
+
+#### External media driver
+
+Pass ```EXTERNAL_MEDIA_DRIVER=true``` to any install target to run the Aeron C media driver (```aeronmd```) as a
+sidecar. 
+
+Build the driver image with ```make build-media-driver``` (part of ```make build-backend```).
+
+```bash
+make install-all EXTERNAL_MEDIA_DRIVER=true
+make install-backend EXTERNAL_MEDIA_DRIVER=true
+make install-backend-ephemeral EXTERNAL_MEDIA_DRIVER=true
+```
+
+#### Using images from GHCR
+
+By default the charts use images built into Minikube. Pass ```GHCR=true``` to pull the released images from
+```ghcr.io``` instead (no local build needed).
+
+```bash
+make install-all GHCR=true
+make install-backend-ephemeral GHCR=true EXTERNAL_MEDIA_DRIVER=true
+make install-all GHCR=true GHCR_TAG=1.2.3          # a specific release
+```
+
+
+
 ![img.png](docs/images/k9s-screenshot.png)
 
 [Top](#aeron-cache)
