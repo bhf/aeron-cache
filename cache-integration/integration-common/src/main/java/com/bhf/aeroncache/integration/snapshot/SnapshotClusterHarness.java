@@ -276,15 +276,29 @@ public final class SnapshotClusterHarness {
         if (!Files.exists(dir)) {
             return 0L;
         }
-        try (var paths = Files.walk(dir)) {
-            return paths.filter(Files::isRegularFile).mapToLong(p -> {
-                try {
-                    return Files.size(p);
-                } catch (IOException e) {
-                    return 0L;
+        // The archive is live (segments are created, renamed and purged while we measure), so a plain
+        // Files.walk would throw NoSuchFileException when a file vanishes mid-walk. Skip those instead.
+        long[] total = {0L};
+        Files.walkFileTree(dir, new java.nio.file.SimpleFileVisitor<>() {
+            @Override
+            public java.nio.file.FileVisitResult visitFile(Path file, java.nio.file.attribute.BasicFileAttributes attrs) {
+                if (attrs.isRegularFile()) {
+                    total[0] += attrs.size();
                 }
-            }).sum();
-        }
+                return java.nio.file.FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public java.nio.file.FileVisitResult visitFileFailed(Path file, IOException exc) {
+                return java.nio.file.FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public java.nio.file.FileVisitResult postVisitDirectory(Path d, IOException exc) {
+                return java.nio.file.FileVisitResult.CONTINUE;
+            }
+        });
+        return total[0];
     }
 
     // ---------------------------------------------------------------------------------------------
