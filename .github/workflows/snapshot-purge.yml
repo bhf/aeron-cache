@@ -1,4 +1,4 @@
-name: Recording Purge
+name: Soak Snapshot Purge
 
 # Brings up a single-node clustered cache with a co-located clustertools sidecar, grows the Raft log
 # across several snapshot rounds, then purges old log segments down to the retained snapshot floor
@@ -32,7 +32,7 @@ on:
       - 'cache-integration/integration-common/**'
       - 'cache-cluster/**'
       - 'cache-messages-http/**'
-      - '.github/workflows/recording-purge.yml'
+      - '.github/workflows/snapshot-purge.yml'
 
 permissions:
   contents: read
