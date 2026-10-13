@@ -73,6 +73,9 @@ import java.util.function.Consumer;
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class BidiWsRouteHandler {
 
+    /** Jetty defaults to 64KB; bulk and large value frames need more headroom. */
+    private static final long MAX_MESSAGE_SIZE_BYTES = 16L * 1024 * 1024;
+
     private final CacheSubscriptionRequestPublisher cacheSubs;
     private final CacheSubscriptionRequestPublisher countersSubs;
     private final BidiMessageCodec codec = new BidiMessageCodec();
@@ -97,6 +100,9 @@ public class BidiWsRouteHandler {
     }
 
     private void onConnect(WsConnectContext ctx) {
+        ctx.session.setMaxTextMessageSize(MAX_MESSAGE_SIZE_BYTES);
+        ctx.session.setMaxBinaryMessageSize(MAX_MESSAGE_SIZE_BYTES);
+        ctx.session.setMaxFrameSize(MAX_MESSAGE_SIZE_BYTES);
         ctx.enableAutomaticPings();
         sessions.put(ctx.sessionId(), new BidiSession(ctx));
         log.info("BIDI websocket connected, sessionId: {}", ctx.sessionId());
