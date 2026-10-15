@@ -53,7 +53,7 @@ https://github.com/user-attachments/assets/cdbf0e54-2ff8-47c4-8a98-50a8104de6fd
 
 ### Brew
 ```bash
-brew tap bhf/aeron-cache
+brew tap bhf/aeroncache
 brew install aeron-cache
 aeron-cache
 ```
