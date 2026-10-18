@@ -49,4 +49,28 @@ public interface CacheTracingService {
     void startBulkOpsRequest(BulkCacheOpsRequestDetails requestDetails);
 
     void endBulkOpsRequest(BulkCacheOpsRequestDetails requestDetails);
+
+    void startPatchValue(PatchValueRequestDetails requestDetails);
+
+    void endPatchValue(PatchValueRequestDetails requestDetails);
+
+    void startCancelItemRemoval(CancelItemRemovalRequestDetails requestDetails);
+
+    void endCancelItemRemoval(CancelItemRemovalRequestDetails requestDetails);
+
+    void startGetAllTimersRequest(GetAllTimersRequestDetails requestDetails);
+
+    void endGetAllTimersRequest(GetAllTimersRequestDetails requestDetails);
+
+    void startIncrementCounterRequest(IncrementCounterRequestDetails requestDetails);
+
+    void endIncrementCounterRequest(IncrementCounterRequestDetails requestDetails);
+
+    void startDecrementCounterRequest(DecrementCounterRequestDetails requestDetails);
+
+    void endDecrementCounterRequest(DecrementCounterRequestDetails requestDetails);
+
+    void startSetCounterRequest(SetCounterRequestDetails requestDetails);
+
+    void endSetCounterRequest(SetCounterRequestDetails requestDetails);
 }

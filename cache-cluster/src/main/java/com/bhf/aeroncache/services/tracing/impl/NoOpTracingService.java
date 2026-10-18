@@ -1,6 +1,5 @@
 package com.bhf.aeroncache.services.tracing.impl;
 
-import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 
@@ -115,6 +114,66 @@ public class NoOpTracingService implements CacheTracingService {
 
     @Override
     public void endBulkOpsRequest(BulkCacheOpsRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void startPatchValue(PatchValueRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void endPatchValue(PatchValueRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void startCancelItemRemoval(CancelItemRemovalRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void endCancelItemRemoval(CancelItemRemovalRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void startGetAllTimersRequest(GetAllTimersRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void endGetAllTimersRequest(GetAllTimersRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void startIncrementCounterRequest(IncrementCounterRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void endIncrementCounterRequest(IncrementCounterRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void startDecrementCounterRequest(DecrementCounterRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void endDecrementCounterRequest(DecrementCounterRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void startSetCounterRequest(SetCounterRequestDetails requestDetails) {
+
+    }
+
+    @Override
+    public void endSetCounterRequest(SetCounterRequestDetails requestDetails) {
 
     }
 }

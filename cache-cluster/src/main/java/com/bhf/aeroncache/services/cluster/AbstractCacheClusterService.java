@@ -348,6 +348,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
                                          CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService,
                                          CountersCacheManager<I, K, ReusableLong> countersCacheManager) {
         countersRequestDecoder.decodeSetCounterRequest(buffer, offset, setCounterRequestDetails);
+        tracingService.startSetCounterRequest(setCounterRequestDetails);
         I cacheId = setCounterRequestDetails.getCacheId();
         K counterId = setCounterRequestDetails.getCounterId();
         long counterValue = setCounterRequestDetails.getCounterValue();
@@ -355,6 +356,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         var result = processSetCounter(cacheId, counterId, counterValue, requestId, countersCacheManager);
         log.info("Result for set counter, cacheId: {}, counterId: {}, status: {}, counterValue: {}", cacheId, counterId, result.getStatus(), result.getCounterValue());
         handlePostSetCounter(cacheId, result, session, countersResponseEncoder, countersSubscriptionService);
+        tracingService.endSetCounterRequest(setCounterRequestDetails);
     }
 
     private SetCounterResult<I, K> processSetCounter(I cacheId, K counterId, long counterValue, String requestId,
@@ -395,6 +397,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
                                                CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService,
                                                CountersCacheManager<I, K, ReusableLong> countersCacheManager) {
         countersRequestDecoder.decodeDecrementCounterRequest(buffer, offset, decrementCounterRequestDetails);
+        tracingService.startDecrementCounterRequest(decrementCounterRequestDetails);
         I cacheId = decrementCounterRequestDetails.getCacheId();
         K counterId = decrementCounterRequestDetails.getCounterId();
         long amount = decrementCounterRequestDetails.getAmount();
@@ -402,6 +405,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         var result = processDecrementCounter(cacheId, counterId, amount, requestId, countersCacheManager);
         log.info("Result for decrement counter, cacheId: {}, counterId: {}, status: {}, counterValue: {}", cacheId, counterId, result.getStatus(), result.getCounterValue());
         handlePostDecrementCounter(cacheId, result, session, countersResponseEncoder, countersSubscriptionService);
+        tracingService.endDecrementCounterRequest(decrementCounterRequestDetails);
     }
 
     private DecrementCounterResult<I, K> processDecrementCounter(I cacheId, K counterId, long amount, String requestId,
@@ -442,6 +446,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
                                                CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService,
                                                CountersCacheManager<I, K, ReusableLong> countersCacheManager) {
         countersRequestDecoder.decodeIncrementCounterRequest(buffer, offset, incrementCounterRequestDetails);
+        tracingService.startIncrementCounterRequest(incrementCounterRequestDetails);
         I cacheId = incrementCounterRequestDetails.getCacheId();
         K counterId = incrementCounterRequestDetails.getCounterId();
         long amount = incrementCounterRequestDetails.getAmount();
@@ -449,6 +454,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         var result = processIncrementCounter(cacheId, counterId, amount, requestId, countersCacheManager);
         log.info("Result for increment counter, cacheId: {}, counterId: {}, status: {}, counterValue: {}", cacheId, counterId, result.getStatus(), result.getCounterValue());
         handlePostIncrementCounter(cacheId, result, session, countersResponseEncoder, countersSubscriptionService);
+        tracingService.endIncrementCounterRequest(incrementCounterRequestDetails);
     }
 
     private IncrementCounterResult<I, K> processIncrementCounter(I cacheId, K counterId, long amount, String requestId,
@@ -551,12 +557,14 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
     <VT extends Reusable> void handleCancelItemRemoval(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, VT> responseEncoder, CacheTimerService<I, K> timerService) {
         decoder.decodeCancelItemRemovalRequest(buffer, offset, cancelItemRemovalRequestDetails);
+        tracingService.startCancelItemRemoval(cancelItemRemovalRequestDetails);
         I cacheId = cancelItemRemovalRequestDetails.getCacheId();
         K key = cancelItemRemovalRequestDetails.getKey();
         var requestId = cancelItemRemovalRequestDetails.getRequestId();
         var result = processCancelItemRemoval(cacheId, key, requestId, timerService);
         var length = responseEncoder.encodeItemRemovalCancelled(cacheId, key, result, egressBuffer);
         sendMessage(session, egressBuffer, length);
+        tracingService.endCancelItemRemoval(cancelItemRemovalRequestDetails);
     }
 
     private CancelItemRemovalResult<I, K> processCancelItemRemoval(I cacheId, K key, String requestId, CacheTimerService<I, K> timerService) {
@@ -582,12 +590,14 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      */
     <VT extends Reusable> void handlePatchValue(ClientSession session, DirectBuffer buffer, int offset, CacheRequestDecoder<I, K, VT> decoder, CacheResponseEncoder<I, K, VT> responseEncoder, PatchValueRequestDetails<I, K, VT> patchValueRequestDetails, CacheManager<I, K, VT> cacheManager, CacheSubscriptionService<I, K, VT> subscriptionService, CacheSubscriptionService<I, K, VT> patchSubscriptionService) {
         var requestDetails = getPatchValueRequestDetails(session, buffer, offset, decoder, patchValueRequestDetails);
+        tracingService.startPatchValue(requestDetails);
         I cacheId = requestDetails.getCacheId();
         K key = requestDetails.getKey();
         VT patch = requestDetails.getValue();
         var requestId = requestDetails.getRequestId();
         var patchValueResult = processPatchValue(cacheId, key, patch, requestId, cacheManager);
         handlePostPatchValue(cacheId, key, patch, patchValueResult, session, responseEncoder, subscriptionService, patchSubscriptionService);
+        tracingService.endPatchValue(requestDetails);
     }
 
     private <VT extends Reusable> PatchValueResult<I, K, VT> processPatchValue(I cacheId, K key, VT patch, String requestId, CacheManager<I, K, VT> cacheManager) {
@@ -790,6 +800,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
      */
     void handleGetAllTimers(ClientSession session, DirectBuffer buffer, int offset) {
         decoder.decodeGetAllTimersRequest(buffer, offset, getAllTimersRequestDetails);
+        tracingService.startGetAllTimersRequest(getAllTimersRequestDetails);
         var requestId = getAllTimersRequestDetails.getRequestId();
         log.info("Got request for all timers, request Id: {}", requestId);
 
@@ -805,6 +816,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         encoder.encodeAllTimersResult(allTimersResult, egressBuffer, responseConsumer);
 
         returnTimerDetailsToPool();
+        tracingService.endGetAllTimersRequest(getAllTimersRequestDetails);
     }
 
     private void returnTimerDetailsToPool() {
