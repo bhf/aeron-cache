@@ -222,4 +222,100 @@ public class OtelTracingService implements CacheTracingService {
     public void endBulkOpsRequest(BulkCacheOpsRequestDetails requestDetails) {
 
     }
+
+    @Override
+    public void startPatchValue(PatchValueRequestDetails requestDetails) {
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
+        log.info("PatchValue SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
+        Span spanNoOp = Span.wrap(spanContext);
+        Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
+        Span span = tracer.spanBuilder("patchValueRequest").setParent(Context.current().with(spanNoOp)).startSpan();
+        span.setAttribute("nodeId", nodeId);
+        span.makeCurrent();
+    }
+
+    @Override
+    public void endPatchValue(PatchValueRequestDetails requestDetails) {
+        Span.current().end();
+    }
+
+    @Override
+    public void startCancelItemRemoval(CancelItemRemovalRequestDetails requestDetails) {
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
+        log.info("CancelItemRemoval SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
+        Span spanNoOp = Span.wrap(spanContext);
+        Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
+        Span span = tracer.spanBuilder("cancelItemRemovalRequest").setParent(Context.current().with(spanNoOp)).startSpan();
+        span.setAttribute("nodeId", nodeId);
+        span.makeCurrent();
+    }
+
+    @Override
+    public void endCancelItemRemoval(CancelItemRemovalRequestDetails requestDetails) {
+        Span.current().end();
+    }
+
+    @Override
+    public void startGetAllTimersRequest(GetAllTimersRequestDetails requestDetails) {
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
+        log.info("GetAllTimers SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
+        Span spanNoOp = Span.wrap(spanContext);
+        Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
+        Span span = tracer.spanBuilder("getAllTimersRequest").setParent(Context.current().with(spanNoOp)).startSpan();
+        span.setAttribute("nodeId", nodeId);
+        span.makeCurrent();
+    }
+
+    @Override
+    public void endGetAllTimersRequest(GetAllTimersRequestDetails requestDetails) {
+        Span.current().end();
+    }
+
+    @Override
+    public void startIncrementCounterRequest(IncrementCounterRequestDetails requestDetails) {
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
+        log.info("IncrementCounter SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
+        Span spanNoOp = Span.wrap(spanContext);
+        Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
+        Span span = tracer.spanBuilder("incrementCounterRequest").setParent(Context.current().with(spanNoOp)).startSpan();
+        span.setAttribute("nodeId", nodeId);
+        span.makeCurrent();
+    }
+
+    @Override
+    public void endIncrementCounterRequest(IncrementCounterRequestDetails requestDetails) {
+        Span.current().end();
+    }
+
+    @Override
+    public void startDecrementCounterRequest(DecrementCounterRequestDetails requestDetails) {
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
+        log.info("DecrementCounter SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
+        Span spanNoOp = Span.wrap(spanContext);
+        Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
+        Span span = tracer.spanBuilder("decrementCounterRequest").setParent(Context.current().with(spanNoOp)).startSpan();
+        span.setAttribute("nodeId", nodeId);
+        span.makeCurrent();
+    }
+
+    @Override
+    public void endDecrementCounterRequest(DecrementCounterRequestDetails requestDetails) {
+        Span.current().end();
+    }
+
+    @Override
+    public void startSetCounterRequest(SetCounterRequestDetails requestDetails) {
+        SpanContext spanContext = getSpanContext(requestDetails.getRequestId());
+        log.info("SetCounter SpanContext with traceId {} spanId {} ", spanContext.getTraceId(), spanContext.getSpanId());
+        Span spanNoOp = Span.wrap(spanContext);
+        Tracer tracer = tracerProvider.get("aeron-cache-cluster-tracer");
+        Span span = tracer.spanBuilder("setCounterRequest").setParent(Context.current().with(spanNoOp)).startSpan();
+        span.setAttribute("nodeId", nodeId);
+        span.makeCurrent();
+    }
+
+    @Override
+    public void endSetCounterRequest(SetCounterRequestDetails requestDetails) {
+        Span.current().end();
+    }
 }
