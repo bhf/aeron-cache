@@ -5,7 +5,7 @@ import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
-import com.bhf.aeroncache.services.tracing.impl.NoOpTracingService;
+import com.bhf.aeroncache.services.tracing.impl.AeronCounterTracingService;
 import com.bhf.aeroncache.services.tracing.impl.OtelTracingService;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
@@ -250,7 +250,7 @@ public class CacheNodeApplication {
                 .idleStrategySupplier(CacheNodeIdleStrategies.consensusModuleIdleStrategy);
 
         final var cacheManagerFactory = getCacheManagerFactory();
-        final var cacheService = getSbeDecodingCacheClusterService(nodeId, cacheManagerFactory, dynamicCacheCreation);
+        final var cacheService = getSbeDecodingCacheClusterService(nodeId, aeronDirName, cacheManagerFactory, dynamicCacheCreation);
 
         final ClusteredServiceContainer.Context clusteredServiceContext =
                 new ClusteredServiceContainer.Context()
@@ -301,8 +301,8 @@ public class CacheNodeApplication {
     }
 
     private static SBEDecodingCacheClusterService<Reusable<?>, Reusable<?>, Reusable<?>> getSbeDecodingCacheClusterService(
-            int nodeId, CacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> cacheManagerFactory, boolean dynamicCacheCreation) {
-        return new SBEDecodingCacheClusterService<>(String.valueOf(nodeId), getTracingService(nodeId), cacheManagerFactory, dynamicCacheCreation);
+            int nodeId, String aeronDirName, CacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> cacheManagerFactory, boolean dynamicCacheCreation) {
+        return new SBEDecodingCacheClusterService<>(String.valueOf(nodeId), getTracingService(nodeId, aeronDirName), cacheManagerFactory, dynamicCacheCreation);
     }
 
     private static CacheManagerFactory getCacheManagerFactory() {
@@ -316,7 +316,7 @@ public class CacheNodeApplication {
         }
     }
 
-    private static CacheTracingService getTracingService(int nodeId) {
+    private static CacheTracingService getTracingService(int nodeId, String aeronDirName) {
         String tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
         String jaegerExporter = System.getenv("OTEL_EXPORTER_OTLP_ENDPOINT");
 
@@ -325,7 +325,8 @@ public class CacheNodeApplication {
             return new OtelTracingService(jaegerExporter, tracingServiceName, String.valueOf(nodeId));
         }
 
-        return new NoOpTracingService();
+        System.out.println("Aeron Cache request counting is enabled using Aeron media driver counters");
+        return new AeronCounterTracingService(aeronDirName, String.valueOf(nodeId));
     }
 
 }
