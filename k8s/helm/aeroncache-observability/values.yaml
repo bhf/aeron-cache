@@ -1,14 +1,21 @@
 # Observability stack (Prometheus + Grafana) for the aeroncache interface apps.
 #
-# This chart is the scrape/visualisation half of the optional metrics feature. The *producing*
-# half lives in the interface charts (aeroncache-http/-ws/-sse/-http-near): enable it per app with
-# `javaagent.enabled=true`, which activates the bundled OpenTelemetry Java agent and makes it serve
-# a Prometheus endpoint, annotating the pod with prometheus.io/scrape. Prometheus below discovers
-# those annotated pods automatically, so no per-app target config is needed here.
+# This chart is the scrape/visualisation half of the metrics feature. The *producing* half lives in
+# the application charts, and there are two producers:
+#   - Interface charts (aeroncache-http/-ws/-sse/-http-near): enable per app with
+#     `javaagent.enabled=true`, which activates the bundled OpenTelemetry Java agent, serves a
+#     Prometheus endpoint and annotates the pod with prometheus.io/scrape.
+#   - Cache/gateway charts (aeroncache-cluster/-ephemeral/-gateway): their clustertools sidecar
+#     exports the shared Aeron media driver counters (media driver + cache type 2000 + gateway type
+#     2100) on /prometheus, and the pods carry prometheus.io/scrape by default (no flag needed).
+# Prometheus below discovers all annotated pods automatically, so no per-app target config is needed
+# here. The pre-provisioned Grafana dashboards cover the interface apps, the transport gateway, the
+# cache service and the raw media driver counters.
 #
 # From the Makefiles:
 #   make install-observability                 # deploy Prometheus + Grafana
-#   make install-backend JAVAAGENT=true        # (re)deploy the apps with the agent on
+#   make install-cluster | install-ephemeral | install-gateway   # scraped automatically
+#   make install-backend JAVAAGENT=true        # (re)deploy the interface apps with the agent on
 
 # Override the generated resource name stem. With "aeroncache" the resources are named
 # aeroncache-prometheus / aeroncache-grafana (matching the old docker-compose service names).

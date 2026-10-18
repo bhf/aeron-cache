@@ -90,3 +90,272 @@ data:
         }
       ]
     }
+  # Aeron transport gateway dashboard, built on the gateway metrics counters (Aeron counter type 2100)
+  # exported in Prometheus format by the clustertools sidecar on each gateway pod.
+  aeron-gateway.json: |
+    {
+      "title": "Aeron Cache - Transport Gateway",
+      "uid": "aeron-gateway",
+      "schemaVersion": 39,
+      "editable": true,
+      "time": { "from": "now-30m", "to": "now" },
+      "refresh": "10s",
+      "templating": {
+        "list": [
+          { "name": "datasource", "type": "datasource", "query": "prometheus", "hide": 0, "current": {} }
+        ]
+      },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Connected sessions",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "targets": [ { "expr": "sum(aeron_gateway_sessions_connected)", "legendFormat": "connected" } ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null } ] } } }
+        },
+        {
+          "type": "stat",
+          "title": "Sessions since start",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "targets": [ { "expr": "sum(aeron_gateway_sessions_total)", "legendFormat": "total" } ]
+        },
+        {
+          "type": "stat",
+          "title": "Request rate",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "reqps" } },
+          "targets": [ { "expr": "sum(rate(aeron_gateway_requests_total[1m]))", "legendFormat": "requests" } ]
+        },
+        {
+          "type": "stat",
+          "title": "Stream update rate",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "ops" } },
+          "targets": [ { "expr": "sum(rate(aeron_gateway_stream_updates_published_total[1m]))", "legendFormat": "updates" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Request rate by type",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 4 },
+          "fieldConfig": { "defaults": { "unit": "reqps" } },
+          "targets": [ { "expr": "sum by (type) (rate(aeron_gateway_requests_total[1m]))", "legendFormat": "{{`{{type}}`}}" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Connected sessions over time",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 4 },
+          "targets": [ { "expr": "sum by (pod) (aeron_gateway_sessions_connected)", "legendFormat": "{{`{{pod}}`}}" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Stream updates published rate",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+          "fieldConfig": { "defaults": { "unit": "ops" } },
+          "targets": [ { "expr": "sum by (pod) (rate(aeron_gateway_stream_updates_published_total[1m]))", "legendFormat": "{{`{{pod}}`}}" } ]
+        },
+        {
+          "type": "bargauge",
+          "title": "Total requests by type",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+          "options": { "orientation": "horizontal", "displayMode": "gradient" },
+          "targets": [ { "expr": "sum by (type) (aeron_gateway_requests_total)", "legendFormat": "{{`{{type}}`}}", "instant": true } ]
+        }
+      ]
+    }
+  # Cache service dashboard, built on the cache request counters (Aeron counter type 2000) exported in
+  # Prometheus format by the clustertools sidecar. Works for both the clustered cache (one series per
+  # node pod) and the ephemeral cache (a single pod); series are broken down by pod so the two never
+  # collide even when deployed side by side.
+  aeron-cache-service.json: |
+    {
+      "title": "Aeron Cache - Cache Service",
+      "uid": "aeron-cache-service",
+      "schemaVersion": 39,
+      "editable": true,
+      "time": { "from": "now-30m", "to": "now" },
+      "refresh": "10s",
+      "templating": {
+        "list": [
+          { "name": "datasource", "type": "datasource", "query": "prometheus", "hide": 0, "current": {} }
+        ]
+      },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Total request rate",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "reqps" } },
+          "targets": [ { "expr": "sum(rate(aeron_cache_requests_total[1m]))", "legendFormat": "requests" } ]
+        },
+        {
+          "type": "stat",
+          "title": "Cache nodes reporting",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "targets": [ { "expr": "count(group by (pod) (aeron_cache_requests_total))", "legendFormat": "nodes" } ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } }
+        },
+        {
+          "type": "stat",
+          "title": "Requests counted (all ops)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
+          "targets": [ { "expr": "sum(aeron_cache_requests_total)", "legendFormat": "total" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Request rate by operation",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 4 },
+          "fieldConfig": { "defaults": { "unit": "reqps" } },
+          "targets": [ { "expr": "sum by (operation) (rate(aeron_cache_requests_total[1m]))", "legendFormat": "{{`{{operation}}`}}" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Request rate by node",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 4 },
+          "fieldConfig": { "defaults": { "unit": "reqps" } },
+          "targets": [ { "expr": "sum by (pod) (rate(aeron_cache_requests_total[1m]))", "legendFormat": "{{`{{pod}}`}}" } ]
+        },
+        {
+          "type": "bargauge",
+          "title": "Requests by operation (cumulative)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 10, "w": 12, "x": 0, "y": 13 },
+          "options": { "orientation": "horizontal", "displayMode": "gradient" },
+          "targets": [ { "expr": "sum by (operation) (aeron_cache_requests_total)", "legendFormat": "{{`{{operation}}`}}", "instant": true } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Operation mix per node (rate)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 10, "w": 12, "x": 12, "y": 13 },
+          "fieldConfig": { "defaults": { "unit": "reqps" } },
+          "targets": [ { "expr": "sum by (pod, operation) (rate(aeron_cache_requests_total[1m]))", "legendFormat": "{{`{{pod}}`}} {{`{{operation}}`}}" } ]
+        }
+      ]
+    }
+  # General Aeron transport / media driver dashboard, built on the raw aeron_counter export (every
+  # allocated media driver counter from the CnC file) exported by the clustertools sidecar. This is
+  # deployment agnostic: it shows whatever the co-located media driver publishes, whether the pod is a
+  # cluster node, an ephemeral cache or the gateway. The table lists every counter for ad-hoc browsing.
+  aeron-transport.json: |
+    {
+      "title": "Aeron Cache - Transport / Media Driver",
+      "uid": "aeron-transport",
+      "schemaVersion": 39,
+      "editable": true,
+      "time": { "from": "now-30m", "to": "now" },
+      "refresh": "10s",
+      "templating": {
+        "list": [
+          { "name": "datasource", "type": "datasource", "query": "prometheus", "hide": 0, "current": {} }
+        ]
+      },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Drivers reporting",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+          "targets": [ { "expr": "count(group by (pod) (aeron_counter))", "legendFormat": "drivers" } ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } }
+        },
+        {
+          "type": "stat",
+          "title": "Driver errors",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+          "targets": [ { "expr": "sum(aeron_counter{label=\"Errors\"})", "legendFormat": "errors" } ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } } }
+        },
+        {
+          "type": "stat",
+          "title": "Short sends",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+          "targets": [ { "expr": "sum(aeron_counter{label=\"Short sends\"})", "legendFormat": "short sends" } ]
+        },
+        {
+          "type": "stat",
+          "title": "Bytes sent rate",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "Bps" } },
+          "targets": [ { "expr": "sum(rate(aeron_counter{label=\"Bytes sent\"}[1m]))", "legendFormat": "sent" } ]
+        },
+        {
+          "type": "stat",
+          "title": "Bytes received rate",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "Bps" } },
+          "targets": [ { "expr": "sum(rate(aeron_counter{label=\"Bytes received\"}[1m]))", "legendFormat": "received" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Throughput (bytes/sec)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "fieldConfig": { "defaults": { "unit": "Bps" } },
+          "targets": [
+            { "expr": "sum by (pod) (rate(aeron_counter{label=\"Bytes sent\"}[1m]))", "legendFormat": "{{`{{pod}}`}} sent" },
+            { "expr": "sum by (pod) (rate(aeron_counter{label=\"Bytes received\"}[1m]))", "legendFormat": "{{`{{pod}}`}} received" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Loss & retransmits (per sec)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "targets": [
+            { "expr": "sum(rate(aeron_counter{label=\"NAKs sent\"}[1m]))", "legendFormat": "NAKs sent" },
+            { "expr": "sum(rate(aeron_counter{label=\"NAKs received\"}[1m]))", "legendFormat": "NAKs received" },
+            { "expr": "sum(rate(aeron_counter{label=\"Retransmits sent\"}[1m]))", "legendFormat": "retransmits" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Flow control events (per sec)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "targets": [
+            { "expr": "sum by (label) (rate(aeron_counter{label=~\"Flow control.*\"}[1m]))", "legendFormat": "{{`{{label}}`}}" },
+            { "expr": "sum(rate(aeron_counter{label=\"Sender flow control limits applied\"}[1m]))", "legendFormat": "sender limits applied" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Protocol messages (per sec)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "targets": [
+            { "expr": "sum(rate(aeron_counter{label=\"Status Messages sent\"}[1m]))", "legendFormat": "SM sent" },
+            { "expr": "sum(rate(aeron_counter{label=\"Status Messages received\"}[1m]))", "legendFormat": "SM received" },
+            { "expr": "sum(rate(aeron_counter{label=\"Heartbeats sent\"}[1m]))", "legendFormat": "heartbeats sent" },
+            { "expr": "sum(rate(aeron_counter{label=\"Heartbeats received\"}[1m]))", "legendFormat": "heartbeats received" }
+          ]
+        },
+        {
+          "type": "table",
+          "title": "All media driver counters",
+          "description": "Every counter the co-located media driver publishes. Filter by pod/label to explore cluster, consensus and transport counters.",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 20 },
+          "targets": [ { "expr": "aeron_counter", "format": "table", "instant": true } ],
+          "transformations": [
+            { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "job": true, "namespace": true, "counter_id": true, "instance": true }, "renameByName": { "Value": "value", "type_id": "type" } } }
+          ]
+        }
+      ]
+    }

@@ -2,6 +2,7 @@ package com.bhf.aeroncache.clustertools.application;
 
 import com.bhf.aeroncache.clustertools.archive.RecordingPurger;
 import com.bhf.aeroncache.clustertools.config.ClusterToolsConfig;
+import com.bhf.aeroncache.clustertools.counters.AeronCountersPrometheusFormatter;
 import com.bhf.aeroncache.clustertools.counters.AeronCountersReader;
 import com.bhf.aeroncache.clustertools.process.ClusterToolProcessRunner;
 import com.bhf.aeroncache.clustertools.schedule.SnapshotScheduler;
@@ -92,7 +93,7 @@ public class ClusterToolsHTTPApplication {
                 .get(COUNTERS, ClusterToolsHTTPApplication::handleGetCounters)
                 .get(LIVENESS, ClusterToolsHTTPApplication::handleGetLiveness)
                 .get(READINESS, ClusterToolsHTTPApplication::handleGetReadiness)
-                .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
+                .get("/prometheus", ctx -> handleGetPrometheus(ctx, registry))
                 .start(PORT);
     }
 
@@ -172,6 +173,32 @@ public class ClusterToolsHTTPApplication {
             ctx.status(503).result(
                     "Could not read Aeron media driver counters from " + aeronDirectoryName + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * Serve metrics in Prometheus text exposition format: the clustertools JVM metrics from the
+     * Micrometer registry, followed by a best-effort scrape of the co-located Aeron media driver's
+     * counters (publications, flow control, errors, plus the cache and gateway application counters).
+     *
+     * <p>Exposing both on one endpoint lets a single Prometheus target per pod capture everything the
+     * media driver publishes. If the driver cannot be read (for example it has not started yet) the
+     * JVM metrics are still served and the Aeron counters are simply omitted from this scrape, so the
+     * target never flaps between up and down just because the driver is briefly unavailable.
+     *
+     * @param ctx      The Javalin context.
+     * @param registry The Micrometer registry holding the JVM metrics.
+     */
+    private static void handleGetPrometheus(Context ctx, PrometheusMeterRegistry registry) {
+        final StringBuilder body = new StringBuilder(registry.scrape());
+        final String aeronDirectoryName = COUNTERS_READER.aeronDirectoryName();
+        try {
+            body.append(AeronCountersPrometheusFormatter.format(
+                    AeronCountersReader.read(aeronDirectoryName)));
+        } catch (Exception e) {
+            log.warn("Omitting Aeron media driver counters from /prometheus, could not read {}: {}",
+                    aeronDirectoryName, e.getMessage());
+        }
+        ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(body.toString());
     }
 
     /**
