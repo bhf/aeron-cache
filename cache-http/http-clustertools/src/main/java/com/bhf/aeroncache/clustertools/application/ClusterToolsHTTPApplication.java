@@ -148,20 +148,29 @@ public class ClusterToolsHTTPApplication {
     /**
      * Scrape the co-located Aeron media driver's counters and return them as JSON.
      *
-     * <p>These are the media driver's own counters, not the cache counters. A failure to read the
-     * driver's CnC file (for example because the driver is not running or the aeron directory is
-     * misconfigured) is reported as a 503, since the upstream being scraped is unavailable.
+     * <p>These are the media driver's own counters, not the cache counters. The media driver
+     * directory is the configured {@code AERON_DIR} (falling back to the Aeron default), but can be
+     * overridden per request with a {@code ?dir=} query parameter - useful when the co-located node
+     * runs an embedded driver under a derived directory (for example
+     * {@code /dev/shm/aeron-root-0-driver}) rather than a fixed external driver directory.
+     *
+     * <p>A failure to read the driver's CnC file (for example because the driver is not running or
+     * the directory is wrong) is reported as a 503, since the upstream being scraped is unavailable.
      *
      * @param ctx The Javalin context.
      */
     private static void handleGetCounters(Context ctx) {
+        final String dirOverride = ctx.queryParam("dir");
+        final String aeronDirectoryName = (dirOverride != null && !dirOverride.isBlank())
+                ? dirOverride.trim()
+                : COUNTERS_READER.aeronDirectoryName();
         try {
             ctx.status(200);
-            ctx.json(COUNTERS_READER.read());
+            ctx.json(AeronCountersReader.read(aeronDirectoryName));
         } catch (Exception e) {
-            log.error("Failed to scrape Aeron media driver counters from {}",
-                    COUNTERS_READER.aeronDirectoryName(), e);
-            ctx.status(503).result("Could not read Aeron media driver counters: " + e.getMessage());
+            log.error("Failed to scrape Aeron media driver counters from {}", aeronDirectoryName, e);
+            ctx.status(503).result(
+                    "Could not read Aeron media driver counters from " + aeronDirectoryName + ": " + e.getMessage());
         }
     }
 

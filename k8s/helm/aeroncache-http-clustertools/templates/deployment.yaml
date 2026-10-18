@@ -47,6 +47,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            {{- if .Values.aeronDir }}
+            - name: AERON_DIR
+              value: {{ .Values.aeronDir | quote }}
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ .Values.aeroncacheHTTPConfigmap }}

@@ -4,6 +4,13 @@ replicaCount: 1
 # Set the configmap to use for the cluster config
 aeroncacheHTTPConfigmap: aeroncache-http-clustertools-config
 
+# Aeron media driver directory the `counters` endpoint scrapes (the directory containing cnc.dat),
+# exposed as the AERON_DIR env var. Leave empty to use the Aeron default; it can always be overridden
+# per request with `?dir=`. For scraping to work this container must see the media driver's directory
+# on disk - mount the driver's /dev/shm (e.g. a shared volume or hostPath) rather than this chart's
+# own empty shm volume.
+aeronDir: ""
+
 # Comma separated list of allowed CORS origins for the web facing interface. Leave blank to fall
 # back to the application default (localhost dev origins).
 corsAllowedOrigins: "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost"

@@ -76,10 +76,18 @@ Clustertools container
     - "/bin/bash"
     - "-c"
     - |
+      CLUSTER_NODE=${POD_NAME##*-}
       if [ -n "$CACHE_DATA_DIR_BASE" ]; then
-        CLUSTER_NODE=${POD_NAME##*-}
         export CACHE_DATA_DIR="${CACHE_DATA_DIR_BASE}/node${CLUSTER_NODE}/cluster"
       fi
+      {{- if .Values.externalMediaDriver.enabled }}
+      # External driver: the node and driver share this fixed Aeron directory.
+      export AERON_DIR="{{ .Values.externalMediaDriver.aeronDir }}"
+      {{- else }}
+      # Embedded driver: CacheNodeApplication derives its dir as
+      # <Aeron default>-<nodeId>-driver, i.e. /dev/shm/aeron-<user>-<nodeId>-driver.
+      export AERON_DIR="/dev/shm/aeron-$(id -un)-${CLUSTER_NODE}-driver"
+      {{- end }}
       exec java --enable-preview --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED {{ if .Values.externalMediaDriver.enabled }}-Daeron.dir={{ .Values.externalMediaDriver.aeronDir }} {{ end }}-cp @/app/jib-classpath-file com.bhf.aeroncache.clustertools.application.ClusterToolsHTTPApplication
   env:
     - name: POD_NAME
