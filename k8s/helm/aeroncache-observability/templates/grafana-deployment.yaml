@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aeroncache-observability.grafana.fullname" . }}
+  labels:
+    {{- include "aeroncache-observability.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: grafana
+  template:
+    metadata:
+      annotations:
+        checksum/provisioning: {{ include (print $.Template.BasePath "/grafana-provisioning.yaml") . | sha256sum }}
+        checksum/dashboards: {{ include (print $.Template.BasePath "/grafana-dashboards.yaml") . | sha256sum }}
+      labels:
+        {{- include "aeroncache-observability.labels" . | nindent 8 }}
+        app.kubernetes.io/component: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: "{{ .Values.grafana.image.repository }}:{{ .Values.grafana.image.tag }}"
+          imagePullPolicy: {{ .Values.grafana.image.pullPolicy }}
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: {{ .Values.grafana.adminUser | quote }}
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: {{ .Values.grafana.adminPassword | quote }}
+            {{- if .Values.grafana.anonymousAccess }}
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: "Admin"
+            - name: GF_AUTH_DISABLE_SIGNOUT_MENU
+              value: "true"
+            - name: GF_AUTH_DISABLE_LOGIN_FORM
+              value: "true"
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+          {{- with .Values.grafana.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboard-provider
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+      volumes:
+        - name: datasources
+          configMap:
+            name: {{ include "aeroncache-observability.grafana.fullname" . }}-provisioning
+            items:
+              - key: datasource.yaml
+                path: datasource.yaml
+        - name: dashboard-provider
+          configMap:
+            name: {{ include "aeroncache-observability.grafana.fullname" . }}-provisioning
+            items:
+              - key: dashboards.yaml
+                path: dashboards.yaml
+        - name: dashboards
+          configMap:
+            name: {{ include "aeroncache-observability.grafana.fullname" . }}-dashboards

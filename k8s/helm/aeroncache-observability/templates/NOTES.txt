@@ -1,0 +1,23 @@
+Aeron Cache observability stack installed.
+
+Prometheus : {{ include "aeroncache-observability.prometheus.fullname" . }} (service type {{ .Values.prometheus.service.type }}, port {{ .Values.prometheus.service.port }})
+Grafana    : {{ include "aeroncache-observability.grafana.fullname" . }} (service type {{ .Values.grafana.service.type }}, port {{ .Values.grafana.service.port }})
+
+1. Open Grafana:
+{{- if contains "LoadBalancer" .Values.grafana.service.type }}
+   minikube service -n {{ .Release.Namespace }} {{ include "aeroncache-observability.grafana.fullname" . }}
+   (or: make -C k8s/helm/aeroncache-observability port-forward-grafana  ->  http://localhost:{{ .Values.grafana.service.port }})
+{{- else }}
+   make -C k8s/helm/aeroncache-observability port-forward-grafana  ->  http://localhost:{{ .Values.grafana.service.port }}
+{{- end }}
+   The "Aeron Cache - Interface Apps" dashboard is pre-provisioned (folder: Aeron Cache).
+
+2. These panels stay empty until an interface app is scraped. Deploy the apps WITH the agent:
+
+     make -C k8s/helm install-backend JAVAAGENT=true
+     # or a single app, e.g.:  make -C k8s/helm install-http JAVAAGENT=true
+
+   Without JAVAAGENT=true the apps run uninstrumented and expose no metrics (nothing to scrape).
+
+3. Verify discovery in Prometheus:
+     make -C k8s/helm/aeroncache-observability port-forward-prometheus  ->  http://localhost:{{ .Values.prometheus.service.port }}/targets

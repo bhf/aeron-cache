@@ -1,0 +1,6 @@
+apiVersion: v2
+name: aeroncache-observability
+description: Prometheus + Grafana observability stack that scrapes the OpenTelemetry Java agent metrics exposed by the aeroncache interface apps.
+type: application
+version: 0.0.1
+appVersion: "0.0.1"
