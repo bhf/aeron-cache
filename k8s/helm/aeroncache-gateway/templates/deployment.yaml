@@ -58,9 +58,11 @@ spec:
             {{- if .Values.externalMediaDriver.enabled }}
             - name: LAUNCH_EMBEDDED
               value: "false"
+            {{- end }}
+            # Set in both modes: the external C driver binds here, or (embedded) the gateway's own
+            # driver is pinned here so the co-located clustertools sidecar can scrape its counters.
             - name: AERON_DIR
               value: {{ .Values.externalMediaDriver.aeronDir | quote }}
-            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ .Values.aeroncacheGatewayConfigmap }}
@@ -90,6 +92,7 @@ spec:
           volumeMounts:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+        {{- include "aeroncache-gateway.clustertools" . | nindent 8 }}
       {{- with .Values.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}

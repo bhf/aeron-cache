@@ -151,7 +151,10 @@ public class GatewayApplication {
             var launchEmbeddedStr = System.getenv("LAUNCH_EMBEDDED");
             boolean launchEmbedded = launchEmbeddedStr == null || Boolean.parseBoolean(launchEmbeddedStr);
             if (launchEmbedded) {
-                mediaDriver = ClusterUtils.launchEmbeddedMediaDriver();
+                final String configuredDir = System.getenv("AERON_DIR");
+                mediaDriver = (configuredDir != null && !configuredDir.isBlank())
+                        ? ClusterUtils.launchEmbeddedMediaDriver(configuredDir)
+                        : ClusterUtils.launchEmbeddedMediaDriver();
             }
 
             final Aeron.Context aeronCtx = new Aeron.Context();
