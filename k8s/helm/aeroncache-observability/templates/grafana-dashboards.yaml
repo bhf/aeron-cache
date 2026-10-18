@@ -273,10 +273,10 @@ data:
         },
         {
           "type": "stat",
-          "title": "Driver errors",
+          "title": "Errors (driver/archive/cluster)",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
-          "targets": [ { "expr": "sum(aeron_counter{label=\"Errors\"})", "legendFormat": "errors" } ],
+          "targets": [ { "expr": "sum(aeron_counter{label=~\".*Errors.*\"})", "legendFormat": "errors" } ],
           "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } } }
         },
         {
@@ -331,7 +331,7 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
           "targets": [
             { "expr": "sum by (label) (rate(aeron_counter{label=~\"Flow control.*\"}[1m]))", "legendFormat": "{{`{{label}}`}}" },
-            { "expr": "sum(rate(aeron_counter{label=\"Sender flow control limits applied\"}[1m]))", "legendFormat": "sender limits applied" }
+            { "expr": "sum(rate(aeron_counter{label=~\"Sender flow control limits.*\"}[1m]))", "legendFormat": "sender limits applied" }
           ]
         },
         {

@@ -10,9 +10,12 @@ aeroncacheGatewayConfigmap: aeroncache-gateway-config
 requestPubHost: "aeroncache-gateway"
 
 # The Aeron client facing request endpoint and response control endpoint used for
-# response channels (control-mode=response).
+# response channels (control-mode=response). Both are the addresses the gateway BINDS locally, so
+# they must be a local interface, not a Service name: a pod cannot bind a Service ClusterIP (the
+# driver fails with "Cannot assign requested address"). 0.0.0.0 binds all interfaces; clients still
+# reach the gateway via the aeroncache-gateway Service on these ports.
 gatewayRequestEndpoint: "0.0.0.0:7075"
-gatewayResponseControlEndpoint: "aeroncache-gateway:7076"
+gatewayResponseControlEndpoint: "0.0.0.0:7076"
 
 # Idle strategy for the Aeron and agent threads. One of: backoff, spin, noop, yield,
 # sleep-ns[:nanos], sleep-ms[:millis], or a fully qualified IdleStrategy class name. Applies to all
