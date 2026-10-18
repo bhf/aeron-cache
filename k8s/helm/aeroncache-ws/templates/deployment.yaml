@@ -15,9 +15,16 @@ spec:
       {{- include "aeroncache-ws.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- if or .Values.podAnnotations .Values.javaagent.enabled }}
       annotations:
+        {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.javaagent.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.javaagent.metricsPort | quote }}
+        prometheus.io/path: {{ .Values.javaagent.metricsPath | quote }}
+        {{- end }}
       {{- end }}
       labels:
         {{- include "aeroncache-ws.labels" . | nindent 8 }}
@@ -61,6 +68,9 @@ spec:
             - name: AERON_DIR
               value: {{ .Values.externalMediaDriver.aeronDir | quote }}
             {{- end }}
+            {{- if .Values.javaagent.enabled }}
+            {{- include "aeroncache-ws.javaagentEnv" . | nindent 12 }}
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ .Values.aeroncacheWSConfigmap }}
@@ -68,6 +78,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+            {{- if .Values.javaagent.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.javaagent.metricsPort }}
+              protocol: TCP
+            {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

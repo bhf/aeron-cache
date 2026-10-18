@@ -50,6 +50,27 @@ externalMediaDriver:
   extraEnv: []
   resources: {}
 
+# OpenTelemetry Java agent metrics (optional). The agent jar is baked into the image by Jib at
+# agentPath but is inert unless enabled here: when enabled, it is activated via JAVA_TOOL_OPTIONS and
+# exposes a Prometheus scrape endpoint on metricsPort/metricsPath (JVM + auto-instrumented HTTP
+# server metrics), and the pod is annotated with prometheus.io/scrape so the aeroncache-observability
+# Prometheus auto-discovers it. When disabled (the default) no -javaagent flag is set, so the app is
+# never instrumented. Toggle from the Makefiles with JAVAAGENT=true (see ../Makefile).
+javaagent:
+  enabled: false
+  # Path to the agent jar in the image (see cache-sse/sse-server-jooby/build.gradle.kts).
+  agentPath: /app/agent/opentelemetry-javaagent.jar
+  # Port and path the agent's Prometheus exporter serves metrics on.
+  metricsPort: 9464
+  metricsPath: /metrics
+  # OTEL_SERVICE_NAME; defaults to the chart fullname when left blank.
+  serviceName: ""
+  # Non-metric signal exporters; left off so enabling metrics does not also emit traces/logs.
+  tracesExporter: none
+  logsExporter: none
+  # Extra OTEL_*/agent env, e.g. [{name: OTEL_METRIC_EXPORT_INTERVAL, value: "5000"}].
+  extraEnv: []
+
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   repository: aeroncache-sse

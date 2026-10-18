@@ -62,6 +62,35 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
+OpenTelemetry Java agent environment. Activates the agent jar baked into the image (see the app's
+build.gradle.kts extraDirectories) via JAVA_TOOL_OPTIONS and points its metrics pipeline at a
+Prometheus scrape endpoint. Traces/logs exporters are left configurable (default: none) so turning
+on metrics does not also start shipping traces to an endpoint that may not exist. Rendered only when
+javaagent.enabled is true, so a disabled app gets no -javaagent flag and is never instrumented.
+*/}}
+{{- define "aeroncache-ws.javaagentEnv" -}}
+- name: JAVA_TOOL_OPTIONS
+  value: "-javaagent:{{ .Values.javaagent.agentPath }}"
+- name: OTEL_JAVAAGENT_ENABLED
+  value: "true"
+- name: OTEL_SERVICE_NAME
+  value: {{ default (include "aeroncache-ws.fullname" .) .Values.javaagent.serviceName | quote }}
+- name: OTEL_METRICS_EXPORTER
+  value: "prometheus"
+- name: OTEL_EXPORTER_PROMETHEUS_HOST
+  value: "0.0.0.0"
+- name: OTEL_EXPORTER_PROMETHEUS_PORT
+  value: {{ .Values.javaagent.metricsPort | quote }}
+- name: OTEL_TRACES_EXPORTER
+  value: {{ .Values.javaagent.tracesExporter | quote }}
+- name: OTEL_LOGS_EXPORTER
+  value: {{ .Values.javaagent.logsExporter | quote }}
+{{- with .Values.javaagent.extraEnv }}
+{{- toYaml . }}
+{{- end }}
+{{- end }}
+
+{{/*
 Aeron C media driver native sidecar. Rendered as an initContainer entry with
 restartPolicy: Always so the driver starts before the app and terminates after it.
 The startupProbe gates the app container on the CnC file existing, so the Aeron
