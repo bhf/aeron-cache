@@ -10,9 +10,23 @@ Grafana    : {{ include "aeroncache-observability.grafana.fullname" . }} (servic
 {{- else }}
    make -C k8s/helm/aeroncache-observability port-forward-grafana  ->  http://localhost:{{ .Values.grafana.service.port }}
 {{- end }}
-   The "Aeron Cache - Interface Apps" dashboard is pre-provisioned (folder: Aeron Cache).
+   These dashboards are pre-provisioned (folder: Aeron Cache):
+     - Aeron Cache - Interface Apps            (HTTP/WS/SSE apps, OTel javaagent metrics)
+     - Aeron Cache - Transport Gateway         (gateway sessions / requests / stream updates)
+     - Aeron Cache - Cache Service             (cache request counters, clustered or ephemeral)
+     - Aeron Cache - Transport / Media Driver  (raw Aeron media driver counters)
 
-2. These panels stay empty until an interface app is scraped. Deploy the apps WITH the agent:
+2a. The gateway / cache / media-driver dashboards are fed by the clustertools sidecar, which exports
+    the shared Aeron media driver counters on /prometheus. The aeroncache-cluster, -ephemeral and
+    -gateway charts carry the prometheus.io/scrape annotations by default, so just deploy whichever
+    cache flavour you want and the panels populate automatically (no extra flag needed):
+
+     make -C k8s/helm install-cluster       # clustered cache
+     make -C k8s/helm install-ephemeral     # ephemeral cache
+     make -C k8s/helm install-gateway       # transport gateway
+
+2b. The "Interface Apps" panels stay empty until an interface app is scraped. Deploy the apps WITH
+    the agent:
 
      make -C k8s/helm install-backend JAVAAGENT=true
      # or a single app, e.g.:  make -C k8s/helm install-http JAVAAGENT=true

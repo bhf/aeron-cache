@@ -60,3 +60,36 @@ curl 'http://localhost:7080/api/v1/clustertools/counters?dir=/dev/shm/aeron-root
   ]
 }
 ```
+
+### Prometheus exposition
+
+The same media driver counters are also exported in Prometheus text format on `/prometheus`, appended
+after the clustertools JVM metrics, so a single Prometheus target per pod captures everything the
+driver publishes. If the driver cannot be read the JVM metrics are still served and the Aeron counters
+are simply omitted from that scrape (the target does not flap).
+
+```bash
+curl http://localhost:7080/prometheus
+```
+
+Three metric families are produced:
+
+- `aeron_counter{counter_id,type_id,label}` — every allocated driver counter, verbatim. This is the
+  complete, lossless export (media driver system counters, publications, subscriptions, plus the cache
+  and gateway application counters). It powers the general *Aeron Cache - Transport / Media Driver*
+  Grafana dashboard.
+- `aeron_cache_requests_total{operation,node}` — the cache request counters (Aeron counter type
+  `2000`, registered by `AeronCounterTracingService`), parsed into a clean per-operation metric for
+  the *Cache Service* dashboard.
+- `aeron_gateway_requests_total{type,node}`, `aeron_gateway_sessions_connected{node}`,
+  `aeron_gateway_sessions_total{node}`, `aeron_gateway_stream_updates_published_total{node}` — the
+  gateway counters (Aeron counter type `2100`, registered by `AeronCounterGatewayMetrics`), parsed for
+  the *Transport Gateway* dashboard.
+
+The parsed families are a convenience layer on top of `aeron_counter`: a counter whose label does not
+match the expected structured pattern is still present in `aeron_counter`, so nothing is dropped.
+
+The `aeroncache-cluster`, `aeroncache-ephemeral` and `aeroncache-gateway` charts annotate their pods
+with `prometheus.io/scrape=true` (port `7080`, path `/prometheus`) so the `aeroncache-observability`
+Prometheus auto-discovers and scrapes this sidecar. This works identically whichever cache flavour is
+deployed.
