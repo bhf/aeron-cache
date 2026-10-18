@@ -89,6 +89,10 @@ public class EphemeralCacheApplication {
                     .dirDeleteOnStart(true)
                     .dirDeleteOnShutdown(true)
                     .threadingMode(ThreadingMode.SHARED));
+            final String configuredDir = System.getenv("AERON_DIR");
+            if (configuredDir != null && !configuredDir.isBlank()) {
+                mediaDriverCtx.aeronDirectoryName(configuredDir);
+            }
             final MediaDriver mediaDriver = MediaDriver.launchEmbedded(mediaDriverCtx);
             aeronDir = mediaDriver.aeronDirectoryName();
         } else {

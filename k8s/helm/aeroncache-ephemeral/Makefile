@@ -5,7 +5,7 @@ MEDIA_DRIVER_FLAG := $(if $(EXTERNAL_MEDIA_DRIVER),--set externalMediaDriver.ena
 # Set GHCR=true to pull the image from ghcr.io instead of the local Minikube image (see ../ghcr.mk).
 # The ephemeral (SINGLE mode) cache runs the same aeroncache-cluster image as the clustered chart.
 include ../ghcr.mk
-GHCR_FLAGS := $(call ghcr_image,aeroncache-cluster,image) $(call ghcr_image,aeroncache-media-driver,externalMediaDriver.image) $(ghcr_secret)
+GHCR_FLAGS := $(call ghcr_image,aeroncache-cluster,image) $(call ghcr_image,aeroncache-http-clustertools,clustertools.image) $(call ghcr_image,aeroncache-media-driver,externalMediaDriver.image) $(ghcr_secret)
 
 install:
 	helm install -n aeroncache aeroncache-ephemeral -f values.yaml --set cacheMode=SINGLE --create-namespace . $(MEDIA_DRIVER_FLAG) $(GHCR_FLAGS)

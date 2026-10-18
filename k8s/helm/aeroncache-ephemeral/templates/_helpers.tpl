@@ -103,3 +103,41 @@ client never races ahead of the driver.
     {{- toYaml . | nindent 4 }}
   {{- end }}
 {{- end }}
+
+{{/*
+ClusterTools HTTP sidecar. Co-located with the ephemeral cache so its `counters` endpoint can scrape
+the cache's media driver counters from the shared /dev/shm directory. AERON_DIR points at the same
+Aeron directory the cache container uses, so the sidecar maps the driver's cnc.dat directly.
+*/}}
+{{- define "aeroncache-ephemeral.clustertools" -}}
+- name: aeroncache-http-clustertools
+  image: "{{ .Values.clustertools.image.repository }}:{{ .Values.clustertools.image.tag }}"
+  imagePullPolicy: {{ .Values.clustertools.image.pullPolicy }}
+  ports:
+    - name: http
+      containerPort: {{ .Values.clustertools.port }}
+      protocol: TCP
+  env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: AERON_DIR
+      value: {{ .Values.externalMediaDriver.aeronDir | quote }}
+  {{- with .Values.clustertools.livenessProbe }}
+  livenessProbe:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.clustertools.readinessProbe }}
+  readinessProbe:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.clustertools.resources }}
+  resources:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.volumeMounts }}
+  volumeMounts:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

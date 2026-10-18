@@ -48,6 +48,33 @@ jobs:
           sleep 10
           kubectl wait -n aeroncache --for=condition=ready pod --all --timeout=300s
 
+      - name: Verify ClusterTools Counters Endpoint
+        run: |
+          # The monolith exposes its in-process clustertools on the cluster-tools service port. Scrape
+          # the embedded media driver's counters and assert the endpoint returns a populated set - a
+          # running driver always publishes system counters. --retry-all-errors covers the brief 503
+          # window before the driver has written its cnc.dat.
+          kubectl port-forward -n aeroncache svc/aeroncache-monolith 7080:7080 &
+          PF_PID=$!
+          sleep 5
+          echo "Scraping media driver counters..."
+          curl --fail --silent --show-error \
+               --retry 10 --retry-delay 3 --retry-connrefused --retry-all-errors \
+               -o counters.json \
+               http://localhost:7080/api/v1/clustertools/counters \
+            || { echo "Counters endpoint did not return 200"; \
+                 kill $PF_PID 2>/dev/null || true; \
+                 kubectl logs -n aeroncache -l app.kubernetes.io/name=aeroncache-monolith --tail=100 || true; \
+                 exit 1; }
+          kill $PF_PID 2>/dev/null || true
+          COUNT=$(jq -r '.count' counters.json)
+          DIR=$(jq -r '.aeronDirectoryName' counters.json)
+          echo "Scraped $COUNT counters from $DIR"
+          if ! [ "$COUNT" -gt 0 ] 2>/dev/null; then
+            echo "Expected a populated counter set, got count=$COUNT:"; cat counters.json; exit 1
+          fi
+          echo "Counters endpoint check passed."
+
       - name: Port-forward Cache Interfaces
         run: |
           # Expose the monolith interface ports on localhost so the integration suite can reach them.
