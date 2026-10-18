@@ -2,6 +2,8 @@ package com.bhf.aeroncache.gateway.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.gateway.codec.GatewayResponseWriter;
+import com.bhf.aeroncache.gateway.metrics.GatewayMetrics;
+import com.bhf.aeroncache.gateway.metrics.GatewayRequestType;
 import com.bhf.aeroncache.gateway.messages.BooleanType;
 import com.bhf.aeroncache.gateway.messages.GatewayBulkRequestDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayCommandDecoder;
@@ -80,6 +82,7 @@ public class GatewayIngressAgent implements Agent {
     private final GatewaySubscriptionPublisher cacheSubs;
     private final GatewaySubscriptionPublisher countersSubs;
     private final GatewayResponseWriter egressWriter;
+    private final GatewayMetrics metrics;
 
     private final ManyToOneConcurrentArrayQueue<Image> unavailableImages = new ManyToOneConcurrentArrayQueue<>(1024);
 
@@ -116,13 +119,15 @@ public class GatewayIngressAgent implements Agent {
                                AeronCache cluster,
                                GatewaySubscriptionPublisher cacheSubs,
                                GatewaySubscriptionPublisher countersSubs,
-                               GatewayResponseWriter egressWriter) {
+                               GatewayResponseWriter egressWriter,
+                               GatewayMetrics metrics) {
         this.aeron = aeron;
         this.requestStreamId = requestStreamId;
         this.cluster = cluster;
         this.cacheSubs = cacheSubs;
         this.countersSubs = countersSubs;
         this.egressWriter = egressWriter;
+        this.metrics = metrics;
         this.requestUriBuilder = media.requestSubscription(requestEndpoint, responseControlEndpoint);
         this.registry = new GatewaySessionRegistry(aeron, media, responseControlEndpoint, responseStreamId);
     }
@@ -163,9 +168,11 @@ public class GatewayIngressAgent implements Agent {
 
     private void onImageAvailable(Image image) {
         log.info("Gateway client image available, session {}", image.correlationId());
+        metrics.onSessionConnected();
     }
 
     private void onImageUnavailable(Image image) {
+        metrics.onSessionDisconnected();
         if (!unavailableImages.offer(image)) {
             log.error("Unable to enqueue unavailable image for session {}", image.correlationId());
         }
@@ -197,14 +204,18 @@ public class GatewayIngressAgent implements Agent {
             handleCommand(responsePublication);
         } else if (templateId == GatewaySubscribeDecoder.TEMPLATE_ID) {
             subscribeDecoder.wrap(buffer, bodyOffset, blockLength, version);
+            metrics.onRequest(GatewayRequestType.SUBSCRIBE);
             handleSubscribe(responsePublication, sessionId);
         } else if (templateId == GatewayUnsubscribeDecoder.TEMPLATE_ID) {
             unsubscribeDecoder.wrap(buffer, bodyOffset, blockLength, version);
+            metrics.onRequest(GatewayRequestType.UNSUBSCRIBE);
             handleUnsubscribe(sessionId);
         } else if (templateId == GatewayBulkRequestDecoder.TEMPLATE_ID) {
             bulkRequestDecoder.wrap(buffer, bodyOffset, blockLength, version);
+            metrics.onRequest(GatewayRequestType.BULK_OPS);
             handleBulkRequest(responsePublication);
         } else {
+            metrics.onRequest(GatewayRequestType.UNKNOWN);
             log.warn("Unknown gateway template id {} on session {}", templateId, sessionId);
         }
     }
@@ -279,6 +290,8 @@ public class GatewayIngressAgent implements Agent {
         final String key = commandDecoder.key();
         final String value = commandDecoder.value();
 
+        metrics.onRequest(commandRequestType(msgType));
+
         switch (msgType) {
             case CREATE_CACHE_MSG_ID -> cacheSubs.sendCreateCache(correlationId, cacheId,
                     (Consumer<CreateCacheResult>) o -> respondStatus(responsePublication, correlationId, ((CreateCacheResult) o).getStatus(), cacheId));
@@ -335,6 +348,35 @@ public class GatewayIngressAgent implements Agent {
         }
     }
 
+    private static GatewayRequestType commandRequestType(int msgType) {
+        return switch (msgType) {
+            case CREATE_CACHE_MSG_ID -> GatewayRequestType.CREATE_CACHE;
+            case ADD_CACHE_ENTRY_MSG_ID -> GatewayRequestType.ADD_CACHE_ENTRY;
+            case PATCH_CACHE_ENTRY_MSG_ID -> GatewayRequestType.PATCH_CACHE_ENTRY;
+            case GET_CACHE_ENTRY_MSG_ID -> GatewayRequestType.GET_CACHE_ENTRY;
+            case CLEAR_CACHE_MSG_ID -> GatewayRequestType.CLEAR_CACHE;
+            case DELETE_CACHE_MSG_ID -> GatewayRequestType.DELETE_CACHE;
+            case REMOVE_CACHE_ENTRY_MSG_ID -> GatewayRequestType.REMOVE_CACHE_ENTRY;
+            case CANCEL_CACHE_ITEM_REMOVAL_MSG_ID -> GatewayRequestType.CANCEL_CACHE_ITEM_REMOVAL;
+            case GET_CACHE_ENTRIES_MSG_ID -> GatewayRequestType.GET_CACHE_ENTRIES;
+            case GET_CACHE_STATS_MSG_ID -> GatewayRequestType.GET_CACHE_STATS;
+            case GET_TIMERS_MSG_ID -> GatewayRequestType.GET_TIMERS;
+            case CREATE_COUNTER_CACHE_MSG_ID -> GatewayRequestType.CREATE_COUNTER_CACHE;
+            case ADD_COUNTER_ENTRY_MSG_ID -> GatewayRequestType.ADD_COUNTER_ENTRY;
+            case GET_COUNTER_ENTRY_MSG_ID -> GatewayRequestType.GET_COUNTER_ENTRY;
+            case CLEAR_COUNTER_CACHE_MSG_ID -> GatewayRequestType.CLEAR_COUNTER_CACHE;
+            case DELETE_COUNTER_CACHE_MSG_ID -> GatewayRequestType.DELETE_COUNTER_CACHE;
+            case GET_COUNTER_ENTRIES_MSG_ID -> GatewayRequestType.GET_COUNTER_ENTRIES;
+            case GET_COUNTER_STATS_MSG_ID -> GatewayRequestType.GET_COUNTER_STATS;
+            case REMOVE_COUNTER_ENTRY_MSG_ID -> GatewayRequestType.REMOVE_COUNTER_ENTRY;
+            case CANCEL_COUNTER_ITEM_REMOVAL_MSG_ID -> GatewayRequestType.CANCEL_COUNTER_ITEM_REMOVAL;
+            case INCREMENT_COUNTER_ENTRY_MSG_ID -> GatewayRequestType.INCREMENT_COUNTER_ENTRY;
+            case DECREMENT_COUNTER_ENTRY_MSG_ID -> GatewayRequestType.DECREMENT_COUNTER_ENTRY;
+            case SET_COUNTER_ENTRY_MSG_ID -> GatewayRequestType.SET_COUNTER_ENTRY;
+            default -> GatewayRequestType.UNKNOWN;
+        };
+    }
+
     // ------------------------------------------------------------------ subscriptions
 
     private void handleSubscribe(Publication responsePublication, String sessionId) {
@@ -362,9 +404,11 @@ public class GatewayIngressAgent implements Agent {
                 egressWriter.writeError(responsePublication, correlationId, CacheOperationStatus.ERROR, "Subscription failed");
         final Runnable ackHandler = () ->
                 egressWriter.writeSubscribeAck(responsePublication, correlationId, CacheOperationStatus.SUCCESS, cacheIds);
-        final Consumer<GatewayStreamUpdate> updateConsumer = update ->
-                egressWriter.writeStreamUpdate(responsePublication, update.eventType(), update.cacheId(),
-                        update.key(), update.value(), update.requestId());
+        final Consumer<GatewayStreamUpdate> updateConsumer = update -> {
+            egressWriter.writeStreamUpdate(responsePublication, update.eventType(), update.cacheId(),
+                    update.key(), update.value(), update.requestId());
+            metrics.onStreamUpdatePublished();
+        };
 
         log.info("Gateway subscribe session {}, caches {}, keys {}, mode {}, snapshot {}, counters {}", sessionId, cacheIds, keys, mode, sendSnapshot, counters);
         publisher.subscribeToCache(cluster, failureHandler, ackHandler, cacheIds, keys, mode, sessionId, correlationId, sendSnapshot, updateConsumer);

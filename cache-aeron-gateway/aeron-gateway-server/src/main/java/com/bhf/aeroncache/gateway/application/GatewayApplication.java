@@ -11,6 +11,7 @@ import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.gateway.codec.GatewayResponseWriter;
 import com.bhf.aeroncache.gateway.config.GatewayIdleStrategies;
+import com.bhf.aeroncache.gateway.metrics.AeronCounterGatewayMetrics;
 import com.bhf.aeroncache.services.ReconnectingAeronCache;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -209,7 +210,8 @@ public class GatewayApplication {
 
         var egressWriter = new GatewayResponseWriter();
         var ingressAgent = new GatewayIngressAgent(gatewayAeron, media, requestEndpoint, responseControlEndpoint,
-                REQUEST_STREAM_ID, RESPONSE_STREAM_ID, cache, cacheSubs, countersSubs, egressWriter);
+                REQUEST_STREAM_ID, RESPONSE_STREAM_ID, cache, cacheSubs, countersSubs, egressWriter,
+                new AeronCounterGatewayMetrics(gatewayAeron, DNSUtils.getThisHostName()));
 
         if (media.isIpc()) {
             log.info("Gateway ingress transport media IPC (endpoints ignored; client must share this media driver)");
