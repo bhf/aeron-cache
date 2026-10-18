@@ -2,6 +2,7 @@ package com.bhf.aeroncache.clustertools.application;
 
 import com.bhf.aeroncache.clustertools.archive.RecordingPurger;
 import com.bhf.aeroncache.clustertools.config.ClusterToolsConfig;
+import com.bhf.aeroncache.clustertools.counters.AeronCountersReader;
 import com.bhf.aeroncache.clustertools.process.ClusterToolProcessRunner;
 import com.bhf.aeroncache.clustertools.schedule.SnapshotScheduler;
 import com.bhf.aeroncache.clustertools.snapshot.SnapshotInfoReader;
@@ -38,6 +39,7 @@ public class ClusterToolsHTTPApplication {
     private static int PORT = 7080;
     private static final String API_PREFIX = "/api/v1/clustertools/";
     private static final String SNAPSHOT_INFO = API_PREFIX + "snapshot-info";
+    private static final String COUNTERS = API_PREFIX + "counters";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     public static int BOUND_PORT;
@@ -46,6 +48,7 @@ public class ClusterToolsHTTPApplication {
     private static final SnapshotInfoReader SNAPSHOT_INFO_READER = new SnapshotInfoReader();
     private static final ClusterToolProcessRunner TOOL_RUNNER = new ClusterToolProcessRunner();
     private static final RecordingPurger RECORDING_PURGER = new RecordingPurger(CONFIG);
+    private static final AeronCountersReader COUNTERS_READER = new AeronCountersReader(CONFIG);
     private static final SnapshotScheduler SNAPSHOT_SCHEDULER = new SnapshotScheduler(
             CONFIG, TOOL_RUNNER, SNAPSHOT_INFO_READER, RECORDING_PURGER,
             result -> lastPurgeResult = result);
@@ -86,6 +89,7 @@ public class ClusterToolsHTTPApplication {
         return Javalin.create(config)
                 .post(API_PREFIX, ClusterToolsHTTPApplication::handleClusterToolsRequest)
                 .get(SNAPSHOT_INFO, ClusterToolsHTTPApplication::handleGetSnapshotInfo)
+                .get(COUNTERS, ClusterToolsHTTPApplication::handleGetCounters)
                 .get(LIVENESS, ClusterToolsHTTPApplication::handleGetLiveness)
                 .get(READINESS, ClusterToolsHTTPApplication::handleGetReadiness)
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
@@ -139,6 +143,26 @@ public class ClusterToolsHTTPApplication {
         SnapshotInfoResponse response = SNAPSHOT_INFO_READER.read(clusterDir, CONFIG.getArchiveDir(), lastPurgeResult);
         ctx.status(200);
         ctx.json(response);
+    }
+
+    /**
+     * Scrape the co-located Aeron media driver's counters and return them as JSON.
+     *
+     * <p>These are the media driver's own counters, not the cache counters. A failure to read the
+     * driver's CnC file (for example because the driver is not running or the aeron directory is
+     * misconfigured) is reported as a 503, since the upstream being scraped is unavailable.
+     *
+     * @param ctx The Javalin context.
+     */
+    private static void handleGetCounters(Context ctx) {
+        try {
+            ctx.status(200);
+            ctx.json(COUNTERS_READER.read());
+        } catch (Exception e) {
+            log.error("Failed to scrape Aeron media driver counters from {}",
+                    COUNTERS_READER.aeronDirectoryName(), e);
+            ctx.status(503).result("Could not read Aeron media driver counters: " + e.getMessage());
+        }
     }
 
     /**
