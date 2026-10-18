@@ -5,6 +5,18 @@
 #   chart's values.yaml default (off). Command-line variables propagate to the sub-makes.
 #   e.g.  make install-backend-ephemeral EXTERNAL_MEDIA_DRIVER=true
 #
+# Observability (Prometheus + Grafana):
+#   `make install-observability` deploys the aeroncache-observability chart (Prometheus + Grafana)
+#   into the aeroncache namespace. Pass JAVAAGENT=true to any interface-app install target
+#   (install-http/-ws/-sse/-http-near, or the aggregates that include them) to activate the bundled
+#   OpenTelemetry Java agent, which exposes a Prometheus endpoint that the observability stack
+#   auto-discovers via pod annotations. JAVAAGENT is unset by default, so apps are never instrumented
+#   unless you ask for it. Like EXTERNAL_MEDIA_DRIVER it is a command-line variable and propagates to
+#   the sub-makes.
+#   e.g.  make install-observability
+#         make install-backend JAVAAGENT=true
+#         make install-all JAVAAGENT=true
+#
 # GHCR image source:
 #   By default the install targets use the images built into Minikube (image.pullPolicy Never).
 #   Pass GHCR=true to any install target to instead pull the released images from ghcr.io
@@ -89,6 +101,12 @@ install-ui:
 
 uninstall-ui:
 	$(MAKE) -C aeroncache-ui-nextjs uninstall
+
+install-observability:
+	$(MAKE) -C aeroncache-observability install
+
+uninstall-observability:
+	$(MAKE) -C aeroncache-observability uninstall
 
 install-ui-monolith:
 	$(MAKE) -C aeroncache-ui-nextjs install-monolith

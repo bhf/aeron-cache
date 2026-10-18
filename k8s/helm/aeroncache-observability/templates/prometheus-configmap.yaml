@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aeroncache-observability.prometheus.fullname" . }}
+  labels:
+    {{- include "aeroncache-observability.labels" . | nindent 4 }}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: {{ .Values.prometheus.scrapeInterval }}
+      evaluation_interval: {{ .Values.prometheus.scrapeInterval }}
+    scrape_configs:
+      # Annotation-based auto-discovery of the aeroncache interface pods. When an app is deployed
+      # with javaagent.enabled=true its pod carries prometheus.io/scrape=true plus the agent's
+      # metrics port/path, and the relabeling below turns that into a scrape target. Apps without
+      # the agent have no such annotation and are simply never scraped.
+      - job_name: aeroncache-pods
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                {{- range .Values.prometheus.scrapeNamespaces }}
+                - {{ . }}
+                {{- end }}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+            action: replace
+            target_label: app
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+      # Prometheus scraping itself, handy as a liveness signal in Grafana.
+      - job_name: prometheus
+        static_configs:
+          - targets:
+              - localhost:9090

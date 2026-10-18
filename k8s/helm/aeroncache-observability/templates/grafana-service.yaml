@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aeroncache-observability.grafana.fullname" . }}
+  labels:
+    {{- include "aeroncache-observability.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  type: {{ .Values.grafana.service.type }}
+  {{- if or (eq .Values.grafana.service.type "LoadBalancer") (eq .Values.grafana.service.type "NodePort") }}
+  externalTrafficPolicy: Local
+  {{- end }}
+  ports:
+    - port: {{ .Values.grafana.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: grafana

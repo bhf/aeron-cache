@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aeroncache-observability.grafana.fullname" . }}-dashboards
+  labels:
+    {{- include "aeroncache-observability.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+data:
+  # Starter dashboard over the OpenTelemetry Java agent metrics (OTel semantic-convention names).
+  # Panels sit empty until at least one interface app is deployed with javaagent.enabled=true.
+  aeroncache-overview.json: |
+    {
+      "title": "Aeron Cache - Interface Apps",
+      "uid": "aeroncache-overview",
+      "schemaVersion": 39,
+      "editable": true,
+      "time": { "from": "now-30m", "to": "now" },
+      "refresh": "10s",
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "hide": 0,
+            "current": {}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Scrape targets up",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+          "targets": [
+            { "expr": "count(up{job=\"aeroncache-pods\"} == 1)", "legendFormat": "up" }
+          ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } }
+        },
+        {
+          "type": "timeseries",
+          "title": "JVM heap used",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 6, "w": 9, "x": 6, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "bytes" } },
+          "targets": [
+            { "expr": "sum by (app) (jvm_memory_used_bytes{jvm_memory_type=\"heap\"})", "legendFormat": "{{`{{app}}`}}" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "JVM CPU utilization",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 6, "w": 9, "x": 15, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "percentunit" } },
+          "targets": [
+            { "expr": "jvm_cpu_recent_utilization_ratio", "legendFormat": "{{`{{app}}`}}" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "GC time rate",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 7, "w": 8, "x": 0, "y": 6 },
+          "fieldConfig": { "defaults": { "unit": "s" } },
+          "targets": [
+            { "expr": "sum by (app) (rate(jvm_gc_duration_seconds_sum[1m]))", "legendFormat": "{{`{{app}}`}}" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "HTTP request rate",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 7, "w": 8, "x": 8, "y": 6 },
+          "fieldConfig": { "defaults": { "unit": "reqps" } },
+          "targets": [
+            { "expr": "sum by (app) (rate(http_server_request_duration_seconds_count[1m]))", "legendFormat": "{{`{{app}}`}}" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "HTTP p95 latency",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 7, "w": 8, "x": 16, "y": 6 },
+          "fieldConfig": { "defaults": { "unit": "s" } },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum by (le, app) (rate(http_server_request_duration_seconds_bucket[5m])))", "legendFormat": "{{`{{app}}`}}" }
+          ]
+        }
+      ]
+    }

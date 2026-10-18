@@ -155,7 +155,21 @@ make install-backend-ephemeral GHCR=true EXTERNAL_MEDIA_DRIVER=true
 make install-all GHCR=true GHCR_TAG=1.2.3          # a specific release
 ```
 
+#### Observability (Prometheus + Grafana)
 
+Deploy an in-cluster Prometheus + Grafana stack with ```make install-observability```. It installs into the
+```aeroncache``` namespace alongside the apps and ships a pre-provisioned "Aeron Cache - Interface Apps" Grafana
+dashboard (JVM memory/CPU/GC and HTTP request rate/latency).
+
+Metrics come from the OpenTelemetry Java agent, which is **optional and off by default**. Pass ```JAVAAGENT=true``` to
+any interface-app install target to activate the agent (baked into the HTTP, WS, SSE and near-cache images) so it serves
+a Prometheus endpoint; Prometheus auto-discovers the instrumented pods via annotations. Without ```JAVAAGENT=true``` the
+apps run uninstrumented and expose no metrics.
+
+```bash
+make install-observability                  # Prometheus + Grafana
+make install-backend JAVAAGENT=true         # apps with the agent on
+```
 
 ![img.png](docs/images/k9s-screenshot.png)
 

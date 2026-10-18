@@ -1,0 +1,61 @@
+# Observability stack (Prometheus + Grafana) for the aeroncache interface apps.
+#
+# This chart is the scrape/visualisation half of the optional metrics feature. The *producing*
+# half lives in the interface charts (aeroncache-http/-ws/-sse/-http-near): enable it per app with
+# `javaagent.enabled=true`, which activates the bundled OpenTelemetry Java agent and makes it serve
+# a Prometheus endpoint, annotating the pod with prometheus.io/scrape. Prometheus below discovers
+# those annotated pods automatically, so no per-app target config is needed here.
+#
+# From the Makefiles:
+#   make install-observability                 # deploy Prometheus + Grafana
+#   make install-backend JAVAAGENT=true        # (re)deploy the apps with the agent on
+
+# Override the generated resource name stem. With "aeroncache" the resources are named
+# aeroncache-prometheus / aeroncache-grafana (matching the old docker-compose service names).
+fullnameOverride: "aeroncache"
+nameOverride: ""
+
+prometheus:
+  image:
+    repository: prom/prometheus
+    # These are public upstream images pulled from Docker Hub at deploy time (not built into
+    # Minikube like the app images), so the pull policy is IfNotPresent rather than Never.
+    tag: v2.54.1
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 9090
+  # Global scrape cadence (the app agents export metrics on roughly this interval too).
+  scrapeInterval: 5s
+  # How long the in-memory/emptyDir TSDB keeps samples. Kept short because storage is ephemeral.
+  retention: 6h
+  # Namespaces Prometheus searches for annotated aeroncache pods. The apps install into aeroncache.
+  scrapeNamespaces:
+    - aeroncache
+  resources: {}
+
+grafana:
+  image:
+    repository: grafana/grafana
+    tag: 11.2.0
+    pullPolicy: IfNotPresent
+  service:
+    # LoadBalancer so `minikube tunnel` / the minikube service command exposes the UI, matching the
+    # other web-facing charts. Use ClusterIP + port-forward for a locked-down deployment.
+    type: LoadBalancer
+    port: 3000
+  # Anonymous Admin access with no login form, mirroring the dev docker-compose grafana block. Set
+  # to false to require a login with the admin credentials below.
+  anonymousAccess: true
+  adminUser: admin
+  adminPassword: admin
+  resources: {}
+
+# RBAC for Prometheus' Kubernetes pod service discovery (get/list/watch pods). Required for the
+# annotation-based scraping to work; disable only if you wire a static scrape config instead.
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+  name: ""

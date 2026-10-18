@@ -1,0 +1,42 @@
+{{- if .Values.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "aeroncache-observability.serviceAccountName" . }}
+  labels:
+    {{- include "aeroncache-observability.labels" . | nindent 4 }}
+{{- end }}
+{{- if .Values.rbac.create }}
+---
+# Prometheus' kubernetes_sd_config (role: pod) needs read access to pods to discover the annotated
+# aeroncache interface pods. ClusterRole because the discovery API is cluster-scoped even though we
+# filter to the aeroncache namespace in the scrape config.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "aeroncache-observability.prometheus.fullname" . }}
+  labels:
+    {{- include "aeroncache-observability.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - endpoints
+      - services
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "aeroncache-observability.prometheus.fullname" . }}
+  labels:
+    {{- include "aeroncache-observability.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "aeroncache-observability.prometheus.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "aeroncache-observability.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
