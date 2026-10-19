@@ -79,6 +79,10 @@ Clustertools container
       CLUSTER_NODE=${POD_NAME##*-}
       if [ -n "$CACHE_DATA_DIR_BASE" ]; then
         export CACHE_DATA_DIR="${CACHE_DATA_DIR_BASE}/node${CLUSTER_NODE}/cluster"
+        # ClusterToolsConfig reads CLUSTER_FOLDER (not CACHE_DATA_DIR) for the cluster dir the
+        # snapshot/purge tools operate on; point it at this node's cluster dir on the shared volume.
+        # ARCHIVE_DIR then resolves to the sibling node${CLUSTER_NODE}/archive automatically.
+        export CLUSTER_FOLDER="${CACHE_DATA_DIR_BASE}/node${CLUSTER_NODE}/cluster"
       fi
       {{- if .Values.externalMediaDriver.enabled }}
       # External driver: the node and driver share this fixed Aeron directory.

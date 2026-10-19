@@ -87,6 +87,12 @@ public class HttpApplication {
     public static final int TERM_SIZE_MULTIPLE = 4;
     @Setter
     private static int CLUSTER_TOOLS_PORT = 7080;
+
+    /** How long to wait for a triggered snapshot to become durable on the leader before purging. */
+    private static final long DURABILITY_TIMEOUT_MS = 60_000L;
+
+    /** Poll interval while awaiting snapshot durability. */
+    private static final long DURABILITY_POLL_MS = 1_000L;
     @Setter
     private static int DEFAULT_HTTP_PORT = 7070;
     private static final String DEFAULT_CLUSTER_TOOLS_ENDPOINT = "http://localhost:7080/api/v1/clustertools/";
@@ -426,25 +432,43 @@ public class HttpApplication {
         }
 
         var clusterToolsFolder = System.getenv().getOrDefault("CLUSTER_FOLDER", "node0/cluster");
-        var nodeResults = new ArrayList<AggregatedPurgeResponse.NodePurgeResult>();
 
-        // 1. Take the cluster-wide snapshot (and purge) on the first node.
-        String snapshotHost = hostArray.get(0);
-        var snapshotResult = callPurgeTool(snapshotHost, "snapshot-and-purge", clusterToolsFolder);
-        nodeResults.add(snapshotResult);
-
-        if (!snapshotResult.success()) {
-            // No durable snapshot - do not purge the remaining nodes.
-            var response = aggregate(nodeResults, false,
-                    "Snapshot did not complete on " + snapshotHost + "; skipped purging the remaining nodes");
+        // 1. Take the cluster-wide snapshot on the leader. `ClusterTool snapshot` only succeeds on the
+        //    leader (exit code 0); a follower returns a non-zero exit code. Iterating the nodes finds the
+        //    leader and triggers the single, cluster-wide snapshot - every node then snapshots.
+        String leaderHost = null;
+        long snapshotsBefore = -1L;
+        for (String host : hostArray) {
+            final long before = readSnapshotCount(host);
+            final ClusterToolsResponse resp = callSnapshotTool(host, clusterToolsFolder);
+            if (resp != null && resp.exitCode() == 0) {
+                leaderHost = host;
+                snapshotsBefore = before;
+                break;
+            }
+        }
+        if (leaderHost == null) {
             context.status(HTTPStatusUtils.INTERNAL_SERVER_ERROR);
-            context.json(response);
+            context.json(new AggregatedPurgeResponse(false, 0L,
+                    "no leader node accepted the snapshot (is the cluster active?)", List.of()));
             return;
         }
 
-        // 2. Purge each remaining node locally; the snapshot has already been taken cluster-wide.
-        for (int i = 1; i < hostArray.size(); i++) {
-            nodeResults.add(callPurgeTool(hostArray.get(i), "purge", clusterToolsFolder));
+        // 2. Wait for the new snapshot to become durable on the leader before purging, so a purge never
+        //    runs against a cluster that has not yet persisted the snapshot just taken.
+        if (!awaitLeaderSnapshotDurable(leaderHost, snapshotsBefore)) {
+            context.status(HTTPStatusUtils.INTERNAL_SERVER_ERROR);
+            context.json(new AggregatedPurgeResponse(false, 0L,
+                    "snapshot triggered on " + leaderHost + " did not become durable within "
+                            + DURABILITY_TIMEOUT_MS + "ms; skipped purging", List.of()));
+            return;
+        }
+
+        // 3. Purge every node locally; the snapshot is durable cluster-wide, so each node trims its own
+        //    archive up to its retention floor.
+        var nodeResults = new ArrayList<AggregatedPurgeResponse.NodePurgeResult>();
+        for (String host : hostArray) {
+            nodeResults.add(callPurgeTool(host, "purge", clusterToolsFolder));
         }
 
         boolean allSucceeded = nodeResults.stream().allMatch(AggregatedPurgeResponse.NodePurgeResult::success);
@@ -514,6 +538,93 @@ public class HttpApplication {
                     ? "Snapshot taken and " + nodeResults.size() + " node(s) purged; reclaimed " + totalReclaimed + " bytes"
                     : "Snapshot-and-purge completed with errors on one or more nodes; reclaimed " + totalReclaimed + " bytes";
         return new AggregatedPurgeResponse(success, totalReclaimed, message, List.copyOf(nodeResults));
+    }
+
+    /**
+     * POST a {@code snapshot} command to one node's clustertools sidecar. {@code ClusterTool snapshot}
+     * succeeds (exit code 0) only on the leader and triggers a cluster-wide snapshot; a follower
+     * returns a non-zero exit code and takes no snapshot.
+     *
+     * @param host               the sidecar host to contact.
+     * @param clusterToolsFolder the cluster folder to pass in the request.
+     * @return the sidecar's response, or {@code null} on a transport/parse error or non-2xx status.
+     */
+    private static ClusterToolsResponse callSnapshotTool(String host, String clusterToolsFolder) {
+        String hostUri = "http://" + host + ":" + CLUSTER_TOOLS_PORT + "/api/v1/clustertools/";
+        try {
+            var jsonBody = OBJECT_MAPPER.writeValueAsString(new ClusterToolsRequest("snapshot", clusterToolsFolder));
+            log.info("Sending snapshot request to host: {}", hostUri);
+            var httpRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(hostUri))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                    .build();
+            HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+            if (httpResponse.statusCode() / 100 != 2) {
+                log.warn("snapshot request to {} returned status {}", host, httpResponse.statusCode());
+                return null;
+            }
+            return OBJECT_MAPPER.readValue(httpResponse.body(), ClusterToolsResponse.class);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+            log.warn("snapshot request to {} failed: {}", host, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Read the current retained snapshot count from one node's clustertools sidecar.
+     *
+     * @param host the sidecar host to query.
+     * @return the snapshot count, or -1 on a transport/parse error or non-2xx status.
+     */
+    private static long readSnapshotCount(String host) {
+        String hostUri = "http://" + host + ":" + CLUSTER_TOOLS_PORT + "/api/v1/clustertools/snapshot-info";
+        try {
+            var httpRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(hostUri))
+                    .header("Accept", "application/json")
+                    .GET()
+                    .build();
+            HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+            if (httpResponse.statusCode() / 100 != 2) {
+                return -1L;
+            }
+            return OBJECT_MAPPER.readValue(httpResponse.body(), SnapshotInfoResponse.class).snapshotCount();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+            log.warn("snapshot-info request to {} failed: {}", host, e.getMessage());
+            return -1L;
+        }
+    }
+
+    /**
+     * Poll the leader's snapshot count until it rises above the pre-snapshot baseline, signalling the
+     * snapshot just triggered has become durable.
+     *
+     * @param leaderHost      the leader's sidecar host.
+     * @param snapshotsBefore the snapshot count observed before triggering the snapshot.
+     * @return true once the count advances within the timeout, false otherwise.
+     */
+    private static boolean awaitLeaderSnapshotDurable(String leaderHost, long snapshotsBefore) {
+        final long deadline = System.currentTimeMillis() + DURABILITY_TIMEOUT_MS;
+        while (System.currentTimeMillis() < deadline) {
+            if (readSnapshotCount(leaderHost) > snapshotsBefore) {
+                return true;
+            }
+            try {
+                Thread.sleep(DURABILITY_POLL_MS);
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
     }
 
     /**
