@@ -1,9 +1,10 @@
 "use client";
 
 import {Button} from "@/components/ui/button";
-import {CameraIcon, RefreshCwIcon, Trash2Icon} from "lucide-react";
+import {CameraIcon, RefreshCwIcon, ServerIcon, Trash2Icon} from "lucide-react";
 import {toast} from "sonner";
 import {snapshotAndPurgeRequest, snapshotCacheRequest} from "@/lib/actions";
+import {NodePurgeResult} from "@/lib/types";
 import {useRouter} from "next/navigation";
 import {useState} from "react";
 
@@ -29,6 +30,7 @@ function formatBytes(bytes: number): string {
 export default function TriggerSnapshot() {
     const router = useRouter();
     const [pending, setPending] = useState<null | "snapshot" | "purge">(null);
+    const [nodeResults, setNodeResults] = useState<NodePurgeResult[] | null>(null);
 
     const refreshAfterDelay = () => {
         setTimeout(() => {
@@ -39,6 +41,7 @@ export default function TriggerSnapshot() {
 
     const handleSnapshot = async () => {
         setPending("snapshot");
+        setNodeResults(null);
         const result = await snapshotCacheRequest();
 
         if (result.error) {
@@ -59,7 +62,9 @@ export default function TriggerSnapshot() {
 
     const handleSnapshotAndPurge = async () => {
         setPending("purge");
+        setNodeResults(null);
         const result = await snapshotAndPurgeRequest();
+        setNodeResults(result.nodes ?? null);
 
         if (result.error) {
             toast("Snapshot & Purge Error", {
@@ -81,27 +86,65 @@ export default function TriggerSnapshot() {
     };
 
     return (
-        <div className="flex flex-wrap gap-2">
-            <Button
-                onClick={handleSnapshot}
-                disabled={pending !== null}
-                data-testid="trigger-snapshot-button">
-                <CameraIcon/>{pending === "snapshot" ? "Requesting…" : "Take Snapshot"}
-            </Button>
-            <Button
-                variant="secondary"
-                onClick={handleSnapshotAndPurge}
-                disabled={pending !== null}
-                data-testid="trigger-snapshot-purge-button">
-                <Trash2Icon/>{pending === "purge" ? "Purging…" : "Snapshot & Purge"}
-            </Button>
-            <Button
-                variant="outline"
-                onClick={() => router.refresh()}
-                disabled={pending !== null}
-                data-testid="refresh-snapshot-button">
-                <RefreshCwIcon/>Refresh
-            </Button>
+        <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+                <Button
+                    onClick={handleSnapshot}
+                    disabled={pending !== null}
+                    data-testid="trigger-snapshot-button">
+                    <CameraIcon/>{pending === "snapshot" ? "Requesting…" : "Take Snapshot"}
+                </Button>
+                <Button
+                    variant="secondary"
+                    onClick={handleSnapshotAndPurge}
+                    disabled={pending !== null}
+                    data-testid="trigger-snapshot-purge-button">
+                    <Trash2Icon/>{pending === "purge" ? "Purging…" : "Snapshot & Purge"}
+                </Button>
+                <Button
+                    variant="outline"
+                    onClick={() => router.refresh()}
+                    disabled={pending !== null}
+                    data-testid="refresh-snapshot-button">
+                    <RefreshCwIcon/>Refresh
+                </Button>
+            </div>
+
+            {nodeResults && nodeResults.length > 0 && (
+                <div className="border-t pt-3" data-testid="purge-node-breakdown">
+                    <div className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
+                        <ServerIcon className="size-3"/>
+                        Per-node purge results
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        {nodeResults.map((node) => (
+                            <div
+                                key={node.host}
+                                className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+                                data-testid={`purge-node-${node.host}`}>
+                                <div className="flex min-w-0 flex-col">
+                                    <span className="truncate font-medium" title={node.host}>{node.host}</span>
+                                    <span className="truncate text-xs text-muted-foreground" title={node.message}>
+                                        {node.message}
+                                    </span>
+                                </div>
+                                <div className="flex shrink-0 items-center gap-3">
+                                    <span className="tabular-nums text-xs text-muted-foreground">
+                                        {formatBytes(node.reclaimedBytes)}
+                                    </span>
+                                    <span
+                                        className={node.success
+                                            ? "text-xs font-medium text-green-600 dark:text-green-500"
+                                            : "text-xs font-medium text-destructive"}
+                                        data-testid={`purge-node-status-${node.host}`}>
+                                        {node.success ? "OK" : "Failed"}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

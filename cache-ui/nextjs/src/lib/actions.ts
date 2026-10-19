@@ -2,6 +2,7 @@
 
 import {getLogger} from "@/lib/loggingUtil";
 import {revalidatePath, updateTag} from "next/cache";
+import type {NodePurgeResult} from "@/lib/types";
 
 /**
  * React server actions.
@@ -485,10 +486,13 @@ export async function snapshotAndPurgeRequest() {
         });
 
         const body = await rawResponse.json().catch(() => null);
+        const nodes = body?.nodes as NodePurgeResult[] | undefined;
 
         if (rawResponse.status != 200 || (body && body.success === false)) {
             return {
                 message: body?.message ?? "Problem requesting snapshot and purge",
+                reclaimedBytes: body?.reclaimedBytes as number | undefined,
+                nodes,
                 error: true
             };
         }
@@ -496,6 +500,7 @@ export async function snapshotAndPurgeRequest() {
         return {
             message: body?.message ?? "Successfully requested snapshot and purge",
             reclaimedBytes: body?.reclaimedBytes as number | undefined,
+            nodes,
             error: false
         };
     } catch (err) {
