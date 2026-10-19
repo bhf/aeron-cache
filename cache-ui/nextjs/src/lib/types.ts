@@ -77,6 +77,22 @@ export interface RecordingPurge {
 }
 
 /**
+ * The purge outcome for a single cluster node, returned in the per-node breakdown of a
+ * cluster-wide snapshot-and-purge.
+ *
+ * @property host           the clustertools sidecar host that was contacted.
+ * @property success        whether this node's purge (and, for the first node, the snapshot) succeeded.
+ * @property reclaimedBytes bytes reclaimed on disk on this node.
+ * @property message        human readable detail from this node, or the failure reason.
+ */
+export interface NodePurgeResult {
+    host: string
+    success: boolean
+    reclaimedBytes: number
+    message: string
+}
+
+/**
  * Information about the latest cluster snapshot and the archive disk usage,
  * surfaced for display in the UI.
  *
