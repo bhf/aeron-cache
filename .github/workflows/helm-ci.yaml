@@ -144,6 +144,31 @@ jobs:
 
           echo -e "\nSmoke pre-gate passed. Running the full integration suite against the cluster..."
 
+      - name: Verify Cluster-wide Snapshot and Purge (fan-out)
+        run: |
+          # Exercise the cache-http snapshot-and-purge fan-out against the live cluster: it must find the
+          # leader, take one cluster-wide snapshot, then purge every node. Asserts HTTP 200, overall
+          # success, and a per-node breakdown covering all 3 cluster nodes (each successful). This guards
+          # the leader-aware fan-out and the clustertools sidecar's CLUSTER_FOLDER wiring - a regression in
+          # either (e.g. snapshot sent to a follower, or a null cluster dir) surfaces here instead of
+          # silently shipping. A fresh cluster reclaims nothing, so we assert the call succeeds, not that
+          # bytes were freed.
+          echo "Triggering snapshot-and-purge..."
+          HTTP_CODE=$(curl -s -o sap.json -w '%{http_code}' --max-time 120 \
+            --retry 5 --retry-delay 5 --retry-connrefused \
+            -X POST http://localhost:7070/api/v1/snapshot-and-purge) || true
+          echo "HTTP $HTTP_CODE"; cat sap.json; echo
+          SUCCESS=$(jq -r '.success' sap.json 2>/dev/null)
+          NODE_COUNT=$(jq -r '.nodes | length' sap.json 2>/dev/null)
+          ALL_OK=$(jq -r '[.nodes[].success] | all' sap.json 2>/dev/null)
+          echo "httpCode=$HTTP_CODE success=$SUCCESS nodes=$NODE_COUNT allNodesOk=$ALL_OK"
+          if [ "$HTTP_CODE" != "200" ] || [ "$SUCCESS" != "true" ] || [ "$NODE_COUNT" != "3" ] || [ "$ALL_OK" != "true" ]; then
+            echo "Expected HTTP 200 with success=true and 3 nodes all successful."
+            kubectl logs -n aeroncache aeroncache-cluster-0 -c aeroncache-http-clustertools --tail=100 || true
+            exit 1
+          fi
+          echo "Snapshot-and-purge fan-out check passed."
+
       - name: Run Integration Suite Against Cluster
         # Reuse the existing clustered integration suites against the already-running kind deployment.
         # externalEnv=true makes BackendTestLauncher target the port-forwarded interfaces instead of

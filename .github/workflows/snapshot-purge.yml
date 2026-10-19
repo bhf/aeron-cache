@@ -28,6 +28,7 @@ on:
     # Testcontainers test, so it should not run on every unrelated PR.
     paths:
       - 'cache-http/http-clustertools/**'
+      - 'cache-http/http-server-javalin/**'
       - 'cache-integration/clustered/recording-purge-tests/**'
       - 'cache-integration/integration-common/**'
       - 'cache-cluster/**'

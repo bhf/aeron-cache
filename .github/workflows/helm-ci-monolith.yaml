@@ -115,6 +115,29 @@ jobs:
 
           echo -e "\nSmoke pre-gate passed. Running the integration suite against the monolith..."
 
+      - name: Verify Snapshot and Purge (fan-out, single node)
+        run: |
+          # Exercise the cache-http snapshot-and-purge fan-out against the monolith's in-process cluster:
+          # it must find the single node as leader, snapshot, then purge it. Asserts HTTP 200, overall
+          # success, and a one-node breakdown. Guards the leader-aware fan-out and the embedded
+          # clustertools CLUSTER_FOLDER wiring for the monolith topology. A fresh node reclaims nothing,
+          # so we assert the call succeeds, not that bytes were freed.
+          echo "Triggering snapshot-and-purge..."
+          HTTP_CODE=$(curl -s -o sap.json -w '%{http_code}' --max-time 120 \
+            --retry 5 --retry-delay 5 --retry-connrefused \
+            -X POST http://localhost:7070/api/v1/snapshot-and-purge) || true
+          echo "HTTP $HTTP_CODE"; cat sap.json; echo
+          SUCCESS=$(jq -r '.success' sap.json 2>/dev/null)
+          NODE_COUNT=$(jq -r '.nodes | length' sap.json 2>/dev/null)
+          ALL_OK=$(jq -r '[.nodes[].success] | all' sap.json 2>/dev/null)
+          echo "httpCode=$HTTP_CODE success=$SUCCESS nodes=$NODE_COUNT allNodesOk=$ALL_OK"
+          if [ "$HTTP_CODE" != "200" ] || [ "$SUCCESS" != "true" ] || [ "$NODE_COUNT" != "1" ] || [ "$ALL_OK" != "true" ]; then
+            echo "Expected HTTP 200 with success=true and 1 node successful."
+            kubectl logs -n aeroncache -l app.kubernetes.io/name=aeroncache-monolith --tail=100 || true
+            exit 1
+          fi
+          echo "Snapshot-and-purge fan-out check passed."
+
       - name: Run Integration Suite Against Monolith
         # Reuse the existing clustered interface suites against the already-running kind deployment.
         # externalEnv=true makes BackendTestLauncher target the port-forwarded interfaces instead of
