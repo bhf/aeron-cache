@@ -1,0 +1,81 @@
+name: Soak Scheduled Snapshot (Recording Growth)
+
+# Brings up a single-node clustered cache with a co-located clustertools sidecar running its in-process
+# snapshot scheduler gated by the RECORDING_GROWTH check. Confirms the scheduler holds off while the
+# archive is below the growth threshold, then fires a snapshot + purge once churn grows the archive past
+# it - all without calling any endpoint directly.
+#
+# This is heavyweight, like the recording-purge soak: it pushes a large burst of log through the cluster,
+# so the node gets a 2GB /dev/shm so the burst does not wedge the media driver. The default threshold
+# (80MB) sits above the idle archive footprint and below what the churn adds (~144MB), so the check holds
+# off while idle and fires after the churn. The threshold/churn are tunable below.
+on:
+  workflow_dispatch:
+    inputs:
+      archiveGrowthBytes:
+        description: 'Archive growth in bytes since the last purge before firing'
+        required: false
+        default: '83886080'
+      churnItems:
+        description: 'Large (64KB) writes performed to grow the archive'
+        required: false
+        default: '2300'
+      retention:
+        description: 'Snapshots to retain (purge keeps this many newest)'
+        required: false
+        default: '2'
+  pull_request:
+    branches: [ main ]
+    # Heavyweight Testcontainers soak - only run when the scheduler, the check, or something they depend
+    # on changes.
+    paths:
+      - 'cache-http/http-clustertools/**'
+      - 'cache-http/http-server-javalin/**'
+      - 'cache-integration/clustered/scheduled-snapshot-tests/**'
+      - 'cache-integration/integration-common/**'
+      - 'cache-cluster/**'
+      - 'cache-messages-http/**'
+      - '.github/workflows/scheduled-snapshot-recording-growth.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  recording-growth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Build Backend Images
+        # The soak boots node + http and a clustertools sidecar, all from the current build.
+        run: |
+          docker pull eclipse-temurin:25-jre
+          ./gradlew :cache-cluster:jibDockerBuild \
+                    :cache-http:http-server-javalin:jibDockerBuild \
+                    :cache-http:http-clustertools:jibDockerBuild
+
+      - name: Run Scheduled Snapshot (Recording Growth) Test
+        run: |
+          # inputs.* are empty on pull_request events, so fall back to the test's own defaults.
+          ./gradlew --console=plain \
+            :cache-integration:clustered:scheduled-snapshot-tests:test \
+            --tests '*ScheduledRecordingGrowthSnapshotTest' \
+            -PskipIntegrationTests=false \
+            -Dsnapshot.scheduled.archiveGrowthBytes=${{ github.event.inputs.archiveGrowthBytes || '83886080' }} \
+            -Dsnapshot.scheduled.churnItems=${{ github.event.inputs.churnItems || '2300' }} \
+            -Dsnapshot.scheduled.retention=${{ github.event.inputs.retention || '2' }}
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scheduled-snapshot-recording-growth-report
+          path: cache-integration/clustered/scheduled-snapshot-tests/build/reports/tests/test
+          if-no-files-found: ignore

@@ -102,6 +102,22 @@ Clustertools container
     - name: CACHE_DATA_DIR_BASE
       value: {{ .Values.persistence.mountPath }}
     {{- end }}
+    {{- with .Values.clustertools.snapshot }}
+    - name: SNAPSHOT_SCHEDULE_ENABLED
+      value: {{ .scheduleEnabled | quote }}
+    - name: SNAPSHOT_INTERVAL
+      value: {{ .interval | quote }}
+    - name: SNAPSHOT_RETENTION_COUNT
+      value: {{ .retentionCount | int64 | quote }}
+    - name: SNAPSHOT_CHECK_STRATEGY
+      value: {{ .check.strategy | quote }}
+    - name: SNAPSHOT_CHECK_POLL_INTERVAL
+      value: {{ .check.pollInterval | quote }}
+    - name: SNAPSHOT_CHECK_STATE_CHANGE_THRESHOLD
+      value: {{ .check.stateChangeThreshold | int64 | quote }}
+    - name: SNAPSHOT_CHECK_ARCHIVE_GROWTH_BYTES
+      value: {{ .check.archiveGrowthBytes | int64 | quote }}
+    {{- end }}
   envFrom:
     - configMapRef:
         name: {{ .Values.aeroncacheClusterConfigmap }}

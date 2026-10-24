@@ -86,6 +86,20 @@ LAUNCH_EMBEDDED=false
 CACHE_DATA_DIR=$CONFIG_DIR
 AERON_DIR=aeron
 CLUSTER_FOLDER=$CONFIG_DIR/node0/cluster/
+
+// In-process scheduled snapshot + purge (the monolith runs the ClusterTools scheduler in-process).
+// Disabled by default; the on-demand snapshot-and-purge endpoint always works regardless.
+SNAPSHOT_SCHEDULE_ENABLED=false
+SNAPSHOT_INTERVAL=PT6H
+SNAPSHOT_RETENTION_COUNT=2
+// Check strategy gating scheduled runs: ALWAYS | CACHE_STATE_CHANGE | RECORDING_GROWTH
+SNAPSHOT_CHECK_STRATEGY=ALWAYS
+// Poll interval for the CACHE_STATE_CHANGE / RECORDING_GROWTH strategies (ignored by ALWAYS)
+SNAPSHOT_CHECK_POLL_INTERVAL=PT5M
+// CACHE_STATE_CHANGE: state-changing cache ops since the last snapshot before snapshotting
+SNAPSHOT_CHECK_STATE_CHANGE_THRESHOLD=10000
+// RECORDING_GROWTH: archive growth in bytes since the last purge before snapshotting (256 MiB)
+SNAPSHOT_CHECK_ARCHIVE_GROWTH_BYTES=268435456
 EOF
 fi
 

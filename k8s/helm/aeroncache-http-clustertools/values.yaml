@@ -15,6 +15,41 @@ aeronDir: ""
 # back to the application default (localhost dev origins).
 corsAllowedOrigins: "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost"
 
+# In-process scheduled snapshot + purge. This is separate from, and in addition to, any external
+# cron that calls the snapshot-and-purge endpoint; the endpoint always runs regardless of the check
+# below - the check only gates the scheduled runs.
+#
+# Disabled by default (matching the application default). Enabling it also requires clusterFolder to
+# point at the cluster data directory this sidecar can see on disk.
+snapshot:
+  # Whether the in-process scheduled snapshot + purge timer runs.
+  scheduleEnabled: false
+  # How often the ALWAYS strategy takes a snapshot + purge (ISO-8601 duration).
+  interval: PT6H
+  # Number of most recent snapshots whose log history is retained by the purge.
+  retentionCount: 2
+  # Cluster data directory (contains recording.log). Required when scheduleEnabled is true. Leave
+  # empty to omit the env var.
+  clusterFolder: ""
+  # Archive directory whose segments are purged. Leave empty to default to a sibling `archive`
+  # directory next to clusterFolder.
+  archiveDir: ""
+  # The strategy deciding whether each scheduled run is worthwhile. Only scheduled runs are gated.
+  check:
+    # One of:
+    #   ALWAYS             - always snapshot on `interval` (original behaviour).
+    #   CACHE_STATE_CHANGE - snapshot once enough cache state-changing operations have accrued,
+    #                        read from the custom request counters in the media driver.
+    #   RECORDING_GROWTH   - snapshot once the archive has grown enough since the last purge.
+    strategy: ALWAYS
+    # Poll interval for CACHE_STATE_CHANGE and RECORDING_GROWTH (ISO-8601 duration). These evaluate
+    # cheaply, so they poll often and only occasionally trigger a snapshot. Ignored by ALWAYS.
+    pollInterval: PT5M
+    # CACHE_STATE_CHANGE: state-changing operations since the last snapshot before snapshotting.
+    stateChangeThreshold: 10000
+    # RECORDING_GROWTH: archive growth in bytes since the last purge before snapshotting (256 MiB).
+    archiveGrowthBytes: 268435456
+
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   repository: aeroncache-http-clustertools
