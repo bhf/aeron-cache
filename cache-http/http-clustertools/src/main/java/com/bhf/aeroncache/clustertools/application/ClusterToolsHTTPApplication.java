@@ -56,11 +56,17 @@ public class ClusterToolsHTTPApplication {
     /**
      * The strategy gating the scheduled snapshot + purge. The default always proceeds on the
      * configured interval, preserving the original fixed-rate behaviour. To try a smarter strategy,
-     * swap in another {@link SnapshotPurgeCheck} - for example a
-     * {@code RecordingGrowthSnapshotPurgeCheck} wired with a short poll rate, a growth threshold, and
-     * suppliers {@code () -> SNAPSHOT_INFO_READER.read(clusterDir(), CONFIG.getArchiveDir(), lastPurgeResult)}
-     * and {@code () -> lastPurgeResult}. Only the scheduled path is affected; the HTTP endpoint still
-     * runs {@link SnapshotScheduler#snapshotAndPurge()} unconditionally.
+     * swap in another {@link SnapshotPurgeCheck}, for example either of:
+     * <ul>
+     *   <li>{@code new CacheStateChangeSnapshotPurgeCheck(shortRate, opThreshold, COUNTERS_READER::read)} -
+     *       snapshots once enough cache state-changing operations have accrued, read from the custom
+     *       request counters exposed by the {@code /counters} endpoint;</li>
+     *   <li>{@code new RecordingGrowthSnapshotPurgeCheck(shortRate, byteThreshold,
+     *       () -> SNAPSHOT_INFO_READER.read(clusterDir(), CONFIG.getArchiveDir(), lastPurgeResult),
+     *       () -> lastPurgeResult)} - snapshots once the archive has grown enough since the last purge.</li>
+     * </ul>
+     * Only the scheduled path is affected; the HTTP endpoint still runs
+     * {@link SnapshotScheduler#snapshotAndPurge()} unconditionally.
      */
     private static final SnapshotPurgeCheck SNAPSHOT_PURGE_CHECK =
             new AlwaysSnapshotPurgeCheck(CONFIG.getSnapshotInterval());
