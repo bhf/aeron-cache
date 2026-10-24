@@ -222,6 +222,8 @@ public final class SnapshotClusterHarness {
             boolean firedDuringIdle,
             boolean firedAfterChurn,
             int snapshotCountAfter,
+            long idleArchiveBytes,
+            long postChurnArchiveBytes,
             JSONObject lastPurge,
             boolean fixtureStillServed) {
 
@@ -304,12 +306,16 @@ public final class SnapshotClusterHarness {
 
                 // Idle phase: no churn beyond the seed, so the check should hold off for the window.
                 boolean firedDuringIdle = awaitScheduledPurge(tools, idleWindow) != null;
+                long idleArchiveBytes = tools.snapshotInfo().optLong("archiveDirBytes", -1);
 
                 // Churn phase: cross the strategy's threshold.
                 String churnValue = "x".repeat(churnItemBytes);
                 for (int i = 0; i < churnItems; i++) {
                     cache.putItem("scheduled-churn", "k" + i, churnValue);
                 }
+                long postChurnArchiveBytes = tools.snapshotInfo().optLong("archiveDirBytes", -1);
+                System.out.println("Scheduled-check archive bytes: idle=" + idleArchiveBytes
+                        + ", postChurn=" + postChurnArchiveBytes);
 
                 // Fire phase: the check should now proceed and the scheduler snapshot + purge.
                 JSONObject firedInfo = awaitScheduledPurge(tools, fireTimeout);
@@ -328,7 +334,8 @@ public final class SnapshotClusterHarness {
                 }
 
                 return new ScheduledCheckOutcome(
-                        firedDuringIdle, firedAfterChurn, snapshotCountAfter, lastPurge, fixtureStillServed);
+                        firedDuringIdle, firedAfterChurn, snapshotCountAfter,
+                        idleArchiveBytes, postChurnArchiveBytes, lastPurge, fixtureStillServed);
             }
         } finally {
             node.stop();

@@ -19,21 +19,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * and once the churn pushes enough log to cross it the scheduler <em>fires</em> a snapshot + purge,
  * leaving the cluster still serving the fixture.
  *
- * <p>This is heavyweight, like the recording-purge soak: archive growth is quantised to archive
- * segments, so the churn must push a whole segment past the threshold, and the node needs an oversized
- * {@code /dev/shm} so the burst does not wedge the media driver. The default threshold (200MB) sits
- * above the idle footprint (~one segment) and below idle-plus-one-segment; tune it and the churn to
- * the image's archive segment length if needed. Tunables (system properties, forwarded by the
- * {@code snapshot.} prefix): {@code -Dsnapshot.scheduled.archiveGrowthBytes} (default 209715200),
- * {@code -Dsnapshot.scheduled.churnItems} (default 2300), {@code -Dsnapshot.scheduled.churnItemBytes}
- * (default 65536), {@code -Dsnapshot.scheduled.retention} (default 2).
+ * <p>This is heavyweight, like the recording-purge soak: it pushes a large burst of log through the
+ * cluster, so the node needs an oversized {@code /dev/shm} so the burst does not wedge the media driver.
+ * The growth threshold (default 80MB) sits above the idle archive footprint (a few MB after seeding)
+ * and comfortably below what the churn adds (~144MB of 64KB values), so the check holds off while idle
+ * and fires after the churn. Tune the threshold and churn together if a given image sizes its archive
+ * differently. Tunables (system properties, forwarded by the {@code snapshot.} prefix):
+ * {@code -Dsnapshot.scheduled.archiveGrowthBytes} (default 83886080), {@code -Dsnapshot.scheduled.churnItems}
+ * (default 2300), {@code -Dsnapshot.scheduled.churnItemBytes} (default 65536),
+ * {@code -Dsnapshot.scheduled.retention} (default 2).
  */
 class ScheduledRecordingGrowthSnapshotTest {
 
     @Test
     @DisplayName("Scheduler holds off while idle, then snapshots once the archive grows past the threshold")
     void snapshotsWhenRecordingLogGrowsEnough() throws Exception {
-        long growthBytes = Long.getLong("snapshot.scheduled.archiveGrowthBytes", 200L * 1024 * 1024);
+        long growthBytes = Long.getLong("snapshot.scheduled.archiveGrowthBytes", 80L * 1024 * 1024);
         int churnItems = Integer.getInteger("snapshot.scheduled.churnItems", 2300);
         int churnItemBytes = Integer.getInteger("snapshot.scheduled.churnItemBytes", 64 * 1024);
         int retention = Integer.getInteger("snapshot.scheduled.retention", 2);
@@ -53,13 +54,24 @@ class ScheduledRecordingGrowthSnapshotTest {
 
         System.out.println("RECORDING_GROWTH outcome: firedDuringIdle=" + outcome.firedDuringIdle()
                 + ", firedAfterChurn=" + outcome.firedAfterChurn()
+                + ", idleArchiveBytes=" + outcome.idleArchiveBytes()
+                + ", postChurnArchiveBytes=" + outcome.postChurnArchiveBytes()
+                + ", threshold=" + growthBytes
                 + ", reclaimedBytes=" + outcome.reclaimedBytesAfterChurn()
                 + ", snapshotCountAfter=" + outcome.snapshotCountAfter()
                 + ", fixtureStillServed=" + outcome.fixtureStillServed()
                 + " | " + outcome.lastPurge());
 
         assertFalse(outcome.firedDuringIdle(),
-                "scheduler took a snapshot while idle - the growth check did not hold off below the threshold");
+                "scheduler took a snapshot while idle - the growth check did not hold off below the threshold"
+                        + " (idle archive " + outcome.idleArchiveBytes() + " vs threshold " + growthBytes + ")");
+        if (!outcome.firedAfterChurn()) {
+            // Distinguish a mis-sized test (churn did not grow the archive past the threshold, so the
+            // check correctly held off) from a real product failure (it grew past but nothing fired).
+            assertTrue(outcome.postChurnArchiveBytes() >= growthBytes,
+                    "churn did not grow the archive past the threshold: postChurn=" + outcome.postChurnArchiveBytes()
+                            + " < threshold=" + growthBytes + "; raise churnItems/churnItemBytes or lower the threshold");
+        }
         assertTrue(outcome.firedAfterChurn(),
                 "scheduler never fired after churn grew the archive past the threshold");
         assertTrue(outcome.purgeSucceededAfterChurn(),
