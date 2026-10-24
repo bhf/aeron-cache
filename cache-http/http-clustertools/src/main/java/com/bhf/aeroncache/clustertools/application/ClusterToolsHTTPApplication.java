@@ -6,6 +6,8 @@ import com.bhf.aeroncache.clustertools.counters.AeronCountersPrometheusFormatter
 import com.bhf.aeroncache.clustertools.counters.AeronCountersReader;
 import com.bhf.aeroncache.clustertools.process.ClusterToolProcessRunner;
 import com.bhf.aeroncache.clustertools.schedule.SnapshotScheduler;
+import com.bhf.aeroncache.clustertools.schedule.check.AlwaysSnapshotPurgeCheck;
+import com.bhf.aeroncache.clustertools.schedule.check.SnapshotPurgeCheck;
 import com.bhf.aeroncache.clustertools.snapshot.SnapshotInfoReader;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
 import com.bhf.aeroncache.http.responses.ClusterToolsResponse;
@@ -50,9 +52,22 @@ public class ClusterToolsHTTPApplication {
     private static final ClusterToolProcessRunner TOOL_RUNNER = new ClusterToolProcessRunner();
     private static final RecordingPurger RECORDING_PURGER = new RecordingPurger(CONFIG);
     private static final AeronCountersReader COUNTERS_READER = new AeronCountersReader(CONFIG);
+
+    /**
+     * The strategy gating the scheduled snapshot + purge. The default always proceeds on the
+     * configured interval, preserving the original fixed-rate behaviour. To try a smarter strategy,
+     * swap in another {@link SnapshotPurgeCheck} - for example a
+     * {@code RecordingGrowthSnapshotPurgeCheck} wired with a short poll rate, a growth threshold, and
+     * suppliers {@code () -> SNAPSHOT_INFO_READER.read(clusterDir(), CONFIG.getArchiveDir(), lastPurgeResult)}
+     * and {@code () -> lastPurgeResult}. Only the scheduled path is affected; the HTTP endpoint still
+     * runs {@link SnapshotScheduler#snapshotAndPurge()} unconditionally.
+     */
+    private static final SnapshotPurgeCheck SNAPSHOT_PURGE_CHECK =
+            new AlwaysSnapshotPurgeCheck(CONFIG.getSnapshotInterval());
+
     private static final SnapshotScheduler SNAPSHOT_SCHEDULER = new SnapshotScheduler(
             CONFIG, TOOL_RUNNER, SNAPSHOT_INFO_READER, RECORDING_PURGER,
-            result -> lastPurgeResult = result);
+            result -> lastPurgeResult = result, SNAPSHOT_PURGE_CHECK);
 
     /**
      * Result of the most recent purge run (scheduled or on-demand), surfaced via snapshot-info.

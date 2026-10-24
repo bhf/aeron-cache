@@ -3,6 +3,8 @@ package com.bhf.aeroncache.clustertools.schedule;
 import com.bhf.aeroncache.clustertools.archive.RecordingPurger;
 import com.bhf.aeroncache.clustertools.config.ClusterToolsConfig;
 import com.bhf.aeroncache.clustertools.process.ClusterToolProcessRunner;
+import com.bhf.aeroncache.clustertools.schedule.check.SnapshotPurgeCheck;
+import com.bhf.aeroncache.clustertools.schedule.check.SnapshotPurgeDecision;
 import com.bhf.aeroncache.clustertools.snapshot.SnapshotInfoReader;
 import com.bhf.aeroncache.http.responses.RecordingPurgeResponse;
 import com.bhf.aeroncache.http.responses.SnapshotInfoResponse;
@@ -23,6 +25,13 @@ import java.util.function.Consumer;
  * — and only then purges. If the snapshot does not become durable within a timeout, the purge is
  * skipped so segments are never removed without a fresh snapshot to recover from.
  *
+ * <p>Before each scheduled run a {@link SnapshotPurgeCheck} is consulted to decide whether the run is
+ * worthwhile; a skipping decision drops that run. The check also owns the polling rate via
+ * {@link SnapshotPurgeCheck#getScheduleRate()}, so a cheap default check polls rarely while a growth-
+ * or counter-aware check can poll frequently and only occasionally trigger a snapshot. This gating
+ * applies only to the scheduled path - {@link #snapshotAndPurge()} itself, used by the on-demand HTTP
+ * endpoint, is never gated.
+ *
  * <p>Disabled unless {@link ClusterToolsConfig#isScheduleEnabled()} is true, so embedding in the
  * monolith does not schedule snapshots implicitly.
  */
@@ -38,6 +47,7 @@ public class SnapshotScheduler {
     private final SnapshotInfoReader infoReader;
     private final RecordingPurger purger;
     private final Consumer<RecordingPurgeResponse> purgeResultSink;
+    private final SnapshotPurgeCheck scheduledCheck;
     private final ScheduledExecutorService executor;
 
     public SnapshotScheduler(
@@ -45,12 +55,14 @@ public class SnapshotScheduler {
             final ClusterToolProcessRunner toolRunner,
             final SnapshotInfoReader infoReader,
             final RecordingPurger purger,
-            final Consumer<RecordingPurgeResponse> purgeResultSink) {
+            final Consumer<RecordingPurgeResponse> purgeResultSink,
+            final SnapshotPurgeCheck scheduledCheck) {
         this.config = config;
         this.toolRunner = toolRunner;
         this.infoReader = infoReader;
         this.purger = purger;
         this.purgeResultSink = purgeResultSink;
+        this.scheduledCheck = scheduledCheck;
         this.executor = Executors.newSingleThreadScheduledExecutor(runnable -> {
             final Thread thread = new Thread(runnable, "snapshot-scheduler");
             thread.setDaemon(true);
@@ -70,9 +82,9 @@ public class SnapshotScheduler {
             log.error("Scheduled snapshot + purge enabled but CLUSTER_FOLDER is not set; not scheduling");
             return;
         }
-        final long periodMs = config.getSnapshotInterval().toMillis();
-        log.info("Scheduling snapshot + purge every {} (retaining {} snapshots)",
-                config.getSnapshotInterval(), config.getSnapshotRetentionCount());
+        final long periodMs = scheduledCheck.getScheduleRate().toMillis();
+        log.info("Scheduling snapshot + purge check '{}' every {} (retaining {} snapshots)",
+                scheduledCheck.name(), scheduledCheck.getScheduleRate(), config.getSnapshotRetentionCount());
         executor.scheduleWithFixedDelay(this::runQuietly, periodMs, periodMs, TimeUnit.MILLISECONDS);
     }
 
@@ -85,6 +97,14 @@ public class SnapshotScheduler {
 
     private void runQuietly() {
         try {
+            final SnapshotPurgeDecision decision = scheduledCheck.evaluate();
+            if (!decision.proceed()) {
+                log.info("Scheduled snapshot + purge skipped by check '{}': {}",
+                        scheduledCheck.name(), decision.reason());
+                return;
+            }
+            log.info("Scheduled snapshot + purge approved by check '{}': {}",
+                    scheduledCheck.name(), decision.reason());
             snapshotAndPurge();
         } catch (final Throwable t) {
             // Never let an exception kill the scheduled task.
