@@ -31,3 +31,12 @@ data:
   {{- if .Values.idleStrategy }}
   IDLE_STRATEGY: {{ tpl .Values.idleStrategy . | quote }}
   {{- end }}
+  {{- with .Values.snapshot }}
+  SNAPSHOT_SCHEDULE_ENABLED: {{ .scheduleEnabled | quote }}
+  SNAPSHOT_INTERVAL: {{ .interval | quote }}
+  SNAPSHOT_RETENTION_COUNT: {{ .retentionCount | int64 | quote }}
+  SNAPSHOT_CHECK_STRATEGY: {{ .check.strategy | quote }}
+  SNAPSHOT_CHECK_POLL_INTERVAL: {{ .check.pollInterval | quote }}
+  SNAPSHOT_CHECK_STATE_CHANGE_THRESHOLD: {{ .check.stateChangeThreshold | int64 | quote }}
+  SNAPSHOT_CHECK_ARCHIVE_GROWTH_BYTES: {{ .check.archiveGrowthBytes | int64 | quote }}
+  {{- end }}

@@ -49,6 +49,33 @@ aeronCacheTermLength: "128m"
 # (localhost dev origins).
 corsAllowedOrigins: "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost"
 
+# In-process scheduled snapshot + purge. The monolith launches the ClusterTools HTTP application
+# in-process, so it runs this scheduler against its own node0 cluster dir (CLUSTER_FOLDER above).
+# This is separate from any external cron hitting the snapshot-and-purge endpoint; the endpoint always
+# runs regardless - the check below only gates the scheduled runs.
+snapshot:
+  # Whether the in-process scheduled snapshot + purge timer runs.
+  scheduleEnabled: false
+  # How often the ALWAYS strategy takes a snapshot + purge (ISO-8601 duration).
+  interval: PT6H
+  # Number of most recent snapshots whose log history is retained by the purge.
+  retentionCount: 2
+  # The strategy deciding whether each scheduled run is worthwhile. Only scheduled runs are gated.
+  check:
+    # One of:
+    #   ALWAYS             - always snapshot on `interval` (original behaviour).
+    #   CACHE_STATE_CHANGE - snapshot once enough cache state-changing operations have accrued,
+    #                        read from the custom request counters (type 2000) in the media driver.
+    #   RECORDING_GROWTH   - snapshot once the archive has grown enough since the last purge.
+    strategy: ALWAYS
+    # Poll interval for CACHE_STATE_CHANGE and RECORDING_GROWTH (ISO-8601 duration). These evaluate
+    # cheaply, so they poll often and only occasionally trigger a snapshot. Ignored by ALWAYS.
+    pollInterval: PT5M
+    # CACHE_STATE_CHANGE: state-changing operations since the last snapshot before snapshotting.
+    stateChangeThreshold: 10000
+    # RECORDING_GROWTH: archive growth in bytes since the last purge before snapshotting (256 MiB).
+    archiveGrowthBytes: 268435456
+
 # External Aeron C media driver (aeronmd) sidecar. By default the monolith launches a single
 # embedded Java media driver in-process (MONOLITH_EMBEDDED_DRIVER=true) that all its components
 # share. When enabled here, the C driver runs as a native sidecar instead and the monolith attaches

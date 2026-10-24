@@ -5,8 +5,8 @@ import com.bhf.aeroncache.clustertools.config.ClusterToolsConfig;
 import com.bhf.aeroncache.clustertools.counters.AeronCountersPrometheusFormatter;
 import com.bhf.aeroncache.clustertools.counters.AeronCountersReader;
 import com.bhf.aeroncache.clustertools.process.ClusterToolProcessRunner;
+import com.bhf.aeroncache.clustertools.schedule.SnapshotPurgeCheckFactory;
 import com.bhf.aeroncache.clustertools.schedule.SnapshotScheduler;
-import com.bhf.aeroncache.clustertools.schedule.check.AlwaysSnapshotPurgeCheck;
 import com.bhf.aeroncache.clustertools.schedule.check.SnapshotPurgeCheck;
 import com.bhf.aeroncache.clustertools.snapshot.SnapshotInfoReader;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
@@ -54,31 +54,25 @@ public class ClusterToolsHTTPApplication {
     private static final AeronCountersReader COUNTERS_READER = new AeronCountersReader(CONFIG);
 
     /**
-     * The strategy gating the scheduled snapshot + purge. The default always proceeds on the
-     * configured interval, preserving the original fixed-rate behaviour. To try a smarter strategy,
-     * swap in another {@link SnapshotPurgeCheck}, for example either of:
-     * <ul>
-     *   <li>{@code new CacheStateChangeSnapshotPurgeCheck(shortRate, opThreshold, COUNTERS_READER::read)} -
-     *       snapshots once enough cache state-changing operations have accrued, read from the custom
-     *       request counters exposed by the {@code /counters} endpoint;</li>
-     *   <li>{@code new RecordingGrowthSnapshotPurgeCheck(shortRate, byteThreshold,
-     *       () -> SNAPSHOT_INFO_READER.read(clusterDir(), CONFIG.getArchiveDir(), lastPurgeResult),
-     *       () -> lastPurgeResult)} - snapshots once the archive has grown enough since the last purge.</li>
-     * </ul>
-     * Only the scheduled path is affected; the HTTP endpoint still runs
+     * Result of the most recent purge run (scheduled or on-demand), surfaced via snapshot-info.
+     */
+    private static volatile RecordingPurgeResponse lastPurgeResult;
+
+    /**
+     * The strategy gating the scheduled snapshot + purge, selected by {@code SNAPSHOT_CHECK_STRATEGY}
+     * (defaults to always-proceed, preserving the original fixed-interval behaviour). Only the
+     * scheduled path is affected; the HTTP endpoint still runs
      * {@link SnapshotScheduler#snapshotAndPurge()} unconditionally.
      */
-    private static final SnapshotPurgeCheck SNAPSHOT_PURGE_CHECK =
-            new AlwaysSnapshotPurgeCheck(CONFIG.getSnapshotInterval());
+    private static final SnapshotPurgeCheck SNAPSHOT_PURGE_CHECK = SnapshotPurgeCheckFactory.create(
+            CONFIG,
+            COUNTERS_READER::read,
+            () -> SNAPSHOT_INFO_READER.read(clusterDir(), CONFIG.getArchiveDir(), lastPurgeResult),
+            () -> lastPurgeResult);
 
     private static final SnapshotScheduler SNAPSHOT_SCHEDULER = new SnapshotScheduler(
             CONFIG, TOOL_RUNNER, SNAPSHOT_INFO_READER, RECORDING_PURGER,
             result -> lastPurgeResult = result, SNAPSHOT_PURGE_CHECK);
-
-    /**
-     * Result of the most recent purge run (scheduled or on-demand), surfaced via snapshot-info.
-     */
-    private static volatile RecordingPurgeResponse lastPurgeResult;
 
     public static void main(String[] args) {
         var app = startHTTPServer();
@@ -160,11 +154,20 @@ public class ClusterToolsHTTPApplication {
      * @param ctx The Javalin context.
      */
     private static void handleGetSnapshotInfo(Context ctx) {
-        var clusterFolder = CONFIG.getClusterFolder();
-        var clusterDir = clusterFolder == null ? null : new File(clusterFolder);
-        SnapshotInfoResponse response = SNAPSHOT_INFO_READER.read(clusterDir, CONFIG.getArchiveDir(), lastPurgeResult);
+        SnapshotInfoResponse response = SNAPSHOT_INFO_READER.read(clusterDir(), CONFIG.getArchiveDir(), lastPurgeResult);
         ctx.status(200);
         ctx.json(response);
+    }
+
+    /**
+     * The configured cluster data directory as a {@link File}, or null when {@code CLUSTER_FOLDER} is
+     * unset.
+     *
+     * @return the cluster directory, or null.
+     */
+    private static File clusterDir() {
+        final String clusterFolder = CONFIG.getClusterFolder();
+        return clusterFolder == null ? null : new File(clusterFolder);
     }
 
     /**

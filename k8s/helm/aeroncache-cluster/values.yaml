@@ -62,6 +62,32 @@ clustertools:
     httpGet:
       path: /readiness/
       port: 7080
+  # In-process scheduled snapshot + purge run by the co-located clustertools sidecar. CLUSTER_FOLDER /
+  # ARCHIVE_DIR are derived per-node by the sidecar command, so only the scheduling policy is set here.
+  # This is separate from any external cron hitting the snapshot-and-purge endpoint; the endpoint always
+  # runs regardless - the check below only gates the scheduled runs.
+  snapshot:
+    # Whether the in-process scheduled snapshot + purge timer runs.
+    scheduleEnabled: false
+    # How often the ALWAYS strategy takes a snapshot + purge (ISO-8601 duration).
+    interval: PT6H
+    # Number of most recent snapshots whose log history is retained by the purge.
+    retentionCount: 2
+    # The strategy deciding whether each scheduled run is worthwhile. Only scheduled runs are gated.
+    check:
+      # One of:
+      #   ALWAYS             - always snapshot on `interval` (original behaviour).
+      #   CACHE_STATE_CHANGE - snapshot once enough cache state-changing operations have accrued,
+      #                        read from the custom request counters (type 2000) in the media driver.
+      #   RECORDING_GROWTH   - snapshot once the archive has grown enough since the last purge.
+      strategy: ALWAYS
+      # Poll interval for CACHE_STATE_CHANGE and RECORDING_GROWTH (ISO-8601 duration). These evaluate
+      # cheaply, so they poll often and only occasionally trigger a snapshot. Ignored by ALWAYS.
+      pollInterval: PT5M
+      # CACHE_STATE_CHANGE: state-changing operations since the last snapshot before snapshotting.
+      stateChangeThreshold: 10000
+      # RECORDING_GROWTH: archive growth in bytes since the last purge before snapshotting (256 MiB).
+      archiveGrowthBytes: 268435456
 
 release-name: "aeroncache-cluster"
 
