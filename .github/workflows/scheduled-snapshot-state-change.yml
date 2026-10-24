@@ -1,0 +1,79 @@
+name: Soak Scheduled Snapshot (Cache State Change)
+
+# Brings up a single-node clustered cache with a co-located clustertools sidecar running its in-process
+# snapshot scheduler gated by the CACHE_STATE_CHANGE check. Confirms the scheduler holds off while the
+# cache is idle, then fires a snapshot + purge once enough state-changing operations (read from the
+# media driver's type-2000 request counters) have accrued - all without calling any endpoint directly.
+#
+# This is light relative to the recording-growth soak: it bumps the counters with many tiny writes past
+# a low threshold, so no oversized /dev/shm is needed. The thresholds/churn are tunable below.
+on:
+  workflow_dispatch:
+    inputs:
+      stateChangeThreshold:
+        description: 'State-changing cache ops since the last snapshot before firing'
+        required: false
+        default: '1000'
+      churnItems:
+        description: 'Cache writes performed to cross the threshold'
+        required: false
+        default: '2000'
+      retention:
+        description: 'Snapshots to retain (purge keeps this many newest)'
+        required: false
+        default: '2'
+  pull_request:
+    branches: [ main ]
+    # Heavyweight Testcontainers soak - only run when the scheduler, the check, or something they depend
+    # on changes.
+    paths:
+      - 'cache-http/http-clustertools/**'
+      - 'cache-http/http-server-javalin/**'
+      - 'cache-integration/clustered/scheduled-snapshot-tests/**'
+      - 'cache-integration/integration-common/**'
+      - 'cache-cluster/**'
+      - 'cache-messages-http/**'
+      - '.github/workflows/scheduled-snapshot-state-change.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  state-change:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Build Backend Images
+        # The soak boots node + http and a clustertools sidecar, all from the current build.
+        run: |
+          docker pull eclipse-temurin:25-jre
+          ./gradlew :cache-cluster:jibDockerBuild \
+                    :cache-http:http-server-javalin:jibDockerBuild \
+                    :cache-http:http-clustertools:jibDockerBuild
+
+      - name: Run Scheduled Snapshot (Cache State Change) Test
+        run: |
+          # inputs.* are empty on pull_request events, so fall back to the test's own defaults.
+          ./gradlew --console=plain \
+            :cache-integration:clustered:scheduled-snapshot-tests:test \
+            --tests '*ScheduledCacheStateChangeSnapshotTest' \
+            -PskipIntegrationTests=false \
+            -Dsnapshot.scheduled.stateChangeThreshold=${{ github.event.inputs.stateChangeThreshold || '1000' }} \
+            -Dsnapshot.scheduled.churnItems=${{ github.event.inputs.churnItems || '2000' }} \
+            -Dsnapshot.scheduled.retention=${{ github.event.inputs.retention || '2' }}
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scheduled-snapshot-state-change-report
+          path: cache-integration/clustered/scheduled-snapshot-tests/build/reports/tests/test
+          if-no-files-found: ignore

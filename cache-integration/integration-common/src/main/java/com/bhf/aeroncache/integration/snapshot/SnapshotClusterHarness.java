@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -210,6 +211,169 @@ public final class SnapshotClusterHarness {
             network.close();
             deleteRecursively(Path.of(hostPath));
         }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Scheduled snapshot + purge gating (SnapshotPurgeCheck strategies)
+    // ---------------------------------------------------------------------------------------------
+
+    /** Outcome of a scheduled-check soak: whether the in-process scheduler fired, and when. */
+    public record ScheduledCheckOutcome(
+            boolean firedDuringIdle,
+            boolean firedAfterChurn,
+            int snapshotCountAfter,
+            JSONObject lastPurge,
+            boolean fixtureStillServed) {
+
+        /** Did the scheduler's snapshot + purge complete successfully after the churn phase? */
+        public boolean purgeSucceededAfterChurn() {
+            return lastPurge != null && lastPurge.optBoolean("success", false);
+        }
+
+        public long reclaimedBytesAfterChurn() {
+            return lastPurge == null ? 0 : lastPurge.optLong("reclaimedBytes", 0);
+        }
+    }
+
+    /**
+     * Exercise a scheduled {@code SnapshotPurgeCheck} strategy end to end: boot a single node with the
+     * clustertools sidecar running its in-process scheduler (enabled via {@code strategyEnv}), confirm
+     * the check <em>holds off</em> while the cache is idle, then churn enough to cross the strategy's
+     * threshold and confirm the scheduler <em>fires</em> a snapshot + purge - all without the harness
+     * ever calling a snapshot or purge endpoint itself.
+     *
+     * <p>"Fired" is observed purely from the sidecar's {@code snapshot-info}: its {@code lastPurge}
+     * field is null until a snapshot + purge runs, and only the scheduler can set it here, so a
+     * non-null {@code lastPurge} is an unambiguous signal the check proceeded.
+     *
+     * @param strategyEnv    strategy-specific env for the sidecar (e.g. {@code SNAPSHOT_CHECK_STRATEGY},
+     *                       its threshold and poll interval); scheduling is enabled automatically.
+     * @param retentionCount snapshots to retain ({@code SNAPSHOT_RETENTION_COUNT}).
+     * @param idleWindow     how long to watch for a (not expected) scheduled run before churning.
+     * @param fireTimeout    how long to wait for the scheduled run after churning.
+     * @param churnItems     cache writes performed to cross the threshold.
+     * @param churnItemBytes size of each churn value, in bytes.
+     * @param largeShm       give node + http a 2GB {@code /dev/shm} (needed when churn pushes whole
+     *                       archive segments, i.e. for the recording-growth strategy).
+     * @return the observed outcome.
+     */
+    public static ScheduledCheckOutcome scheduledCheckUnderChurn(
+            Map<String, String> strategyEnv,
+            int retentionCount,
+            Duration idleWindow,
+            Duration fireTimeout,
+            int churnItems,
+            int churnItemBytes,
+            boolean largeShm) throws IOException, InterruptedException {
+        String hostPath = HOST_ROOT + "/scheduled-" + UUID.randomUUID();
+        new File(hostPath).mkdirs();
+
+        Network network = Network.newNetwork();
+        GenericContainer<?> node = clusterNode(network, hostPath)
+                .withCreateContainerCmdModifier(cmd -> cmd.getHostConfig().withIpcMode("shareable"));
+        if (largeShm) {
+            node.withSharedMemorySize(PURGE_SHM_BYTES);
+        }
+        // Publish the sidecar's 7080 (it shares node0's network namespace) so the host can poll
+        // snapshot-info to observe whether the in-process scheduler fired.
+        node.addExposedPort(7080);
+
+        try {
+            node.start();
+            String aeronDir = discoverAeronDir(node);
+            System.out.println("Discovered node0 aeron dir: " + aeronDir);
+
+            GenericContainer<?> httpBuilder = httpInterface(network);
+            if (largeShm) {
+                httpBuilder.withSharedMemorySize(PURGE_SHM_BYTES);
+            }
+            try (GenericContainer<?> clustertools = scheduledSidecar(node, retentionCount, aeronDir, strategyEnv);
+                 GenericContainer<?> http = httpBuilder) {
+                clustertools.start();
+                http.start();
+
+                String httpBase = "http://" + http.getHost() + ":" + http.getMappedPort(7070);
+                SnapshotHttp cache = new SnapshotHttp(httpBase);
+                cache.awaitReady(Duration.ofMinutes(2));
+                cache.seed();
+                cache.createCache("scheduled-churn");
+
+                String toolsBase = "http://" + node.getHost() + ":" + node.getMappedPort(7080);
+                ClusterToolsHttp tools = new ClusterToolsHttp(toolsBase);
+                tools.awaitReady(Duration.ofMinutes(1));
+
+                // Idle phase: no churn beyond the seed, so the check should hold off for the window.
+                boolean firedDuringIdle = awaitScheduledPurge(tools, idleWindow) != null;
+
+                // Churn phase: cross the strategy's threshold.
+                String churnValue = "x".repeat(churnItemBytes);
+                for (int i = 0; i < churnItems; i++) {
+                    cache.putItem("scheduled-churn", "k" + i, churnValue);
+                }
+
+                // Fire phase: the check should now proceed and the scheduler snapshot + purge.
+                JSONObject firedInfo = awaitScheduledPurge(tools, fireTimeout);
+                boolean firedAfterChurn = firedInfo != null;
+                JSONObject lastPurge = (firedInfo != null && !firedInfo.isNull("lastPurge"))
+                        ? firedInfo.getJSONObject("lastPurge") : null;
+                int snapshotCountAfter = (firedInfo != null ? firedInfo : tools.snapshotInfo())
+                        .optInt("snapshotCount", -1);
+
+                boolean fixtureStillServed;
+                try {
+                    cache.verifyFixture(SnapshotFixture.VERSION);
+                    fixtureStillServed = true;
+                } catch (AssertionError | RuntimeException e) {
+                    fixtureStillServed = false;
+                }
+
+                return new ScheduledCheckOutcome(
+                        firedDuringIdle, firedAfterChurn, snapshotCountAfter, lastPurge, fixtureStillServed);
+            }
+        } finally {
+            node.stop();
+            network.close();
+            deleteRecursively(Path.of(hostPath));
+        }
+    }
+
+    /**
+     * Poll {@code snapshot-info} until its {@code lastPurge} is non-null (the scheduler ran a snapshot
+     * + purge) or the timeout elapses.
+     *
+     * @return the snapshot-info payload once a purge is observed, or null if none ran within the timeout.
+     */
+    private static JSONObject awaitScheduledPurge(ClusterToolsHttp tools, Duration timeout) {
+        long deadline = System.nanoTime() + timeout.toNanos();
+        while (System.nanoTime() < deadline) {
+            JSONObject info = tools.snapshotInfo();
+            if (!info.isNull("lastPurge")) {
+                return info;
+            }
+            sleepQuietly(1000);
+        }
+        return null;
+    }
+
+    private static void sleepQuietly(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * The clustertools sidecar wired to run its in-process scheduler with a chosen check strategy:
+     * like {@link #purgeSidecar} but with {@code SNAPSHOT_SCHEDULE_ENABLED=true} and the given
+     * strategy env layered on top.
+     */
+    private static GenericContainer<?> scheduledSidecar(
+            GenericContainer<?> node, int retentionCount, String aeronDir, Map<String, String> strategyEnv) {
+        GenericContainer<?> sidecar = purgeSidecar(node, retentionCount, aeronDir)
+                .withEnv("SNAPSHOT_SCHEDULE_ENABLED", "true");
+        strategyEnv.forEach(sidecar::withEnv);
+        return sidecar;
     }
 
     /**
