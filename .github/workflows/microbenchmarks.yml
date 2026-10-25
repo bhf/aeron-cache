@@ -12,6 +12,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Run every shard twice: with the default MapCache and with the PooledMapCache. MapCacheFactory
+        # selects the implementation from the AERON_CACHE_POOLING_ENABLED env var, which the forked
+        # JMH JVMs inherit from the Gradle step below.
+        pooling: [unpooled, pooled]
         mode: [throughput]
         # Shard the run across parallel jobs so wall-clock stays low. The two shards are split by
         # package: counter benchmarks live in ...cache.counters.*, everything else is a cache
@@ -34,7 +38,9 @@ jobs:
 
       # A quick regression signal on every push/PR: short 5s warmup + 5s measurement, single fork.
       # For longer, publishable numbers trigger the "JMH Full" workflow manually.
-      - name: Run JMH benchmark (${{ matrix.shard.name }})
+      - name: Run JMH benchmark (${{ matrix.shard.name }}, ${{ matrix.pooling }})
+        env:
+          AERON_CACHE_POOLING_ENABLED: ${{ matrix.pooling == 'pooled' }}
         run: >-
           ./gradlew :cache-integration:microbenchmarks:jmh
           -PjmhMode=${{ matrix.mode }}
@@ -45,10 +51,10 @@ jobs:
       - name: Rename and Prepare Artifact
         run: |
           SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          mv cache-integration/microbenchmarks/build/reports/jmh/results.json "cache-integration/microbenchmarks/build/reports/jmh/${SHA}-${{ matrix.mode }}-${{ matrix.shard.name }}.json"
+          mv cache-integration/microbenchmarks/build/reports/jmh/results.json "cache-integration/microbenchmarks/build/reports/jmh/${SHA}-${{ matrix.mode }}-${{ matrix.shard.name }}-${{ matrix.pooling }}.json"
 
       - name: Upload JMH Results
         uses: actions/upload-artifact@v4
         with:
-          name: jmh-results-${{ matrix.mode }}-${{ matrix.shard.name }}
-          path: cache-integration/microbenchmarks/build/reports/jmh/${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.mode }}-${{ matrix.shard.name }}.json
+          name: jmh-results-${{ matrix.mode }}-${{ matrix.shard.name }}-${{ matrix.pooling }}
+          path: cache-integration/microbenchmarks/build/reports/jmh/${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.mode }}-${{ matrix.shard.name }}-${{ matrix.pooling }}.json
