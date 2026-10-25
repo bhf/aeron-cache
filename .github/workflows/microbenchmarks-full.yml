@@ -40,6 +40,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Run every shard twice: with the default MapCache and with the PooledMapCache. MapCacheFactory
+        # selects the implementation from the AERON_CACHE_POOLING_ENABLED env var, which the forked
+        # JMH JVMs inherit from the Gradle step below.
+        pooling: [unpooled, pooled]
         # Same cache vs counters sharding as the per-PR workflow so the long run is parallelised too.
         shard:
           - name: cache
@@ -57,7 +61,9 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Run JMH benchmark (${{ matrix.shard.name }})
+      - name: Run JMH benchmark (${{ matrix.shard.name }}, ${{ matrix.pooling }})
+        env:
+          AERON_CACHE_POOLING_ENABLED: ${{ matrix.pooling == 'pooled' }}
         run: >-
           ./gradlew :cache-integration:microbenchmarks:jmh
           -PjmhMode=${{ inputs.mode }}
@@ -71,10 +77,10 @@ jobs:
       - name: Rename and Prepare Artifact
         run: |
           SHA="${{ github.sha }}"
-          mv cache-integration/microbenchmarks/build/reports/jmh/results.json "cache-integration/microbenchmarks/build/reports/jmh/${SHA}-${{ inputs.mode }}-${{ matrix.shard.name }}-full.json"
+          mv cache-integration/microbenchmarks/build/reports/jmh/results.json "cache-integration/microbenchmarks/build/reports/jmh/${SHA}-${{ inputs.mode }}-${{ matrix.shard.name }}-${{ matrix.pooling }}-full.json"
 
       - name: Upload JMH Results
         uses: actions/upload-artifact@v4
         with:
-          name: jmh-results-${{ inputs.mode }}-${{ matrix.shard.name }}-full
-          path: cache-integration/microbenchmarks/build/reports/jmh/${{ github.sha }}-${{ inputs.mode }}-${{ matrix.shard.name }}-full.json
+          name: jmh-results-${{ inputs.mode }}-${{ matrix.shard.name }}-${{ matrix.pooling }}-full
+          path: cache-integration/microbenchmarks/build/reports/jmh/${{ github.sha }}-${{ inputs.mode }}-${{ matrix.shard.name }}-${{ matrix.pooling }}-full.json
