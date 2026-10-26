@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type {Metadata} from "next";
 import ObservabilityDashboard from "@/components/observability/ObservabilityDashboard";
 
@@ -12,10 +11,7 @@ export const metadata: Metadata = {
 export default function Page() {
     return (
         <div className="p-6 space-y-4">
-            <div className="flex items-baseline justify-between">
-                <h1 className="text-2xl">Observability</h1>
-                <Link href="/" className="text-sm underline">Back to Aeron Cache</Link>
-            </div>
+            <h1 className="text-2xl">Observability</h1>
             <ObservabilityDashboard/>
         </div>
     )

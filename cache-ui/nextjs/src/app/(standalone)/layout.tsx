@@ -1,5 +1,6 @@
 import type {Metadata} from "next";
 import "../globals.css";
+import SiteHeader from "@/components/SiteHeader";
 import {Toaster} from "@/components/ui/sonner";
 
 /**
@@ -15,6 +16,7 @@ export default function StandaloneLayout({children}: Readonly<{ children: React.
     return (
         <html lang="en">
         <body>
+        <SiteHeader/>
         {children}
         <Toaster/>
         </body>

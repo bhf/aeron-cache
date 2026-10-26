@@ -3,6 +3,7 @@
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog"
 import {Button} from "@/components/ui/button"
 import {ActivityIcon, ExternalLinkIcon} from "lucide-react"
+import {HEADER_BUTTON_CLASS} from "@/lib/headerStyles"
 import ObservabilityDashboard from "@/components/observability/ObservabilityDashboard"
 
 /**
@@ -12,10 +13,10 @@ import ObservabilityDashboard from "@/components/observability/ObservabilityDash
  */
 export default function ObservabilityButton() {
     return (
-        <div className="flex items-start">
+        <div className="flex items-center">
             <Dialog>
                 <DialogTrigger asChild>
-                    <Button variant="link" data-testid="menu-link-observability"><ActivityIcon/>Observability</Button>
+                    <Button variant="link" className={HEADER_BUTTON_CLASS} data-testid="menu-link-observability"><ActivityIcon/>Observability</Button>
                 </DialogTrigger>
                 <DialogContent className="w-[95vw] max-w-[1400px] sm:max-w-[1400px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
@@ -30,7 +31,7 @@ export default function ObservabilityButton() {
             <a href="/observability" target="_blank" rel="noopener noreferrer"
                title="Open observability in a new tab" aria-label="Open observability in a new tab"
                data-testid="observability-open-new-tab"
-               className="-ml-3 flex h-9 items-center px-2 text-primary hover:opacity-70">
+               className={`-ml-3 flex h-9 items-center px-2 ${HEADER_BUTTON_CLASS}`}>
                 <ExternalLinkIcon className="size-4"/>
             </a>
         </div>

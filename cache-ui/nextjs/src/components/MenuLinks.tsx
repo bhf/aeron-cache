@@ -3,6 +3,7 @@ import ObservabilityButton from "@/components/observability/ObservabilityButton"
 import Link from "next/link";
 import {Button} from "@/components/ui/button";
 import {LayersIcon, KanbanIcon, CameraIcon} from "lucide-react";
+import {HEADER_BUTTON_CLASS} from "@/lib/headerStyles";
 import {getJaegerURL, getPrometheusURL, isUrlAccessible} from "@/lib/actions";
 
 export default async function MenuLinks() {
@@ -15,21 +16,21 @@ export default async function MenuLinks() {
     ]);
 
     return (
-        <div className="hidden lg:flex lg:flex-1 lg:justify-end pr-4">
+        <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-end">
             <AboutAeronCache/>
             {isJaegerAccessible && (
                 <Link href={jaegerURL} target="_blank" data-testid="menu-link-jaeger">
-                    <Button variant="link"><LayersIcon/>Jaeger</Button>
+                    <Button variant="link" className={HEADER_BUTTON_CLASS}><LayersIcon/>Jaeger</Button>
                 </Link>
             )}
             {isPrometheusAccessible && (
                 <Link href={prometheuesURL} target="_blank" data-testid="menu-link-prometheus">
-                    <Button variant="link"><KanbanIcon/>Prometheus</Button>
+                    <Button variant="link" className={HEADER_BUTTON_CLASS}><KanbanIcon/>Prometheus</Button>
                 </Link>
             )}
             <ObservabilityButton/>
             <Link href="/snapshot" data-testid="menu-link-snapshot">
-                <Button variant="link"><CameraIcon/>Snapshot</Button>
+                <Button variant="link" className={HEADER_BUTTON_CLASS}><CameraIcon/>Snapshot</Button>
             </Link>
         </div>
     )
