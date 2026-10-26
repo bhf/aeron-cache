@@ -2,7 +2,7 @@
 
 import {ColumnDef} from "@tanstack/react-table"
 import {CacheInfo} from "@/lib/types";
-import {RemoveCacheItem} from "@/app/@cacheview/cache/[slug]/RemoveCacheItem";
+import {RemoveCacheItem} from "@/app/(main)/@cacheview/cache/[slug]/RemoveCacheItem";
 import CopyToClipboard from "@/components/cache-view/CopyToClipboard";
 import TruncatedText from "@/components/cache-view/TruncatedText";
 import JsonViewer from "@/components/cache-view/JsonViewer";

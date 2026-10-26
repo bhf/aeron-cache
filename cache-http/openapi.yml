@@ -453,6 +453,40 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/SnapshotInfoResponse'
+  /api/v1/aeron-counters:
+    get:
+      tags:
+        - ClusterTools
+      summary: Aeron media driver counters of every node
+      description: >-
+        The Aeron media driver counters scraped from each node's clustertools sidecar, with the gateway's
+        cache mode and node count, for the UI observability dashboard. Unreachable nodes are reported
+        with reachable=false.
+      operationId: getAeronCounters
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                properties:
+                  mode:
+                    type: string
+                    enum: [CLUSTERED, EPHEMERAL]
+                  nodeCount:
+                    type: integer
+                  nodes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        host:
+                          type: string
+                        reachable:
+                          type: boolean
+                        counters:
+                          type: object
   /liveness/:
     get:
       tags:

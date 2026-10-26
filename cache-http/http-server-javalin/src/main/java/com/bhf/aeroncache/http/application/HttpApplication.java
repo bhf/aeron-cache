@@ -7,6 +7,8 @@ import com.bhf.aeroncache.http.handlers.CacheRouteHandlers;
 import com.bhf.aeroncache.http.handlers.CountersRouteHandlers;
 import com.bhf.aeroncache.http.handlers.HTTPConsumerUtils;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
+import com.bhf.aeroncache.http.responses.AeronCountersFanoutResponse;
+import com.bhf.aeroncache.http.responses.AeronCountersResponse;
 import com.bhf.aeroncache.http.responses.AggregatedPurgeResponse;
 import com.bhf.aeroncache.http.responses.CacheDetails;
 import com.bhf.aeroncache.http.responses.ClusterToolsResponse;
@@ -123,6 +125,7 @@ public class HttpApplication {
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static List<String> hostArray = new ArrayList<>();
+    private static volatile boolean clusteredMode = true;
     public static int BOUND_PORT;
 
     public static void main(String[] args) {
@@ -134,6 +137,7 @@ public class HttpApplication {
     }
 
     public static int startHTTPInterface(int port, boolean useClusteredMode) {
+        clusteredMode = useClusteredMode;
 
         System.out.println("Starting HTTP interface");
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
@@ -318,6 +322,7 @@ public class HttpApplication {
                 .post("/api/v1/snapshot", HttpApplication::handleTakeSnapshot)
                 .post("/api/v1/snapshot-and-purge", HttpApplication::handleSnapshotAndPurge)
                 .get("/api/v1/snapshot-info", HttpApplication::handleGetSnapshotInfo)
+                .get("/api/v1/aeron-counters", HttpApplication::handleGetAeronCounters)
                 .get(LIVENESS, HttpApplication::handleGetLiveness)
                 .get(READINESS, HttpApplication::handleGetReadiness)
                 .get("/prometheus", ctx -> ctx.contentType(PROMO_MICROMETER_CONTENT_TYPE).result(registry.scrape()))
@@ -673,6 +678,45 @@ public class HttpApplication {
         context.json(firstResponse != null
                 ? firstResponse
                 : new SnapshotInfoResponse(false, -1, -1, -1, -1, 0, 0, null));
+    }
+
+    /**
+     * Gather the Aeron media driver counters from every node's clustertools sidecar for the UI's
+     * observability dashboard. A node that cannot be reached is reported as unreachable rather than
+     * failing the whole request.
+     *
+     * @param context the Javalin context.
+     */
+    private static void handleGetAeronCounters(@NotNull Context context) {
+        final List<AeronCountersFanoutResponse.NodeCounters> nodes = new ArrayList<>();
+
+        for (String host : hostArray) {
+            AeronCountersResponse counters = null;
+            try {
+                String hostUri = "http://" + host + ":" + CLUSTER_TOOLS_PORT + "/api/v1/clustertools/counters";
+                var httpRequest = HttpRequest.newBuilder()
+                        .uri(URI.create(hostUri))
+                        .header("Accept", "application/json")
+                        .timeout(java.time.Duration.ofSeconds(3))
+                        .GET()
+                        .build();
+                HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+                if (httpResponse.statusCode() == HTTPStatusUtils.OK) {
+                    counters = OBJECT_MAPPER.readValue(httpResponse.body(), AeronCountersResponse.class);
+                } else {
+                    log.warn("counters request to {} failed with status code: {}", host, httpResponse.statusCode());
+                }
+            } catch (IOException e) {
+                log.warn("counters request to {} failed: {}", host, e.getMessage());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            }
+            nodes.add(new AeronCountersFanoutResponse.NodeCounters(host, counters != null, counters));
+        }
+
+        context.status(HTTPStatusUtils.OK);
+        context.json(new AeronCountersFanoutResponse(clusteredMode ? "CLUSTERED" : "EPHEMERAL", hostArray.size(), nodes));
     }
 
     private static void makeClusterToolsRequest(Context context, String command) {

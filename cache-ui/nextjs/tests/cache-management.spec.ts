@@ -6,6 +6,8 @@ test.describe('Aeron Cache Management', () => {
     });
 
     test('should display dashboard stats', async ({ page }) => {
+        await page.getByTestId('menu-link-observability').click();
+        await expect(page.getByTestId('observability-dashboard')).toBeVisible();
         await expect(page.getByTestId('stats-total-ops')).toBeVisible();
         await expect(page.getByTestId('stats-total-caches')).toBeVisible();
         await expect(page.getByTestId('stats-total-items')).toBeVisible();
