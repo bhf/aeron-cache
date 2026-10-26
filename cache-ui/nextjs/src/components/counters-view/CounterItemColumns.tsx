@@ -2,8 +2,8 @@
 
 import {ColumnDef} from "@tanstack/react-table"
 import {CounterItem} from "@/lib/types";
-import {RemoveCounterItem} from "@/app/@cacheview/counters/[slug]/RemoveCounterItem";
-import {CounterRowActions} from "@/app/@cacheview/counters/[slug]/CounterRowActions";
+import {RemoveCounterItem} from "@/app/(main)/@cacheview/counters/[slug]/RemoveCounterItem";
+import {CounterRowActions} from "@/app/(main)/@cacheview/counters/[slug]/CounterRowActions";
 import CopyToClipboard from "@/components/cache-view/CopyToClipboard";
 
 const MAX_CHARACTERS_MD_PLUS = 37

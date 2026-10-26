@@ -1,4 +1,5 @@
 import AboutAeronCache from "@/components/About";
+import ObservabilityButton from "@/components/observability/ObservabilityButton";
 import Link from "next/link";
 import {Button} from "@/components/ui/button";
 import {LayersIcon, KanbanIcon, CameraIcon} from "lucide-react";
@@ -26,6 +27,7 @@ export default async function MenuLinks() {
                     <Button variant="link"><KanbanIcon/>Prometheus</Button>
                 </Link>
             )}
+            <ObservabilityButton/>
             <Link href="/snapshot" data-testid="menu-link-snapshot">
                 <Button variant="link"><CameraIcon/>Snapshot</Button>
             </Link>
