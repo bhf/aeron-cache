@@ -12,13 +12,14 @@ import {Github, Linkedin, Star} from "@deemlol/next-icons";
 import {ShieldQuestionIcon} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import Image from "next/image";
+import {HEADER_BUTTON_CLASS} from "@/lib/headerStyles";
 
 export default function AboutAeronCache() {
     return (
         <div>
             <Dialog>
                 <DialogTrigger asChild>
-                    <Button variant="link"><ShieldQuestionIcon/>About</Button>
+                    <Button variant="link" className={HEADER_BUTTON_CLASS}><ShieldQuestionIcon/>About</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px] pb-15">
                     <DialogHeader>
