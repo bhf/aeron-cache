@@ -10,6 +10,9 @@ import com.bhf.aeroncache.http.responses.CreateCacheResponse;
 import com.bhf.aeroncache.http.responses.GetItemResponse;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
+import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
+import com.bhf.aeroncache.near.NearCache;
+import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.models.results.CreateCacheResult;
 import com.bhf.aeroncache.models.results.GetAllCacheEntriesResult;
@@ -76,7 +79,7 @@ public class NearCacheApplication {
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
 
-    private static final ConcurrentNearCacheManager nearCacheManager = new ConcurrentNearCacheManager();
+    private static final NearCacheManager nearCacheManager = new ConcurrentNearCacheManager();
     private static final CacheStatsTracker statsTracker = new CacheStatsTracker();
     private static AeronCacheClusterListener client;
     private static ObservingCacheRequestPublisher observingPublisher;
@@ -419,7 +422,7 @@ public class NearCacheApplication {
      * @throws InterruptedException
      * @throws ExecutionException
      */
-    private static void handleExistingLocalCache(Context ctx, NearCacheInstance localCache, String key, String cacheId) throws InterruptedException, ExecutionException {
+    private static void handleExistingLocalCache(Context ctx, NearCache localCache, String key, String cacheId) throws InterruptedException, ExecutionException {
         if(localCache.containsKey(key)){
             var result = localCache.get(key);
             ctx.status(HTTPStatusUtils.OK);

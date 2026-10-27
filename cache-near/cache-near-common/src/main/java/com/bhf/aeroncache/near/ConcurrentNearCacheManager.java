@@ -1,23 +1,27 @@
-package com.bhf.aeroncache.http.application;
+package com.bhf.aeroncache.near;
 
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 @Log4j2
-public class ConcurrentNearCacheManager {
+public class ConcurrentNearCacheManager implements NearCacheManager {
 
-    private final ConcurrentHashMap<String, NearCacheInstance> nearCacheMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, NearCacheInstance> nearCacheMap = new ConcurrentHashMap<>();
 
+    @Override
     public void put(String cacheId, String key, String value) {
         nearCacheMap.computeIfAbsent(cacheId, NearCacheInstance::new).put(key, value);
     }
 
+    @Override
     public boolean contains(String cacheId) {
         return nearCacheMap.containsKey(cacheId);
     }
 
+    @Override
     public void handleCacheUpdate(CacheUpdateEvent cacheUpdateEvent) {
 
         switch(cacheUpdateEvent.eventType()){
@@ -37,7 +41,8 @@ public class ConcurrentNearCacheManager {
         }
     }
 
-    public NearCacheInstance get(String cacheId) {
+    @Override
+    public NearCache get(String cacheId) {
         return nearCacheMap.get(cacheId);
     }
 }
