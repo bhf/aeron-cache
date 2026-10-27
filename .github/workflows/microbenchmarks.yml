@@ -20,9 +20,11 @@ jobs:
         # Shard the run across parallel jobs so wall-clock stays low. The two shards are split by
         # package: counter benchmarks live in ...cache.counters.*, everything else is a cache
         # benchmark. See build.gradle.kts for the -PjmhIncludes / -PjmhExcludes filters.
+        # The codec benchmarks (...codecs.*) have their own pooling-independent workflow
+        # (microbenchmarks-codecs.yml), so the cache shard excludes them as well as the counters.
         shard:
           - name: cache
-            args: "-PjmhExcludes=.*counters.*"
+            args: "-PjmhExcludes=.*counters.*,.*codecs.*"
           - name: counters
             args: "-PjmhIncludes=.*counters.*"
 

@@ -45,9 +45,10 @@ jobs:
         # JMH JVMs inherit from the Gradle step below.
         pooling: [unpooled, pooled]
         # Same cache vs counters sharding as the per-PR workflow so the long run is parallelised too.
+        # Codec benchmarks (...codecs.*) are excluded here too; they have their own workflow.
         shard:
           - name: cache
-            args: "-PjmhExcludes=.*counters.*"
+            args: "-PjmhExcludes=.*counters.*,.*codecs.*"
           - name: counters
             args: "-PjmhIncludes=.*counters.*"
 

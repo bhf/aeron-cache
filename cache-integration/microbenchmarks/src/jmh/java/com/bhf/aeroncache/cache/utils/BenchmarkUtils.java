@@ -5,6 +5,7 @@ import com.bhf.aeroncache.codecs.request.ReusableStringCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCacheResponseEncoder;
 import com.bhf.aeroncache.codecs.request.ReusableStringCountersCacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.ReusableStringCountersCacheResponseEncoder;
+import com.bhf.aeroncache.models.consumer.HydratingPublicationConsumer;
 import com.bhf.aeroncache.services.cache.snapshot.CountersCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheEntrySnapshotCodec;
 import com.bhf.aeroncache.services.cache.snapshot.ReusableStringCacheIdSnapshotCodec;
@@ -61,6 +62,21 @@ public class BenchmarkUtils {
             }
             @Override public long offer(DirectBufferVector[] vectors) { return 0; }
             @Override public long tryClaim(int length, BufferClaim bufferClaim) { return 0; }
+        };
+    }
+
+    /**
+     * A {@link HydratingPublicationConsumer} for the group/batched response encoders
+     * ({@code encodeAllCacheEntriesResult}, {@code encodeBulkOpsResponse}, ...) which otherwise publish
+     * each batch via a consumer. The encoder records the buffer and length on the consumer before calling
+     * {@link java.util.function.Consumer#accept accept}; this implementation simply leaves the encoded
+     * bytes in place so a paired decode benchmark can read them straight back from the same buffer. Keep
+     * the encoded entry count at or below the encoder's batch size (100) so a single batch is produced and
+     * the buffer holds the whole message rather than only the last batch.
+     */
+    public static HydratingPublicationConsumer getCapturingConsumer() {
+        return new HydratingPublicationConsumer() {
+            @Override public void accept(MutableDirectBuffer buffer) {}
         };
     }
 
