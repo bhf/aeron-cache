@@ -7,6 +7,7 @@
 [![Helm CI Ephemeral](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-ephemeral.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-ephemeral.yaml)
 [![K8s CI Monolith Cache](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-monolith.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-monolith.yaml)
 [![Microbenchmarks](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks.yml)
+[![JMH Codecs](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks-codecs.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/microbenchmarks-codecs.yml)
 [![Soak Core Cache](https://github.com/bhf/aeron-cache/actions/workflows/soak-core-cache.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/soak-core-cache.yml)
 [![Soak Streaming](https://github.com/bhf/aeron-cache/actions/workflows/soak-streaming.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/soak-streaming.yml)
 [![Soak Bidi WS](https://github.com/bhf/aeron-cache/actions/workflows/soak-bidi-ws.yml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/soak-bidi-ws.yml)
