@@ -23,7 +23,6 @@ Includes HTTP, WS, SSE and Aeron transport (UDP and IPC) interfaces.
 
 Deployable on Kubernetes with ```helm``` or locally with ```brew```.
 
-
 * [Features](#features)
 * [How To Run - Brew](#brew)
 * [How To Run - K8s/Helm](#k8s-and-helm)
