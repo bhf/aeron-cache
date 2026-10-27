@@ -3,6 +3,7 @@
 
 [![Backend CI](https://github.com/bhf/aeron-cache/actions/workflows/ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/ci.yaml)
 [![Frontend CI](https://github.com/bhf/aeron-cache/actions/workflows/ui-ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/ui-ci.yaml)
+[![Lighthouse CI](https://github.com/bhf/aeron-cache/actions/workflows/lighthouse-ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/lighthouse-ci.yaml)
 [![Helm CI](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci.yaml)
 [![Helm CI Ephemeral](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-ephemeral.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-ephemeral.yaml)
 [![K8s CI Monolith Cache](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-monolith.yaml/badge.svg)](https://github.com/bhf/aeron-cache/actions/workflows/helm-ci-monolith.yaml)
