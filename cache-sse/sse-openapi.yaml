@@ -153,6 +153,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StopNearCacheResponse'
+  /api/v1/near/counters-caches:
+    get:
+      summary: List warm near counter caches
+      description: |
+        List the counter caches currently kept warm in the local near cache, with their local item
+        counts. Available only when the SSE interface is started with `NEAR_CACHE_ENABLED=true`.
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CacheDetails'
+  /api/v1/near/counters/{cacheId}:
+    delete:
+      summary: Stop near caching a counter cache
+      description: |
+        Stop near caching the specified counter cache: drop the internal cluster subscription that keeps
+        the local copy warm and remove the local copy. Active streaming subscriptions are not affected.
+        Idempotent - stopping a counter cache that is not currently warm succeeds with `wasCached=false`.
+        Available only when the SSE interface is started with `NEAR_CACHE_ENABLED=true`.
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          description: The ID of the counter cache to stop near caching.
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StopNearCacheResponse'
 
 components:
   parameters:

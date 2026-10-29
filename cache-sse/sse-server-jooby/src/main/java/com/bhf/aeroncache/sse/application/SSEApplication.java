@@ -62,13 +62,16 @@ public class SSEApplication extends Jooby {
     private static final String COUNTERS_MULTI_SUB_API_PREFIX = "/api/sse/v1/counters/";
     private static final String NEAR_CACHES_API = "/api/v1/near/caches";
     private static final String NEAR_CACHE_API_PREFIX = "/api/v1/near/cache/";
+    private static final String NEAR_COUNTERS_CACHES_API = "/api/v1/near/counters-caches";
+    private static final String NEAR_COUNTERS_API_PREFIX = "/api/v1/near/counters/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
     private static AeronCacheClusterListener client;
     private static CacheSubscriptionRequestPublisher subscriptionService;
     private static CacheSubscriptionRequestPublisher countersSubscriptionService;
-    private static NearCacheManager nearCacheManager;
+    private static NearCacheManager<Object> nearCacheManager;
+    private static NearCacheManager<Object> countersNearCacheManager;
     private static boolean nearCacheEnabled;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
@@ -88,7 +91,8 @@ public class SSEApplication extends Jooby {
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
         nearCacheEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false"));
         System.out.println("Near cache hydration enabled: " + nearCacheEnabled);
-        nearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager() : null;
+        nearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager<>() : null;
+        countersNearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager<>() : null;
 
         var boundPort = startHTTPServer(args, port);
         setupCacheConnection();
@@ -117,18 +121,22 @@ public class SSEApplication extends Jooby {
         get(READINESS, SSEApplication::handleGetReadiness);
 
         if (nearCacheEnabled) {
-            get(NEAR_CACHES_API, SSEApplication::handleGetNearCaches);
-            delete(NEAR_CACHE_API_PREFIX + "{cacheId}", SSEApplication::handleStopNearCache);
+            get(NEAR_CACHES_API, ctx -> handleGetNearCaches(ctx, subscriptionService));
+            delete(NEAR_CACHE_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, subscriptionService));
+            get(NEAR_COUNTERS_CACHES_API, ctx -> handleGetNearCaches(ctx, countersSubscriptionService));
+            delete(NEAR_COUNTERS_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, countersSubscriptionService));
         }
     }
 
     /**
-     * List the caches currently kept warm in the near cache, with their local item counts.
+     * List the caches currently kept warm in the given subscription service's near cache, with their
+     * local item counts.
      *
-     * @param ctx The context.
+     * @param ctx                 The context.
+     * @param subscriptionService The subscription service whose near cache to list.
      * @return the warm cache details as JSON.
      */
-    private static Object handleGetNearCaches(Context ctx) {
+    private static Object handleGetNearCaches(Context ctx, CacheSubscriptionRequestPublisher subscriptionService) {
         log.info("Got request to list warm near caches");
         List<CacheDetails> warmCaches = new ArrayList<>();
         for (var cacheIdObj : subscriptionService.warmNearCaches()) {
@@ -142,10 +150,11 @@ public class SSEApplication extends Jooby {
      * Stop near caching a cache: drop the internal subscription and remove the local copy. Active client
      * subscriptions are not affected.
      *
-     * @param ctx The context.
+     * @param ctx                 The context.
+     * @param subscriptionService The subscription service whose near cache to stop.
      * @return the stop result as JSON.
      */
-    private static Object handleStopNearCache(Context ctx) {
+    private static Object handleStopNearCache(Context ctx, CacheSubscriptionRequestPublisher subscriptionService) {
         var cacheId = ctx.path("cacheId").toString();
         log.info("Got request to stop near caching cacheId {}", cacheId);
         var wasCached = subscriptionService.stopNearCaching(cache, cacheId);
@@ -551,7 +560,7 @@ public class SSEApplication extends Jooby {
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher, nearCacheManager);
 
                 CacheRequestPublisher<String, String, Long> countersRbPublisher = new RBCountersRequestPublisher(rb);
-                countersSubscriptionService = new CacheSubscriptionRequestPublisher(countersRbPublisher);
+                countersSubscriptionService = new CacheSubscriptionRequestPublisher(countersRbPublisher, countersNearCacheManager);
             }
 
             client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);

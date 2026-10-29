@@ -4,6 +4,7 @@ import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.services.cache.ResponseChannelCacheConnector;
 import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.handlers.CacheRouteHandlers;
+import com.bhf.aeroncache.http.handlers.CountersNearCacheRouteHandlers;
 import com.bhf.aeroncache.http.handlers.CountersRouteHandlers;
 import com.bhf.aeroncache.http.handlers.HTTPConsumerUtils;
 import com.bhf.aeroncache.http.handlers.NearCacheRouteHandlers;
@@ -107,8 +108,11 @@ public class HttpApplication {
     private static final String CACHE_API_PREFIX = "/api/v1/cache/";
     private static final String COUNTERS_API_PREFIX = "/api/v1/counters/";
     private static final String NEAR_CACHE_API_PREFIX = "/api/v1/near/cache/";
+    private static final String NEAR_COUNTERS_API_PREFIX = "/api/v1/near/counters/";
     /** Single logical subscription session shared by all near cache subscriptions on this interface. */
     private static final String NEAR_CACHE_SESSION_ID = "http-near-cache";
+    /** Single logical subscription session shared by all near counters subscriptions on this interface. */
+    private static final String NEAR_COUNTERS_SESSION_ID = "http-near-counters";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
@@ -119,7 +123,9 @@ public class HttpApplication {
     private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString, String, String, String> cachePublisher;
     private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableLong, String, String, Long> countersPublisher;
     private static CacheSubscriptionRequestPublisher<ReusableString, ReusableString, ReusableString> subscriptionService;
-    private static NearCacheManager nearCacheManager;
+    private static CacheSubscriptionRequestPublisher<ReusableString, ReusableString, ReusableLong> countersSubscriptionService;
+    private static NearCacheManager<String> nearCacheManager;
+    private static NearCacheManager<Long> countersNearCacheManager;
     private static boolean nearCacheEnabled;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
@@ -197,6 +203,7 @@ public class HttpApplication {
 
                 if (nearCacheEnabled) {
                     subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
+                    countersSubscriptionService = new CacheSubscriptionRequestPublisher(countersRbPublisher);
                 }
             }
 
@@ -205,18 +212,21 @@ public class HttpApplication {
                 // Route cluster cache callbacks through both the request/response correlator and the
                 // near cache subscription service, so subscription update events keep the local near
                 // cache warm alongside the normal observing publisher.
-                nearCacheManager = new ConcurrentNearCacheManager();
+                nearCacheManager = new ConcurrentNearCacheManager<>();
+                countersNearCacheManager = new ConcurrentNearCacheManager<>();
                 client.setCacheResultsCallbacks(new GroupedResponseHandler(List.of(cachePublisher, subscriptionService)));
+                client.setCountersResultsCallbacks(new GroupedResponseHandler(List.of(countersPublisher, countersSubscriptionService)));
             } else {
                 client.setCacheResultsCallbacks(cachePublisher);
+                client.setCountersResultsCallbacks(countersPublisher);
             }
-            client.setCountersResultsCallbacks(countersPublisher);
             client.setCountersCacheResponseDecoder(countersResponseDecoder);
 
             setupCacheRouteHandlers(app);
             setupCacheCountersRouteHandlers(app);
             if (nearCacheEnabled) {
                 setupNearCacheRouteHandlers(app);
+                setupNearCountersRouteHandlers(app);
             }
 
             var podName = System.getenv("POD_ADDRESS");
@@ -445,6 +455,50 @@ public class HttpApplication {
     private static void unsubscribeNearCache(String cacheId) {
         String requestId = UUID.randomUUID().toString();
         subscriptionService.unsubscribeSession(cache, requestId, NEAR_CACHE_SESSION_ID, cacheId);
+    }
+
+    /**
+     * Wire up the near counters read and management endpoints. Only invoked when the near cache is
+     * enabled. Mirrors {@link #setupNearCacheRouteHandlers(Javalin)} for counter caches.
+     *
+     * @param app The Javalin instance.
+     */
+    private static void setupNearCountersRouteHandlers(Javalin app) {
+        var nearHandlers = new CountersNearCacheRouteHandlers(countersPublisher, countersNearCacheManager,
+                HttpApplication::subscribeCountersNearCache, HttpApplication::unsubscribeCountersNearCache);
+        app.get(NEAR_COUNTERS_API_PREFIX + "<cacheId>/<key>", nearHandlers::handleGetItemRequest)
+                .get("/api/v1/near/counters-caches", nearHandlers::handleGetNearCachesRequest)
+                .get(NEAR_COUNTERS_API_PREFIX + "<cacheId>", nearHandlers::handleGetCacheRequest)
+                .delete(NEAR_COUNTERS_API_PREFIX + "<cacheId>", nearHandlers::handleStopNearCacheRequest);
+    }
+
+    /**
+     * Subscribe to a remote counter cache and update the local near counters copy on each update event.
+     *
+     * @param cacheId The counter cache ID to subscribe to.
+     */
+    private static void subscribeCountersNearCache(String cacheId) {
+        Consumer<Void> subscriptionFailureHandler = _ -> log.warn("Subscription to counters cacheId {} failed", cacheId);
+        String requestId = UUID.randomUUID().toString();
+        Consumer<CacheUpdateEvent> resultsConsumer = cacheUpdateEvent -> {
+            log.debug("Received counters update event for cacheId {}, key {}, value {}",
+                    cacheUpdateEvent.cacheId(),
+                    cacheUpdateEvent.itemKey(),
+                    cacheUpdateEvent.itemValue());
+
+            countersNearCacheManager.handleCacheUpdate(cacheUpdateEvent);
+        };
+        countersSubscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), NEAR_COUNTERS_SESSION_ID, requestId, true, resultsConsumer);
+    }
+
+    /**
+     * Drop the near counters cluster subscription for a counter cache so update events stop flowing.
+     *
+     * @param cacheId The counter cache ID to unsubscribe from.
+     */
+    private static void unsubscribeCountersNearCache(String cacheId) {
+        String requestId = UUID.randomUUID().toString();
+        countersSubscriptionService.unsubscribeSession(cache, requestId, NEAR_COUNTERS_SESSION_ID, cacheId);
     }
 
     /**

@@ -8,12 +8,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Log4j2
-public class ConcurrentNearCacheManager implements NearCacheManager {
+public class ConcurrentNearCacheManager<V> implements NearCacheManager<V> {
 
-    private final ConcurrentMap<String, NearCacheInstance> nearCacheMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, NearCacheInstance<V>> nearCacheMap = new ConcurrentHashMap<>();
 
     @Override
-    public void put(String cacheId, String key, String value) {
+    public void put(String cacheId, String key, V value) {
         nearCacheMap.computeIfAbsent(cacheId, NearCacheInstance::new).put(key, value);
     }
 
@@ -23,10 +23,10 @@ public class ConcurrentNearCacheManager implements NearCacheManager {
     }
 
     @Override
-    public void handleCacheUpdate(CacheUpdateEvent cacheUpdateEvent) {
+    public void handleCacheUpdate(CacheUpdateEvent<V> cacheUpdateEvent) {
 
         switch(cacheUpdateEvent.eventType()){
-            case ADD_ITEM -> put(cacheUpdateEvent.cacheId(), cacheUpdateEvent.itemKey(), (String) cacheUpdateEvent.itemValue());
+            case ADD_ITEM -> put(cacheUpdateEvent.cacheId(), cacheUpdateEvent.itemKey(), cacheUpdateEvent.itemValue());
             case DELETE_CACHE -> nearCacheMap.remove(cacheUpdateEvent.cacheId());
             case REMOVE_ITEM -> {
                 if(nearCacheMap.containsKey(cacheUpdateEvent.cacheId())){
@@ -43,7 +43,7 @@ public class ConcurrentNearCacheManager implements NearCacheManager {
     }
 
     @Override
-    public NearCache get(String cacheId) {
+    public NearCache<V> get(String cacheId) {
         return nearCacheMap.get(cacheId);
     }
 

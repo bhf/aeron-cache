@@ -115,4 +115,25 @@ public class GroupedResponseHandler<I extends Reusable, K extends Reusable, V ex
             handler.handleBulkOperationsResult(bulkCacheOpsResult);
         }
     }
+
+    @Override
+    public void handleCounterIncremented(IncrementCounterResult<I, K> result) {
+        for(CacheResponseHandler handler : handlers){
+            handler.handleCounterIncremented(result);
+        }
+    }
+
+    @Override
+    public void handleCounterDecremented(DecrementCounterResult<I, K> result) {
+        for(CacheResponseHandler handler : handlers){
+            handler.handleCounterDecremented(result);
+        }
+    }
+
+    @Override
+    public void handleCounterSet(SetCounterResult<I, K> result) {
+        for(CacheResponseHandler handler : handlers){
+            handler.handleCounterSet(result);
+        }
+    }
 }
