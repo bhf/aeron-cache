@@ -107,6 +107,8 @@ public class HttpApplication {
     private static final String CACHE_API_PREFIX = "/api/v1/cache/";
     private static final String COUNTERS_API_PREFIX = "/api/v1/counters/";
     private static final String NEAR_CACHE_API_PREFIX = "/api/v1/near/cache/";
+    /** Single logical subscription session shared by all near cache subscriptions on this interface. */
+    private static final String NEAR_CACHE_SESSION_ID = "http-near-cache";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
@@ -405,19 +407,23 @@ public class HttpApplication {
      * @param app The Javalin instance.
      */
     private static void setupNearCacheRouteHandlers(Javalin app) {
-        var nearHandlers = new NearCacheRouteHandlers(cachePublisher, nearCacheManager, HttpApplication::subscribeNearCache);
+        var nearHandlers = new NearCacheRouteHandlers(cachePublisher, nearCacheManager,
+                HttpApplication::subscribeNearCache, HttpApplication::unsubscribeNearCache);
         app.get(NEAR_CACHE_API_PREFIX + "<cacheId>/<key>", nearHandlers::handleGetItemRequest)
-                .get(NEAR_CACHE_API_PREFIX + "<cacheId>", nearHandlers::handleGetCacheRequest);
+                .get("/api/v1/near/caches", nearHandlers::handleGetNearCachesRequest)
+                .get(NEAR_CACHE_API_PREFIX + "<cacheId>", nearHandlers::handleGetCacheRequest)
+                .delete(NEAR_CACHE_API_PREFIX + "<cacheId>", nearHandlers::handleStopNearCacheRequest);
     }
 
     /**
-     * Subscribe to the remote cache and update the local near cache copy on each update event.
+     * Subscribe to the remote cache and update the local near cache copy on each update event. All near
+     * cache subscriptions share a single logical session ({@link #NEAR_CACHE_SESSION_ID}) so that
+     * stopping near caching can drop the subscription again.
      *
      * @param cacheId The cache ID to subscribe to.
      */
     private static void subscribeNearCache(String cacheId) {
         Consumer<Void> subscriptionFailureHandler = _ -> log.warn("Subscription to cacheId {} failed", cacheId);
-        String sessionId = UUID.randomUUID().toString();
         String requestId = UUID.randomUUID().toString();
         Consumer<CacheUpdateEvent> resultsConsumer = cacheUpdateEvent -> {
             log.debug("Received cache update event for cacheId {}, key {}, value {}",
@@ -427,7 +433,18 @@ public class HttpApplication {
 
             nearCacheManager.handleCacheUpdate(cacheUpdateEvent);
         };
-        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), sessionId, requestId, true, resultsConsumer);
+        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), NEAR_CACHE_SESSION_ID, requestId, true, resultsConsumer);
+    }
+
+    /**
+     * Drop the near cache's cluster subscription for a cache so update events stop flowing. Removing the
+     * local copy is handled separately by the caller.
+     *
+     * @param cacheId The cache ID to unsubscribe from.
+     */
+    private static void unsubscribeNearCache(String cacheId) {
+        String requestId = UUID.randomUUID().toString();
+        subscriptionService.unsubscribeSession(cache, requestId, NEAR_CACHE_SESSION_ID, cacheId);
     }
 
     /**

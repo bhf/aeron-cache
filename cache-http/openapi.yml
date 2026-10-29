@@ -377,6 +377,53 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - StopNearCache
+      summary: Stop near caching a cache
+      description: >-
+        Stop near caching the specified cache: drop the cluster subscription so updates stop flowing
+        and remove the local copy. The source cache on the cluster is not affected. Idempotent -
+        stopping a cache that is not currently warm succeeds with wasCached=false.
+      operationId: stopNearCache
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the cache
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/StopNearCacheResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/near/caches:
+    get:
+      tags:
+        - GetNearCaches
+      summary: List warm near caches
+      description: >-
+        List the caches currently held warm in the local near cache, with their local item counts.
+        Only available when the HTTP interface is started with NEAR_CACHE_ENABLED=true.
+      operationId: getNearCaches
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CacheDetails'
   /api/v1/near/cache/{cacheId}/{key}:
     get:
       tags:
@@ -670,6 +717,17 @@ components:
         itemCount:
           type: integer
           format: int64
+    StopNearCacheResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCacheID"
+        wasCached:
+          type: boolean
+          description: Whether a local near cache copy existed and was removed.
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
     CacheStatsResponse:
       type: object
       properties:

@@ -1,9 +1,11 @@
 package com.bhf.aeroncache.http.handlers;
 
 import com.bhf.aeroncache.http.application.HttpApplication;
+import com.bhf.aeroncache.http.responses.CacheDetails;
 import com.bhf.aeroncache.http.responses.GetCacheResponse;
 import com.bhf.aeroncache.http.responses.GetItemResponse;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
+import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.near.NearCache;
@@ -14,6 +16,8 @@ import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import io.javalin.http.Context;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -35,18 +39,67 @@ public class NearCacheRouteHandlers {
     private final ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString, String, String, String> publisher;
     private final NearCacheManager nearCacheManager;
     private final Consumer<String> subscribeToCache;
+    private final Consumer<String> unsubscribeFromCache;
 
     /**
-     * @param publisher        the publisher used to fetch from the source cache over the cluster.
-     * @param nearCacheManager the local near cache store kept warm by subscription updates.
-     * @param subscribeToCache subscribes to a cache's updates so the local copy is kept in sync.
+     * @param publisher            the publisher used to fetch from the source cache over the cluster.
+     * @param nearCacheManager     the local near cache store kept warm by subscription updates.
+     * @param subscribeToCache     subscribes to a cache's updates so the local copy is kept in sync.
+     * @param unsubscribeFromCache drops the cluster subscription for a cache so updates stop flowing.
      */
     public NearCacheRouteHandlers(ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString, String, String, String> publisher,
                                   NearCacheManager nearCacheManager,
-                                  Consumer<String> subscribeToCache) {
+                                  Consumer<String> subscribeToCache,
+                                  Consumer<String> unsubscribeFromCache) {
         this.publisher = publisher;
         this.nearCacheManager = nearCacheManager;
         this.subscribeToCache = subscribeToCache;
+        this.unsubscribeFromCache = unsubscribeFromCache;
+    }
+
+    /**
+     * List the caches currently held warm in the near cache, with their local item counts.
+     *
+     * @param ctx The context.
+     */
+    public void handleGetNearCachesRequest(Context ctx) {
+        log.info("Got request to list warm near caches");
+        List<CacheDetails> warmCaches = new ArrayList<>();
+        for (var cacheId : nearCacheManager.cacheIds()) {
+            var localCache = nearCacheManager.get(cacheId);
+            var itemCount = localCache == null ? 0 : localCache.items().size();
+            warmCaches.add(new CacheDetails(cacheId, itemCount));
+        }
+        ctx.status(HTTPStatusUtils.OK);
+        ctx.json(warmCaches);
+    }
+
+    /**
+     * Stop near caching a cache: drop the cluster subscription so updates stop flowing and remove the
+     * local copy. Idempotent - stopping a cache that is not currently warm succeeds with
+     * {@code wasCached=false}.
+     *
+     * @param ctx The context.
+     */
+    public void handleStopNearCacheRequest(Context ctx) {
+        try {
+            var cacheId = ctx.pathParam("cacheId");
+            log.info("Got request to stop near caching cacheId {}", cacheId);
+
+            unsubscribeFromCache.accept(cacheId);
+            var wasCached = nearCacheManager.remove(cacheId);
+
+            ctx.status(HTTPStatusUtils.OK);
+            ctx.json(new StopNearCacheResponse(cacheId, wasCached, CacheOperationStatus.SUCCESS));
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to stop near caching cacheId " + ctx.pathParam("cacheId");
+            log.warn(errorMsg);
+            HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
+                    CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
     }
 
     /**
