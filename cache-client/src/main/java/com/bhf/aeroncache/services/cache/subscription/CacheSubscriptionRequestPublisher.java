@@ -2,10 +2,13 @@ package com.bhf.aeroncache.services.cache.subscription;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.models.consumer.IdentifiableConsumer;
+import com.bhf.aeroncache.http.responses.CacheItem;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.near.NearCache;
+import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import lombok.extern.log4j.Log4j2;
@@ -16,6 +19,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -45,8 +49,46 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      */
     private final Set<String> clusterSubscriptions = ConcurrentHashMap.newKeySet();
 
+    /**
+     * Optional local near cache. When present, whole-cache hydrating subscriptions are served from this
+     * local copy instead of asking the cluster for a per-subscriber snapshot. {@code null} disables the
+     * near cache (the default, used by the HTTP near cache which manages its own).
+     */
+    private final NearCacheManager nearCacheManager;
+
+    /**
+     * The session id used for the single internal subscription that keeps the near cache warm for a
+     * cache, independent of any client sessions.
+     */
+    private final String nearCacheSessionId;
+
+    /** Caches currently kept warm in the near cache (subscribed by the near cache session). */
+    private final Set<String> nearWarmCaches = ConcurrentHashMap.newKeySet();
+
     public CacheSubscriptionRequestPublisher(CacheRequestPublisher rbPublisher) {
+        this(rbPublisher, null, null);
+    }
+
+    /**
+     * @param rbPublisher        the request publisher.
+     * @param nearCacheManager   the local near cache to warm and hydrate from, or {@code null} to disable.
+     * @param nearCacheSessionId the session id for the internal near cache subscription (required when
+     *                           {@code nearCacheManager} is non-null).
+     */
+    public CacheSubscriptionRequestPublisher(CacheRequestPublisher rbPublisher, NearCacheManager nearCacheManager,
+                                             String nearCacheSessionId) {
         super(rbPublisher);
+        this.nearCacheManager = nearCacheManager;
+        this.nearCacheSessionId = nearCacheSessionId;
+    }
+
+    /**
+     * Whether near-cache-backed hydration is enabled on this publisher.
+     *
+     * @return true if a near cache is configured.
+     */
+    public boolean isNearCacheEnabled() {
+        return nearCacheManager != null;
     }
 
     private static String clusterSubscriptionKey(String cacheId, String key, SubscriptionMode mode) {
@@ -118,6 +160,130 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
     public void subscribeToCache(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, Runnable subscriptionAckHandler,
                                  List<String> cacheIds, List<String> keys, SubscriptionMode mode, String sessionId,
                                  String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
+        var effectiveMode = mode == null ? SubscriptionMode.FULL : mode;
+
+        // Near-cache-backed hydration only applies to whole-cache, FULL-mode, hydrating client
+        // subscriptions. The internal near cache session itself always takes the plain path.
+        boolean wholeCache = (keys == null);
+        boolean nearEligible = isNearCacheEnabled() && sendSnapshot && wholeCache
+                && effectiveMode == SubscriptionMode.FULL && !sessionId.equals(nearCacheSessionId);
+
+        if (!nearEligible) {
+            doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
+                    sessionId, requestId, sendSnapshot, consumer);
+            return;
+        }
+
+        // A cache whose local copy already holds data can hydrate this subscriber entirely from the near
+        // cache, avoiding a per-subscriber cluster snapshot. Any cache without a populated local copy yet
+        // (cold, or still being warmed) is warmed for next time, and this subscriber falls back to a
+        // cluster snapshot so it still gets correct initial state.
+        var distinctCaches = new LinkedHashSet<>(cacheIds);
+        boolean allHaveLocalData = distinctCaches.stream().allMatch(nearCacheManager::contains);
+        for (var cacheId : distinctCaches) {
+            ensureNearCacheWarm(cluster, cacheId, subscriptionFailureHandler);
+        }
+
+        boolean clusterSnapshot = !allHaveLocalData;
+        doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
+                sessionId, requestId, clusterSnapshot, consumer);
+
+        if (allHaveLocalData) {
+            // The cluster was not asked for a snapshot; replay the local near cache to this subscriber.
+            for (var cacheId : distinctCaches) {
+                replayNearCache(cacheId, requestId, consumer);
+            }
+        }
+    }
+
+    /**
+     * Ensure a cache is kept warm in the near cache by subscribing the internal near cache session to it
+     * (once) with a snapshot. The near cache session stays subscribed independent of client sessions, so
+     * the local copy survives client churn until near caching is explicitly stopped.
+     *
+     * @param cluster                    The cluster to use.
+     * @param cacheId                    The cache to warm.
+     * @param subscriptionFailureHandler Invoked if the warming subscription fails.
+     */
+    private void ensureNearCacheWarm(AeronCache cluster, String cacheId, Consumer<Void> subscriptionFailureHandler) {
+        if (!nearWarmCaches.add(cacheId)) {
+            // Already warm or being warmed.
+            return;
+        }
+        log.info("Warming near cache for cacheId {}", cacheId);
+        var requestId = UUID.randomUUID().toString();
+        Consumer<Void> nearFailureHandler = v -> {
+            log.warn("Near cache warming subscription failed for cacheId {}", cacheId);
+            nearWarmCaches.remove(cacheId);
+            if (subscriptionFailureHandler != null) {
+                subscriptionFailureHandler.accept(v);
+            }
+        };
+        Consumer<CacheUpdateEvent> nearConsumer = nearCacheManager::handleCacheUpdate;
+        doSubscribe(cluster, nearFailureHandler, () -> {}, List.of(cacheId), null, SubscriptionMode.FULL,
+                nearCacheSessionId, requestId, true, nearConsumer);
+    }
+
+    /**
+     * Replay the current contents of a near-cached cache to a subscriber as {@code ADD_ITEM} events,
+     * hydrating it from the local copy.
+     *
+     * @param cacheId   The cache to replay.
+     * @param requestId The request ID to stamp the replayed events with.
+     * @param consumer  The subscriber to hydrate.
+     */
+    private void replayNearCache(String cacheId, String requestId, Consumer<CacheUpdateEvent> consumer) {
+        NearCache nearCache = nearCacheManager.get(cacheId);
+        if (nearCache == null) {
+            return;
+        }
+        for (CacheItem item : nearCache.items()) {
+            consumer.accept(new CacheUpdateEvent(cacheId, CacheUpdateEvent.EventType.ADD_ITEM, item.key(), item.value(), requestId));
+        }
+    }
+
+    /**
+     * List the caches currently kept warm in the near cache.
+     *
+     * @return a snapshot of the warm cache IDs.
+     */
+    public Set<String> warmNearCaches() {
+        return Set.copyOf(nearWarmCaches);
+    }
+
+    /**
+     * The number of items held locally for a near-cached cache.
+     *
+     * @param cacheId the cache to query.
+     * @return the local item count, or 0 if the cache is not warm.
+     */
+    public int nearCacheItemCount(String cacheId) {
+        if (nearCacheManager == null) {
+            return 0;
+        }
+        var nearCache = nearCacheManager.get(cacheId);
+        return nearCache == null ? 0 : nearCache.items().size();
+    }
+
+    /**
+     * Stop near caching a cache: drop the internal near cache subscription (so the local copy stops
+     * being updated and, if no client sessions remain, the cluster subscription is released) and remove
+     * the local copy. Active client subscriptions are not affected.
+     *
+     * @param cluster the cluster to use.
+     * @param cacheId the cache to stop near caching.
+     * @return true if a local near cache copy existed and was removed.
+     */
+    public boolean stopNearCaching(AeronCache cluster, String cacheId) {
+        nearWarmCaches.remove(cacheId);
+        var requestId = UUID.randomUUID().toString();
+        unsubscribeSession(cluster, requestId, nearCacheSessionId, cacheId);
+        return nearCacheManager != null && nearCacheManager.remove(cacheId);
+    }
+
+    private void doSubscribe(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, Runnable subscriptionAckHandler,
+                             List<String> cacheIds, List<String> keys, SubscriptionMode mode, String sessionId,
+                             String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
         var effectiveMode = mode == null ? SubscriptionMode.FULL : mode;
 
         // Group the requested keys per cache; an empty key set denotes a whole-cache subscription.
@@ -313,6 +479,8 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
     @Override
     public void handleCacheDeleted(DeleteCacheResult<I> deleteCacheResult) {
         super.handleCacheDeleted(deleteCacheResult);
+        // A deleted cache is no longer warm; the near cache copy is dropped by handleCacheUpdate.
+        nearWarmCaches.remove(String.valueOf(deleteCacheResult.getCacheId().value()));
         var subscribers = cacheSubscriptions.get(deleteCacheResult.getCacheId().value());
 
         if (subscribers != null) {

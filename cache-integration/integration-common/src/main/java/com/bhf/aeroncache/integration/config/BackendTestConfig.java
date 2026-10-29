@@ -46,6 +46,13 @@ public @interface BackendTestConfig {
     boolean httpNearCacheEnabled() default false;
 
     /**
+     * Whether the near cache (near-cache-backed hydration and management endpoints) is enabled on the
+     * streaming interfaces (WS/SSE) for tests - false by default.
+     * @return
+     */
+    boolean streamingNearCacheEnabled() default false;
+
+    /**
      * Whether dynamic cache creation is enabled for tests - false by default.
      * @return
      */

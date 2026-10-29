@@ -154,6 +154,7 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
       - OTEL_JAVAAGENT_LOGGING=none
       - CACHE_MODE=RAFT
+      - NEAR_CACHE_ENABLED=true
   cache-sse-client:
     shm_size: '1gb'
     build:
@@ -176,6 +177,7 @@ services:
       - OTEL_JAVAAGENT_LOGGING=none
       - CACHE_MODE=RAFT
       - REQUEST_PUB_HOST=node0
+      - NEAR_CACHE_ENABLED=true
   cache-gateway-client:
     shm_size: '1gb'
     build:

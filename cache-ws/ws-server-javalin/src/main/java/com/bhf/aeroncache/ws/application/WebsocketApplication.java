@@ -1,9 +1,13 @@
 package com.bhf.aeroncache.ws.application;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.http.responses.CacheDetails;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
+import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
+import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.ResponseChannelCacheConnector;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -60,12 +64,16 @@ public class WebsocketApplication {
     private static final String COUNTERS_API_PREFIX = "/api/ws/v1/counter/";
     private static final String COUNTERS_MULTI_SUB_API_PREFIX = "/api/ws/v1/counters/";
     private static final String BIDI_API = "/api/ws/v1/bidi";
+    private static final String NEAR_CACHES_API = "/api/v1/near/caches";
+    private static final String NEAR_CACHE_API_PREFIX = "/api/v1/near/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
     private static AeronCacheClusterListener client;
     private static CacheSubscriptionRequestPublisher subscriptionService;
     private static CacheSubscriptionRequestPublisher countersSubscriptionService;
+    private static NearCacheManager nearCacheManager;
+    private static boolean nearCacheEnabled;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     public static final CacheStatsTracker statsTracker = new CacheStatsTracker();
@@ -84,6 +92,9 @@ public class WebsocketApplication {
     public static int startWebsocketInterface(int port) {
         System.out.println("Starting Websocket interface");
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
+        nearCacheEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false"));
+        System.out.println("Near cache hydration enabled: " + nearCacheEnabled);
+        nearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager() : null;
 
         var app = startHTTPServer(port);
 
@@ -106,12 +117,12 @@ public class WebsocketApplication {
                 // sending directly to the cluster
                 var requestPublisher = new RBClusterMessagePublisher(cache, rb,
                         WsIdleStrategies.clusterMessagePublisherIdleStrategy.get(), cacheRequestEncoder);
-                subscriptionService = new CacheSubscriptionRequestPublisher(requestPublisher);
+                subscriptionService = new CacheSubscriptionRequestPublisher(requestPublisher, nearCacheManager);
             } else {
                 // Drop normalised cache requests onto an Agrona RB for encoding
                 // to SBE on the Agent thread
                 CacheRequestPublisher rbPublisher = new RBCacheRequestPublisher(rb);
-                subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
+                subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher, nearCacheManager);
 
                 CacheRequestPublisher<String, String, Long> countersRbPublisher = new RBCountersRequestPublisher(rb);
                 countersSubscriptionService = new CacheSubscriptionRequestPublisher(countersRbPublisher);
@@ -125,6 +136,9 @@ public class WebsocketApplication {
             setupCacheWsRouteHandlers(app);
             setupCountersWsRouteHandlers(app);
             setupBidiWsRouteHandler(app);
+            if (nearCacheEnabled) {
+                setupNearCacheManagementRoutes(app);
+            }
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
             System.out.println("CLUSTER_ADDRESSES=" + allHosts);
@@ -272,6 +286,56 @@ public class WebsocketApplication {
                 .ws(CACHE_MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", handlers::handleMultiCacheWsWithHydration)
                 .ws(CACHE_API_PREFIX + "{cacheId}", handlers::handleSingleCacheWs)
                 .ws(CACHE_MULTI_SUB_API_PREFIX + "{cacheIds}", handlers::handleMultiCacheWs);
+    }
+
+    /**
+     * Register the HTTP management routes for the near cache: list warm caches and stop near caching a
+     * cache. Only registered when the near cache is enabled.
+     *
+     * @param app The Javalin instance.
+     */
+    private static void setupNearCacheManagementRoutes(Javalin app) {
+        app.get(NEAR_CACHES_API, WebsocketApplication::handleGetNearCaches)
+                .delete(NEAR_CACHE_API_PREFIX + "{cacheId}", WebsocketApplication::handleStopNearCache);
+    }
+
+    /**
+     * List the caches currently kept warm in the near cache, with their local item counts.
+     *
+     * @param ctx The context.
+     */
+    private static void handleGetNearCaches(Context ctx) {
+        log.info("Got request to list warm near caches");
+        List<CacheDetails> warmCaches = new ArrayList<>();
+        for (var cacheIdObj : subscriptionService.warmNearCaches()) {
+            var cacheId = (String) cacheIdObj;
+            warmCaches.add(new CacheDetails(cacheId, subscriptionService.nearCacheItemCount(cacheId)));
+        }
+        ctx.status(HTTPStatusUtils.OK);
+        ctx.json(warmCaches);
+    }
+
+    /**
+     * Stop near caching a cache: drop the internal subscription and remove the local copy. Active client
+     * subscriptions are not affected.
+     *
+     * @param ctx The context.
+     */
+    private static void handleStopNearCache(Context ctx) {
+        try {
+            var cacheId = ctx.pathParam("cacheId");
+            log.info("Got request to stop near caching cacheId {}", cacheId);
+            var wasCached = subscriptionService.stopNearCaching(cache, cacheId);
+            ctx.status(HTTPStatusUtils.OK);
+            ctx.json(new StopNearCacheResponse(cacheId, wasCached, CacheOperationStatus.SUCCESS));
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to stop near caching cacheId " + ctx.pathParam("cacheId");
+            log.warn(errorMsg);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
     }
 
     /**

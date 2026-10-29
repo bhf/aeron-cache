@@ -1,0 +1,136 @@
+package com.bhf.aeroncache.integration.streaming;
+
+import com.bhf.aeroncache.annotations.HappyPath;
+import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.integration.BackendTestLauncher;
+import com.bhf.aeroncache.integration.BackendTestResource;
+import com.bhf.aeroncache.integration.config.TestEndpointsProvider;
+import com.bhf.aeroncache.integration.utils.CacheTestUtils;
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import org.awaitility.Awaitility;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+/**
+ * Shared integration tests for the streaming near cache: hydration served from the local near cache,
+ * plus the management endpoints (list warm caches, stop near caching). Transport-specific subclasses
+ * supply the streaming helper (WS or SSE) and where the management HTTP endpoints live for that
+ * interface.
+ */
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ExtendWith(BackendTestLauncher.class)
+public abstract class AbstractStreamingNearCacheTests {
+
+    private static final String NEAR_CACHES_ENDPOINT = "/api/v1/near/caches";
+    private static final String NEAR_CACHE_PREFIX = "/api/v1/near/cache/";
+    private static final long AWAIT_SECONDS = 60;
+
+    private final TestEndpointsProvider httpEndpoints;
+    private final StreamingHelper streamingHelper;
+
+    /**
+     * @param httpEndpoints   endpoints used to create caches and add items over HTTP.
+     * @param streamingHelper the WS or SSE streaming client helper.
+     */
+    protected AbstractStreamingNearCacheTests(TestEndpointsProvider httpEndpoints, StreamingHelper streamingHelper) {
+        this.httpEndpoints = httpEndpoints;
+        this.streamingHelper = streamingHelper;
+    }
+
+    protected abstract String getCacheId();
+
+    /** The base URI ({@code http://host}) of the streaming interface's management endpoints. */
+    protected abstract String managementBaseUri(BackendTestResource backend);
+
+    /** The port of the streaming interface's management endpoints. */
+    protected abstract int managementPort(BackendTestResource backend);
+
+    @Test
+    @DisplayName("Should warm the near cache on a hydrating subscription, hydrate a second subscriber locally, list it, then drop it on stop")
+    @HappyPath
+    void shouldWarmHydrateListAndStop(BackendTestResource backend) {
+        var cacheId = getCacheId();
+
+        // Seed the source cache with items over HTTP.
+        CacheTestUtils.createCache(cacheId, backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", "Value1", backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key2", "Value2", backend, httpEndpoints);
+
+        // The first hydrating subscriber warms the near cache (and is itself hydrated).
+        assertHydrates(backend, cacheId, Map.of("Key1", "Value1", "Key2", "Value2"));
+
+        // Once the near cache has been warmed, it is listed with its item count.
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("cacheId", Matchers.hasItem(cacheId))
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(2)));
+
+        // A second hydrating subscriber is now served the full state from the local near cache.
+        assertHydrates(backend, cacheId, Map.of("Key1", "Value1", "Key2", "Value2"));
+
+        // Stop near caching the cache: the local copy is dropped.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("cacheId", Matchers.comparesEqualTo(cacheId))
+                .body("wasCached", Matchers.equalTo(true))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        // It should no longer be listed as warm.
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("cacheId", Matchers.not(Matchers.hasItem(cacheId))));
+    }
+
+    @Test
+    @DisplayName("Should succeed with wasCached=false when stopping a cache that was never warm")
+    void shouldReportNotCachedWhenStoppingUnwarmedCache(BackendTestResource backend) {
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + getCacheId() + "-never-warmed")
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasCached", Matchers.equalTo(false))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+    }
+
+    /**
+     * Open a hydrating streaming subscription and assert it receives the expected items as ADD_ITEM
+     * events, whatever the hydration source (cluster snapshot on a cold cache, near cache once warm).
+     */
+    private void assertHydrates(BackendTestResource backend, String cacheId, Map<String, String> expected) {
+        CompletableFuture<Void> ready = new CompletableFuture<>();
+        var eventsFuture = streamingHelper.getEventsWithHydration(backend, cacheId, expected.size(), ready);
+
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(eventsFuture::isDone);
+        var events = eventsFuture.join();
+
+        MatcherAssert.assertThat(events, Matchers.hasSize(expected.size()));
+        for (var event : events) {
+            MatcherAssert.assertThat(event.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(event.cacheId(), Matchers.is(cacheId));
+        }
+        var eventMap = events.stream().collect(Collectors.toMap(CacheUpdateEvent::itemKey, e -> (String) e.itemValue()));
+        MatcherAssert.assertThat(eventMap, Matchers.is(expected));
+    }
+}
