@@ -66,13 +66,16 @@ public class WebsocketApplication {
     private static final String BIDI_API = "/api/ws/v1/bidi";
     private static final String NEAR_CACHES_API = "/api/v1/near/caches";
     private static final String NEAR_CACHE_API_PREFIX = "/api/v1/near/cache/";
+    private static final String NEAR_COUNTERS_CACHES_API = "/api/v1/near/counters-caches";
+    private static final String NEAR_COUNTERS_API_PREFIX = "/api/v1/near/counters/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
     private static AeronCacheClusterListener client;
     private static CacheSubscriptionRequestPublisher subscriptionService;
     private static CacheSubscriptionRequestPublisher countersSubscriptionService;
-    private static NearCacheManager nearCacheManager;
+    private static NearCacheManager<Object> nearCacheManager;
+    private static NearCacheManager<Object> countersNearCacheManager;
     private static boolean nearCacheEnabled;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
@@ -94,7 +97,8 @@ public class WebsocketApplication {
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
         nearCacheEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false"));
         System.out.println("Near cache hydration enabled: " + nearCacheEnabled);
-        nearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager() : null;
+        nearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager<>() : null;
+        countersNearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager<>() : null;
 
         var app = startHTTPServer(port);
 
@@ -125,7 +129,7 @@ public class WebsocketApplication {
                 subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher, nearCacheManager);
 
                 CacheRequestPublisher<String, String, Long> countersRbPublisher = new RBCountersRequestPublisher(rb);
-                countersSubscriptionService = new CacheSubscriptionRequestPublisher(countersRbPublisher);
+                countersSubscriptionService = new CacheSubscriptionRequestPublisher(countersRbPublisher, countersNearCacheManager);
             }
 
             client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);
@@ -295,16 +299,20 @@ public class WebsocketApplication {
      * @param app The Javalin instance.
      */
     private static void setupNearCacheManagementRoutes(Javalin app) {
-        app.get(NEAR_CACHES_API, WebsocketApplication::handleGetNearCaches)
-                .delete(NEAR_CACHE_API_PREFIX + "{cacheId}", WebsocketApplication::handleStopNearCache);
+        app.get(NEAR_CACHES_API, ctx -> handleGetNearCaches(ctx, subscriptionService))
+                .delete(NEAR_CACHE_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, subscriptionService))
+                .get(NEAR_COUNTERS_CACHES_API, ctx -> handleGetNearCaches(ctx, countersSubscriptionService))
+                .delete(NEAR_COUNTERS_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, countersSubscriptionService));
     }
 
     /**
-     * List the caches currently kept warm in the near cache, with their local item counts.
+     * List the caches currently kept warm in the given subscription service's near cache, with their
+     * local item counts.
      *
-     * @param ctx The context.
+     * @param ctx                 The context.
+     * @param subscriptionService The subscription service whose near cache to list.
      */
-    private static void handleGetNearCaches(Context ctx) {
+    private static void handleGetNearCaches(Context ctx, CacheSubscriptionRequestPublisher subscriptionService) {
         log.info("Got request to list warm near caches");
         List<CacheDetails> warmCaches = new ArrayList<>();
         for (var cacheIdObj : subscriptionService.warmNearCaches()) {
@@ -319,9 +327,10 @@ public class WebsocketApplication {
      * Stop near caching a cache: drop the internal subscription and remove the local copy. Active client
      * subscriptions are not affected.
      *
-     * @param ctx The context.
+     * @param ctx                 The context.
+     * @param subscriptionService The subscription service whose near cache to stop.
      */
-    private static void handleStopNearCache(Context ctx) {
+    private static void handleStopNearCache(Context ctx, CacheSubscriptionRequestPublisher subscriptionService) {
         try {
             var cacheId = ctx.pathParam("cacheId");
             log.info("Got request to stop near caching cacheId {}", cacheId);

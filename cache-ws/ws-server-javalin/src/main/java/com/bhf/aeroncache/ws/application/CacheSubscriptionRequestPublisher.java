@@ -27,7 +27,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      * @param rbPublisher      the request publisher.
      * @param nearCacheManager the local near cache to warm and hydrate from, or {@code null} to disable.
      */
-    public CacheSubscriptionRequestPublisher(CacheRequestPublisher rbPublisher, NearCacheManager nearCacheManager) {
+    public CacheSubscriptionRequestPublisher(CacheRequestPublisher rbPublisher, NearCacheManager<Object> nearCacheManager) {
         super(rbPublisher, nearCacheManager, NEAR_CACHE_SESSION_ID);
     }
 

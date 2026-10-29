@@ -2,7 +2,6 @@ package com.bhf.aeroncache.services.cache.subscription;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.models.consumer.IdentifiableConsumer;
-import com.bhf.aeroncache.http.responses.CacheItem;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
@@ -54,7 +53,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      * local copy instead of asking the cluster for a per-subscriber snapshot. {@code null} disables the
      * near cache (the default, used by the HTTP near cache which manages its own).
      */
-    private final NearCacheManager nearCacheManager;
+    private final NearCacheManager<Object> nearCacheManager;
 
     /**
      * The session id used for the single internal subscription that keeps the near cache warm for a
@@ -75,7 +74,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      * @param nearCacheSessionId the session id for the internal near cache subscription (required when
      *                           {@code nearCacheManager} is non-null).
      */
-    public CacheSubscriptionRequestPublisher(CacheRequestPublisher rbPublisher, NearCacheManager nearCacheManager,
+    public CacheSubscriptionRequestPublisher(CacheRequestPublisher rbPublisher, NearCacheManager<Object> nearCacheManager,
                                              String nearCacheSessionId) {
         super(rbPublisher);
         this.nearCacheManager = nearCacheManager;
@@ -233,13 +232,12 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      * @param consumer  The subscriber to hydrate.
      */
     private void replayNearCache(String cacheId, String requestId, Consumer<CacheUpdateEvent> consumer) {
-        NearCache nearCache = nearCacheManager.get(cacheId);
+        NearCache<Object> nearCache = nearCacheManager.get(cacheId);
         if (nearCache == null) {
             return;
         }
-        for (CacheItem item : nearCache.items()) {
-            consumer.accept(new CacheUpdateEvent(cacheId, CacheUpdateEvent.EventType.ADD_ITEM, item.key(), item.value(), requestId));
-        }
+        nearCache.snapshot().forEach((key, value) ->
+                consumer.accept(new CacheUpdateEvent(cacheId, CacheUpdateEvent.EventType.ADD_ITEM, key, value, requestId)));
     }
 
     /**
@@ -262,7 +260,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             return 0;
         }
         var nearCache = nearCacheManager.get(cacheId);
-        return nearCache == null ? 0 : nearCache.items().size();
+        return nearCache == null ? 0 : nearCache.size();
     }
 
     /**

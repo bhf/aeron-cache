@@ -2,6 +2,7 @@ package com.bhf.aeroncache.http.handlers;
 
 import com.bhf.aeroncache.http.application.HttpApplication;
 import com.bhf.aeroncache.http.responses.CacheDetails;
+import com.bhf.aeroncache.http.responses.CacheItem;
 import com.bhf.aeroncache.http.responses.GetCacheResponse;
 import com.bhf.aeroncache.http.responses.GetItemResponse;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
@@ -37,7 +38,7 @@ import java.util.function.Consumer;
 public class NearCacheRouteHandlers {
 
     private final ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString, String, String, String> publisher;
-    private final NearCacheManager nearCacheManager;
+    private final NearCacheManager<String> nearCacheManager;
     private final Consumer<String> subscribeToCache;
     private final Consumer<String> unsubscribeFromCache;
 
@@ -48,7 +49,7 @@ public class NearCacheRouteHandlers {
      * @param unsubscribeFromCache drops the cluster subscription for a cache so updates stop flowing.
      */
     public NearCacheRouteHandlers(ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString, String, String, String> publisher,
-                                  NearCacheManager nearCacheManager,
+                                  NearCacheManager<String> nearCacheManager,
                                   Consumer<String> subscribeToCache,
                                   Consumer<String> unsubscribeFromCache) {
         this.publisher = publisher;
@@ -67,7 +68,7 @@ public class NearCacheRouteHandlers {
         List<CacheDetails> warmCaches = new ArrayList<>();
         for (var cacheId : nearCacheManager.cacheIds()) {
             var localCache = nearCacheManager.get(cacheId);
-            var itemCount = localCache == null ? 0 : localCache.items().size();
+            var itemCount = localCache == null ? 0 : localCache.size();
             warmCaches.add(new CacheDetails(cacheId, itemCount));
         }
         ctx.status(HTTPStatusUtils.OK);
@@ -143,7 +144,9 @@ public class NearCacheRouteHandlers {
 
             if (nearCacheManager.contains(cacheId)) {
                 var localCache = nearCacheManager.get(cacheId);
-                var items = localCache.items();
+                var items = localCache.snapshot().entrySet().stream()
+                        .map(e -> new CacheItem(e.getKey(), e.getValue()))
+                        .toList();
                 var response = new GetCacheResponse(cacheId, CacheOperationStatus.SUCCESS, items);
                 ctx.status(HTTPStatusUtils.getHTTPCode(CacheOperationStatus.SUCCESS));
                 ctx.json(response);
@@ -185,7 +188,7 @@ public class NearCacheRouteHandlers {
      * @param key        The key.
      * @param cacheId    The cache ID.
      */
-    private void handleExistingLocalCache(Context ctx, NearCache localCache, String key, String cacheId) throws InterruptedException, ExecutionException {
+    private void handleExistingLocalCache(Context ctx, NearCache<String> localCache, String key, String cacheId) throws InterruptedException, ExecutionException {
         if (localCache.containsKey(key)) {
             var result = localCache.get(key);
             ctx.status(HTTPStatusUtils.OK);

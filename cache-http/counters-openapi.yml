@@ -404,6 +404,120 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/near/counters/{cacheId}:
+    get:
+      tags:
+        - GetNearCounters
+      summary: Get all counters from the near cache
+      description: >-
+        Get all counters from the specified counter cache, served from the local near cache. Only
+        available when the HTTP interface is started with NEAR_CACHE_ENABLED=true. The first read of a
+        counter cache subscribes to it so the local copy is kept warm; a miss falls back to the source.
+      operationId: getNearCounters
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the counter cache
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCountersResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - StopNearCounters
+      summary: Stop near caching a counter cache
+      description: >-
+        Stop near caching the specified counter cache: drop the cluster subscription that keeps the
+        local copy warm and remove the local copy. The source counter cache is not affected. Idempotent
+        - stopping a counter cache that is not currently warm succeeds with wasCached=false. Only
+        available when the HTTP interface is started with NEAR_CACHE_ENABLED=true.
+      operationId: stopNearCounters
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the counter cache
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StopNearCacheResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/near/counters/{cacheId}/{key}:
+    get:
+      tags:
+        - GetNearCounter
+      summary: Get a counter from the near cache
+      description: >-
+        Get a counter by its key from the specified counter cache, served from the local near cache.
+        Only available when the HTTP interface is started with NEAR_CACHE_ENABLED=true. A miss in the
+        local near cache falls back to the source and populates the local copy.
+      operationId: getNearCounter
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the counter cache
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The key of the counter
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCounterResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/near/counters-caches:
+    get:
+      tags:
+        - GetNearCountersCaches
+      summary: List warm near counter caches
+      description: >-
+        List the counter caches currently held warm in the local near cache, with their local item
+        counts. Only available when the HTTP interface is started with NEAR_CACHE_ENABLED=true.
+      operationId: getNearCountersCaches
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CacheDetails'
 components:
   schemas:
     ErrorResponse:
@@ -624,6 +738,17 @@ components:
         itemCount:
           type: integer
           format: int64
+    StopNearCacheResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCacheID"
+        wasCached:
+          type: boolean
+          description: Whether a local near cache copy existed and was removed.
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
     CacheStatsResponse:
       type: object
       properties:
