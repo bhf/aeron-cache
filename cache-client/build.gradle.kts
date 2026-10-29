@@ -8,6 +8,7 @@ dependencies {
     implementation(project(":cache-cluster"))
     implementation(project(":cache-common"))
     implementation(project(":cache-messages-http"))
+    implementation(project(":cache-near:cache-near-common"))
     implementation(project(":cache-spi"))
     runtimeOnly(project(":cache-spi-impl:map-cache:map-cache-core"))
     implementation(libs.aeron)

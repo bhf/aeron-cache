@@ -174,13 +174,13 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
             httpPort = httpContainer.getMappedPort(7070);
         }
         if (config.wsEnabled()) {
-            wsContainer = TestContainersEnvironmentFactory.getClusteredWSContainer(NODES, network);
+            wsContainer = TestContainersEnvironmentFactory.getClusteredWSContainer(NODES, network, config.streamingNearCacheEnabled());
             wsContainer.start();
             baseWsUri = "ws://"+wsContainer.getHost();
             wsPort = wsContainer.getMappedPort(7071);
         }
         if (config.sseEnabled()) {
-            sseContainer = TestContainersEnvironmentFactory.getClusteredSSEContainer(NODES, network);
+            sseContainer = TestContainersEnvironmentFactory.getClusteredSSEContainer(NODES, network, config.streamingNearCacheEnabled());
             sseContainer.start();
             baseSseUri = "http://"+sseContainer.getHost();
             ssePort = sseContainer.getMappedPort(7072);
@@ -317,6 +317,9 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
         }
         if(config.dynamicCacheCreationEnabled()){
             functionalityKeyBuilder.append("_dyn");
+        }
+        if (config.streamingNearCacheEnabled()) {
+            functionalityKeyBuilder.append("_near");
         }
 
         return functionalityKeyBuilder.toString();

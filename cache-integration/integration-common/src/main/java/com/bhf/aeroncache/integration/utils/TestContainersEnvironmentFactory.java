@@ -185,6 +185,19 @@ public class TestContainersEnvironmentFactory {
      * @return
      */
     public static GenericContainer<?> getClusteredWSContainer(int nodes, Network network) {
+        return getClusteredWSContainer(nodes, network, false);
+    }
+
+    /**
+     * Get a container for a single WS interface configured for using cluster mode, optionally with the
+     * near cache (near-cache-backed hydration and management endpoints) enabled.
+     *
+     * @param nodes            the number of cluster nodes.
+     * @param network          the shared docker network.
+     * @param nearCacheEnabled whether to enable the near cache ({@code NEAR_CACHE_ENABLED}).
+     * @return the configured container.
+     */
+    public static GenericContainer<?> getClusteredWSContainer(int nodes, Network network, boolean nearCacheEnabled) {
         String clusterAddresses = getClusterAddresses(nodes);
 
         return new GenericContainer<>(getImageName("aeroncache-ws"))
@@ -196,6 +209,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
                 .withEnv("CACHE_MODE", "RAFT")
+                .withEnv("NEAR_CACHE_ENABLED", Boolean.toString(nearCacheEnabled))
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -207,6 +221,19 @@ public class TestContainersEnvironmentFactory {
      * @return
      */
     public static GenericContainer<?> getClusteredSSEContainer(int nodes, Network network) {
+        return getClusteredSSEContainer(nodes, network, false);
+    }
+
+    /**
+     * Get a container for a single SSE interface configured for using cluster mode, optionally with the
+     * near cache (near-cache-backed hydration and management endpoints) enabled.
+     *
+     * @param nodes            the number of cluster nodes.
+     * @param network          the shared docker network.
+     * @param nearCacheEnabled whether to enable the near cache ({@code NEAR_CACHE_ENABLED}).
+     * @return the configured container.
+     */
+    public static GenericContainer<?> getClusteredSSEContainer(int nodes, Network network, boolean nearCacheEnabled) {
         String clusterAddresses = getClusterAddresses(nodes);
 
         return new GenericContainer<>(getImageName("aeroncache-sse"))
@@ -219,6 +246,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("EGRESS_IP", "172.16.202.5")
                 .withEnv("CACHE_MODE", "RAFT")
                 .withEnv("REQUEST_PUB_HOST", "node0")
+                .withEnv("NEAR_CACHE_ENABLED", Boolean.toString(nearCacheEnabled))
                 .waitingFor(Wait.forHttp("/readiness/"));
     }
 

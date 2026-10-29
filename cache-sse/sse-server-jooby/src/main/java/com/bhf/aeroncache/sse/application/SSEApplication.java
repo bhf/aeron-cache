@@ -1,9 +1,14 @@
 package com.bhf.aeroncache.sse.application;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.http.responses.CacheDetails;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.http.responses.SubscriptionAck;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
+import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
+import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.ResponseChannelCacheConnector;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -55,12 +60,16 @@ public class SSEApplication extends Jooby {
     private static final String CACHE_MULTI_SUB_API_PREFIX = "/api/sse/v1/caches/";
     private static final String COUNTERS_API_PREFIX = "/api/sse/v1/counter/";
     private static final String COUNTERS_MULTI_SUB_API_PREFIX = "/api/sse/v1/counters/";
+    private static final String NEAR_CACHES_API = "/api/v1/near/caches";
+    private static final String NEAR_CACHE_API_PREFIX = "/api/v1/near/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
     private static AeronCacheClusterListener client;
     private static CacheSubscriptionRequestPublisher subscriptionService;
     private static CacheSubscriptionRequestPublisher countersSubscriptionService;
+    private static NearCacheManager nearCacheManager;
+    private static boolean nearCacheEnabled;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     private static String tracingServiceName;
@@ -77,6 +86,9 @@ public class SSEApplication extends Jooby {
     public static int startSSEInterface(String[] args, int port) {
         System.out.println("Starting SSE interface");
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
+        nearCacheEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false"));
+        System.out.println("Near cache hydration enabled: " + nearCacheEnabled);
+        nearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager() : null;
 
         var boundPort = startHTTPServer(args, port);
         setupCacheConnection();
@@ -103,6 +115,41 @@ public class SSEApplication extends Jooby {
 
         get(LIVENESS, SSEApplication::handleGetLiveness);
         get(READINESS, SSEApplication::handleGetReadiness);
+
+        if (nearCacheEnabled) {
+            get(NEAR_CACHES_API, SSEApplication::handleGetNearCaches);
+            delete(NEAR_CACHE_API_PREFIX + "{cacheId}", SSEApplication::handleStopNearCache);
+        }
+    }
+
+    /**
+     * List the caches currently kept warm in the near cache, with their local item counts.
+     *
+     * @param ctx The context.
+     * @return the warm cache details as JSON.
+     */
+    private static Object handleGetNearCaches(Context ctx) {
+        log.info("Got request to list warm near caches");
+        List<CacheDetails> warmCaches = new ArrayList<>();
+        for (var cacheIdObj : subscriptionService.warmNearCaches()) {
+            var cacheId = (String) cacheIdObj;
+            warmCaches.add(new CacheDetails(cacheId, subscriptionService.nearCacheItemCount(cacheId)));
+        }
+        return warmCaches;
+    }
+
+    /**
+     * Stop near caching a cache: drop the internal subscription and remove the local copy. Active client
+     * subscriptions are not affected.
+     *
+     * @param ctx The context.
+     * @return the stop result as JSON.
+     */
+    private static Object handleStopNearCache(Context ctx) {
+        var cacheId = ctx.path("cacheId").toString();
+        log.info("Got request to stop near caching cacheId {}", cacheId);
+        var wasCached = subscriptionService.stopNearCaching(cache, cacheId);
+        return new StopNearCacheResponse(cacheId, wasCached, CacheOperationStatus.SUCCESS);
     }
 
     private static Object handleGetReadiness(Context ctx) {
@@ -496,12 +543,12 @@ public class SSEApplication extends Jooby {
                 // sending directly to the cluster
                 var requestPublisher = new RBClusterMessagePublisher(cache, rb,
                         SSEIdleStrategies.clusterMessagePublisherIdleStrategy.get(), cacheRequestEncoder);
-                subscriptionService = new CacheSubscriptionRequestPublisher(requestPublisher);
+                subscriptionService = new CacheSubscriptionRequestPublisher(requestPublisher, nearCacheManager);
             } else {
                 // Drop normalised cache requests onto an Agrona RB for encoding
                 // to SBE on the Agent thread
                 CacheRequestPublisher rbPublisher = new RBCacheRequestPublisher(rb);
-                subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
+                subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher, nearCacheManager);
 
                 CacheRequestPublisher<String, String, Long> countersRbPublisher = new RBCountersRequestPublisher(rb);
                 countersSubscriptionService = new CacheSubscriptionRequestPublisher(countersRbPublisher);

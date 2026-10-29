@@ -11,6 +11,8 @@ info:
 servers:
   - url: ws://localhost:7071
     description: Local WebSocket server
+  - url: http://localhost:7071
+    description: Local HTTP server (near cache management endpoints, when NEAR_CACHE_ENABLED=true)
 paths:
   /api/ws/v1/cache/{cacheId}:
     get:
@@ -132,6 +134,44 @@ paths:
               schema:
                 $ref: '#/components/schemas/RequestErrorResponse'
 
+  /api/v1/near/caches:
+    get:
+      summary: List warm near caches
+      description: |
+        HTTP endpoint. List the caches currently kept warm in the local near cache, with their local item
+        counts. Available only when the WebSocket interface is started with `NEAR_CACHE_ENABLED=true`.
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CacheDetails'
+  /api/v1/near/cache/{cacheId}:
+    delete:
+      summary: Stop near caching a cache
+      description: |
+        HTTP endpoint. Stop near caching the specified cache: drop the internal cluster subscription that
+        keeps the local copy warm and remove the local copy. Active streaming subscriptions are not
+        affected. Idempotent - stopping a cache that is not currently warm succeeds with `wasCached=false`.
+        Available only when the WebSocket interface is started with `NEAR_CACHE_ENABLED=true`.
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          description: The ID of the cache to stop near caching.
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StopNearCacheResponse'
+
 components:
   parameters:
     KeysQueryParam:
@@ -196,6 +236,26 @@ components:
           type: string
         helpMsg:
           type: string
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    CacheDetails:
+      type: object
+      description: A near-cached cache and its local item count.
+      properties:
+        cacheId:
+          type: string
+        itemCount:
+          type: integer
+          format: int64
+    StopNearCacheResponse:
+      type: object
+      description: The result of stopping near caching for a cache.
+      properties:
+        cacheId:
+          type: string
+        wasCached:
+          type: boolean
+          description: Whether a local near cache copy existed and was removed.
         operationStatus:
           $ref: '#/components/schemas/CacheOperationStatus'
     CacheOperationStatus:
