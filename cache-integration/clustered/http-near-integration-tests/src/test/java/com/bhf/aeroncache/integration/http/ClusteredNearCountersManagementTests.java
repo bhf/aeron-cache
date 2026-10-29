@@ -38,8 +38,8 @@ class ClusteredNearCountersManagementTests {
     @BeforeAll
     void setup(BackendTestResource backend) {
         CacheTestUtils.createCache(WARM_CACHE_ID, backend, endpoints);
-        CacheTestUtils.setCounter(WARM_CACHE_ID, "Key1", 10L, backend, endpoints);
-        CacheTestUtils.setCounter(WARM_CACHE_ID, "Key2", 20L, backend, endpoints);
+        CacheTestUtils.addItem(WARM_CACHE_ID, "Key1", 10L, backend, endpoints);
+        CacheTestUtils.addItem(WARM_CACHE_ID, "Key2", 20L, backend, endpoints);
     }
 
     @Test

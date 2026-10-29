@@ -62,8 +62,8 @@ public abstract class AbstractStreamingNearCountersTests {
 
         // Seed the source counter cache over HTTP.
         CacheTestUtils.createCache(cacheId, backend, httpCounterEndpoints);
-        CacheTestUtils.setCounter(cacheId, "Key1", 10L, backend, httpCounterEndpoints);
-        CacheTestUtils.setCounter(cacheId, "Key2", 20L, backend, httpCounterEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", 10L, backend, httpCounterEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key2", 20L, backend, httpCounterEndpoints);
 
         // The first hydrating subscriber warms the near counter cache (and is itself hydrated).
         assertHydrates(backend, cacheId, Map.of("Key1", 10L, "Key2", 20L));
