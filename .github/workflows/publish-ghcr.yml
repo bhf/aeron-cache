@@ -9,7 +9,6 @@ name: Publish Images to GHCR
 #   ghcr.io/<owner>/aeroncache-cluster
 #   ghcr.io/<owner>/aeroncache-http
 #   ghcr.io/<owner>/aeroncache-http-clustertools
-#   ghcr.io/<owner>/aeroncache-http-near
 #   ghcr.io/<owner>/aeroncache-ws
 #   ghcr.io/<owner>/aeroncache-sse
 #   ghcr.io/<owner>/aeroncache-gateway
@@ -82,7 +81,6 @@ jobs:
             :cache-cluster:jib \
             :cache-http:http-server-javalin:jib \
             :cache-http:http-clustertools:jib \
-            :cache-near:http-server-near-javalin:jib \
             :cache-ws:ws-server-javalin:jib \
             :cache-sse:sse-server-jooby:jib \
             :cache-aeron-gateway:aeron-gateway-server:jib \

@@ -149,6 +149,19 @@ public class TestContainersEnvironmentFactory {
     }
 
     public static GenericContainer<?> getClusteredHTTPContainer(int nodes, Network network) {
+        return getClusteredHTTPContainer(nodes, network, false);
+    }
+
+    /**
+     * Get a container for a single HTTP interface configured for using cluster mode, optionally with
+     * the near cache read endpoints enabled.
+     *
+     * @param nodes            the number of cluster nodes.
+     * @param network          the shared docker network.
+     * @param nearCacheEnabled whether to enable the near cache endpoints ({@code NEAR_CACHE_ENABLED}).
+     * @return the configured container.
+     */
+    public static GenericContainer<?> getClusteredHTTPContainer(int nodes, Network network, boolean nearCacheEnabled) {
         String clusterAddresses = getClusterAddresses(nodes);
 
         return new GenericContainer<>(getImageName("aeroncache-http"))
@@ -160,28 +173,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
                 .withEnv("EGRESS_IP", "172.16.202.5")
                 .withEnv("CACHE_MODE", "RAFT")
-                .waitingFor(Wait.forHttp("/readiness"));
-    }
-
-    /**
-     * Get a container for a single near cache HTTP interface configured for using cluster mode.
-     *
-     * @param nodes
-     * @param network
-     * @return
-     */
-    public static GenericContainer<?> getClusteredHTTPNearContainer(int nodes, Network network) {
-        String clusterAddresses = getClusterAddresses(nodes);
-
-        return new GenericContainer<>(getImageName("aeroncache-http-near"))
-                .withNetwork(network)
-                .withNetworkAliases("cache-http-near-client")
-                .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
-                .withExposedPorts(7073)
-                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
-                .withEnv("CLUSTER_ADDRESSES", clusterAddresses)
-                .withEnv("EGRESS_IP", "172.16.202.5")
-                .withEnv("CACHE_MODE", "RAFT")
+                .withEnv("NEAR_CACHE_ENABLED", Boolean.toString(nearCacheEnabled))
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 
@@ -290,6 +282,18 @@ public class TestContainersEnvironmentFactory {
      * @return
      */
     public static GenericContainer<?> getEphemeralCacheHTTPContainer(Network network) {
+        return getEphemeralCacheHTTPContainer(network, false);
+    }
+
+    /**
+     * Get a container for a single HTTP interface configured for single node mode, optionally with the
+     * near cache read endpoints enabled.
+     *
+     * @param network          the shared docker network.
+     * @param nearCacheEnabled whether to enable the near cache endpoints ({@code NEAR_CACHE_ENABLED}).
+     * @return the configured container.
+     */
+    public static GenericContainer<?> getEphemeralCacheHTTPContainer(Network network, boolean nearCacheEnabled) {
         return new GenericContainer<>(getImageName("aeroncache-http"))
                 .withNetwork(network)
                 .withNetworkAliases("cache-http-client")
@@ -301,27 +305,7 @@ public class TestContainersEnvironmentFactory {
                 .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "node0:8075")
                 .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", "node0:8076")
                 .withEnv("AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS", "2")
-                .waitingFor(Wait.forHttp("/readiness"));
-    }
-
-    /**
-     * Get a container for a single near cache HTTP interface configured for single node mode.
-     *
-     * @param network
-     * @return
-     */
-    public static GenericContainer<?> getEphemeralCacheHTTPNearContainer(Network network) {
-        return new GenericContainer<>(getImageName("aeroncache-http-near"))
-                .withNetwork(network)
-                .withNetworkAliases("cache-http-client")
-                .withSharedMemorySize(SHM_SIZE_MBS * 1024L * 1024L)
-                .withExposedPorts(7070)
-                .withEnv("JAVA_TOOL_OPTIONS", JAVA_TOOL_OPTIONS)
-                .withEnv("CLUSTER_ADDRESSES", "node0")
-                .withEnv("CACHE_MODE", "SINGLE")
-                .withEnv("EPHEMERAL_REQUEST_ENDPOINT", "node0:8075")
-                .withEnv("EPHEMERAL_RESPONSE_CONTROL_ENDPOINT", "node0:8076")
-                .withEnv("AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS", "2")
+                .withEnv("NEAR_CACHE_ENABLED", Boolean.toString(nearCacheEnabled))
                 .waitingFor(Wait.forHttp("/readiness"));
     }
 

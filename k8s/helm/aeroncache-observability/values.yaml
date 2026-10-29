@@ -2,7 +2,7 @@
 #
 # This chart is the scrape/visualisation half of the metrics feature. The *producing* half lives in
 # the application charts, and there are two producers:
-#   - Interface charts (aeroncache-http/-ws/-sse/-http-near): enable per app with
+#   - Interface charts (aeroncache-http/-ws/-sse): enable per app with
 #     `javaagent.enabled=true`, which activates the bundled OpenTelemetry Java agent, serves a
 #     Prometheus endpoint and annotates the pod with prometheus.io/scrape.
 #   - Cache/gateway charts (aeroncache-cluster/-ephemeral/-gateway): their clustertools sidecar

@@ -10,6 +10,7 @@ dependencies {
     testImplementation(libs.junit.params)
     testImplementation(libs.json)
     testImplementation(libs.hamcrest)
+    testImplementation(libs.awaitility)
     testImplementation(libs.jackson.core)
 
     testImplementation(project(":cache-cluster"))

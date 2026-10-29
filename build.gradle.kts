@@ -69,7 +69,6 @@ subprojects {
             if (!skipIntegrationTests && jibOnBuild && !inProcessOnly) {
                 dependsOn(":cache-http:http-server-javalin:jibDockerBuild")
                 dependsOn(":cache-http:http-clustertools:jibDockerBuild")
-                dependsOn(":cache-near:http-server-near-javalin:jibDockerBuild")
                 dependsOn(":cache-sse:sse-server-jooby:jibDockerBuild")
                 dependsOn(":cache-ws:ws-server-javalin:jibDockerBuild")
                 dependsOn(":cache-cluster:jibDockerBuild")
