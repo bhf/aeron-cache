@@ -36,7 +36,6 @@ jobs:
           kind load docker-image aeroncache-http:latest --name kind
           kind load docker-image aeroncache-ws:latest --name kind
           kind load docker-image aeroncache-sse:latest --name kind
-          kind load docker-image aeroncache-http-near:latest --name kind
           kind load docker-image aeroncache-gateway:latest --name kind
 
       - name: Install Backend Helm Charts
@@ -110,9 +109,8 @@ jobs:
           kubectl port-forward -n aeroncache svc/aeroncache-http 7070:7070 &
           kubectl port-forward -n aeroncache svc/aeroncache-ws 7071:7071 &
           kubectl port-forward -n aeroncache svc/aeroncache-sse 7072:7072 &
-          kubectl port-forward -n aeroncache svc/aeroncache-http-near 7073:7073 &
           sleep 5 # give port-forwarding a moment to establish
-          echo "Port-forwards established for http/ws/sse/http-near."
+          echo "Port-forwards established for http/ws/sse."
 
       - name: Smoke Pre-Gate (fast fail before the full suite)
         run: |

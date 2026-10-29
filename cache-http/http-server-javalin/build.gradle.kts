@@ -16,6 +16,7 @@ dependencies {
     implementation(project(":cache-common"))
     implementation(project(":cache-messages-http"))
     implementation(project(":cache-spi"))
+    implementation(project(":cache-near:cache-near-common"))
     runtimeOnly(project(":cache-spi-impl:map-cache:map-cache-core"))
     implementation(libs.aeron)
     implementation(libs.javalin)

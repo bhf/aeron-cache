@@ -5,6 +5,11 @@ replicaCount: 1
 clusterAddresses: "aeroncache-cluster-0.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local"
 cacheMode: "RAFT"
 
+# When true, the HTTP interface also serves the near cache read endpoints
+# (GET /api/v1/near/cache/...), backed by a local near cache kept warm via a cluster subscription.
+# Sets NEAR_CACHE_ENABLED on the container.
+nearCacheEnabled: true
+
 # Set the configmap to use for the cluster config
 aeroncacheHTTPConfigmap: aeroncache-http-config
 

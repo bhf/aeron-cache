@@ -102,8 +102,12 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
             ssePort = externalPort("sse", 7072);
         }
         if (config.httpNearCacheEnabled()) {
-            baseHttpNearUri = "http://" + externalHost("httpNear");
-            httpNearPort = externalPort("httpNear", 7073);
+            // The near cache endpoints are served by the main HTTP interface (NEAR_CACHE_ENABLED), so
+            // they default to the HTTP interface's host/port. A dedicated aeroncache.httpNear.* override
+            // is still honoured if supplied.
+            baseHttpNearUri = "http://" + System.getProperty("aeroncache.httpNear.host", externalHost("http"));
+            httpNearPort = Integer.parseInt(System.getProperty("aeroncache.httpNear.port",
+                    String.valueOf(externalPort("http", 7070))));
         }
 
         return BackendTestResource.forExternalEnvironment(baseHttpUri, httpPort, baseWsUri, wsPort,
@@ -160,12 +164,11 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
         int ssePort = 0;
 
         GenericContainer<?> httpContainer = null;
-        GenericContainer<?> httpNearContainer = null;
         GenericContainer<?> wsContainer = null;
         GenericContainer<?> sseContainer = null;
 
         if (config.httpEnabled()) {
-            httpContainer = TestContainersEnvironmentFactory.getClusteredHTTPContainer(NODES, network);
+            httpContainer = TestContainersEnvironmentFactory.getClusteredHTTPContainer(NODES, network, config.httpNearCacheEnabled());
             httpContainer.start();
             baseHttpUri = "http://"+httpContainer.getHost();
             httpPort = httpContainer.getMappedPort(7070);
@@ -183,13 +186,13 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
             ssePort = sseContainer.getMappedPort(7072);
         }
         if (config.httpNearCacheEnabled()){
-            httpNearContainer = TestContainersEnvironmentFactory.getClusteredHTTPNearContainer(NODES, network);
-            httpNearContainer.start();
-            baseHttpNearUri = "http://"+httpNearContainer.getHost();
-            httpNearPort = httpNearContainer.getMappedPort(7073);
+            // The near cache endpoints are now served by the main HTTP interface when NEAR_CACHE_ENABLED
+            // is set, so they share the HTTP container's host and port.
+            baseHttpNearUri = baseHttpUri;
+            httpNearPort = httpPort;
         }
 
-        var backendTestContainers = new BackendTestContainers(cacheNodes, httpContainer, httpNearContainer, wsContainer, sseContainer);
+        var backendTestContainers = new BackendTestContainers(cacheNodes, httpContainer, wsContainer, sseContainer);
         return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSseUri, ssePort, baseHttpNearUri,
                 httpNearPort, functionalityKey, true, backendTestContainers, false);
     }
@@ -214,12 +217,11 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
         int ssePort = 0;
 
         GenericContainer<?> httpContainer = null;
-        GenericContainer<?> httpNearContainer = null;
         GenericContainer<?> wsContainer = null;
         GenericContainer<?> sseContainer = null;
 
         if (config.httpEnabled()) {
-            httpContainer = TestContainersEnvironmentFactory.getEphemeralCacheHTTPContainer(network);
+            httpContainer = TestContainersEnvironmentFactory.getEphemeralCacheHTTPContainer(network, config.httpNearCacheEnabled());
             httpContainer.start();
             baseHttpUri = "http://"+httpContainer.getHost();
             httpPort = httpContainer.getMappedPort(7070);
@@ -237,13 +239,13 @@ public class BackendTestLauncher implements BeforeAllCallback, ParameterResolver
             ssePort = sseContainer.getMappedPort(7072);
         }
         if (config.httpNearCacheEnabled()){
-            httpNearContainer = TestContainersEnvironmentFactory.getClusteredHTTPNearContainer(3, network);
-            httpNearContainer.start();
-            baseHttpNearUri = "http://"+httpNearContainer.getHost();
-            httpNearPort = httpNearContainer.getMappedPort(7073);
+            // The near cache endpoints are now served by the main HTTP interface when NEAR_CACHE_ENABLED
+            // is set, so they share the HTTP container's host and port.
+            baseHttpNearUri = baseHttpUri;
+            httpNearPort = httpPort;
         }
 
-        var backendTestContainers = new BackendTestContainers(cacheNodeList, httpContainer, httpNearContainer, wsContainer, sseContainer);
+        var backendTestContainers = new BackendTestContainers(cacheNodeList, httpContainer, wsContainer, sseContainer);
         return new BackendTestResource(baseHttpUri, httpPort, baseWsUri, wsPort, baseSseUri, ssePort, baseHttpNearUri,
                 httpNearPort, functionalityKey, true, backendTestContainers, false);
     }

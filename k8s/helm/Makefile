@@ -8,7 +8,7 @@
 # Observability (Prometheus + Grafana):
 #   `make install-observability` deploys the aeroncache-observability chart (Prometheus + Grafana)
 #   into the aeroncache namespace. Pass JAVAAGENT=true to any interface-app install target
-#   (install-http/-ws/-sse/-http-near, or the aggregates that include them) to activate the bundled
+#   (install-http/-ws/-sse, or the aggregates that include them) to activate the bundled
 #   OpenTelemetry Java agent, which exposes a Prometheus endpoint that the observability stack
 #   auto-discovers via pod annotations. JAVAAGENT is unset by default, so apps are never instrumented
 #   unless you ask for it. Like EXTERNAL_MEDIA_DRIVER it is a command-line variable and propagates to
@@ -27,14 +27,14 @@
 #   e.g.  make install-all GHCR=true
 #         make install-all GHCR=true GHCR_TAG=1.2.3
 
-install-backend: install-cluster install-http install-ws install-sse install-gateway install-http-near
-uninstall-backend: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-gateway uninstall-http-near
+install-backend: install-cluster install-http install-ws install-sse install-gateway
+uninstall-backend: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-gateway
 
 install-frontend: install-ui
 uninstall-frontend: uninstall-ui
 
-install-all: install-cluster install-http install-ws install-sse install-gateway install-http-near install-ui
-uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-gateway uninstall-http-near uninstall-ui
+install-all: install-cluster install-http install-ws install-sse install-gateway install-ui
+uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-gateway uninstall-ui
 
 install-all-ephemeral: install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral install-gateway-ephemeral install-ui
 uninstall-all-ephemeral: uninstall-ephemeral uninstall-http uninstall-ws uninstall-sse uninstall-ui uninstall-gateway
@@ -89,12 +89,6 @@ install-gateway-ephemeral:
 
 uninstall-gateway:
 	$(MAKE) -C aeroncache-gateway uninstall
-
-install-http-near:
-	$(MAKE) -C aeroncache-http-near install
-
-uninstall-http-near:
-	$(MAKE) -C aeroncache-http-near uninstall
 
 install-ui:
 	$(MAKE) -C aeroncache-ui-nextjs install

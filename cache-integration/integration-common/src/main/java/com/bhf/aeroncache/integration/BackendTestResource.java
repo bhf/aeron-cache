@@ -72,9 +72,6 @@ public class BackendTestResource implements ExtensionContext.Store.CloseableReso
             if (containers.sseContainer() != null) {
                 shutdownContainer(containers.sseContainer());
             }
-            if(containers.httpNearContainer() != null) {
-                shutdownContainer(containers.httpNearContainer());
-            }
         }
     }
 

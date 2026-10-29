@@ -6,7 +6,9 @@ import com.bhf.aeroncache.http.config.HttpIdleStrategies;
 import com.bhf.aeroncache.http.handlers.CacheRouteHandlers;
 import com.bhf.aeroncache.http.handlers.CountersRouteHandlers;
 import com.bhf.aeroncache.http.handlers.HTTPConsumerUtils;
+import com.bhf.aeroncache.http.handlers.NearCacheRouteHandlers;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
+import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.http.responses.AeronCountersFanoutResponse;
 import com.bhf.aeroncache.http.responses.AeronCountersResponse;
 import com.bhf.aeroncache.http.responses.AggregatedPurgeResponse;
@@ -21,10 +23,13 @@ import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.bulk.responses.BulkCacheOpsResponse;
 import com.bhf.aeroncache.models.results.BulkCacheOpsResult;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
+import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.ReconnectingAeronCache;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
+import com.bhf.aeroncache.services.cache.GroupedResponseHandler;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.RBCountersRequestPublisher;
@@ -39,6 +44,7 @@ import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.CorsUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
+import com.bhf.aeroncache.services.cache.subscription.CacheSubscriptionRequestPublisher;
 import com.bhf.aeroncache.utils.RingBufferUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aeron.Aeron;
@@ -100,6 +106,7 @@ public class HttpApplication {
     private static final String DEFAULT_CLUSTER_TOOLS_ENDPOINT = "http://localhost:7080/api/v1/clustertools/";
     private static final String CACHE_API_PREFIX = "/api/v1/cache/";
     private static final String COUNTERS_API_PREFIX = "/api/v1/counters/";
+    private static final String NEAR_CACHE_API_PREFIX = "/api/v1/near/cache/";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
@@ -109,6 +116,9 @@ public class HttpApplication {
     @Getter
     private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString, String, String, String> cachePublisher;
     private static ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableLong, String, String, Long> countersPublisher;
+    private static CacheSubscriptionRequestPublisher<ReusableString, ReusableString, ReusableString> subscriptionService;
+    private static NearCacheManager nearCacheManager;
+    private static boolean nearCacheEnabled;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     public static final CacheStatsTracker statsTracker = new CacheStatsTracker();
@@ -141,6 +151,8 @@ public class HttpApplication {
 
         System.out.println("Starting HTTP interface");
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
+        nearCacheEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false"));
+        System.out.println("Near cache endpoints enabled: " + nearCacheEnabled);
 
         var app = startHTTPServer(port);
 
@@ -168,6 +180,10 @@ public class HttpApplication {
                         HttpIdleStrategies.blockingPublisherIdleStrategy.get(), clientFactory.getCacheRequestEncoder());
                 cachePublisher = new ObservingClusterRequestPublisher(cacheRequestPublisher,
                         blockingRequestPublisher);
+
+                if (nearCacheEnabled) {
+                    subscriptionService = new CacheSubscriptionRequestPublisher(cacheRequestPublisher);
+                }
             } else {
                 // Drop normalised cache requests onto an Agrona RB for encoding
                 // to SBE on the Agent thread
@@ -176,15 +192,30 @@ public class HttpApplication {
 
                 CacheRequestPublisher<String, String, Long> countersRbPublisher = new RBCountersRequestPublisher(rb);
                 countersPublisher = new ObservingCacheRequestPublisher<>(countersRbPublisher);
+
+                if (nearCacheEnabled) {
+                    subscriptionService = new CacheSubscriptionRequestPublisher(rbPublisher);
+                }
             }
 
             client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);
-            client.setCacheResultsCallbacks(cachePublisher);
+            if (nearCacheEnabled) {
+                // Route cluster cache callbacks through both the request/response correlator and the
+                // near cache subscription service, so subscription update events keep the local near
+                // cache warm alongside the normal observing publisher.
+                nearCacheManager = new ConcurrentNearCacheManager();
+                client.setCacheResultsCallbacks(new GroupedResponseHandler(List.of(cachePublisher, subscriptionService)));
+            } else {
+                client.setCacheResultsCallbacks(cachePublisher);
+            }
             client.setCountersResultsCallbacks(countersPublisher);
             client.setCountersCacheResponseDecoder(countersResponseDecoder);
 
             setupCacheRouteHandlers(app);
             setupCacheCountersRouteHandlers(app);
+            if (nearCacheEnabled) {
+                setupNearCacheRouteHandlers(app);
+            }
 
             var podName = System.getenv("POD_ADDRESS");
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
@@ -364,6 +395,39 @@ public class HttpApplication {
                 .get("/api/v1/caches", handlers::handleGetCachesRequest)
                 .get("/api/v1/stats", handlers::handleGetStatsRequest)
                 .get("/api/v1/timers", handlers::handleGetTimersRequest);
+    }
+
+    /**
+     * Wire up the near cache read endpoints. Only invoked when the near cache is enabled via the
+     * {@code NEAR_CACHE_ENABLED} environment variable. Reads are served from a local near cache kept
+     * warm by a cluster subscription, falling back to the source cache on a miss.
+     *
+     * @param app The Javalin instance.
+     */
+    private static void setupNearCacheRouteHandlers(Javalin app) {
+        var nearHandlers = new NearCacheRouteHandlers(cachePublisher, nearCacheManager, HttpApplication::subscribeNearCache);
+        app.get(NEAR_CACHE_API_PREFIX + "<cacheId>/<key>", nearHandlers::handleGetItemRequest)
+                .get(NEAR_CACHE_API_PREFIX + "<cacheId>", nearHandlers::handleGetCacheRequest);
+    }
+
+    /**
+     * Subscribe to the remote cache and update the local near cache copy on each update event.
+     *
+     * @param cacheId The cache ID to subscribe to.
+     */
+    private static void subscribeNearCache(String cacheId) {
+        Consumer<Void> subscriptionFailureHandler = _ -> log.warn("Subscription to cacheId {} failed", cacheId);
+        String sessionId = UUID.randomUUID().toString();
+        String requestId = UUID.randomUUID().toString();
+        Consumer<CacheUpdateEvent> resultsConsumer = cacheUpdateEvent -> {
+            log.debug("Received cache update event for cacheId {}, key {}, value {}",
+                    cacheUpdateEvent.cacheId(),
+                    cacheUpdateEvent.itemKey(),
+                    cacheUpdateEvent.itemValue());
+
+            nearCacheManager.handleCacheUpdate(cacheUpdateEvent);
+        };
+        subscriptionService.subscribeToCache(cache, subscriptionFailureHandler, List.of(cacheId), sessionId, requestId, true, resultsConsumer);
     }
 
     /**
