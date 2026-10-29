@@ -51,11 +51,11 @@ class ClusteredNearCacheManagementTests {
         var uri = getHttpUri(backend);
         var port = getHttpPort(backend);
 
-        // Reading the near cache subscribes to it and requests a snapshot; the local copy is populated
-        // asynchronously as the snapshot arrives.
+        // Reading the cache (served transparently from the near cache on the regular read URI) subscribes
+        // to it and requests a snapshot; the local copy is populated asynchronously as the snapshot arrives.
         RestAssured.given().port(port).baseUri(uri)
                 .accept(ContentType.JSON)
-                .when().get(NEAR_CACHE_PREFIX + WARM_CACHE_ID)
+                .when().get(endpoints.getItemEndpoint() + WARM_CACHE_ID)
                 .then().assertThat()
                 .statusCode(200)
                 .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
