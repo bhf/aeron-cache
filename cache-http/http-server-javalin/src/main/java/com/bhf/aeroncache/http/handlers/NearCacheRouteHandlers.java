@@ -24,15 +24,16 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 /**
- * Handlers for the near cache read endpoints ({@code GET /api/v1/near/cache/<cacheId>} and
- * {@code GET /api/v1/near/cache/<cacheId>/<key>}).
+ * Handlers for near cache reads. When the near cache is enabled via the {@code NEAR_CACHE_ENABLED}
+ * environment variable, {@link HttpApplication} binds the regular cache read routes
+ * ({@code GET /api/v1/cache/<cacheId>} and {@code GET /api/v1/cache/<cacheId>/<key>}) to these
+ * handlers instead of the strong cluster-read handlers, so near caching is transparent to clients.
+ * The near-specific management routes (list warm caches, stop near caching) are also served here.
  *
  * <p>Reads are served from a local {@link NearCacheManager} that is kept warm by a cluster
  * subscription: the first read of a cache subscribes to it (requesting a snapshot), and subsequent
  * update events populate the local copy. A read that misses the local cache falls back to fetching
- * from the source cache over the cluster. These handlers are only wired up by
- * {@link HttpApplication} when the near cache is enabled via the {@code NEAR_CACHE_ENABLED}
- * environment variable.
+ * from the source cache over the cluster.
  */
 @Log4j2
 public class NearCacheRouteHandlers {

@@ -55,6 +55,7 @@ import io.aeron.logbuffer.FragmentHandler;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
+import io.javalin.http.Handler;
 import io.javalin.http.servlet.JavalinServletContext;
 import io.javalin.micrometer.MicrometerPlugin;
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
@@ -126,6 +127,8 @@ public class HttpApplication {
     private static CacheSubscriptionRequestPublisher<ReusableString, ReusableString, ReusableLong> countersSubscriptionService;
     private static NearCacheManager<String> nearCacheManager;
     private static NearCacheManager<Long> countersNearCacheManager;
+    private static NearCacheRouteHandlers nearCacheHandlers;
+    private static CountersNearCacheRouteHandlers countersNearCacheHandlers;
     private static boolean nearCacheEnabled;
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
@@ -214,6 +217,10 @@ public class HttpApplication {
                 // cache warm alongside the normal observing publisher.
                 nearCacheManager = new ConcurrentNearCacheManager<>();
                 countersNearCacheManager = new ConcurrentNearCacheManager<>();
+                nearCacheHandlers = new NearCacheRouteHandlers(cachePublisher, nearCacheManager,
+                        HttpApplication::subscribeNearCache, HttpApplication::unsubscribeNearCache);
+                countersNearCacheHandlers = new CountersNearCacheRouteHandlers(countersPublisher, countersNearCacheManager,
+                        HttpApplication::subscribeCountersNearCache, HttpApplication::unsubscribeCountersNearCache);
                 client.setCacheResultsCallbacks(new GroupedResponseHandler(List.of(cachePublisher, subscriptionService)));
                 client.setCountersResultsCallbacks(new GroupedResponseHandler(List.of(countersPublisher, countersSubscriptionService)));
             } else {
@@ -225,8 +232,8 @@ public class HttpApplication {
             setupCacheRouteHandlers(app);
             setupCacheCountersRouteHandlers(app);
             if (nearCacheEnabled) {
-                setupNearCacheRouteHandlers(app);
-                setupNearCountersRouteHandlers(app);
+                setupNearCacheManagementRoutes(app);
+                setupNearCountersManagementRoutes(app);
             }
 
             var podName = System.getenv("POD_ADDRESS");
@@ -376,9 +383,13 @@ public class HttpApplication {
 
     private static void setupCacheCountersRouteHandlers(Javalin app) {
         var countersHandlers = new CountersRouteHandlers(countersPublisher);
+        // See setupCacheRouteHandlers: when the near cache is enabled, counter GET reads are served
+        // transparently from the near cache on the same URIs; otherwise they are strong cluster reads.
+        Handler getItem = nearCacheEnabled ? countersNearCacheHandlers::handleGetItemRequest : countersHandlers::handleGetItemRequest;
+        Handler getCache = nearCacheEnabled ? countersNearCacheHandlers::handleGetCacheRequest : countersHandlers::handleGetCacheRequest;
         app.post(COUNTERS_API_PREFIX, countersHandlers::handleCreateCacheRequest)
-                .get(COUNTERS_API_PREFIX + "<cacheId>/<key>", countersHandlers::handleGetItemRequest)
-                .get(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handleGetCacheRequest)
+                .get(COUNTERS_API_PREFIX + "<cacheId>/<key>", getItem)
+                .get(COUNTERS_API_PREFIX + "<cacheId>", getCache)
                 .post(COUNTERS_API_PREFIX + "timed/<cacheId>", countersHandlers::handlePutTimedItemRequest)
                 .post(COUNTERS_API_PREFIX + "increment/<cacheId>", countersHandlers::handleIncrementItemRequest)
                 .post(COUNTERS_API_PREFIX + "decrement/<cacheId>", countersHandlers::handleDecrementItemRequest)
@@ -394,9 +405,15 @@ public class HttpApplication {
 
     private static void setupCacheRouteHandlers(Javalin app) {
         var handlers = new CacheRouteHandlers(cachePublisher);
+        // When the near cache is enabled on this interface, GET reads are served transparently from the
+        // local near cache (warm-on-first-read, falling back to the source cache on a miss) on the same
+        // URIs; otherwise they are strong reads straight from the cluster. All mutations always go to the
+        // cluster regardless, and the near cache picks them up through its own subscription.
+        Handler getItem = nearCacheEnabled ? nearCacheHandlers::handleGetItemRequest : handlers::handleGetItemRequest;
+        Handler getCache = nearCacheEnabled ? nearCacheHandlers::handleGetCacheRequest : handlers::handleGetCacheRequest;
         app.post(CACHE_API_PREFIX, handlers::handleCreateCacheRequest)
-                .get(CACHE_API_PREFIX + "<cacheId>/<key>", handlers::handleGetItemRequest)
-                .get(CACHE_API_PREFIX + "<cacheId>", handlers::handleGetCacheRequest)
+                .get(CACHE_API_PREFIX + "<cacheId>/<key>", getItem)
+                .get(CACHE_API_PREFIX + "<cacheId>", getCache)
                 .post(CACHE_API_PREFIX + "timed/<cacheId>", handlers::handlePutTimedItemRequest)
                 .post(CACHE_API_PREFIX + "<cacheId>/<key>/cancel-removal", handlers::handleCancelItemRemovalRequest)
                 .post(CACHE_API_PREFIX + "<cacheId>", handlers::handlePutItemRequest)
@@ -410,19 +427,17 @@ public class HttpApplication {
     }
 
     /**
-     * Wire up the near cache read endpoints. Only invoked when the near cache is enabled via the
-     * {@code NEAR_CACHE_ENABLED} environment variable. Reads are served from a local near cache kept
-     * warm by a cluster subscription, falling back to the source cache on a miss.
+     * Wire up the near cache management endpoints. Only invoked when the near cache is enabled via the
+     * {@code NEAR_CACHE_ENABLED} environment variable. Near cache <em>reads</em> are served transparently
+     * on the regular {@code /api/v1/cache/} read URIs (see {@link #setupCacheRouteHandlers(Javalin)}); the
+     * only near-specific surface is management: listing the warm caches and stopping near caching for a
+     * cache (which has no regular-endpoint equivalent).
      *
      * @param app The Javalin instance.
      */
-    private static void setupNearCacheRouteHandlers(Javalin app) {
-        var nearHandlers = new NearCacheRouteHandlers(cachePublisher, nearCacheManager,
-                HttpApplication::subscribeNearCache, HttpApplication::unsubscribeNearCache);
-        app.get(NEAR_CACHE_API_PREFIX + "<cacheId>/<key>", nearHandlers::handleGetItemRequest)
-                .get("/api/v1/near/caches", nearHandlers::handleGetNearCachesRequest)
-                .get(NEAR_CACHE_API_PREFIX + "<cacheId>", nearHandlers::handleGetCacheRequest)
-                .delete(NEAR_CACHE_API_PREFIX + "<cacheId>", nearHandlers::handleStopNearCacheRequest);
+    private static void setupNearCacheManagementRoutes(Javalin app) {
+        app.get("/api/v1/near/caches", nearCacheHandlers::handleGetNearCachesRequest)
+                .delete(NEAR_CACHE_API_PREFIX + "<cacheId>", nearCacheHandlers::handleStopNearCacheRequest);
     }
 
     /**
@@ -458,18 +473,16 @@ public class HttpApplication {
     }
 
     /**
-     * Wire up the near counters read and management endpoints. Only invoked when the near cache is
-     * enabled. Mirrors {@link #setupNearCacheRouteHandlers(Javalin)} for counter caches.
+     * Wire up the near counters management endpoints. Only invoked when the near cache is enabled.
+     * Mirrors {@link #setupNearCacheManagementRoutes(Javalin)} for counter caches: reads are served
+     * transparently on the regular {@code /api/v1/counters/} read URIs, leaving only the list-warm and
+     * stop-near-caching management operations here.
      *
      * @param app The Javalin instance.
      */
-    private static void setupNearCountersRouteHandlers(Javalin app) {
-        var nearHandlers = new CountersNearCacheRouteHandlers(countersPublisher, countersNearCacheManager,
-                HttpApplication::subscribeCountersNearCache, HttpApplication::unsubscribeCountersNearCache);
-        app.get(NEAR_COUNTERS_API_PREFIX + "<cacheId>/<key>", nearHandlers::handleGetItemRequest)
-                .get("/api/v1/near/counters-caches", nearHandlers::handleGetNearCachesRequest)
-                .get(NEAR_COUNTERS_API_PREFIX + "<cacheId>", nearHandlers::handleGetCacheRequest)
-                .delete(NEAR_COUNTERS_API_PREFIX + "<cacheId>", nearHandlers::handleStopNearCacheRequest);
+    private static void setupNearCountersManagementRoutes(Javalin app) {
+        app.get("/api/v1/near/counters-caches", countersNearCacheHandlers::handleGetNearCachesRequest)
+                .delete(NEAR_COUNTERS_API_PREFIX + "<cacheId>", countersNearCacheHandlers::handleStopNearCacheRequest);
     }
 
     /**

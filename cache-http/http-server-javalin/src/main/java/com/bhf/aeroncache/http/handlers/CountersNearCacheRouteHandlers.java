@@ -27,11 +27,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 /**
- * Handlers for the near counter cache read endpoints ({@code GET /api/v1/near/counters/<cacheId>} and
- * {@code GET /api/v1/near/counters/<cacheId>/<key>}) and their management endpoints. The counter
- * equivalent of {@link NearCacheRouteHandlers}: reads are served from a local {@link NearCacheManager}
- * of {@code Long} values kept warm by a cluster subscription, falling back to the source counter cache
- * on a miss. Only wired up when {@code NEAR_CACHE_ENABLED} is set.
+ * Handlers for near counter cache reads and their management endpoints. The counter equivalent of
+ * {@link NearCacheRouteHandlers}: when {@code NEAR_CACHE_ENABLED} is set, the regular counter read
+ * routes ({@code GET /api/v1/counters/<cacheId>} and {@code GET /api/v1/counters/<cacheId>/<key>}) are
+ * bound to these handlers, so near caching is transparent to clients. Reads are served from a local
+ * {@link NearCacheManager} of {@code Long} values kept warm by a cluster subscription, falling back to
+ * the source counter cache on a miss.
  */
 @Log4j2
 public class CountersNearCacheRouteHandlers {
