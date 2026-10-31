@@ -106,6 +106,7 @@ jobs:
         with:
           name: lighthouse-report
           path: cache-ui/nextjs/.lighthouseci/
+          include-hidden-files: true
           retention-days: 30
 
       - name: Export Backend Logs on Failure
