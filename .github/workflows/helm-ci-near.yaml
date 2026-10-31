@@ -1,0 +1,213 @@
+name: K8s CI Near Cache
+
+# Near-cache variant of helm-ci.yaml (K8s CI Clustered Cache). Deploys the full clustered backend with
+# near caching enabled on every interface (NEAR_CACHE=true) and asserts the things that are specific to
+# near mode:
+#   - each near-caching interface workload (and so its pods) is named "<app>-near", while the Service
+#     keeps its plain name (so service discovery is unaffected);
+#   - the near cache management endpoints are live on every interface;
+#   - the near cache actually warms (a hydrating HTTP read is served from, and listed by, the near cache).
+# It then reuses the existing clustered integration suites against the running deployment to confirm near
+# caching is transparent (clients see identical behaviour with it on).
+#
+# Runs on demand, and on pushes/PRs that touch the near cache code paths or the Helm charts, so the heavy
+# kind deployment is only spent when it is relevant.
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'cache-near/**'
+      - 'cache-client/**'
+      - 'cache-aeron-gateway/**'
+      - 'cache-ws/**'
+      - 'cache-sse/**'
+      - 'cache-http/**'
+      - 'k8s/helm/**'
+      - '.github/workflows/helm-ci-near.yaml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'cache-near/**'
+      - 'cache-client/**'
+      - 'cache-aeron-gateway/**'
+      - 'cache-ws/**'
+      - 'cache-sse/**'
+      - 'cache-http/**'
+      - 'k8s/helm/**'
+      - '.github/workflows/helm-ci-near.yaml'
+
+jobs:
+  test-k8s-near:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Build Local Target Docker Images
+        run: |
+          docker pull eclipse-temurin:25-jre
+          ./gradlew jibDockerBuild -PjibDockerOnBuild=true
+
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: kind
+
+      - name: Load local images into Kind
+        run: |
+          kind load docker-image aeroncache-cluster:latest --name kind
+          kind load docker-image aeroncache-http-clustertools:latest --name kind
+          kind load docker-image aeroncache-http:latest --name kind
+          kind load docker-image aeroncache-ws:latest --name kind
+          kind load docker-image aeroncache-sse:latest --name kind
+          kind load docker-image aeroncache-gateway:latest --name kind
+
+      - name: Install Backend Helm Charts (near cache enabled)
+        working-directory: ./k8s/helm
+        run: |
+          # install-backend-near == install-backend NEAR_CACHE=true: cluster + http + ws + sse + gateway,
+          # every interface with near-cache-backed hydration and the near cache management endpoints on,
+          # and each interface workload named "<app>-near".
+          make install-backend-near
+
+      - name: Verify Cluster Component Readiness (Wait)
+        run: |
+          echo "Waiting for all pods to be in the Ready state..."
+          sleep 10
+          kubectl wait -n aeroncache --for=condition=ready pod --all --timeout=300s
+
+      - name: Verify Near-Cache Workload Naming
+        run: |
+          # Each near-caching interface runs as a StatefulSet named "<app>-near" (so pods are
+          # "<app>-near-0"), while its Service keeps the plain name so nothing addressing it by service
+          # name changes. The cluster itself is not a near-caching interface and stays plainly named.
+          set -e
+          echo "===== StatefulSets ====="; kubectl get statefulset -n aeroncache
+          echo "===== Services ====="; kubectl get svc -n aeroncache
+          for app in http ws sse gateway; do
+            echo "Checking aeroncache-$app ..."
+            kubectl get statefulset -n aeroncache "aeroncache-$app-near" >/dev/null \
+              || { echo "FAIL: expected StatefulSet aeroncache-$app-near (near workload naming)"; exit 1; }
+            kubectl get pod -n aeroncache "aeroncache-$app-near-0" >/dev/null \
+              || { echo "FAIL: expected pod aeroncache-$app-near-0"; exit 1; }
+            kubectl get svc -n aeroncache "aeroncache-$app" >/dev/null \
+              || { echo "FAIL: Service aeroncache-$app should keep its plain name"; exit 1; }
+            # The plainly-named Service must still select the renamed pod (non-empty endpoints).
+            EP=$(kubectl get endpoints -n aeroncache "aeroncache-$app" -o jsonpath='{.subsets[*].addresses[*].ip}')
+            [ -n "$EP" ] || { echo "FAIL: Service aeroncache-$app has no endpoints (selector did not follow the -near workload)"; exit 1; }
+            echo "  ok: StatefulSet aeroncache-$app-near, Service aeroncache-$app -> $EP"
+          done
+          kubectl get statefulset -n aeroncache aeroncache-cluster >/dev/null \
+            || { echo "FAIL: the cluster StatefulSet should keep its plain name"; exit 1; }
+          echo "Near-cache workload naming check passed."
+
+      - name: Port-forward Cache Interfaces
+        run: |
+          # Services keep their plain names in near mode, so the standard interface ports still apply.
+          kubectl port-forward -n aeroncache svc/aeroncache-http 7070:7070 &
+          kubectl port-forward -n aeroncache svc/aeroncache-ws 7071:7071 &
+          kubectl port-forward -n aeroncache svc/aeroncache-sse 7072:7072 &
+          kubectl port-forward -n aeroncache svc/aeroncache-gateway 7073:7073 &
+          sleep 5 # give port-forwarding a moment to establish
+          echo "Port-forwards established for http/ws/sse/gateway."
+
+      - name: Smoke Pre-Gate (fast fail before the full suite)
+        run: |
+          echo "Checking liveness/readiness..."
+          curl --fail --retry 5 --retry-delay 3 --retry-connrefused http://localhost:7070/liveness/ || exit 1
+          curl --fail --retry 5 --retry-delay 3 --retry-connrefused http://localhost:7070/readiness/ || exit 1
+
+      - name: Verify Near Cache Management Endpoints Are Live
+        run: |
+          # The /api/v1/near/... routes only exist when NEAR_CACHE_ENABLED was picked up, so a 200 here
+          # (rather than 404) proves every interface came up in near mode. The gateway serves these on
+          # its HTTP health port (7073); http/ws/sse on their own ports.
+          set -e
+          check() { # name url
+            echo "Checking near endpoint on $1 ($2) ..."
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 3 --retry-connrefused "$2")
+            [ "$CODE" = "200" ] || { echo "FAIL: $1 near endpoint returned HTTP $CODE (near cache not enabled?)"; exit 1; }
+            echo "  ok: $1 -> HTTP 200"
+          }
+          check http     http://localhost:7070/api/v1/near/caches
+          check ws       http://localhost:7071/api/v1/near/caches
+          check sse      http://localhost:7072/api/v1/near/caches
+          check gateway  http://localhost:7073/api/v1/near/caches
+          check gateway-counters http://localhost:7073/api/v1/near/counters-caches
+          echo "All near cache management endpoints are live."
+
+      - name: Verify Near Cache Warms and Serves a Read (HTTP)
+        run: |
+          # Near caching is transparent on the regular read URIs. Seed a cache over HTTP, read it back
+          # (which warms the near cache via its read-ahead subscription), then assert the cache is listed
+          # as warm with the expected local item count - proving the read was served by the near cache.
+          set -e
+          CID="near-ci-$(date +%s)"
+          echo "Creating cache $CID ..."
+          curl -s --fail -X POST http://localhost:7070/api/v1/cache/ \
+            -H 'Content-Type: application/json' -d "{\"cacheId\":\"$CID\"}" >/dev/null
+          echo "Adding item ..."
+          curl -s --fail -X POST "http://localhost:7070/api/v1/cache/$CID" \
+            -H 'Content-Type: application/json' -d '{"key":"k1","value":"v1"}' >/dev/null
+          echo "Reading item back (warms the near cache) ..."
+          READ=$(curl -s --fail "http://localhost:7070/api/v1/cache/$CID/k1")
+          echo "  read: $READ"
+          echo "$READ" | grep -q '"value":"v1"' || { echo "FAIL: read did not return the stored value"; exit 1; }
+          echo "Waiting for $CID to appear in the warm near cache list ..."
+          for i in $(seq 1 15); do
+            LIST=$(curl -s http://localhost:7070/api/v1/near/caches)
+            echo "$LIST" | grep -q "$CID" && break || sleep 2
+          done
+          echo "  near caches: $LIST"
+          echo "$LIST" | grep -q "\"cacheId\":\"$CID\"" \
+            || { echo "FAIL: $CID was never listed as warm in the near cache"; exit 1; }
+          echo "$LIST" | grep -q "\"itemCount\":1" \
+            || { echo "FAIL: expected itemCount 1 for the warmed cache"; exit 1; }
+          echo "Near cache warm/serve check passed."
+
+      - name: Run Integration Suite Against Near Deployment
+        # Reuse the existing clustered integration suites against the running near-mode deployment to
+        # confirm near caching is transparent. externalEnv=true makes BackendTestLauncher target the
+        # port-forwarded interfaces instead of starting TestContainers. The http-near suite additionally
+        # asserts the near-cache-specific HTTP behaviour.
+        timeout-minutes: 25
+        run: |
+          ./gradlew --console=plain --continue \
+            :cache-integration:clustered:http-integration-tests:test \
+            :cache-integration:clustered:http-near-integration-tests:test \
+            :cache-integration:clustered:ws-integration-tests:test \
+            :cache-integration:clustered:sse-integration-tests:test \
+            -PskipIntegrationTests=false \
+            -Daeroncache.integration.externalEnv=true
+
+      - name: Upload Integration Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-ci-near-integration-test-reports
+          path: '**/build/reports/tests/test/'
+          if-no-files-found: ignore
+
+      - name: Debug cluster state on failure
+        if: failure()
+        run: |
+          echo "===== Nodes ====="
+          kubectl get nodes
+          echo "===== Pods ====="
+          kubectl get pods -A
+          echo "===== Services ====="
+          kubectl get svc -n aeroncache
+          echo "===== Events ====="
+          kubectl get events -n aeroncache --sort-by='.metadata.creationTimestamp'
+          echo "===== Near interface logs ====="
+          for app in http ws sse gateway; do
+            echo "--- aeroncache-$app-near-0 ---"
+            kubectl logs -n aeroncache "aeroncache-$app-near-0" --tail=100 || true
+          done

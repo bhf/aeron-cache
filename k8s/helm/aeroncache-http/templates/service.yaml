@@ -21,5 +21,5 @@ spec:
       protocol: TCP
       name: http
   selector:
-    statefulset.kubernetes.io/pod-name: {{ include "aeroncache-http.fullname" . }}-0
+    statefulset.kubernetes.io/pod-name: {{ include "aeroncache-http.workloadName" . }}-0
 

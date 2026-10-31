@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "aeroncache-http.fullname" . }}
+  name: {{ include "aeroncache-http.workloadName" . }}
   labels:
     {{- include "aeroncache-http.labels" . | nindent 4 }}
 spec:

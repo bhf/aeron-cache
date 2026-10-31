@@ -24,6 +24,20 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
+Workload (StatefulSet) name. When near caching is enabled we suffix it with "-near" so the near
+caching variant is visible in the pod name (StatefulSet pods are "<workload>-<ordinal>"). Only the
+workload's own name changes; the Service, its selector labels and the governing serviceName keep using
+the plain fullname, so service discovery and cross-component wiring are unaffected.
+*/}}
+{{- define "aeroncache-ws.workloadName" -}}
+{{- if .Values.nearCacheEnabled -}}
+{{- printf "%s-near" (include "aeroncache-ws.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- include "aeroncache-ws.fullname" . -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "aeroncache-ws.chart" -}}
