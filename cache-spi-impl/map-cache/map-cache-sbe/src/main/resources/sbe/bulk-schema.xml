@@ -73,7 +73,7 @@
         </enum>
     </types>
 
-    <sbe:message name="BulkOperationRequest" id="22" semanticType="BulkOpsRequest"
+    <sbe:message name="BulkOperationRequest" id="300" semanticType="BulkOpsRequest"
                  description="Conduct a bulk operation across the entire cache">
         <group name="items" id="30" dimensionType="groupSizeEncoding">
             <field name="operationType" id="29" type="BulkOperationType"/>
@@ -87,7 +87,7 @@
         <data name="requestId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="BulkOperationResponse" id="23" semanticType="BulkOpsResponse"
+    <sbe:message name="BulkOperationResponse" id="301" semanticType="BulkOpsResponse"
                  description="Response from a bulk operation request">
         <field name="endOfBatch" id="1" type="BooleanType"/>
         <group name="items" id="30" dimensionType="groupSizeEncoding">

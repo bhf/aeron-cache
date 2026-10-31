@@ -64,20 +64,20 @@
         </enum>
     </types>
 
-    <sbe:message name="CreateCounterCache" id="24" semanticType="CreateCounterCache"
+    <sbe:message name="CreateCounterCache" id="200" semanticType="CreateCounterCache"
                  description="Create a counter cache">
         <data name="cacheId" id="1" type="varStringEncoding"/>
         <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="CreateCounterCacheResponse" id="25" semanticType="CreateCounterCacheResponse"
+    <sbe:message name="CreateCounterCacheResponse" id="201" semanticType="CreateCounterCacheResponse"
                  description="Response to create a counter cache">
         <field name="status" id="1" type="OperationStatus"/>
         <data name="cacheId" id="2" type="varStringEncoding"/>
         <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="AddCounterRequest" id="26" semanticType="AddCounterRequest"
+    <sbe:message name="AddCounterRequest" id="202" semanticType="AddCounterRequest"
                  description="Create a counter in the specified cache">
         <field name="initialValue" id="1" type="int64"/>
         <field name="ttl" id="2" type="int64"/>
@@ -86,7 +86,7 @@
         <data name="requestId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="AddCounterResponse" id="27" semanticType="AddCounterResponse"
+    <sbe:message name="AddCounterResponse" id="203" semanticType="AddCounterResponse"
                  description="Response to add a counter">
         <field name="status" id="1" type="OperationStatus"/>
         <data name="cacheId" id="2" type="varStringEncoding"/>
@@ -94,14 +94,14 @@
         <data name="counterId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="RemoveCounterRequest" id="28" semanticType="RemoveCounterRequest"
+    <sbe:message name="RemoveCounterRequest" id="204" semanticType="RemoveCounterRequest"
                  description="Remove a counter in the specified cache">
         <data name="cacheId" id="3" type="varStringEncoding"/>
         <data name="counterId" id="4" type="varStringEncoding"/>
         <data name="requestId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="RemoveCounterResponse" id="29" semanticType="RemoveCounterResponse"
+    <sbe:message name="RemoveCounterResponse" id="205" semanticType="RemoveCounterResponse"
                  description="Response to remove a counter">
         <field name="counterValue" id="0" type="int64"/>
         <field name="status" id="1" type="OperationStatus"/>
@@ -110,7 +110,7 @@
         <data name="counterId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="IncrementCounterRequest" id="30" semanticType="IncrementCounterRequest"
+    <sbe:message name="IncrementCounterRequest" id="206" semanticType="IncrementCounterRequest"
                  description="Increment a counter by the specified amount">
         <field name="amount" id="1" type="int64"/>
         <field name="ttl" id="2" type="int64"/>
@@ -119,7 +119,7 @@
         <data name="requestId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="IncrementCounterResponse" id="31" semanticType="IncrementCounterResponse"
+    <sbe:message name="IncrementCounterResponse" id="207" semanticType="IncrementCounterResponse"
                  description="Response to increment a counter">
         <field name="counterValue" id="0" type="int64"/>
         <field name="status" id="1" type="OperationStatus"/>
@@ -128,7 +128,7 @@
         <data name="counterId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="DecrementCounterRequest" id="32" semanticType="DecrementCounterRequest"
+    <sbe:message name="DecrementCounterRequest" id="208" semanticType="DecrementCounterRequest"
                  description="Decrement a counter by the specified amount">
         <field name="amount" id="1" type="int64"/>
         <field name="ttl" id="2" type="int64"/>
@@ -137,7 +137,7 @@
         <data name="requestId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="DecrementCounterResponse" id="33" semanticType="DecrementCounterResponse"
+    <sbe:message name="DecrementCounterResponse" id="209" semanticType="DecrementCounterResponse"
                  description="Response to decrement a counter">
         <field name="counterValue" id="0" type="int64"/>
         <field name="status" id="1" type="OperationStatus"/>
@@ -146,7 +146,7 @@
         <data name="counterId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="SetCounterRequest" id="34" semanticType="SetCounterRequest"
+    <sbe:message name="SetCounterRequest" id="210" semanticType="SetCounterRequest"
                  description="Set a counter to the specified value">
         <field name="counterValue" id="1" type="int64"/>
         <field name="ttl" id="2" type="int64"/>
@@ -155,7 +155,7 @@
         <data name="requestId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="SetCounterResponse" id="35" semanticType="SetCounterResponse"
+    <sbe:message name="SetCounterResponse" id="211" semanticType="SetCounterResponse"
                  description="Response to set a counter's value">
         <field name="counterValue" id="0" type="int64"/>
         <field name="status" id="1" type="OperationStatus"/>
@@ -164,20 +164,20 @@
         <data name="counterId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="DeleteCounterCache" id="36" semanticType="DeleteCounterCache"
+    <sbe:message name="DeleteCounterCache" id="212" semanticType="DeleteCounterCache"
                  description="Delete a counter cache">
         <data name="cacheId" id="1" type="varStringEncoding"/>
         <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="DeleteCounterCacheResponse" id="37" semanticType="DeleteCounterCacheResponse"
+    <sbe:message name="DeleteCounterCacheResponse" id="213" semanticType="DeleteCounterCacheResponse"
                  description="Response to delete a counter cache">
         <field name="status" id="1" type="OperationStatus"/>
         <data name="cacheId" id="2" type="varStringEncoding"/>
         <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="CounterCacheSubscriptionRequest" id="38" semanticType="CounterCacheSubscriptionRequest"
+    <sbe:message name="CounterCacheSubscriptionRequest" id="214" semanticType="CounterCacheSubscriptionRequest"
                  description="Subscribe to counter cache updates">
         <field name="sendSnapshot" id="1" type="BooleanType"/>
         <group name="cacheIds" id="20" dimensionType="groupSizeEncoding">
@@ -188,7 +188,7 @@
         <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="CounterCacheSubscriptionResponse" id="39" semanticType="CounterCacheSubscriptionResponse"
+    <sbe:message name="CounterCacheSubscriptionResponse" id="215" semanticType="CounterCacheSubscriptionResponse"
                  description="Response to subscription request to a counter cache">
         <field name="status" id="1" type="OperationStatus"/>
         <field name="isEob" id="2" type="BooleanType"/>
@@ -201,27 +201,27 @@
         <data name="requestId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="CounterCacheUnsubscribeRequest" id="40" semanticType="CounterCacheUnsubscribeRequest"
+    <sbe:message name="CounterCacheUnsubscribeRequest" id="216" semanticType="CounterCacheUnsubscribeRequest"
                  description="Unsubscribe to cache counter updates">
         <data name="cacheId" id="1" type="varStringEncoding"/>
         <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="CounterCacheUnsubscribeResponse" id="41" semanticType="CounterCacheUnsubscribeResponse"
+    <sbe:message name="CounterCacheUnsubscribeResponse" id="217" semanticType="CounterCacheUnsubscribeResponse"
                  description="Response to unsubscribe request to a counter cache">
         <field name="status" id="1" type="OperationStatus"/>
         <data name="cacheId" id="2" type="varStringEncoding"/>
         <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="GetCounterCacheEntry" id="42" semanticType="GetCounterCacheEntry"
+    <sbe:message name="GetCounterCacheEntry" id="218" semanticType="GetCounterCacheEntry"
                  description="Get a specific counter cache value">
         <data name="cacheId" id="1" type="varStringEncoding"/>
         <data name="key" id="2" type="varStringEncoding"/>
         <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="CounterCacheEntryResult" id="43" semanticType="CounterCacheEntryResult"
+    <sbe:message name="CounterCacheEntryResult" id="219" semanticType="CounterCacheEntryResult"
                  description="The result of requesting a counter cache entry">
         <field name="status" id="1" type="OperationStatus"/>
         <field name="counterValue" id="0" type="int64"/>
@@ -230,7 +230,7 @@
         <data name="requestId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="AllCounterCacheEntriesResult" id="57" semanticType="AllCounterCacheEntriesResult"
+    <sbe:message name="AllCounterCacheEntriesResult" id="220" semanticType="AllCounterCacheEntriesResult"
                  description="Get all the entries from a counter cache">
         <field name="status" id="1" type="OperationStatus"/>
         <field name="endOfBatch" id="2" type="BooleanType"/>
@@ -242,26 +242,26 @@
         <data name="cacheId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="GetAllCounterCacheEntries" id="58" semanticType="GetAllCounterCacheEntries"
+    <sbe:message name="GetAllCounterCacheEntries" id="221" semanticType="GetAllCounterCacheEntries"
                  description="Get all entries in the specified counter cache">
         <data name="cacheId" id="1" type="varStringEncoding"/>
         <data name="requestId" id="2" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="ClearCounterCacheRequest" id="46" semanticType="ClearCounterCacheRequest"
+    <sbe:message name="ClearCounterCacheRequest" id="222" semanticType="ClearCounterCacheRequest"
                  description="Clear all counters in the specified cache">
         <data name="cacheId" id="3" type="varStringEncoding"/>
         <data name="requestId" id="5" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="ClearCounterCacheResponse" id="47" semanticType="ClearCounterCacheResponse"
+    <sbe:message name="ClearCounterCacheResponse" id="223" semanticType="ClearCounterCacheResponse"
                  description="Response to clear a counter cache">
         <field name="status" id="1" type="OperationStatus"/>
         <data name="cacheId" id="2" type="varStringEncoding"/>
         <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="CounterCacheEntryUpdate" id="48" semanticType="CounterCacheEntryUpdate"
+    <sbe:message name="CounterCacheEntryUpdate" id="224" semanticType="CounterCacheEntryUpdate"
                  description="An update to a counter cache entry">
         <field name="value" id="1" type="int64"/>
         <field name="eventType" id="5" type="UpdateEventType"/>
@@ -270,12 +270,12 @@
         <data name="requestId" id="4" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="GetCounterStats" id="49" semanticType="GetCounterStats"
+    <sbe:message name="GetCounterStats" id="225" semanticType="GetCounterStats"
                  description="Get stats on all counter caches">
         <data name="requestId" id="1" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="AllCounterCacheStatsResult" id="50" semanticType="AllCounterCacheStatsResult"
+    <sbe:message name="AllCounterCacheStatsResult" id="226" semanticType="AllCounterCacheStatsResult"
                  description="All of the counter cache stats">
         <field name="status" id="1" type="OperationStatus"/>
         <group name="stats" id="20" dimensionType="groupSizeEncoding">
@@ -288,14 +288,14 @@
         <data name="requestId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="CancelCounterItemRemoval" id="52" semanticType="CancelCounterItemRemoval"
+    <sbe:message name="CancelCounterItemRemoval" id="227" semanticType="CancelCounterItemRemoval"
                  description="Cancel a previously scheduled removal (TTL expiry) of a counter cache entry">
         <data name="cacheId" id="1" type="varStringEncoding"/>
         <data name="requestId" id="2" type="varStringEncoding"/>
         <data name="counterId" id="3" type="varStringEncoding"/>
     </sbe:message>
 
-    <sbe:message name="CounterItemRemovalCancelled" id="54" semanticType="CounterItemRemovalCancelled"
+    <sbe:message name="CounterItemRemovalCancelled" id="228" semanticType="CounterItemRemovalCancelled"
                  description="The result of cancelling a scheduled removal of a counter cache entry">
         <field name="status" id="1" type="OperationStatus"/>
         <data name="cacheId" id="2" type="varStringEncoding"/>
