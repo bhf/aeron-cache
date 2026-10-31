@@ -410,8 +410,20 @@ public class GatewayIngressAgent implements Agent {
             metrics.onStreamUpdatePublished();
         };
 
+        // A subscription where no selector named a key is a whole-cache subscription. Pass a null key list
+        // (rather than a list of nulls) so the publisher recognises it as whole-cache and can serve it from
+        // the near cache, matching the streaming interfaces' whole-cache semantics.
+        boolean anyKey = false;
+        for (var key : keys) {
+            if (key != null) {
+                anyKey = true;
+                break;
+            }
+        }
+        final List<String> effectiveKeys = anyKey ? keys : null;
+
         log.info("Gateway subscribe session {}, caches {}, keys {}, mode {}, snapshot {}, counters {}", sessionId, cacheIds, keys, mode, sendSnapshot, counters);
-        publisher.subscribeToCache(cluster, failureHandler, ackHandler, cacheIds, keys, mode, sessionId, correlationId, sendSnapshot, updateConsumer);
+        publisher.subscribeToCache(cluster, failureHandler, ackHandler, cacheIds, effectiveKeys, mode, sessionId, correlationId, sendSnapshot, updateConsumer);
     }
 
     private void handleUnsubscribe(String sessionId) {

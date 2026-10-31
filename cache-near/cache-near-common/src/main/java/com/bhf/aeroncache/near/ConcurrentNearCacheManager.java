@@ -24,21 +24,27 @@ public class ConcurrentNearCacheManager<V> implements NearCacheManager<V> {
 
     @Override
     public void handleCacheUpdate(CacheUpdateEvent<V> cacheUpdateEvent) {
+        handleCacheUpdate(cacheUpdateEvent.cacheId(), cacheUpdateEvent.eventType(),
+                cacheUpdateEvent.itemKey(), cacheUpdateEvent.itemValue());
+    }
 
-        switch(cacheUpdateEvent.eventType()){
-            case ADD_ITEM -> put(cacheUpdateEvent.cacheId(), cacheUpdateEvent.itemKey(), cacheUpdateEvent.itemValue());
-            case DELETE_CACHE -> nearCacheMap.remove(cacheUpdateEvent.cacheId());
+    @Override
+    public void handleCacheUpdate(String cacheId, CacheUpdateEvent.EventType eventType, String itemKey, V itemValue) {
+
+        switch(eventType){
+            case ADD_ITEM -> put(cacheId, itemKey, itemValue);
+            case DELETE_CACHE -> nearCacheMap.remove(cacheId);
             case REMOVE_ITEM -> {
-                if(nearCacheMap.containsKey(cacheUpdateEvent.cacheId())){
-                    nearCacheMap.get(cacheUpdateEvent.cacheId()).remove(cacheUpdateEvent.itemKey());
+                if(nearCacheMap.containsKey(cacheId)){
+                    nearCacheMap.get(cacheId).remove(itemKey);
                 }
             }
             case CLEAR_CACHE -> {
-                if(nearCacheMap.containsKey(cacheUpdateEvent.cacheId())){
-                    nearCacheMap.get(cacheUpdateEvent.cacheId()).clear();
+                if(nearCacheMap.containsKey(cacheId)){
+                    nearCacheMap.get(cacheId).clear();
                 }
             }
-            default -> log.warn("Unknown update action: {} ", cacheUpdateEvent);
+            default -> log.warn("Unknown update action: {} for cacheId {} key {}", eventType, cacheId, itemKey);
         }
     }
 

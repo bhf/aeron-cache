@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -245,9 +246,15 @@ public class BidiWsRouteHandler {
         final Consumer<CacheUpdateEvent> updateConsumer = event ->
                 session.send(codec.write(BidiStreamUpdate.from(event)));
 
+        // A subscription where no selector named a key is a whole-cache subscription. Pass a null key list
+        // (rather than a list of nulls) so the shared publisher recognises it as whole-cache and can serve it
+        // from the near cache, matching the one-directional routes' expandSubscription semantics.
+        final boolean anyKey = keys.stream().anyMatch(Objects::nonNull);
+        final List<String> effectiveKeys = anyKey ? keys : null;
+
         log.info("BIDI subscribe session {}, caches {}, keys {}, mode {}, snapshot {}, counters {}",
                 session.sessionId(), cacheIds, keys, mode, sendSnapshot, counters);
-        publisher.subscribeToCache(WebsocketApplication.getCache(), failureHandler, ackHandler, cacheIds, keys, mode,
+        publisher.subscribeToCache(WebsocketApplication.getCache(), failureHandler, ackHandler, cacheIds, effectiveKeys, mode,
                 session.sessionId(), correlationId, sendSnapshot, updateConsumer);
     }
 

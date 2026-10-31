@@ -12,6 +12,11 @@ dependencies {
     testImplementation(libs.junit.params)
     testImplementation(libs.awaitility)
 
+    // Exercising the gateway's near cache HTTP management endpoints.
+    testImplementation(libs.restassured)
+    testImplementation(libs.hamcrest)
+    testImplementation(libs.json)
+
     testImplementation(libs.aeron)
     testImplementation(libs.log4j.api)
     testImplementation(libs.log4j.core)
@@ -73,6 +78,9 @@ tasks.register<Delete>("cleanTestNodes") {
         "gateway_e2e_0",
         "gateway_e2e_1",
         "gateway_e2e_2",
+        "gateway_near_e2e_0",
+        "gateway_near_e2e_1",
+        "gateway_near_e2e_2",
         "gateway_multiclient_0",
         "gateway_multiclient_1",
         "gateway_multiclient_2"

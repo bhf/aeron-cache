@@ -7,7 +7,7 @@ import com.bhf.aeroncache.integration.config.SSECacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractStreamingNearCacheTests;
 import com.bhf.aeroncache.integration.streaming.SSEStreamingHelper;
 
-@BackendTestConfig(httpEnabled = true, wsEnabled = false, sseEnabled = true, useClusteredMode = true,
+@BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = true,
         useTestContainersEnvironment = true, streamingNearCacheEnabled = true)
 class ClusteredSSENearCacheTests extends AbstractStreamingNearCacheTests {
 
