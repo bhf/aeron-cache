@@ -87,6 +87,10 @@ jobs:
           cp -R cache-ui/nextjs/.next/static package/cache-ui/nextjs/.next/
           cp -R cache-ui/nextjs/public package/cache-ui/nextjs/ 2>/dev/null || true
 
+          # Bake the release version (tag without the leading "v", matching the Docker/GHCR images)
+          # into the UI so /api/version reports it; brew-runner.sh exports it before launching node.
+          echo "${GITHUB_REF_NAME#v}" > package/cache-ui/nextjs/.app-version
+
           # Copy Config overrides
           cp -R config/* package/config/ 2>/dev/null || true
 
