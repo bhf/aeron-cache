@@ -1,4 +1,4 @@
-name: JMH CI
+name: JMH
 
 on:
   push:

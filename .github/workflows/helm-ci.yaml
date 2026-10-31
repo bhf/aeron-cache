@@ -1,4 +1,4 @@
-name: K8s CI Clustered Cache
+name: K8s Clustered Cache
 
 on:
   push:

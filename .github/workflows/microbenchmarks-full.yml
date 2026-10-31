@@ -1,7 +1,7 @@
 name: JMH Full
 
 # Manually triggered, longer-running JMH benchmarks for publishable numbers. Unlike the per-PR
-# "JMH CI" workflow (short 5s/5s single-fork run), this defaults to a multi-fork run with longer
+# "JMH" workflow (short 5s/5s single-fork run), this defaults to a multi-fork run with longer
 # warmup and multiple measurement iterations. All parameters are overridable at dispatch time.
 on:
   workflow_dispatch:
