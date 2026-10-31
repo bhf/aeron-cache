@@ -25,7 +25,7 @@ jobs:
       - id: parse
         run: |
           # Turn the space-separated versions input into a JSON array for the matrix.
-          MATRIX=$(echo '${{ github.event.inputs.versions }}' | tr ' ' '\n' | grep -v '^$' | jq -R -s -c 'split("\n")[:-1]')
+          MATRIX=$(echo '${{ github.event.inputs.versions }}' | tr ', ' '\n\n' | grep -v '^$' | jq -R -s -c 'split("\n")[:-1]')
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo "Testing against: $MATRIX"
 
@@ -44,6 +44,11 @@ jobs:
         with:
           java-version: '25'
           distribution: 'temurin'
+
+      - name: Pull Jib Base Image
+        # The Jib config references the base as docker://eclipse-temurin:25-jre, which loads it from
+        # the local daemon, so it must be pulled first.
+        run: docker pull eclipse-temurin:25-jre
 
       - name: Build Current Backend Images
         # The restore harness boots node + http from the current build, and runs ClusterTool from the
