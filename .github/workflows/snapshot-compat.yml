@@ -4,17 +4,38 @@ name: Snapshot Backward Compatibility
 # known fixture value still recovers from the snapshot. Green means the snapshot format is backward
 # compatible from those releases to HEAD.
 #
-# Trigger manually and list the release tags whose artifacts to test, e.g. "v1.0.0 v1.1.0". Each tag
-# must have a cache-data-<tag>.tar.gz asset (produced by the release workflow).
+# Two trigger modes:
+#   * pull_request - runs automatically against the LATEST tagged release so a PR that breaks
+#     snapshot restore is flagged. A break is NON-BLOCKING: some changes break compatibility by
+#     design, so the "Restore And Assert" step is continue-on-error and the real pass/fail is
+#     recorded in the uploaded result artifact rather than failing the check. (Keep this workflow
+#     out of the required status checks in branch protection so it can never block a merge.)
+#   * workflow_dispatch - pass a space-separated list of release tags to test against instead, e.g.
+#     "v1.0.0 v1.1.0". Leave it blank to behave like the PR trigger (latest release only).
+#
+# Each tested tag must have a cache-data-<tag>.tar.gz asset (produced by the release workflow).
+#
+# Every run uploads a snapshot-compat-<sha>-<from>.json result artifact (one per tested release),
+# whether the restore passed or failed. The aeron-cache-site repo aggregates these across runs into
+# a release-to-release compatibility matrix, the same way it builds the JMH dashboard from the
+# jmh-results-* artifacts.
 on:
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       versions:
-        description: 'Space-separated release tags whose cache-data artifacts to test against the current build'
-        required: true
+        description: 'Space-separated release tags to test against the current build (blank = latest release only)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
+
+concurrency:
+  # Supersede in-flight runs for the same PR / ref so only the newest commit is tested.
+  group: snapshot-compat-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   prepare-matrix:
@@ -23,14 +44,30 @@ jobs:
       matrix: ${{ steps.parse.outputs.matrix }}
     steps:
       - id: parse
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          VERSIONS: ${{ github.event.inputs.versions }}
         run: |
-          # Turn the space-separated versions input into a JSON array for the matrix.
-          MATRIX=$(echo '${{ github.event.inputs.versions }}' | tr ', ' '\n\n' | grep -v '^$' | jq -R -s -c 'split("\n")[:-1]')
+          # Explicit dispatch list wins; otherwise resolve the latest tagged release to test against.
+          if [ -n "$VERSIONS" ]; then
+            MATRIX=$(echo "$VERSIONS" | tr ', ' '\n\n' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          else
+            LATEST=$(gh release view --repo "$REPO" --json tagName --jq .tagName 2>/dev/null || true)
+            if [ -n "$LATEST" ]; then
+              MATRIX=$(jq -c -n --arg v "$LATEST" '[$v]')
+            else
+              # No releases yet (e.g. a fresh repo) - nothing to test against, skip the restore job.
+              MATRIX='[]'
+            fi
+          fi
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo "Testing against: $MATRIX"
 
   restore:
     needs: prepare-matrix
+    # Skip cleanly when there is nothing to test against (empty matrix).
+    if: needs.prepare-matrix.outputs.matrix != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -44,6 +81,15 @@ jobs:
         with:
           java-version: '25'
           distribution: 'temurin'
+
+      - name: Resolve Current Version
+        # The "to" side of the compatibility edge: the version of the build under test. On a PR this
+        # is the in-development snapshot from gradle.properties; the head SHA pins the exact commit.
+        id: current
+        run: |
+          VERSION=$(grep -E '^version=' gradle.properties | cut -d= -f2)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "sha=${{ github.event.pull_request.head.sha || github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Pull Jib Base Image
         # The Jib config references the base as docker://eclipse-temurin:25-jre, which loads it from
@@ -69,13 +115,59 @@ jobs:
           echo "ARTIFACT=$(ls artifacts/cache-data-*.tar.gz | head -1)" >> "$GITHUB_ENV"
 
       - name: Restore And Assert
+        id: restore
+        # Non-blocking: a failure here means the current build cannot load the older snapshot. That
+        # may be an intentional format break, so it must not fail the check - the outcome is recorded
+        # in the result artifact below and surfaced in the site's compatibility matrix instead.
+        continue-on-error: true
         run: |
           ./gradlew :cache-integration:clustered:snapshot-restore-tests:test \
             -PskipIntegrationTests=false \
             -Dsnapshot.restore.artifact="$PWD/$ARTIFACT"
 
+      - name: Record Compatibility Result
+        # Always emit a result, pass or fail, so the matrix has a cell for every edge we tested.
+        if: always()
+        run: |
+          COMPATIBLE=$([ "${{ steps.restore.outcome }}" = "success" ] && echo true || echo false)
+          mkdir -p compat-results
+          OUT="compat-results/snapshot-compat-${{ steps.current.outputs.sha }}-${{ matrix.version }}.json"
+          jq -c -n \
+            --arg schema "snapshot-compat/v1" \
+            --arg from "${{ matrix.version }}" \
+            --arg to "${{ steps.current.outputs.version }}" \
+            --arg toSha "${{ steps.current.outputs.sha }}" \
+            --argjson compatible "$COMPATIBLE" \
+            --arg event "${{ github.event_name }}" \
+            --arg pr "${{ github.event.pull_request.number }}" \
+            --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg runId "${{ github.run_id }}" \
+            --arg runUrl "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{
+              schema: $schema,
+              from: $from,
+              to: $to,
+              toSha: $toSha,
+              compatible: $compatible,
+              event: $event,
+              prNumber: (if $pr == "" then null else ($pr | tonumber) end),
+              timestamp: $timestamp,
+              runId: $runId,
+              runUrl: $runUrl
+            }' > "$OUT"
+          echo "Wrote $OUT:"
+          cat "$OUT"
+
+      - name: Upload Compatibility Result
+        # The aeron-cache-site dashboard build downloads these across runs to assemble the matrix.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-compat-${{ matrix.version }}
+          path: compat-results/snapshot-compat-${{ steps.current.outputs.sha }}-${{ matrix.version }}.json
+
       - name: Upload Test Report On Failure
-        if: failure()
+        if: steps.restore.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: restore-report-${{ matrix.version }}
