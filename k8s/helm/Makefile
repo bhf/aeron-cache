@@ -5,6 +5,18 @@
 #   chart's values.yaml default (off). Command-line variables propagate to the sub-makes.
 #   e.g.  make install-backend-ephemeral EXTERNAL_MEDIA_DRIVER=true
 #
+# Near cache:
+#   Pass NEAR_CACHE=true to any interface-app install target (install-http/-ws/-sse/-gateway, or the
+#   aggregates that include them) to deploy that interface with near-cache-backed hydration and the
+#   near cache management endpoints enabled; NEAR_CACHE=false forces it off. Unset uses each chart's
+#   values.yaml default. Like EXTERNAL_MEDIA_DRIVER it is a command-line variable and propagates to
+#   the sub-makes. When near caching is on, the interface's workload (and hence its pods) is named
+#   "<app>-near" so the near caching variant stands out in `kubectl get pods`; the Service keeps its
+#   plain name, so nothing that addresses the interface by service name changes.
+#   The install-*-near aggregates below are shorthand for the matching target with NEAR_CACHE=true.
+#   e.g.  make install-backend NEAR_CACHE=true
+#         make install-backend-near
+#
 # Observability (Prometheus + Grafana):
 #   `make install-observability` deploys the aeroncache-observability chart (Prometheus + Grafana)
 #   into the aeroncache namespace. Pass JAVAAGENT=true to any interface-app install target
@@ -35,6 +47,20 @@ uninstall-frontend: uninstall-ui
 
 install-all: install-cluster install-http install-ws install-sse install-gateway install-ui
 uninstall-all: uninstall-cluster uninstall-http uninstall-ws uninstall-sse uninstall-gateway uninstall-ui
+
+# Full near-caching stack: every interface (http, ws, sse, gateway) deployed with near caching on and
+# its workload/pods named "<app>-near". Shorthand for the matching target with NEAR_CACHE=true.
+install-backend-near:
+	$(MAKE) install-backend NEAR_CACHE=true
+
+install-all-near:
+	$(MAKE) install-all NEAR_CACHE=true
+
+install-backend-ephemeral-near:
+	$(MAKE) install-backend-ephemeral NEAR_CACHE=true
+
+install-all-ephemeral-near:
+	$(MAKE) install-all-ephemeral NEAR_CACHE=true
 
 install-all-ephemeral: install-ephemeral install-http-ephemeral install-ws-ephemeral install-sse-ephemeral install-gateway-ephemeral install-ui
 uninstall-all-ephemeral: uninstall-ephemeral uninstall-http uninstall-ws uninstall-sse uninstall-ui uninstall-gateway
