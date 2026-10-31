@@ -1,4 +1,4 @@
-name: K8s CI Ephemeral Cache
+name: K8s Ephemeral Cache
 
 on:
   push:

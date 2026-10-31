@@ -1,4 +1,4 @@
-name: Snapshot Backward Compatibility
+name: Snapshot Compatibility
 
 # Boots the CURRENT build against cache-data artifacts captured by OLDER releases and asserts every
 # known fixture value still recovers from the snapshot. Green means the snapshot format is backward

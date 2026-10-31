@@ -1,4 +1,4 @@
-name: Soak Scheduled Snapshot (Recording Growth)
+name: Snapshot Recording Growth
 
 # Brings up a single-node clustered cache with a co-located clustertools sidecar running its in-process
 # snapshot scheduler gated by the RECORDING_GROWTH check. Confirms the scheduler holds off while the

@@ -1,4 +1,4 @@
-name: K8s CI Near Cache
+name: K8s Near Cache
 
 # Near-cache variant of helm-ci.yaml (K8s CI Clustered Cache). Deploys the full clustered backend with
 # near caching enabled on every interface (NEAR_CACHE=true) and asserts the things that are specific to

@@ -1,4 +1,4 @@
-name: Soak Core Cache
+name: Soak Aeron Gateway Core Cache
 
 # Manually triggered, long-running soak of the core key-value + counter functionality. A single-writer
 # workload injects a weighted, seeded-random mix of put/get/remove/clear/delete and counter

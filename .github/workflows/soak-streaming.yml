@@ -1,4 +1,4 @@
-name: Soak Streaming
+name: Soak Aeron Gateway Streaming
 
 # Manually triggered, long-running soak of the streaming/subscription functionality. A single-writer
 # workload cycles the full matrix of subscription variations - cache kind, mode (full/patch), scope

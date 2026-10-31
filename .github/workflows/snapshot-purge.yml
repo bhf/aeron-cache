@@ -1,4 +1,4 @@
-name: Soak Snapshot Purge
+name: Snapshot Purge
 
 # Brings up a single-node clustered cache with a co-located clustertools sidecar, grows the Raft log
 # across several snapshot rounds, then purges old log segments down to the retained snapshot floor

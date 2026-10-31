@@ -5,7 +5,7 @@ name: JMH Codecs
 # These measure the SBE encode/decode paths in isolation, so unlike the cache/counter benchmarks they are
 # pooling-independent (the pooled vs unpooled split only affects the MapCache, not the codecs) and there is
 # no pooling matrix here. The run is instead sharded by codec direction so the four directions run in
-# parallel. The main "JMH CI" workflow excludes .*codecs.* so these do not run twice.
+# parallel. The main "JMH" workflow excludes .*codecs.* so these do not run twice.
 #
 # On push/PR this gives a quick regression signal (short 5s warmup + 5s measurement, single fork). Trigger
 # it manually (workflow_dispatch) to override the run parameters for longer, publishable numbers.

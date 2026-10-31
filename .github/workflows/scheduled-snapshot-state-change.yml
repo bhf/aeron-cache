@@ -1,4 +1,4 @@
-name: Soak Scheduled Snapshot (Cache State Change)
+name: Snapshot State Change
 
 # Brings up a single-node clustered cache with a co-located clustertools sidecar running its in-process
 # snapshot scheduler gated by the CACHE_STATE_CHANGE check. Confirms the scheduler holds off while the

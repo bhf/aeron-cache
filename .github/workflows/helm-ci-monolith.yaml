@@ -1,4 +1,4 @@
-name: K8s CI Monolith Cache
+name: K8s Monolith Cache
 
 on:
   push:
