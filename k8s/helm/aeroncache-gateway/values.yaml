@@ -5,6 +5,12 @@ replicaCount: 1
 clusterAddresses: "aeroncache-cluster-0.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local"
 cacheMode: "RAFT"
 
+# When true, the gateway serves hydration (snapshot-on-subscribe) from a local near cache kept warm
+# by a single cluster subscription, instead of asking the cluster for a per-subscriber snapshot. Also
+# exposes the near cache management endpoints on the HTTP health server. Sets NEAR_CACHE_ENABLED on
+# the container.
+nearCacheEnabled: false
+
 # Set the configmap to use for the cluster config
 aeroncacheGatewayConfigmap: aeroncache-gateway-config
 requestPubHost: "aeroncache-gateway"

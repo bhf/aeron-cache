@@ -203,6 +203,7 @@ services:
       - CACHE_MODE=RAFT
       - GATEWAY_REQUEST_ENDPOINT=0.0.0.0:7075
       - GATEWAY_RESPONSE_CONTROL_ENDPOINT=172.16.202.13:7076
+      - NEAR_CACHE_ENABLED=true
   cache-ui:
     build:
       context: cache-ui/nextjs

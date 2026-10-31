@@ -7,7 +7,7 @@ import com.bhf.aeroncache.integration.config.WSCountersCacheTestEndpoints;
 import com.bhf.aeroncache.integration.streaming.AbstractStreamingNearCountersTests;
 import com.bhf.aeroncache.integration.streaming.WSStreamingHelper;
 
-@BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = false, useClusteredMode = true,
+@BackendTestConfig(httpEnabled = true, wsEnabled = true, sseEnabled = true, useClusteredMode = true,
         useTestContainersEnvironment = true, streamingNearCacheEnabled = true)
 class ClusteredWSNearCountersTests extends AbstractStreamingNearCountersTests {
 

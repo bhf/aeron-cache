@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.gateway.application;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -12,6 +13,11 @@ import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.gateway.codec.GatewayResponseWriter;
 import com.bhf.aeroncache.gateway.config.GatewayIdleStrategies;
 import com.bhf.aeroncache.gateway.metrics.AeronCounterGatewayMetrics;
+import com.bhf.aeroncache.http.responses.CacheDetails;
+import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
+import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
+import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.ReconnectingAeronCache;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.CacheClientAgent;
@@ -31,6 +37,7 @@ import io.aeron.RethrowingErrorHandler;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.FragmentHandler;
 import io.javalin.Javalin;
+import io.javalin.http.Context;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import lombok.extern.log4j.Log4j2;
@@ -57,6 +64,15 @@ public class GatewayApplication {
     public static final String PROMETHEUS_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
+    private static final String NEAR_CACHES_API = "/api/v1/near/caches";
+    private static final String NEAR_CACHE_API_PREFIX = "/api/v1/near/cache/";
+    private static final String NEAR_COUNTERS_CACHES_API = "/api/v1/near/counters-caches";
+    private static final String NEAR_COUNTERS_API_PREFIX = "/api/v1/near/counters/";
+
+    /** Session id for the internal near cache subscription on the gateway's regular caches. */
+    private static final String NEAR_CACHE_SESSION_ID = "gateway-near-cache";
+    /** Session id for the internal near cache subscription on the gateway's counter caches. */
+    private static final String NEAR_COUNTERS_CACHE_SESSION_ID = "gateway-counters-near-cache";
 
     private static final int DEFAULT_HTTP_PORT = 7073;
     private static final int DEFAULT_REQUEST_PORT = 7075;
@@ -71,6 +87,9 @@ public class GatewayApplication {
     private static AeronCacheClusterListener client;
     private static GatewaySubscriptionPublisher cacheSubs;
     private static GatewaySubscriptionPublisher countersSubs;
+    private static NearCacheManager<Object> nearCacheManager;
+    private static NearCacheManager<Object> countersNearCacheManager;
+    private static boolean nearCacheEnabled;
     private static MediaDriver mediaDriver;
     private static Aeron gatewayAeron;
     private static AgentRunner clusterAgentRunner;
@@ -111,6 +130,11 @@ public class GatewayApplication {
     public static int start(int httpPort, boolean useClusteredMode) {
         log.info("Starting Aeron gateway");
 
+        nearCacheEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false"));
+        log.info("Near cache hydration enabled: {}", nearCacheEnabled);
+        nearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager<>() : null;
+        countersNearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager<>() : null;
+
         var app = startHTTPServer(httpPort);
 
         try {
@@ -127,15 +151,22 @@ public class GatewayApplication {
             var countersRequestEncoder = clientFactory.getCountersRequestEncoder();
 
             CacheRequestPublisher rbPublisher = new RBCacheRequestPublisher(rb);
-            cacheSubs = new GatewaySubscriptionPublisher(rbPublisher);
+            cacheSubs = new GatewaySubscriptionPublisher(rbPublisher, nearCacheManager, NEAR_CACHE_SESSION_ID);
 
             CacheRequestPublisher<String, String, Long> countersRbPublisher = new RBCountersRequestPublisher(rb);
-            countersSubs = new GatewaySubscriptionPublisher(countersRbPublisher);
+            countersSubs = new GatewaySubscriptionPublisher(countersRbPublisher, countersNearCacheManager, NEAR_COUNTERS_CACHE_SESSION_ID);
 
             client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);
             client.setCacheResultsCallbacks(cacheSubs);
             client.setCountersResultsCallbacks(countersSubs);
             client.setCountersCacheResponseDecoder(countersResponseDecoder);
+
+            // The near cache management routes need the subscription publishers, which are created after the
+            // HTTP health server is started, so they are registered on the running server here (Javalin
+            // supports adding routes after start), mirroring the WS/SSE interfaces.
+            if (nearCacheEnabled) {
+                setupNearCacheManagementRoutes(app);
+            }
 
             var allHosts = System.getenv("CLUSTER_ADDRESSES");
             log.info("CLUSTER_ADDRESSES={}", allHosts);
@@ -275,5 +306,51 @@ public class GatewayApplication {
     private static String envOrDefault(String name, String defaultValue) {
         var value = System.getenv(name);
         return value == null || value.isEmpty() ? defaultValue : value;
+    }
+
+    /**
+     * Register the HTTP management routes for the near cache on the gateway's health server: list the warm
+     * caches and stop near caching a cache. Only registered when the near cache is enabled. Mirrors the
+     * WS/SSE interfaces, whose near cache management also lives on their HTTP server.
+     *
+     * @param app The Javalin health server.
+     */
+    private static void setupNearCacheManagementRoutes(Javalin app) {
+        app.get(NEAR_CACHES_API, ctx -> handleGetNearCaches(ctx, cacheSubs))
+                .delete(NEAR_CACHE_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, cacheSubs))
+                .get(NEAR_COUNTERS_CACHES_API, ctx -> handleGetNearCaches(ctx, countersSubs))
+                .delete(NEAR_COUNTERS_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, countersSubs));
+    }
+
+    /**
+     * List the caches currently kept warm in the given publisher's near cache, with their local item counts.
+     *
+     * @param ctx       The context.
+     * @param publisher The subscription publisher whose near cache to list.
+     */
+    private static void handleGetNearCaches(Context ctx, GatewaySubscriptionPublisher publisher) {
+        log.info("Got request to list warm near caches");
+        List<CacheDetails> warmCaches = new ArrayList<>();
+        for (var cacheIdObj : publisher.warmNearCaches()) {
+            var cacheId = (String) cacheIdObj;
+            warmCaches.add(new CacheDetails(cacheId, publisher.nearCacheItemCount(cacheId)));
+        }
+        ctx.status(200);
+        ctx.json(warmCaches);
+    }
+
+    /**
+     * Stop near caching a cache: drop the internal subscription and remove the local copy. Active client
+     * subscriptions are not affected.
+     *
+     * @param ctx       The context.
+     * @param publisher The subscription publisher whose near cache to stop.
+     */
+    private static void handleStopNearCache(Context ctx, GatewaySubscriptionPublisher publisher) {
+        var cacheId = ctx.pathParam("cacheId");
+        log.info("Got request to stop near caching cacheId {}", cacheId);
+        var wasCached = publisher.stopNearCaching(cache, cacheId);
+        ctx.status(200);
+        ctx.json(new StopNearCacheResponse(cacheId, wasCached, CacheOperationStatus.SUCCESS));
     }
 }

@@ -49,8 +49,7 @@ tasks.test {
 }
 
 tasks.register<Delete>("cleanTestNodes") {
-    delete("backend_http_ws_near_0", "backend_http_ws_near_1", "backend_http_ws_near_2",
-        "backend_http_sse_near_0", "backend_http_sse_near_1", "backend_http_sse_near_2")
+    delete("backend_http_ws_sse_near_0", "backend_http_ws_sse_near_1", "backend_http_ws_sse_near_2")
 }
 
 fun loadTestEnv(): Map<String, String> {
