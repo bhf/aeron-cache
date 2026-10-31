@@ -121,6 +121,9 @@ jobs:
           context: cache-ui/nextjs
           file: cache-ui/nextjs/Dockerfile
           push: true
+          # Bake the release version into the image so /api/version can report it and flag updates.
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
           tags: |
             ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/aeroncache-ui:${{ steps.meta.outputs.version }}
             ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/aeroncache-ui:latest

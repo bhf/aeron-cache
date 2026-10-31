@@ -140,6 +140,12 @@ echo $PORT > "$PORT_FILE"
 echo "Starting Aeron Cache UI on port $PORT..." >> "$LOG_FILE"
 cd "$FRONTEND_DIR"
 
+# The release package bakes the version into .app-version (see release.yml). Export it so the UI's
+# /api/version reports the installed version instead of the "dev" fallback.
+if [ -f "$FRONTEND_DIR/.app-version" ]; then
+    export APP_VERSION="$(cat "$FRONTEND_DIR/.app-version")"
+fi
+
 # Handle Next.js standalone build path structure
 SERVER_JS="server.js"
 if [ -d ".next/standalone" ]; then

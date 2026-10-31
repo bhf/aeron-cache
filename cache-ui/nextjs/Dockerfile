@@ -9,6 +9,11 @@ FROM node:20.10-alpine as release
 WORKDIR /app
 ENV NODE_ENV production
 
+# The release version (e.g. 0.0.41-SNAPSHOT), passed in from CI and read at runtime by
+# /api/version to compare against the latest GitHub release. Defaults to "dev" for local builds.
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 COPY --from=base /app/public ./public
