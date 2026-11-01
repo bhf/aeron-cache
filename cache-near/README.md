@@ -102,5 +102,9 @@ management endpoints are served over HTTP on the gateway's health server port
 (`/api/v1/near/caches`, `/api/v1/near/counters-caches`, and the `POST` prime / `DELETE` stop
 equivalents).
 
-Near-cache-generated patch deltas (see above) are not yet offered on the gateway - a patch-mode subscribe
-over the gateway takes the plain cluster path. (It would need a flag on the gateway's SBE subscribe message.)
+Near-cache-generated patch deltas (see above) work on the gateway too: its subscribe message already carries
+a per-entry mode, so a `mode=patch` hydrating subscribe to a warm cache is served with a full `ADD_ITEM`
+baseline and synthetic `PATCH_ITEM` deltas computed from the warm copy, exactly as on the streaming
+interfaces - no change to the SBE schema was needed (the egress already encodes `PATCH_ITEM`). The delta is
+computed on the egress thread via the reused `GatewayStreamUpdate` flyweight, and only when a patch
+subscriber is present, so the no-patch-subscriber path stays allocation-free.
