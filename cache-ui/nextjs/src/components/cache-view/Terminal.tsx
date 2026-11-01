@@ -16,7 +16,7 @@ interface TerminalProps {
 /** Keep the rendered feed bounded so a long-lived stream stays responsive. */
 const MAX_VISIBLE = 200
 
-type Tone = "success" | "error" | "info" | "neutral"
+type Tone = "success" | "error" | "warn" | "info" | "neutral"
 
 /** A single parsed event, derived from the raw JSON string handed to us. */
 interface Event {
@@ -24,13 +24,14 @@ interface Event {
     receivedAt: number
     obj: Record<string, unknown>
     tone: Tone
-    status?: string
+    badge?: string
     raw: string
 }
 
 const TONE_ACCENT: Record<Tone, string> = {
     success: "border-l-emerald-400",
     error: "border-l-rose-400",
+    warn: "border-l-amber-400",
     info: "border-l-sky-400",
     neutral: "border-l-zinc-600",
 }
@@ -38,16 +39,39 @@ const TONE_ACCENT: Record<Tone, string> = {
 const TONE_BADGE: Record<Tone, string> = {
     success: "bg-emerald-400/10 text-emerald-300 ring-emerald-400/20",
     error: "bg-rose-400/10 text-rose-300 ring-rose-400/20",
+    warn: "bg-amber-400/10 text-amber-300 ring-amber-400/20",
     info: "bg-sky-400/10 text-sky-300 ring-sky-400/20",
     neutral: "bg-zinc-400/10 text-zinc-300 ring-zinc-400/20",
 }
 
-function toneFor(status: string | undefined): Tone {
-    if (!status) return "neutral"
+/** Maps a cache update event type to a display label and colour tone. */
+const EVENT_META: Record<string, { tone: Tone; label: string }> = {
+    ADD_ITEM: {tone: "success", label: "ADD"},
+    PATCH_ITEM: {tone: "info", label: "PATCH"},
+    REMOVE_ITEM: {tone: "warn", label: "REMOVE"},
+    CLEAR_CACHE: {tone: "error", label: "CLEAR"},
+    DELETE_CACHE: {tone: "error", label: "DELETE"},
+}
+
+/** Falls back to operationStatus/status for payloads that aren't cache update events. */
+function toneForStatus(status: string): Tone {
     const s = status.toUpperCase()
     if (/SUCCESS|\bOK\b|DONE|COMPLETE|CREATED|STORED|UPDATED/.test(s)) return "success"
     if (/ERROR|FAIL|DENIED|INVALID|TIMEOUT|LOST|MISSING|NOT_FOUND/.test(s)) return "error"
     return "info"
+}
+
+/** Derives the row's badge label and tone from an event's fields. */
+function badgeFor(obj: Record<string, unknown>): { tone: Tone; label?: string } {
+    const eventType = obj.eventType as string | undefined
+    if (eventType) {
+        return EVENT_META[eventType.toUpperCase()] ?? {tone: "info", label: eventType}
+    }
+    const status = (obj.operationStatus ?? obj.status) as string | undefined
+    if (status) {
+        return {tone: toneForStatus(status), label: status}
+    }
+    return {tone: "neutral"}
 }
 
 /** Format an arrival time as HH:MM:SS.mmm for a dense, log-like timeline. */
@@ -65,34 +89,41 @@ function parseEvent(raw: string, index: number, receivedAt: number): Event {
     } catch {
         obj = {message: raw}
     }
-    const status = (obj.operationStatus ?? obj.status) as string | undefined
-    return {index, receivedAt, obj, status, tone: toneFor(status), raw}
+    const {tone, label} = badgeFor(obj)
+    return {index, receivedAt, obj, tone, badge: label, raw}
 }
 
 /** A compact one-line summary of an event's most meaningful fields. */
 function EventSummary({obj}: { obj: Record<string, unknown> }) {
-    const key = obj.key as unknown
-    const value = obj.value as unknown
+    const key = (obj.itemKey ?? obj.key) as unknown
+    const value = (obj.itemValue ?? obj.value) as unknown
     const message = (obj.message ?? obj.msg ?? obj.data) as unknown
 
-    if (value !== undefined && value !== null && typeof value !== "object") {
+    if (key !== undefined && key !== null) {
+        const hasValue = value !== undefined && value !== null
+        const isPrimitive = hasValue && typeof value !== "object"
         return (
             <span className="min-w-0 truncate">
-                {key !== undefined && key !== null && (
+                <span className="text-sky-300">{String(key)}</span>
+                {hasValue && (
                     <>
-                        <span className="text-sky-300">{String(key)}</span>
                         <span className="px-1.5 text-zinc-500">→</span>
+                        <span className={isPrimitive && typeof value === "number" ? "text-emerald-300" : "text-amber-300"}>
+                            {isPrimitive ? String(value) : JSON.stringify(value)}
+                        </span>
                     </>
                 )}
-                <span className={typeof value === "number" ? "text-emerald-300" : "text-amber-300"}>
-                    {String(value)}
-                </span>
             </span>
         )
     }
 
     if (typeof message === "string" && message.length > 0) {
         return <span className="min-w-0 truncate text-zinc-300">{message}</span>
+    }
+
+    // Cache-level events (CLEAR_CACHE / DELETE_CACHE) carry no item — surface the cache id.
+    if (obj.cacheId) {
+        return <span className="min-w-0 truncate text-zinc-400">{String(obj.cacheId)}</span>
     }
 
     return <span className="min-w-0 truncate text-zinc-400">{JSON.stringify(obj)}</span>
@@ -115,14 +146,14 @@ function EventRow({event}: { event: Event }) {
                     {formatTime(event.receivedAt)}
                 </time>
 
-                {event.status && (
+                {event.badge && (
                     <span
                         className={cn(
                             "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ring-1 ring-inset",
                             TONE_BADGE[event.tone],
                         )}
                     >
-                        {event.status}
+                        {event.badge}
                     </span>
                 )}
 
