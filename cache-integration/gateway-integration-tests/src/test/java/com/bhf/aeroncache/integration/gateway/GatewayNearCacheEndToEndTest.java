@@ -29,6 +29,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Full-stack embedded end-to-end test for the Aeron gateway's near cache, backed by a real in-process
@@ -209,6 +210,48 @@ class GatewayNearCacheEndToEndTest {
                 .statusCode(200)
                 .body("wasCached", Matchers.equalTo(true))
                 .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+    }
+
+    @Test
+    @DisplayName("Should serve a key-based hydrating subscription from the near cache when the cache is already primed")
+    void shouldServeKeyBasedSubscriptionFromPrimedNearCache() {
+        var cacheId = uniqueCache("gateway-near-keyed");
+
+        // Seed the source cache.
+        createCache(cacheId);
+        addEntry(cacheId, "Key1", "Value1");
+        addEntry(cacheId, "Key2", "Value2");
+
+        // Prime the near cache up front so the whole cache is warm before any subscription arrives.
+        RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasAlreadyWarm", Matchers.equalTo(false));
+
+        await().atMost(60, SECONDS).untilAsserted(() ->
+                RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(2)));
+
+        // A key-based hydrating subscription for Key1 only is served from the warm local copy, filtered to
+        // just that key.
+        var subCorr = correlationId();
+        client.subscribe(subCorr, List.of(cacheId), List.of("Key1"), false, true, false);
+        awaitSubscribeAck(subCorr);
+        await().atMost(60, SECONDS).until(() -> streamed(UpdateEventType.ADD_ITEM, cacheId, "Key1", "Value1"));
+
+        // Key2 was not requested, so it is never delivered to this subscriber.
+        assertFalse(streamed(UpdateEventType.ADD_ITEM, cacheId, "Key2", "Value2"),
+                "key-filtered subscription should not receive Key2");
+
+        // Clean up.
+        RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200);
     }
 
     @Test

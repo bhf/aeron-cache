@@ -12,5 +12,6 @@ public interface StreamingHelper {
     CompletableFuture<List<CacheUpdateEvent>> getEventsWithHydration(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready);
     CompletableFuture<List<CacheUpdateEvent>> getEventsMultipleCachesWithHydration(BackendTestResource backend, List<String> cacheIds, int count, CompletableFuture<Void> ready);
     CompletableFuture<List<CacheUpdateEvent>> getEventsForKeys(BackendTestResource backend, String cacheId, List<String> keys, int count, CompletableFuture<Void> ready);
+    CompletableFuture<List<CacheUpdateEvent>> getEventsForKeysWithHydration(BackendTestResource backend, String cacheId, List<String> keys, int count, CompletableFuture<Void> ready);
     CompletableFuture<List<CacheUpdateEvent>> getPatchEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready);
 }

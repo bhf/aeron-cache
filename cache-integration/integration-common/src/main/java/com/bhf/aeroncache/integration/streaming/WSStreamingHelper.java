@@ -97,6 +97,21 @@ public class WSStreamingHelper implements StreamingHelper {
     }
 
     @Override
+    public CompletableFuture<List<CacheUpdateEvent>> getEventsForKeysWithHydration(BackendTestResource backend, String cacheId, List<String> keys, int count, CompletableFuture<Void> ready) {
+        CountDownLatch latch = new CountDownLatch(count);
+        CompletableFuture<List<CacheUpdateEvent>> messageFuture = new CompletableFuture<>();
+        List<CacheUpdateEvent> events = new ArrayList<>();
+
+        var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
+                + backend.getWsPort() + endpointsProvider.getStreamingHydrateApiPrefix() + cacheId
+                + "?keys=" + String.join(",", keys);
+
+        connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
+
+        return messageFuture;
+    }
+
+    @Override
     public CompletableFuture<List<CacheUpdateEvent>> getPatchEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready) {
         CountDownLatch latch = new CountDownLatch(count);
         CompletableFuture<List<CacheUpdateEvent>> messageFuture = new CompletableFuture<>();

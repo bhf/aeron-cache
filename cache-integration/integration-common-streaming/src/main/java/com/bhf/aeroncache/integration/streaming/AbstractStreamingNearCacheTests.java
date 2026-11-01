@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -156,6 +157,46 @@ public abstract class AbstractStreamingNearCacheTests {
     }
 
     @Test
+    @DisplayName("Should serve a key-based hydrating subscription from the near cache when the cache is already primed")
+    @HappyPath
+    void shouldServeKeyBasedSubscriptionFromPrimedNearCache(BackendTestResource backend) {
+        var cacheId = getCacheId() + "-keyed";
+
+        // Seed the source cache with two items over HTTP.
+        CacheTestUtils.createCache(cacheId, backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", "Value1", backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key2", "Value2", backend, httpEndpoints);
+
+        // Prime the near cache up front so the whole cache is warm before any subscription arrives.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasAlreadyWarm", Matchers.equalTo(false))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(2)));
+
+        // A key-based hydrating subscription for a single key is served from the warm local copy, filtered to
+        // just that key: it receives Key1 only, not the whole cache.
+        assertHydratesKeys(backend, cacheId, List.of("Key1"), Map.of("Key1", "Value1"));
+
+        // Clean up so repeated runs in this class instance start from a cold cache.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200);
+    }
+
+    @Test
     @DisplayName("Should succeed with wasCached=false when stopping a cache that was never warm")
     void shouldReportNotCachedWhenStoppingUnwarmedCache(BackendTestResource backend) {
         RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
@@ -174,6 +215,26 @@ public abstract class AbstractStreamingNearCacheTests {
     private void assertHydrates(BackendTestResource backend, String cacheId, Map<String, String> expected) {
         CompletableFuture<Void> ready = new CompletableFuture<>();
         var eventsFuture = streamingHelper.getEventsWithHydration(backend, cacheId, expected.size(), ready);
+
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(eventsFuture::isDone);
+        var events = eventsFuture.join();
+
+        MatcherAssert.assertThat(events, Matchers.hasSize(expected.size()));
+        for (var event : events) {
+            MatcherAssert.assertThat(event.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(event.cacheId(), Matchers.is(cacheId));
+        }
+        var eventMap = events.stream().collect(Collectors.toMap(CacheUpdateEvent::itemKey, e -> (String) e.itemValue()));
+        MatcherAssert.assertThat(eventMap, Matchers.is(expected));
+    }
+
+    /**
+     * Open a key-based hydrating streaming subscription and assert it is hydrated with exactly the expected
+     * items as ADD_ITEM events - the requested keys and nothing else.
+     */
+    private void assertHydratesKeys(BackendTestResource backend, String cacheId, List<String> keys, Map<String, String> expected) {
+        CompletableFuture<Void> ready = new CompletableFuture<>();
+        var eventsFuture = streamingHelper.getEventsForKeysWithHydration(backend, cacheId, keys, expected.size(), ready);
 
         Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(eventsFuture::isDone);
         var events = eventsFuture.join();
