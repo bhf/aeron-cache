@@ -20,7 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Integration tests for the near counter cache management endpoints: listing the warm counter caches
- * ({@code GET /api/v1/near/counters-caches}) and stopping near caching for a counter cache
+ * ({@code GET /api/v1/near/counters-caches}), priming a counter cache up front
+ * ({@code POST /api/v1/near/counters/<cacheId>}) and stopping near caching for a counter cache
  * ({@code DELETE /api/v1/near/counters/<cacheId>}).
  */
 @BackendTestConfig(httpEnabled = true, httpNearCacheEnabled = true, wsEnabled = false, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
@@ -31,6 +32,7 @@ class ClusteredNearCountersManagementTests {
     private static final String NEAR_COUNTERS_PREFIX = "/api/v1/near/counters/";
     private static final String NEAR_COUNTERS_CACHES_ENDPOINT = "/api/v1/near/counters-caches";
     private static final String WARM_CACHE_ID = "NearMgmtWarmCounterCacheId";
+    private static final String PRIMED_CACHE_ID = "NearMgmtPrimedCounterCacheId";
     private static final String NEVER_WARMED_CACHE_ID = "NearMgmtNeverWarmedCounterCacheId";
 
     private final CounterTestEndpoints endpoints = new CounterTestEndpoints();
@@ -40,6 +42,10 @@ class ClusteredNearCountersManagementTests {
         CacheTestUtils.createCache(WARM_CACHE_ID, backend, endpoints);
         CacheTestUtils.addItem(WARM_CACHE_ID, "Key1", 10L, backend, endpoints);
         CacheTestUtils.addItem(WARM_CACHE_ID, "Key2", 20L, backend, endpoints);
+
+        CacheTestUtils.createCache(PRIMED_CACHE_ID, backend, endpoints);
+        CacheTestUtils.addItem(PRIMED_CACHE_ID, "Key1", 10L, backend, endpoints);
+        CacheTestUtils.addItem(PRIMED_CACHE_ID, "Key2", 20L, backend, endpoints);
     }
 
     @Test
@@ -86,6 +92,52 @@ class ClusteredNearCountersManagementTests {
                         .then().assertThat()
                         .statusCode(200)
                         .body("cacheId", Matchers.not(Matchers.hasItem(WARM_CACHE_ID))));
+    }
+
+    @Test
+    @DisplayName("Should prime a counter cache up front (without reading it) so it is listed warm, then drop it on stop")
+    @HappyPath
+    void shouldPrimeWarmAndStopNearCounters(BackendTestResource backend) {
+        var uri = backend.getBaseHttpNearUri();
+        var port = backend.getHttpNearPort();
+
+        // Prime the near counter cache up front, without any read or subscription: not already warm.
+        RestAssured.given().port(port).baseUri(uri)
+                .accept(ContentType.JSON)
+                .when().post(NEAR_COUNTERS_PREFIX + PRIMED_CACHE_ID)
+                .then().assertThat()
+                .statusCode(200)
+                .body("cacheId", Matchers.comparesEqualTo(PRIMED_CACHE_ID))
+                .body("wasAlreadyWarm", Matchers.equalTo(false))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        // The snapshot populates the local copy asynchronously; it is then listed warm with both items.
+        Awaitility.await().atMost(30, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(port).baseUri(uri)
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_COUNTERS_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("cacheId", Matchers.hasItem(PRIMED_CACHE_ID))
+                        .body("find { it.cacheId == '" + PRIMED_CACHE_ID + "' }.itemCount", Matchers.equalTo(2)));
+
+        // Priming an already-warm counter cache is an idempotent no-op that reports it was already warm.
+        RestAssured.given().port(port).baseUri(uri)
+                .accept(ContentType.JSON)
+                .when().post(NEAR_COUNTERS_PREFIX + PRIMED_CACHE_ID)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasAlreadyWarm", Matchers.equalTo(true))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        // Stop near caching the counter cache: subscription dropped and local copy removed.
+        RestAssured.given().port(port).baseUri(uri)
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_COUNTERS_PREFIX + PRIMED_CACHE_ID)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasCached", Matchers.equalTo(true))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
     }
 
     @Test

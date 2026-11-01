@@ -2,6 +2,7 @@ package com.bhf.aeroncache.ws.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.responses.CacheDetails;
+import com.bhf.aeroncache.http.responses.PrimeNearCacheResponse;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
 import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
@@ -300,8 +301,10 @@ public class WebsocketApplication {
      */
     private static void setupNearCacheManagementRoutes(Javalin app) {
         app.get(NEAR_CACHES_API, ctx -> handleGetNearCaches(ctx, subscriptionService))
+                .post(NEAR_CACHE_API_PREFIX + "{cacheId}", ctx -> handlePrimeNearCache(ctx, subscriptionService))
                 .delete(NEAR_CACHE_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, subscriptionService))
                 .get(NEAR_COUNTERS_CACHES_API, ctx -> handleGetNearCaches(ctx, countersSubscriptionService))
+                .post(NEAR_COUNTERS_API_PREFIX + "{cacheId}", ctx -> handlePrimeNearCache(ctx, countersSubscriptionService))
                 .delete(NEAR_COUNTERS_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, countersSubscriptionService));
     }
 
@@ -339,6 +342,32 @@ public class WebsocketApplication {
             ctx.json(new StopNearCacheResponse(cacheId, wasCached, CacheOperationStatus.SUCCESS));
         } catch (Exception e) {
             var errorMsg = "Badly formed request to stop near caching cacheId " + ctx.pathParam("cacheId");
+            log.warn(errorMsg);
+            statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
+    /**
+     * Prime a cache in the given subscription service's near cache: start the internal near cache
+     * subscription (requesting a snapshot) so the local copy is warmed up front, before any hydrating
+     * client subscription arrives. Idempotent - priming a cache that is already warm succeeds with
+     * {@code wasAlreadyWarm=true} and does not re-subscribe.
+     *
+     * @param ctx                 The context.
+     * @param subscriptionService The subscription service whose near cache to prime.
+     */
+    private static void handlePrimeNearCache(Context ctx, CacheSubscriptionRequestPublisher subscriptionService) {
+        try {
+            var cacheId = ctx.pathParam("cacheId");
+            log.info("Got request to prime near caching cacheId {}", cacheId);
+            var primed = subscriptionService.primeNearCache(cache, cacheId);
+            ctx.status(HTTPStatusUtils.OK);
+            ctx.json(new PrimeNearCacheResponse(cacheId, !primed, CacheOperationStatus.SUCCESS));
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to prime near caching cacheId " + ctx.pathParam("cacheId");
             log.warn(errorMsg);
             statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);

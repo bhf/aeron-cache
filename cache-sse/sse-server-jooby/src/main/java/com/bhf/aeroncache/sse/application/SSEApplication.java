@@ -3,6 +3,7 @@ package com.bhf.aeroncache.sse.application;
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.responses.CacheDetails;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.http.responses.PrimeNearCacheResponse;
 import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.http.responses.SubscriptionAck;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
@@ -122,8 +123,10 @@ public class SSEApplication extends Jooby {
 
         if (nearCacheEnabled) {
             get(NEAR_CACHES_API, ctx -> handleGetNearCaches(ctx, subscriptionService));
+            post(NEAR_CACHE_API_PREFIX + "{cacheId}", ctx -> handlePrimeNearCache(ctx, subscriptionService));
             delete(NEAR_CACHE_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, subscriptionService));
             get(NEAR_COUNTERS_CACHES_API, ctx -> handleGetNearCaches(ctx, countersSubscriptionService));
+            post(NEAR_COUNTERS_API_PREFIX + "{cacheId}", ctx -> handlePrimeNearCache(ctx, countersSubscriptionService));
             delete(NEAR_COUNTERS_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, countersSubscriptionService));
         }
     }
@@ -159,6 +162,23 @@ public class SSEApplication extends Jooby {
         log.info("Got request to stop near caching cacheId {}", cacheId);
         var wasCached = subscriptionService.stopNearCaching(cache, cacheId);
         return new StopNearCacheResponse(cacheId, wasCached, CacheOperationStatus.SUCCESS);
+    }
+
+    /**
+     * Prime a cache in the given subscription service's near cache: start the internal near cache
+     * subscription (requesting a snapshot) so the local copy is warmed up front, before any hydrating
+     * client subscription arrives. Idempotent - priming a cache that is already warm succeeds with
+     * {@code wasAlreadyWarm=true} and does not re-subscribe.
+     *
+     * @param ctx                 The context.
+     * @param subscriptionService The subscription service whose near cache to prime.
+     * @return the prime result as JSON.
+     */
+    private static Object handlePrimeNearCache(Context ctx, CacheSubscriptionRequestPublisher subscriptionService) {
+        var cacheId = ctx.path("cacheId").toString();
+        log.info("Got request to prime near caching cacheId {}", cacheId);
+        var primed = subscriptionService.primeNearCache(cache, cacheId);
+        return new PrimeNearCacheResponse(cacheId, !primed, CacheOperationStatus.SUCCESS);
     }
 
     private static Object handleGetReadiness(Context ctx) {

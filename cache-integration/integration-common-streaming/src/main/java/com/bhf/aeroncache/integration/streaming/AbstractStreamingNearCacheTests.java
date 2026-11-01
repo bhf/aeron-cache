@@ -103,6 +103,59 @@ public abstract class AbstractStreamingNearCacheTests {
     }
 
     @Test
+    @DisplayName("Should prime a cold near cache up front so a later hydrating subscriber is served locally")
+    @HappyPath
+    void shouldPrimeWarmHydrateAndStop(BackendTestResource backend) {
+        var cacheId = getCacheId() + "-primed";
+
+        // Seed the source cache with items over HTTP.
+        CacheTestUtils.createCache(cacheId, backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", "Value1", backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key2", "Value2", backend, httpEndpoints);
+
+        // Prime the near cache up front, with no subscription yet: reports it was not already warm.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("cacheId", Matchers.comparesEqualTo(cacheId))
+                .body("wasAlreadyWarm", Matchers.equalTo(false))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        // The snapshot populates the local copy asynchronously; it is then listed warm with both items.
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("cacheId", Matchers.hasItem(cacheId))
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(2)));
+
+        // Priming an already-warm cache is an idempotent no-op that reports it was already warm.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasAlreadyWarm", Matchers.equalTo(true))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        // A hydrating subscriber arriving after priming is served the full state from the warm local copy.
+        assertHydrates(backend, cacheId, Map.of("Key1", "Value1", "Key2", "Value2"));
+
+        // Stop near caching the cache: the local copy is dropped.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasCached", Matchers.equalTo(true))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+    }
+
+    @Test
     @DisplayName("Should succeed with wasCached=false when stopping a cache that was never warm")
     void shouldReportNotCachedWhenStoppingUnwarmedCache(BackendTestResource backend) {
         RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))

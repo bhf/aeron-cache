@@ -14,6 +14,7 @@ import com.bhf.aeroncache.gateway.codec.GatewayResponseWriter;
 import com.bhf.aeroncache.gateway.config.GatewayIdleStrategies;
 import com.bhf.aeroncache.gateway.metrics.AeronCounterGatewayMetrics;
 import com.bhf.aeroncache.http.responses.CacheDetails;
+import com.bhf.aeroncache.http.responses.PrimeNearCacheResponse;
 import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
@@ -317,8 +318,10 @@ public class GatewayApplication {
      */
     private static void setupNearCacheManagementRoutes(Javalin app) {
         app.get(NEAR_CACHES_API, ctx -> handleGetNearCaches(ctx, cacheSubs))
+                .post(NEAR_CACHE_API_PREFIX + "{cacheId}", ctx -> handlePrimeNearCache(ctx, cacheSubs))
                 .delete(NEAR_CACHE_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, cacheSubs))
                 .get(NEAR_COUNTERS_CACHES_API, ctx -> handleGetNearCaches(ctx, countersSubs))
+                .post(NEAR_COUNTERS_API_PREFIX + "{cacheId}", ctx -> handlePrimeNearCache(ctx, countersSubs))
                 .delete(NEAR_COUNTERS_API_PREFIX + "{cacheId}", ctx -> handleStopNearCache(ctx, countersSubs));
     }
 
@@ -352,5 +355,22 @@ public class GatewayApplication {
         var wasCached = publisher.stopNearCaching(cache, cacheId);
         ctx.status(200);
         ctx.json(new StopNearCacheResponse(cacheId, wasCached, CacheOperationStatus.SUCCESS));
+    }
+
+    /**
+     * Prime a cache in the given publisher's near cache: start the internal near cache subscription
+     * (requesting a snapshot) so the local copy is warmed up front, before any hydrating client
+     * subscription arrives. Idempotent - priming a cache that is already warm succeeds with
+     * {@code wasAlreadyWarm=true} and does not re-subscribe.
+     *
+     * @param ctx       The context.
+     * @param publisher The subscription publisher whose near cache to prime.
+     */
+    private static void handlePrimeNearCache(Context ctx, GatewaySubscriptionPublisher publisher) {
+        var cacheId = ctx.pathParam("cacheId");
+        log.info("Got request to prime near caching cacheId {}", cacheId);
+        var primed = publisher.primeNearCache(cache, cacheId);
+        ctx.status(200);
+        ctx.json(new PrimeNearCacheResponse(cacheId, !primed, CacheOperationStatus.SUCCESS));
     }
 }

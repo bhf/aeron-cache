@@ -227,6 +227,38 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
     }
 
     /**
+     * Prime the near cache for a cache up front, before any hydrating client subscription arrives, so that
+     * the first such subscription rides the already-warm local copy instead of triggering a cold
+     * per-subscriber cluster snapshot.
+     *
+     * <p>This registers the internal near cache session as the first (cold) subscriber and, unlike
+     * {@link #registerNearCacheSession(AeronCache, String)} (which rides a client's teed snapshot), requests
+     * the snapshot itself since there is no client to tee one from. The snapshot populates the local copy
+     * asynchronously, after which the session keeps receiving live updates to stay warm until near caching
+     * is stopped. A cache that is already warm (primed earlier or warmed by a client subscription) is left
+     * untouched; the warm-set guard also prevents a second snapshot subscribe, which the shared cluster
+     * session rejects as a {@code DUPLICATE_SUBSCRIPTION} carrying no entries.
+     *
+     * @param cluster the cluster to use.
+     * @param cacheId the cache to prime.
+     * @return true if priming was started, false if the cache was already warm or the near cache is disabled.
+     */
+    public boolean primeNearCache(AeronCache cluster, String cacheId) {
+        if (!isNearCacheEnabled()) {
+            return false;
+        }
+        if (!nearWarmCaches.add(cacheId)) {
+            return false;
+        }
+        log.info("Priming near cache for cacheId {}", cacheId);
+        var requestId = UUID.randomUUID().toString();
+        Consumer<CacheUpdateEvent> nearConsumer = nearCacheManager::handleCacheUpdate;
+        doSubscribe(cluster, v -> nearWarmCaches.remove(cacheId), () -> {}, List.of(cacheId), null,
+                SubscriptionMode.FULL, nearCacheSessionId, requestId, true, nearConsumer);
+        return true;
+    }
+
+    /**
      * Replay the current contents of a near-cached cache to a subscriber as {@code ADD_ITEM} events,
      * hydrating it from the local copy.
      *

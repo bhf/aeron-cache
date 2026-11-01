@@ -42,6 +42,11 @@ Only the management operations, which have no regular-endpoint equivalent, keep 
 
 - `GET /api/v1/near/caches` / `GET /api/v1/near/counters-caches` - list the caches currently held
   warm, with their local item counts.
+- `POST /api/v1/near/cache/<cacheId>` / `POST /api/v1/near/counters/<cacheId>` - prime a cache up
+  front: start the internal subscription (requesting a snapshot) so the local copy is warmed before any
+  read or hydrating subscription arrives (which then rides the warm copy). The snapshot populates the
+  local copy asynchronously, so success means priming was started; idempotent (an already-warm cache
+  reports `wasAlreadyWarm=true` and is not re-subscribed).
 - `DELETE /api/v1/near/cache/<cacheId>` / `DELETE /api/v1/near/counters/<cacheId>` - stop near
   caching a cache: drop the cluster subscription and remove the local copy (idempotent).
 
@@ -58,8 +63,8 @@ subscriptions always take the plain cluster path.
 Both the one-directional subscription routes and the single bidirectional endpoint
 (`/api/ws/v1/bidi`) share the same subscription publishers, so a whole-cache hydrating subscribe over
 either is served from the same near cache. The near cache management endpoints
-(`/api/v1/near/caches`, `/api/v1/near/counters-caches`, and the `DELETE` equivalents) are served over
-HTTP on the streaming interface's own port.
+(`/api/v1/near/caches`, `/api/v1/near/counters-caches`, and the `POST` prime / `DELETE` stop
+equivalents) are served over HTTP on the streaming interface's own port.
 
 ## Near cache on the Aeron gateway
 
@@ -70,4 +75,5 @@ interfaces. The gateway keeps its zero-allocation dispatch (a reused `GatewayStr
 on the hot path and feeds the near cache through the allocation-free
 `NearCacheManager.handleCacheUpdate(cacheId, eventType, key, value)` overload. The near cache
 management endpoints are served over HTTP on the gateway's health server port
-(`/api/v1/near/caches`, `/api/v1/near/counters-caches`, and the `DELETE` equivalents).
+(`/api/v1/near/caches`, `/api/v1/near/counters-caches`, and the `POST` prime / `DELETE` stop
+equivalents).

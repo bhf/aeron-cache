@@ -437,6 +437,7 @@ public class HttpApplication {
      */
     private static void setupNearCacheManagementRoutes(Javalin app) {
         app.get("/api/v1/near/caches", nearCacheHandlers::handleGetNearCachesRequest)
+                .post(NEAR_CACHE_API_PREFIX + "<cacheId>", nearCacheHandlers::handlePrimeNearCacheRequest)
                 .delete(NEAR_CACHE_API_PREFIX + "<cacheId>", nearCacheHandlers::handleStopNearCacheRequest);
     }
 
@@ -482,6 +483,7 @@ public class HttpApplication {
      */
     private static void setupNearCountersManagementRoutes(Javalin app) {
         app.get("/api/v1/near/counters-caches", countersNearCacheHandlers::handleGetNearCachesRequest)
+                .post(NEAR_COUNTERS_API_PREFIX + "<cacheId>", countersNearCacheHandlers::handlePrimeNearCacheRequest)
                 .delete(NEAR_COUNTERS_API_PREFIX + "<cacheId>", countersNearCacheHandlers::handleStopNearCacheRequest);
     }
 

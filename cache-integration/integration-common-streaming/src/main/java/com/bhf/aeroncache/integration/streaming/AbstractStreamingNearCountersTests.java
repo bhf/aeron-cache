@@ -101,6 +101,59 @@ public abstract class AbstractStreamingNearCountersTests {
                         .body("cacheId", Matchers.not(Matchers.hasItem(cacheId))));
     }
 
+    @Test
+    @DisplayName("Should prime a cold near counter cache up front so a later hydrating subscriber is served locally")
+    @HappyPath
+    void shouldPrimeWarmHydrateAndStopCounters(BackendTestResource backend) {
+        var cacheId = getCacheId() + "-primed";
+
+        // Seed the source counter cache over HTTP.
+        CacheTestUtils.createCache(cacheId, backend, httpCounterEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", 10L, backend, httpCounterEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key2", 20L, backend, httpCounterEndpoints);
+
+        // Prime the near counter cache up front, with no subscription yet: reports it was not already warm.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().post(NEAR_COUNTERS_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("cacheId", Matchers.comparesEqualTo(cacheId))
+                .body("wasAlreadyWarm", Matchers.equalTo(false))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        // The snapshot populates the local copy asynchronously; it is then listed warm with both items.
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_COUNTERS_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("cacheId", Matchers.hasItem(cacheId))
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(2)));
+
+        // Priming an already-warm cache is an idempotent no-op that reports it was already warm.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().post(NEAR_COUNTERS_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasAlreadyWarm", Matchers.equalTo(true))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        // A hydrating subscriber arriving after priming is served the full state from the warm local copy.
+        assertHydrates(backend, cacheId, Map.of("Key1", 10L, "Key2", 20L));
+
+        // Stop near caching the counter cache: the local copy is dropped.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_COUNTERS_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasCached", Matchers.equalTo(true))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+    }
+
     /**
      * Open a hydrating streaming subscription and assert it receives the expected counters as ADD_ITEM
      * events. Counter values arrive as JSON numbers, so they are normalised to {@code long}.

@@ -5,6 +5,7 @@ import com.bhf.aeroncache.http.responses.CacheDetails;
 import com.bhf.aeroncache.http.responses.CounterItem;
 import com.bhf.aeroncache.http.responses.GetCounterResponse;
 import com.bhf.aeroncache.http.responses.GetCountersResponse;
+import com.bhf.aeroncache.http.responses.PrimeNearCacheResponse;
 import com.bhf.aeroncache.http.responses.RequestErrorResponse;
 import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
@@ -92,6 +93,36 @@ public class CountersNearCacheRouteHandlers {
             ctx.json(new StopNearCacheResponse(cacheId, wasCached, CacheOperationStatus.SUCCESS));
         } catch (Exception e) {
             var errorMsg = "Badly formed request to stop near caching counters cacheId " + ctx.pathParam("cacheId");
+            log.warn(errorMsg);
+            HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
+            var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
+                    CacheOperationStatus.ERROR);
+            ctx.status(HTTPStatusUtils.BAD_REQUEST);
+            ctx.json(badRequest);
+        }
+    }
+
+    /**
+     * Prime a near counter cache up front: subscribe to the counter cache (requesting a snapshot) so the
+     * local copy is warmed before any read or hydrating subscription arrives. Idempotent - priming a cache
+     * that is already warm succeeds with {@code wasAlreadyWarm=true} and does not re-subscribe.
+     *
+     * @param ctx The context.
+     */
+    public void handlePrimeNearCacheRequest(Context ctx) {
+        try {
+            var cacheId = ctx.pathParam("cacheId");
+            log.info("Got request to prime near caching counters cacheId {}", cacheId);
+
+            var wasAlreadyWarm = nearCacheManager.contains(cacheId);
+            if (!wasAlreadyWarm) {
+                subscribeToCache.accept(cacheId);
+            }
+
+            ctx.status(HTTPStatusUtils.OK);
+            ctx.json(new PrimeNearCacheResponse(cacheId, wasAlreadyWarm, CacheOperationStatus.SUCCESS));
+        } catch (Exception e) {
+            var errorMsg = "Badly formed request to prime near caching counters cacheId " + ctx.pathParam("cacheId");
             log.warn(errorMsg);
             HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES,
