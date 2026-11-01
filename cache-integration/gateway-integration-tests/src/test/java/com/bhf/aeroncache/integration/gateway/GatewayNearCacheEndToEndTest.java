@@ -160,6 +160,58 @@ class GatewayNearCacheEndToEndTest {
     }
 
     @Test
+    @DisplayName("Should prime a cold near cache up front so a later hydrating subscription is served locally, then drop it on stop")
+    void shouldPrimeWarmHydrateAndStop() {
+        var cacheId = uniqueCache("gateway-near-primed");
+
+        // Seed the source cache.
+        createCache(cacheId);
+        addEntry(cacheId, "Key1", "Value1");
+        addEntry(cacheId, "Key2", "Value2");
+
+        // Prime the near cache up front, with no subscription yet: reports it was not already warm.
+        RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("cacheId", Matchers.comparesEqualTo(cacheId))
+                .body("wasAlreadyWarm", Matchers.equalTo(false))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        // The snapshot populates the local copy asynchronously; it is then listed warm with both items.
+        await().atMost(60, SECONDS).untilAsserted(() ->
+                RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("cacheId", Matchers.hasItem(cacheId))
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(2)));
+
+        // Priming an already-warm cache is an idempotent no-op that reports it was already warm.
+        RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasAlreadyWarm", Matchers.equalTo(true))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        // A hydrating subscription arriving after priming is served the full state from the warm local copy.
+        var subCorr = correlationId();
+        client.subscribe(subCorr, List.of(cacheId), true, false);
+        awaitSubscribeAck(subCorr);
+        await().atMost(60, SECONDS).until(() -> streamed(UpdateEventType.ADD_ITEM, cacheId, "Key1", "Value1"));
+        await().atMost(60, SECONDS).until(() -> streamed(UpdateEventType.ADD_ITEM, cacheId, "Key2", "Value2"));
+
+        // Stop near caching the cache: the local copy is dropped.
+        RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasCached", Matchers.equalTo(true))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+    }
+
+    @Test
     @DisplayName("Should succeed with wasCached=false when stopping a cache that was never warm")
     void shouldReportNotCachedWhenStoppingUnwarmedCache() {
         RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)

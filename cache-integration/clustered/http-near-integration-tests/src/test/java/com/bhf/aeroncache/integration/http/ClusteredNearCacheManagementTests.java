@@ -20,7 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Integration tests for the near cache management endpoints: listing the warm caches
- * ({@code GET /api/v1/near/caches}) and stopping near caching for a cache
+ * ({@code GET /api/v1/near/caches}), priming a cache up front
+ * ({@code POST /api/v1/near/cache/<cacheId>}) and stopping near caching for a cache
  * ({@code DELETE /api/v1/near/cache/<cacheId>}).
  */
 @BackendTestConfig(httpEnabled = true, httpNearCacheEnabled = true, wsEnabled = false, sseEnabled = false, useClusteredMode = true, useTestContainersEnvironment = true)
@@ -31,17 +32,22 @@ class ClusteredNearCacheManagementTests {
     private static final String NEAR_CACHE_PREFIX = "/api/v1/near/cache/";
     private static final String NEAR_CACHES_ENDPOINT = "/api/v1/near/caches";
     private static final String WARM_CACHE_ID = "NearMgmtWarmCacheId";
+    private static final String PRIMED_CACHE_ID = "NearMgmtPrimedCacheId";
     private static final String NEVER_WARMED_CACHE_ID = "NearMgmtNeverWarmedCacheId";
 
     private final NearCacheTestEndpoints endpoints = new NearCacheTestEndpoints();
 
     @BeforeAll
     void setup(BackendTestResource backend) {
-        // Create the source cache (on the cluster, via the regular endpoints) and seed it with items so
+        // Create the source caches (on the cluster, via the regular endpoints) and seed them with items so
         // the subscription snapshot has something to hydrate the local near copy with.
         CacheTestUtils.createCache(WARM_CACHE_ID, backend, endpoints);
         CacheTestUtils.addItem(WARM_CACHE_ID, "Key1", "Value1", backend, endpoints);
         CacheTestUtils.addItem(WARM_CACHE_ID, "Key2", "Value2", backend, endpoints);
+
+        CacheTestUtils.createCache(PRIMED_CACHE_ID, backend, endpoints);
+        CacheTestUtils.addItem(PRIMED_CACHE_ID, "Key1", "Value1", backend, endpoints);
+        CacheTestUtils.addItem(PRIMED_CACHE_ID, "Key2", "Value2", backend, endpoints);
     }
 
     @Test
@@ -88,6 +94,52 @@ class ClusteredNearCacheManagementTests {
                         .then().assertThat()
                         .statusCode(200)
                         .body("cacheId", Matchers.not(Matchers.hasItem(WARM_CACHE_ID))));
+    }
+
+    @Test
+    @DisplayName("Should prime a cache up front (without reading it) so it is listed warm, then drop it on stop")
+    @HappyPath
+    void shouldPrimeWarmAndStopNearCache(BackendTestResource backend) {
+        var uri = getHttpUri(backend);
+        var port = getHttpPort(backend);
+
+        // Prime the near cache up front, without any read or subscription: reports it was not already warm.
+        RestAssured.given().port(port).baseUri(uri)
+                .accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + PRIMED_CACHE_ID)
+                .then().assertThat()
+                .statusCode(200)
+                .body("cacheId", Matchers.comparesEqualTo(PRIMED_CACHE_ID))
+                .body("wasAlreadyWarm", Matchers.equalTo(false))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        // The snapshot populates the local copy asynchronously; it is then listed warm with both items.
+        Awaitility.await().atMost(30, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(port).baseUri(uri)
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("cacheId", Matchers.hasItem(PRIMED_CACHE_ID))
+                        .body("find { it.cacheId == '" + PRIMED_CACHE_ID + "' }.itemCount", Matchers.equalTo(2)));
+
+        // Priming an already-warm cache is an idempotent no-op that reports it was already warm.
+        RestAssured.given().port(port).baseUri(uri)
+                .accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + PRIMED_CACHE_ID)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasAlreadyWarm", Matchers.equalTo(true))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        // Stop near caching the cache: subscription dropped and local copy removed.
+        RestAssured.given().port(port).baseUri(uri)
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + PRIMED_CACHE_ID)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasCached", Matchers.equalTo(true))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
     }
 
     @Test

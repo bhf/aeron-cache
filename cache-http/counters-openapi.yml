@@ -434,6 +434,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - PrimeNearCounters
+      summary: Prime a near counter cache up front
+      description: >-
+        Prime the specified counter cache: subscribe to it (requesting a snapshot) so the local copy is
+        warmed up front, before any read or hydrating subscription arrives. The snapshot populates the
+        local copy asynchronously, so a SUCCESS response means priming was started, not that it is fully
+        populated yet. Idempotent - priming a counter cache that is already warm succeeds with
+        wasAlreadyWarm=true and does not re-subscribe. Only available when the HTTP interface is started
+        with NEAR_CACHE_ENABLED=true.
+      operationId: primeNearCounters
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the counter cache
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrimeNearCacheResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
         - StopNearCounters
@@ -747,6 +779,17 @@ components:
         wasCached:
           type: boolean
           description: Whether a local near cache copy existed and was removed.
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    PrimeNearCacheResponse:
+      type: object
+      properties:
+        cacheId:
+          type: string
+          example: "SomeCacheID"
+        wasAlreadyWarm:
+          type: boolean
+          description: Whether the cache was already warm, in which case priming was a no-op.
         operationStatus:
           $ref: '#/components/schemas/CacheOperationStatus'
     CacheStatsResponse:

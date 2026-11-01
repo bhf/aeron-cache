@@ -132,6 +132,30 @@ paths:
                 items:
                   $ref: '#/components/schemas/CacheDetails'
   /api/v1/near/cache/{cacheId}:
+    post:
+      summary: Prime a near cache up front
+      description: |
+        Prime the specified cache: start the internal cluster subscription (requesting a snapshot) so the
+        local copy is warmed up front, before any hydrating streaming subscription arrives (which then rides
+        the warm copy instead of triggering a cold per-subscriber snapshot). The snapshot populates the
+        local copy asynchronously, so a SUCCESS response means priming was started, not that it is fully
+        populated yet. Idempotent - priming a cache that is already warm succeeds with `wasAlreadyWarm=true`
+        and does not re-subscribe. Available only when the SSE interface is started with
+        `NEAR_CACHE_ENABLED=true`.
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          description: The ID of the cache to prime.
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrimeNearCacheResponse'
     delete:
       summary: Stop near caching a cache
       description: |
@@ -169,6 +193,29 @@ paths:
                 items:
                   $ref: '#/components/schemas/CacheDetails'
   /api/v1/near/counters/{cacheId}:
+    post:
+      summary: Prime a near counter cache up front
+      description: |
+        Prime the specified counter cache: start the internal cluster subscription (requesting a snapshot)
+        so the local copy is warmed up front, before any hydrating streaming subscription arrives. The
+        snapshot populates the local copy asynchronously, so a SUCCESS response means priming was started,
+        not that it is fully populated yet. Idempotent - priming a counter cache that is already warm
+        succeeds with `wasAlreadyWarm=true` and does not re-subscribe. Available only when the SSE interface
+        is started with `NEAR_CACHE_ENABLED=true`.
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          description: The ID of the counter cache to prime.
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrimeNearCacheResponse'
     delete:
       summary: Stop near caching a counter cache
       description: |
@@ -266,6 +313,17 @@ components:
         wasCached:
           type: boolean
           description: Whether a local near cache copy existed and was removed.
+        operationStatus:
+          $ref: '#/components/schemas/CacheOperationStatus'
+    PrimeNearCacheResponse:
+      type: object
+      description: The result of priming a near cache for a cache.
+      properties:
+        cacheId:
+          type: string
+        wasAlreadyWarm:
+          type: boolean
+          description: Whether the cache was already warm, in which case priming was a no-op.
         operationStatus:
           $ref: '#/components/schemas/CacheOperationStatus'
     CacheOperationStatus:
