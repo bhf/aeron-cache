@@ -13,7 +13,7 @@ export default async function Page({
     logger.info("Using SSE Url: "+sseUrl)
     return (
         <div>
-            <div className={"pl-6"}>
+            <div className={"pl-2 pr-4"}>
                 <SseTerminal url={sseUrl}/>
             </div>
         </div>

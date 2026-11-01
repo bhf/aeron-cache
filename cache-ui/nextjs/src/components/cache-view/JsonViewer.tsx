@@ -35,7 +35,7 @@ export function tryFormatJson(value: string): string | null {
  * safe to inject. Colours are theme-aware (light/dark).
  * @param json The pretty-printed JSON string.
  */
-function highlightJson(json: string): string {
+export function highlightJson(json: string): string {
     const escaped = json
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
