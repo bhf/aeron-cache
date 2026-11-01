@@ -145,15 +145,18 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
                                  String requestId, boolean sendSnapshot, Consumer<GatewayStreamUpdate> consumer) {
         var effectiveMode = mode == null ? SubscriptionMode.FULL : mode;
 
-        // Near-cache-backed hydration only applies to whole-cache, FULL-mode, hydrating client
-        // subscriptions. The internal near cache session itself always takes the plain path.
+        // Near-cache-backed hydration applies to FULL-mode, hydrating client subscriptions, whole-cache or
+        // key-based; the internal near cache session itself always takes the plain path. A key-based
+        // subscription is only served from the near cache when the cache is already warm (see below): a key
+        // snapshot carries only the requested keys, so it can never warm a full local copy, and a key-based
+        // subscription to a cold cache therefore takes the plain cluster path.
         boolean wholeCache = (keys == null);
-        boolean nearEligible = isNearCacheEnabled() && sendSnapshot && wholeCache
+        boolean nearEligible = isNearCacheEnabled() && sendSnapshot
                 && effectiveMode == SubscriptionMode.FULL && !sessionId.equals(nearCacheSessionId);
 
         if (!nearEligible) {
             doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
-                    sessionId, requestId, sendSnapshot, consumer);
+                    sessionId, requestId, true, sendSnapshot, consumer);
             return;
         }
 
@@ -166,14 +169,16 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         boolean allHaveLocalData = distinctCaches.stream().allMatch(nearCacheManager::contains);
 
         if (allHaveLocalData) {
-            // Ride the near cache session's existing cluster subscription (no snapshot) and hydrate this
-            // subscriber from the local copy.
+            // Ride the near cache session's existing whole-cache cluster subscription without touching the
+            // cluster, and hydrate this subscriber from the local copy - the whole cache, or just the keys it
+            // asked for. Live updates (filtered to those keys) keep flowing through the shared subscription.
             doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
-                    sessionId, requestId, false, consumer);
+                    sessionId, requestId, false, false, consumer);
+            var keysByCache = groupKeysByCache(cacheIds, keys);
             for (var cacheId : distinctCaches) {
-                replayNearCache(cacheId, requestId, consumer);
+                replayNearCache(cacheId, keysByCache.get(cacheId), requestId, consumer);
             }
-        } else {
+        } else if (wholeCache) {
             // At least one cache is cold. Hydrate this subscriber from the cluster snapshot (the single
             // SUCCESS subscribe) while teeing its events into the near cache to warm it, then register the
             // internal near cache session (without its own snapshot) so the local copy stays warm and
@@ -183,12 +188,18 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
                 consumer.accept(update);
             };
             doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
-                    sessionId, requestId, true, teeConsumer);
+                    sessionId, requestId, true, true, teeConsumer);
             for (var cacheId : distinctCaches) {
                 if (nearWarmCaches.add(cacheId)) {
                     registerNearCacheSession(cluster, cacheId);
                 }
             }
+        } else {
+            // A key-based subscription to a (partly) cold cache: a key snapshot only carries the requested
+            // keys, so it cannot warm a full local copy. Take the plain cluster path and leave the near cache
+            // as it is; a whole-cache subscription or an explicit prime will warm it.
+            doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
+                    sessionId, requestId, true, sendSnapshot, consumer);
         }
     }
 
@@ -207,7 +218,7 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         Consumer<GatewayStreamUpdate> nearConsumer = update ->
                 nearCacheManager.handleCacheUpdate(update.cacheId(), update.eventType(), update.key(), update.value());
         doSubscribe(cluster, v -> {}, () -> {}, List.of(cacheId), null, SubscriptionMode.FULL,
-                nearCacheSessionId, requestId, false, nearConsumer);
+                nearCacheSessionId, requestId, true, false, nearConsumer);
     }
 
     /**
@@ -239,27 +250,32 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         Consumer<GatewayStreamUpdate> nearConsumer = update ->
                 nearCacheManager.handleCacheUpdate(update.cacheId(), update.eventType(), update.key(), update.value());
         doSubscribe(cluster, v -> nearWarmCaches.remove(cacheId), () -> {}, List.of(cacheId), null,
-                SubscriptionMode.FULL, nearCacheSessionId, requestId, true, nearConsumer);
+                SubscriptionMode.FULL, nearCacheSessionId, requestId, true, true, nearConsumer);
         return true;
     }
 
     /**
      * Replay the current contents of a near-cached cache to a subscriber as {@code ADD_ITEM} events,
      * hydrating it from the local copy. Runs on the gateway ingress thread and so uses {@link #replayUpdate}
-     * rather than the egress-owned {@link #streamUpdate}.
+     * rather than the egress-owned {@link #streamUpdate}. A key-filtered subscriber receives only the keys it
+     * asked for; a whole-cache subscriber (empty or {@code null} key set) receives every key.
      *
      * @param cacheId   The cache to replay.
+     * @param keys      The keys to replay, or {@code null}/empty to replay the whole cache.
      * @param requestId The request ID to stamp the replayed events with.
      * @param consumer  The subscriber to hydrate.
      */
-    private void replayNearCache(String cacheId, String requestId, Consumer<GatewayStreamUpdate> consumer) {
+    private void replayNearCache(String cacheId, Set<String> keys, String requestId, Consumer<GatewayStreamUpdate> consumer) {
         NearCache<Object> nearCache = nearCacheManager.get(cacheId);
         if (nearCache == null) {
             return;
         }
+        boolean allKeys = (keys == null || keys.isEmpty());
         nearCache.snapshot().forEach((key, value) -> {
-            replayUpdate.set(cacheId, CacheUpdateEvent.EventType.ADD_ITEM, key, value, requestId);
-            consumer.accept(replayUpdate);
+            if (allKeys || keys.contains(key)) {
+                replayUpdate.set(cacheId, CacheUpdateEvent.EventType.ADD_ITEM, key, value, requestId);
+                consumer.accept(replayUpdate);
+            }
         });
     }
 
@@ -304,43 +320,40 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
 
     private void doSubscribe(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, Runnable subscriptionAckHandler,
                              List<String> cacheIds, List<String> keys, SubscriptionMode mode, String sessionId,
-                             String requestId, boolean sendSnapshot, Consumer<GatewayStreamUpdate> consumer) {
+                             String requestId, boolean clusterSubscribe, boolean sendSnapshot, Consumer<GatewayStreamUpdate> consumer) {
         var effectiveMode = mode == null ? SubscriptionMode.FULL : mode;
 
         // Group the requested keys per cache; an empty key set denotes a whole-cache subscription.
-        Map<String, Set<String>> keysByCache = new LinkedHashMap<>();
-        for (int i = 0; i < cacheIds.size(); i++) {
-            var cacheId = cacheIds.get(i);
-            var key = (keys == null) ? null : keys.get(i);
-            var keySet = keysByCache.computeIfAbsent(cacheId, x -> new LinkedHashSet<>());
-            if (key != null) {
-                keySet.add(key);
-            }
-        }
+        Map<String, Set<String>> keysByCache = groupKeysByCache(cacheIds, keys);
 
-        // Work out which (cacheId, key, mode) combinations the shared cluster session must subscribe to.
+        // Work out which (cacheId, key, mode) combinations the shared cluster session must subscribe to. When
+        // riding an already-warm cache ({@code clusterSubscribe == false}) nothing is sent to the cluster: the
+        // near cache session's existing whole-cache subscription already delivers the live updates, so we only
+        // register the local per-session consumer below.
         List<String> subscribeCacheIds = new ArrayList<>();
         List<String> subscribeKeys = new ArrayList<>();
         List<SubscriptionMode> subscribeModes = new ArrayList<>();
-        keysByCache.forEach((cacheId, keySet) -> {
-            if (keySet.isEmpty()) {
-                boolean isNew = clusterSubscriptions.add(clusterSubscriptionKey(cacheId, null, effectiveMode));
-                if (sendSnapshot || isNew) {
-                    subscribeCacheIds.add(cacheId);
-                    subscribeKeys.add(null);
-                    subscribeModes.add(effectiveMode);
-                }
-            } else {
-                for (var key : keySet) {
-                    boolean isNew = clusterSubscriptions.add(clusterSubscriptionKey(cacheId, key, effectiveMode));
+        if (clusterSubscribe) {
+            keysByCache.forEach((cacheId, keySet) -> {
+                if (keySet.isEmpty()) {
+                    boolean isNew = clusterSubscriptions.add(clusterSubscriptionKey(cacheId, null, effectiveMode));
                     if (sendSnapshot || isNew) {
                         subscribeCacheIds.add(cacheId);
-                        subscribeKeys.add(key);
+                        subscribeKeys.add(null);
                         subscribeModes.add(effectiveMode);
                     }
+                } else {
+                    for (var key : keySet) {
+                        boolean isNew = clusterSubscriptions.add(clusterSubscriptionKey(cacheId, key, effectiveMode));
+                        if (sendSnapshot || isNew) {
+                            subscribeCacheIds.add(cacheId);
+                            subscribeKeys.add(key);
+                            subscribeModes.add(effectiveMode);
+                        }
+                    }
                 }
-            }
-        });
+            });
+        }
 
         if (!subscribeCacheIds.isEmpty()) {
             log.info("Sending request to cluster to subscribe to caches {}, keys {}, mode {}", subscribeCacheIds, subscribeKeys, effectiveMode);
@@ -354,12 +367,34 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
             currentSubscribers.add(new KeyFilteredConsumer(sessionId, keySet.isEmpty() ? null : new LinkedHashSet<>(keySet), consumer));
         });
 
-        // Nothing was sent to the cluster because every requested subscription was already live, so the
-        // subscription is confirmed immediately. When a cluster request was sent, the ack is fired from
-        // its confirmation callback instead.
+        // Nothing was sent to the cluster - either every requested subscription was already live, or we are
+        // riding a warm cache locally - so the subscription is confirmed immediately. When a cluster request
+        // was sent, the ack is fired from its confirmation callback instead.
         if (subscribeCacheIds.isEmpty()) {
             subscriptionAckHandler.run();
         }
+    }
+
+    /**
+     * Group the requested keys per cache. An entry maps a cache id to the set of keys the subscriber asked
+     * for in that cache; an empty set denotes a whole-cache subscription (every key).
+     *
+     * @param cacheIds the caches subscribed to (parallel to {@code keys}).
+     * @param keys     the keys parallel to {@code cacheIds}; a {@code null} entry (or {@code null} list) is a
+     *                 whole-cache subscription for that cache.
+     * @return the keys grouped by cache id, in encounter order.
+     */
+    private static Map<String, Set<String>> groupKeysByCache(List<String> cacheIds, List<String> keys) {
+        Map<String, Set<String>> keysByCache = new LinkedHashMap<>();
+        for (int i = 0; i < cacheIds.size(); i++) {
+            var cacheId = cacheIds.get(i);
+            var key = (keys == null) ? null : keys.get(i);
+            var keySet = keysByCache.computeIfAbsent(cacheId, x -> new LinkedHashSet<>());
+            if (key != null) {
+                keySet.add(key);
+            }
+        }
+        return keysByCache;
     }
 
     private void sendCacheSubscriptionRequest(AeronCache cluster, String requestId, List<String> cacheId, List<String> keys,

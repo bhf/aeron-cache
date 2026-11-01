@@ -83,6 +83,17 @@ public class BidiWsStreamingHelper implements StreamingHelper {
     }
 
     @Override
+    public CompletableFuture<List<CacheUpdateEvent>> getEventsForKeysWithHydration(BackendTestResource backend, String cacheId, List<String> keys, int count, CompletableFuture<Void> ready) {
+        List<String> cacheIds = new ArrayList<>();
+        List<String> keyList = new ArrayList<>();
+        for (var key : keys) {
+            cacheIds.add(cacheId);
+            keyList.add(key);
+        }
+        return subscribeAndCollect(backend, cacheIds, keyList, SubscriptionMode.FULL, true, count, ready);
+    }
+
+    @Override
     public CompletableFuture<List<CacheUpdateEvent>> getPatchEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready) {
         return subscribeAndCollect(backend, List.of(cacheId), null, SubscriptionMode.PATCH, false, count, ready);
     }

@@ -100,6 +100,21 @@ public class SSEStreamingHelper implements StreamingHelper{
     }
 
     @Override
+    public CompletableFuture<List<CacheUpdateEvent>> getEventsForKeysWithHydration(BackendTestResource backend, String cacheId, List<String> keys, int count, CompletableFuture<Void> connectionReady) {
+        CountDownLatch latch = new CountDownLatch(count);
+        List<CacheUpdateEvent> events = new ArrayList<>();
+        CompletableFuture<List<CacheUpdateEvent>> eventData = new CompletableFuture<>();
+
+        var cacheSubscriptionURI = backend.getBaseSSEUri() + ":"
+                + backend.getSsePort() + endpointsProvider.getStreamingHydrateApiPrefix() + cacheId
+                + "?keys=" + String.join(",", keys);
+
+        connect(cacheSubscriptionURI, latch, eventData, events, connectionReady);
+
+        return eventData;
+    }
+
+    @Override
     public CompletableFuture<List<CacheUpdateEvent>> getPatchEvents(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> connectionReady) {
         CountDownLatch latch = new CountDownLatch(count);
         List<CacheUpdateEvent> events = new ArrayList<>();

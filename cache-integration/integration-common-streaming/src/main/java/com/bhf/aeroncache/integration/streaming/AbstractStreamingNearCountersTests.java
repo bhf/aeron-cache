@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -154,6 +155,46 @@ public abstract class AbstractStreamingNearCountersTests {
                 .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
     }
 
+    @Test
+    @DisplayName("Should serve a key-based hydrating subscription from the near counter cache when the cache is already primed")
+    @HappyPath
+    void shouldServeKeyBasedSubscriptionFromPrimedNearCache(BackendTestResource backend) {
+        var cacheId = getCacheId() + "-keyed";
+
+        // Seed the source counter cache over HTTP.
+        CacheTestUtils.createCache(cacheId, backend, httpCounterEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", 10L, backend, httpCounterEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key2", 20L, backend, httpCounterEndpoints);
+
+        // Prime the near counter cache up front so the whole cache is warm before any subscription arrives.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().post(NEAR_COUNTERS_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasAlreadyWarm", Matchers.equalTo(false))
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_COUNTERS_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(2)));
+
+        // A key-based hydrating subscription for a single key is served from the warm local copy, filtered to
+        // just that key: it receives Key1 only, not the whole cache.
+        assertHydratesKeys(backend, cacheId, List.of("Key1"), Map.of("Key1", 10L));
+
+        // Clean up so repeated runs in this class instance start from a cold cache.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_COUNTERS_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200);
+    }
+
     /**
      * Open a hydrating streaming subscription and assert it receives the expected counters as ADD_ITEM
      * events. Counter values arrive as JSON numbers, so they are normalised to {@code long}.
@@ -161,6 +202,27 @@ public abstract class AbstractStreamingNearCountersTests {
     private void assertHydrates(BackendTestResource backend, String cacheId, Map<String, Long> expected) {
         CompletableFuture<Void> ready = new CompletableFuture<>();
         var eventsFuture = streamingHelper.getEventsWithHydration(backend, cacheId, expected.size(), ready);
+
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(eventsFuture::isDone);
+        var events = eventsFuture.join();
+
+        MatcherAssert.assertThat(events, Matchers.hasSize(expected.size()));
+        for (var event : events) {
+            MatcherAssert.assertThat(event.eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+            MatcherAssert.assertThat(event.cacheId(), Matchers.is(cacheId));
+        }
+        var eventMap = events.stream().collect(
+                Collectors.toMap(CacheUpdateEvent::itemKey, e -> ((Number) e.itemValue()).longValue()));
+        MatcherAssert.assertThat(eventMap, Matchers.is(expected));
+    }
+
+    /**
+     * Open a key-based hydrating streaming subscription and assert it is hydrated with exactly the expected
+     * counters as ADD_ITEM events - the requested keys and nothing else.
+     */
+    private void assertHydratesKeys(BackendTestResource backend, String cacheId, List<String> keys, Map<String, Long> expected) {
+        CompletableFuture<Void> ready = new CompletableFuture<>();
+        var eventsFuture = streamingHelper.getEventsForKeysWithHydration(backend, cacheId, keys, expected.size(), ready);
 
         Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(eventsFuture::isDone);
         var events = eventsFuture.join();

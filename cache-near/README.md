@@ -53,12 +53,16 @@ Only the management operations, which have no regular-endpoint equivalent, keep 
 ## Near cache on the streaming interfaces (WS / SSE / bidi)
 
 The streaming interfaces (`cache-ws`, `cache-sse`) take the same `NEAR_CACHE_ENABLED` deployment
-option and are equally transparent. Near caching engages for **whole-cache, FULL-mode, hydrating**
-subscriptions: the first such subscriber to a cold cache hydrates from a single cluster snapshot while
-teeing that snapshot into the near cache, and an internal subscription then keeps the local copy warm
-and in sync after the client disconnects. Later hydrating subscribers to a warm cache are served
-entirely from the local copy, with no per-subscriber cluster snapshot. Key-scoped and PATCH-mode
-subscriptions always take the plain cluster path.
+option and are equally transparent. Near caching engages for **FULL-mode, hydrating** subscriptions:
+the first *whole-cache* subscriber to a cold cache hydrates from a single cluster snapshot while teeing
+that snapshot into the near cache, and an internal subscription then keeps the local copy warm and in
+sync after the client disconnects. Later hydrating subscribers to a warm cache are served entirely from
+the local copy, with no per-subscriber cluster snapshot - whole-cache subscribers get the full copy, and
+**key-based subscribers get just the keys they asked for**, replayed from the local copy and then kept in
+sync (filtered to those keys) through the internal subscription. A key-based subscription to a *cold*
+cache still takes the plain cluster path: a key snapshot carries only the requested keys, so it can never
+warm a full local copy - warm the cache first with a whole-cache subscription or an explicit prime.
+PATCH-mode subscriptions always take the plain cluster path.
 
 Both the one-directional subscription routes and the single bidirectional endpoint
 (`/api/ws/v1/bidi`) share the same subscription publishers, so a whole-cache hydrating subscribe over
@@ -69,9 +73,9 @@ equivalents) are served over HTTP on the streaming interface's own port.
 ## Near cache on the Aeron gateway
 
 The Aeron transport gateway (`cache-aeron-gateway`) takes the same `NEAR_CACHE_ENABLED` option and
-applies near caching to its subscription path identically: a whole-cache hydrating subscribe over the
-gateway's Aeron response channel warms and is served from the near cache exactly as on the streaming
-interfaces. The gateway keeps its zero-allocation dispatch (a reused `GatewayStreamUpdate` flyweight)
+applies near caching to its subscription path identically: whole-cache and key-based hydrating subscribes
+over the gateway's Aeron response channel warm and are served from the near cache exactly as on the
+streaming interfaces. The gateway keeps its zero-allocation dispatch (a reused `GatewayStreamUpdate` flyweight)
 on the hot path and feeds the near cache through the allocation-free
 `NearCacheManager.handleCacheUpdate(cacheId, eventType, key, value)` overload. The near cache
 management endpoints are served over HTTP on the gateway's health server port
