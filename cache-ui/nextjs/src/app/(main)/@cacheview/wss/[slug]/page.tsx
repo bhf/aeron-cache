@@ -13,7 +13,7 @@ export default async function Page({
     logger.info("Using WS Url: "+wsUrl)
     return (
         <div>
-            <div className={"pl-6"}>
+            <div className={"pl-2 pr-4"}>
                 <WebsocketTerminal url={wsUrl}/>
             </div>
         </div>
