@@ -126,6 +126,21 @@ public class WSStreamingHelper implements StreamingHelper {
         return messageFuture;
     }
 
+    @Override
+    public CompletableFuture<List<CacheUpdateEvent>> getPatchEventsWithHydration(BackendTestResource backend, String cacheId, int count, CompletableFuture<Void> ready) {
+        CountDownLatch latch = new CountDownLatch(count);
+        CompletableFuture<List<CacheUpdateEvent>> messageFuture = new CompletableFuture<>();
+        List<CacheUpdateEvent> events = new ArrayList<>();
+
+        var cacheSubscriptionURI = backend.getBaseWsUri() + ":"
+                + backend.getWsPort() + endpointsProvider.getStreamingHydrateApiPrefix() + cacheId
+                + "?mode=patch";
+
+        connect(cacheSubscriptionURI, latch, messageFuture, events, ready);
+
+        return messageFuture;
+    }
+
     private void connect(String uri, CountDownLatch latch, CompletableFuture<List<CacheUpdateEvent>> messageFuture, List<CacheUpdateEvent> events, CompletableFuture<Void> ready) {
 
         var client = new OkHttpClient();

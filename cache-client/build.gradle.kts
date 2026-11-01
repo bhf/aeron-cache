@@ -12,6 +12,7 @@ dependencies {
     implementation(project(":cache-spi"))
     runtimeOnly(project(":cache-spi-impl:map-cache:map-cache-core"))
     implementation(libs.aeron)
+    implementation(libs.jackson.core)
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
 

@@ -62,7 +62,27 @@ the local copy, with no per-subscriber cluster snapshot - whole-cache subscriber
 sync (filtered to those keys) through the internal subscription. A key-based subscription to a *cold*
 cache still takes the plain cluster path: a key snapshot carries only the requested keys, so it can never
 warm a full local copy - warm the cache first with a whole-cache subscription or an explicit prime.
-PATCH-mode subscriptions always take the plain cluster path.
+
+### Near-cache-generated patch deltas
+
+A **patch-mode** (`?mode=patch`) hydrating subscription to a **warm** cache is served from the near cache
+too, but its updates are delivered as deltas: the subscriber receives a full `ADD_ITEM` baseline on
+hydration (and for any first-seen key), and thereafter the near cache computes an RFC 7386 JSON merge patch
+between the value it already holds and each incoming full value, and forwards just that delta as a
+`PATCH_ITEM`. The internal near cache session itself stays on a FULL subscription (it needs whole values to
+diff against) - no cluster-side per-subscriber patch subscription is involved, so the delta computation is
+offloaded to the near-cache layer. This is distinct from the cluster's write-driven patch subscriptions
+(which relay patches authored by `patchValue` writes); here the delta is synthesised locally from the warm
+copy. A patch subscription to a *cold* cache takes the plain cluster path (warm or prime the cache first to
+get near-generated deltas), and patch deltas are only generated for JSON (string) values, not scalar
+counters.
+
+This is transparent to downstream consumers that embed a near cache: `ConcurrentNearCacheManager` applies a
+`PATCH_ITEM` by merging the delta onto the value it already holds (`JsonMergePatch.applyMergePatch`), so an
+embedded client just feeds every `CacheUpdateEvent` into its near cache manager as before and reconstructs
+full values with no extra code. Both the merge-patch *compute* (produce) and *apply* directions live in
+`com.bhf.aeroncache.near.patch.JsonMergePatch`, self-contained to the near-cache layer and independent of
+the cluster's write-side patch provider.
 
 Both the one-directional subscription routes and the single bidirectional endpoint
 (`/api/ws/v1/bidi`) share the same subscription publishers, so a whole-cache hydrating subscribe over
@@ -81,3 +101,6 @@ on the hot path and feeds the near cache through the allocation-free
 management endpoints are served over HTTP on the gateway's health server port
 (`/api/v1/near/caches`, `/api/v1/near/counters-caches`, and the `POST` prime / `DELETE` stop
 equivalents).
+
+Near-cache-generated patch deltas (see above) are not yet offered on the gateway - a patch-mode subscribe
+over the gateway takes the plain cluster path. (It would need a flag on the gateway's SBE subscribe message.)
