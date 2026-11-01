@@ -197,6 +197,65 @@ public abstract class AbstractStreamingNearCacheTests {
     }
 
     @Test
+    @DisplayName("Should serve a patch-mode subscription from the near cache as a full baseline then merge-patch deltas when the cache is primed")
+    @HappyPath
+    void shouldServePatchSubscriptionFromPrimedNearCache(BackendTestResource backend) {
+        var cacheId = getCacheId() + "-patch";
+        var initial = "{\"a\":1,\"b\":2}";
+        var updated = "{\"a\":1,\"b\":3}";
+
+        // Seed a JSON value and prime the cache so it is warm before the patch subscription arrives.
+        CacheTestUtils.createCache(cacheId, backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", initial, backend, httpEndpoints);
+
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(1)));
+
+        // A patch-mode hydrating subscription is served from the warm copy: a full ADD_ITEM baseline, then a
+        // near-cache-generated PATCH_ITEM delta for the subsequent full overwrite.
+        CompletableFuture<Void> ready = new CompletableFuture<>();
+        var eventsFuture = streamingHelper.getPatchEventsWithHydration(backend, cacheId, 2, ready);
+
+        // Once the subscription is established, overwrite the value with a new full value.
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(ready::isDone);
+        CacheTestUtils.addItem(cacheId, "Key1", updated, backend, httpEndpoints);
+
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(eventsFuture::isDone);
+        var events = eventsFuture.join();
+
+        var baseline = events.stream()
+                .filter(e -> e.eventType() == CacheUpdateEvent.EventType.ADD_ITEM)
+                .findFirst().orElseThrow(() -> new AssertionError("expected a full ADD_ITEM baseline, got " + events));
+        MatcherAssert.assertThat(baseline.itemKey(), Matchers.is("Key1"));
+        MatcherAssert.assertThat(baseline.itemValue(), Matchers.is(initial));
+
+        var patch = events.stream()
+                .filter(e -> e.eventType() == CacheUpdateEvent.EventType.PATCH_ITEM)
+                .findFirst().orElseThrow(() -> new AssertionError("expected a PATCH_ITEM delta, got " + events));
+        MatcherAssert.assertThat(patch.itemKey(), Matchers.is("Key1"));
+        // The delta carries only the changed field, not the whole value.
+        MatcherAssert.assertThat(patch.itemValue(), Matchers.is("{\"b\":3}"));
+
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200);
+    }
+
+    @Test
     @DisplayName("Should succeed with wasCached=false when stopping a cache that was never warm")
     void shouldReportNotCachedWhenStoppingUnwarmedCache(BackendTestResource backend) {
         RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))

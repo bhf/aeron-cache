@@ -8,6 +8,7 @@ import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.near.NearCache;
 import com.bhf.aeroncache.near.NearCacheManager;
+import com.bhf.aeroncache.near.patch.JsonMergePatch;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import lombok.extern.log4j.Log4j2;
@@ -102,10 +103,18 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         private final String sessionId;
         private final Set<String> keys;
         private final Consumer<CacheUpdateEvent> delegate;
+        /**
+         * Whether this subscriber wants near-cache-generated patch deltas: full-value updates it rides from
+         * the warm local copy are turned into {@code PATCH_ITEM} merge-patch deltas (see
+         * {@link #handleCacheEntryUpdated}). The initial hydration is always sent as full {@code ADD_ITEM}
+         * values regardless, so the subscriber has a baseline to apply deltas onto.
+         */
+        private final boolean generatePatch;
 
-        KeyFilteredConsumer(String sessionId, Set<String> keys, Consumer<CacheUpdateEvent> delegate) {
+        KeyFilteredConsumer(String sessionId, Set<String> keys, boolean generatePatch, Consumer<CacheUpdateEvent> delegate) {
             this.sessionId = sessionId;
             this.keys = keys;
+            this.generatePatch = generatePatch;
             this.delegate = delegate;
         }
 
@@ -121,6 +130,10 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
 
         boolean matches(String key) {
             return keys == null || keys.isEmpty() || (key != null && keys.contains(key));
+        }
+
+        boolean generatesPatch() {
+            return generatePatch;
         }
     }
 
@@ -161,18 +174,19 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                                  String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
         var effectiveMode = mode == null ? SubscriptionMode.FULL : mode;
 
-        // Near-cache-backed hydration applies to FULL-mode, hydrating client subscriptions, whole-cache or
-        // key-based; the internal near cache session itself always takes the plain path. A key-based
-        // subscription is only served from the near cache when the cache is already warm (see below): a key
-        // snapshot carries only the requested keys, so it can never warm a full local copy, and a key-based
-        // subscription to a cold cache therefore takes the plain cluster path.
+        // Near-cache-backed serving applies to hydrating client subscriptions, whole-cache or key-based, in
+        // FULL or PATCH mode; the internal near cache session itself always takes the plain path. Serving a
+        // subscription from the near cache requires the cache to already be warm (the one exception, below,
+        // is a cold whole-cache FULL subscription, which warms it): a key snapshot carries only the requested
+        // keys and a PATCH subscription has no full baseline to diff against, so neither can warm a full local
+        // copy. PATCH mode on a warm cache is served by generating merge-patch deltas locally from the warm
+        // copy (see handleCacheEntryUpdated); PATCH on a cold cache takes the plain cluster path.
         boolean wholeCache = (keys == null);
-        boolean nearEligible = isNearCacheEnabled() && sendSnapshot
-                && effectiveMode == SubscriptionMode.FULL && !sessionId.equals(nearCacheSessionId);
+        boolean nearEligible = isNearCacheEnabled() && sendSnapshot && !sessionId.equals(nearCacheSessionId);
 
         if (!nearEligible) {
             doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
-                    sessionId, requestId, true, sendSnapshot, consumer);
+                    sessionId, requestId, true, sendSnapshot, false, consumer);
             return;
         }
 
@@ -187,14 +201,17 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         if (allHaveLocalData) {
             // Ride the near cache session's existing whole-cache cluster subscription without touching the
             // cluster, and hydrate this subscriber from the local copy - the whole cache, or just the keys it
-            // asked for. Live updates (filtered to those keys) keep flowing through the shared subscription.
+            // asked for, always as full ADD_ITEM baseline values. Live updates (filtered to those keys) keep
+            // flowing through the shared subscription; for a PATCH-mode subscriber they are turned into
+            // merge-patch deltas computed from the warm copy.
+            boolean generatePatch = (effectiveMode == SubscriptionMode.PATCH);
             doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
-                    sessionId, requestId, false, false, consumer);
+                    sessionId, requestId, false, false, generatePatch, consumer);
             var keysByCache = groupKeysByCache(cacheIds, keys);
             for (var cacheId : distinctCaches) {
                 replayNearCache(cacheId, keysByCache.get(cacheId), requestId, consumer);
             }
-        } else if (wholeCache) {
+        } else if (wholeCache && effectiveMode == SubscriptionMode.FULL) {
             // At least one cache is cold. Hydrate this subscriber from the cluster snapshot (the single
             // SUCCESS subscribe) while teeing its events into the near cache to warm it, then register the
             // internal near cache session (without its own snapshot) so the local copy stays warm and
@@ -204,18 +221,19 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                 consumer.accept(event);
             };
             doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
-                    sessionId, requestId, true, true, teeConsumer);
+                    sessionId, requestId, true, true, false, teeConsumer);
             for (var cacheId : distinctCaches) {
                 if (nearWarmCaches.add(cacheId)) {
                     registerNearCacheSession(cluster, cacheId);
                 }
             }
         } else {
-            // A key-based subscription to a (partly) cold cache: a key snapshot only carries the requested
-            // keys, so it cannot warm a full local copy. Take the plain cluster path and leave the near cache
-            // as it is; a whole-cache subscription or an explicit prime will warm it.
+            // Cold and either key-based or PATCH mode: a key snapshot cannot warm a full local copy, and a
+            // PATCH subscription has no warm baseline to diff against, so take the plain cluster path and leave
+            // the near cache as it is. A whole-cache FULL subscription or an explicit prime will warm it, after
+            // which later subscriptions (including PATCH) are served locally.
             doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
-                    sessionId, requestId, true, sendSnapshot, consumer);
+                    sessionId, requestId, true, sendSnapshot, false, consumer);
         }
     }
 
@@ -234,7 +252,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         var requestId = UUID.randomUUID().toString();
         Consumer<CacheUpdateEvent> nearConsumer = nearCacheManager::handleCacheUpdate;
         doSubscribe(cluster, v -> {}, () -> {}, List.of(cacheId), null, SubscriptionMode.FULL,
-                nearCacheSessionId, requestId, true, false, nearConsumer);
+                nearCacheSessionId, requestId, true, false, false, nearConsumer);
     }
 
     /**
@@ -265,7 +283,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         var requestId = UUID.randomUUID().toString();
         Consumer<CacheUpdateEvent> nearConsumer = nearCacheManager::handleCacheUpdate;
         doSubscribe(cluster, v -> nearWarmCaches.remove(cacheId), () -> {}, List.of(cacheId), null,
-                SubscriptionMode.FULL, nearCacheSessionId, requestId, true, true, nearConsumer);
+                SubscriptionMode.FULL, nearCacheSessionId, requestId, true, true, false, nearConsumer);
         return true;
     }
 
@@ -333,7 +351,8 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
 
     private void doSubscribe(AeronCache cluster, Consumer<Void> subscriptionFailureHandler, Runnable subscriptionAckHandler,
                              List<String> cacheIds, List<String> keys, SubscriptionMode mode, String sessionId,
-                             String requestId, boolean clusterSubscribe, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
+                             String requestId, boolean clusterSubscribe, boolean sendSnapshot, boolean generatePatch,
+                             Consumer<CacheUpdateEvent> consumer) {
         var effectiveMode = mode == null ? SubscriptionMode.FULL : mode;
 
         // Group the requested keys per cache; an empty key set denotes a whole-cache subscription.
@@ -377,7 +396,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         keysByCache.forEach((cacheId, keySet) -> {
             var currentSubscribers = cacheSubscriptions.computeIfAbsent(cacheId, x -> new CopyOnWriteArrayList<>());
             log.info("Adding subscription for cache {}, keys {}, send snapshot {} client session {}", cacheId, keySet, sendSnapshot, sessionId);
-            currentSubscribers.add(new KeyFilteredConsumer(sessionId, keySet.isEmpty() ? null : new LinkedHashSet<>(keySet), consumer));
+            currentSubscribers.add(new KeyFilteredConsumer(sessionId, keySet.isEmpty() ? null : new LinkedHashSet<>(keySet), generatePatch, consumer));
         });
 
         // Nothing was sent to the cluster - either every requested subscription was already live, or we are
@@ -593,20 +612,63 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
 
         if (subscribers != null) {
             var cacheId = String.valueOf(cacheEntryUpdateResult.getCacheId());
-            var eventType = cacheEntryUpdateResult.isPatch() ? CacheUpdateEvent.EventType.PATCH_ITEM : CacheUpdateEvent.EventType.ADD_ITEM;
+            boolean fromClusterPatch = cacheEntryUpdateResult.isPatch();
+            var eventType = fromClusterPatch ? CacheUpdateEvent.EventType.PATCH_ITEM : CacheUpdateEvent.EventType.ADD_ITEM;
             var key = cacheEntryUpdateResult.getKey().value().toString();
             var value = cacheEntryUpdateResult.getValue().value();
+            var requestId = cacheEntryUpdateResult.getRequestId();
+
+            // For near-cache-generated patch subscribers, capture the warm copy's current (pre-update) value
+            // BEFORE the internal near cache session consumer (iterated below) overwrites it, so the delta is
+            // computed old -> new. Only a full (non-cluster-patch) JSON string update can be turned into a delta.
+            String previousJson = null;
+            if (!fromClusterPatch && nearCacheManager != null && value instanceof String) {
+                var nearCache = nearCacheManager.get(cacheId);
+                var previous = (nearCache != null) ? nearCache.get(key) : null;
+                previousJson = (previous instanceof String s) ? s : null;
+            }
+            final String prevJson = previousJson;
+            final String newJson = (value instanceof String s) ? s : null;
+
             subscribers.forEach(c -> {
                 if (!c.matches(key)) {
                     return;
                 }
                 try {
-                    c.accept(
-                            new CacheUpdateEvent(cacheId, eventType, key, value, cacheEntryUpdateResult.getRequestId()));
+                    if (c.generatesPatch() && !fromClusterPatch && newJson != null) {
+                        emitNearPatch(c, cacheId, key, prevJson, newJson, requestId);
+                    } else {
+                        c.accept(new CacheUpdateEvent(cacheId, eventType, key, value, requestId));
+                    }
                 } catch (Exception e) {
 
                 }
             });
+        }
+    }
+
+    /**
+     * Emit a near-cache-generated update to a patch subscriber: a merge-patch {@code PATCH_ITEM} delta when
+     * the warm copy already held a value for the key, or a full {@code ADD_ITEM} baseline otherwise (a
+     * first-seen key has nothing to diff against). A delta that comes out empty (no effective change) is
+     * dropped, so the subscriber is not woken for a no-op write.
+     *
+     * @param c         the patch subscriber.
+     * @param cacheId   the cache id.
+     * @param key       the item key.
+     * @param prevJson  the warm copy's pre-update value, or {@code null} if the key was not held.
+     * @param newJson   the new whole value.
+     * @param requestId the request id to stamp the event with.
+     */
+    private void emitNearPatch(KeyFilteredConsumer c, String cacheId, String key, String prevJson, String newJson,
+                               String requestId) {
+        if (prevJson == null) {
+            c.accept(new CacheUpdateEvent(cacheId, CacheUpdateEvent.EventType.ADD_ITEM, key, newJson, requestId));
+            return;
+        }
+        String delta = JsonMergePatch.computeMergePatch(prevJson, newJson);
+        if (delta != null) {
+            c.accept(new CacheUpdateEvent(cacheId, CacheUpdateEvent.EventType.PATCH_ITEM, key, delta, requestId));
         }
     }
 
