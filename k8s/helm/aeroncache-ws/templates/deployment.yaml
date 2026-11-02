@@ -15,7 +15,7 @@ spec:
       {{- include "aeroncache-ws.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- if or .Values.podAnnotations .Values.javaagent.enabled }}
+      {{- if or .Values.podAnnotations .Values.javaagent.enabled .Values.appMetrics.enabled }}
       annotations:
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -24,6 +24,11 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: {{ .Values.javaagent.metricsPort | quote }}
         prometheus.io/path: {{ .Values.javaagent.metricsPath | quote }}
+        {{- end }}
+        {{- if .Values.appMetrics.enabled }}
+        aeroncache.io/app-metrics-scrape: "true"
+        aeroncache.io/app-metrics-port: {{ .Values.service.port | quote }}
+        aeroncache.io/app-metrics-path: {{ .Values.appMetrics.path | quote }}
         {{- end }}
       {{- end }}
       labels:

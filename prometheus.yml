@@ -16,3 +16,9 @@ scrape_configs:
       - targets:
           - cache-ws-client:7071
     metrics_path: /prometheus
+  - job_name: cache-sse
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+          - cache-sse-client:7072
+    metrics_path: /prometheus

@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.ws.handlers;
 
+import com.bhf.aeroncache.metrics.WebGatewayMetrics;
 import com.bhf.aeroncache.ws.application.CacheSubscriptionRequestPublisher;
 import lombok.extern.log4j.Log4j2;
 
@@ -9,7 +10,7 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class CountersWsRouteHandlers extends AbstractWsRouteHandlers {
 
-    public CountersWsRouteHandlers(CacheSubscriptionRequestPublisher subscriptionService) {
-        super(subscriptionService, false, "counters cache");
+    public CountersWsRouteHandlers(CacheSubscriptionRequestPublisher subscriptionService, WebGatewayMetrics metrics) {
+        super(subscriptionService, false, "counters cache", metrics, "subscribeCounter");
     }
 }

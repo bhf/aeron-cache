@@ -1,17 +1,21 @@
 # Observability stack (Prometheus + Grafana) for the aeroncache interface apps.
 #
 # This chart is the scrape/visualisation half of the metrics feature. The *producing* half lives in
-# the application charts, and there are two producers:
-#   - Interface charts (aeroncache-http/-ws/-sse): enable per app with
-#     `javaagent.enabled=true`, which activates the bundled OpenTelemetry Java agent, serves a
-#     Prometheus endpoint and annotates the pod with prometheus.io/scrape.
+# the application charts, and there are three producers:
+#   - Interface charts' own Micrometer metrics (aeroncache-http/-ws/-sse): the web gateways' per-
+#     operation counters and subscription gauges (plus JVM metrics), served on the app HTTP port at
+#     /prometheus and annotated with aeroncache.io/app-metrics-scrape (enabled by default, scraped by
+#     the aeroncache-app-metrics job below).
+#   - Interface charts' OpenTelemetry Java agent (aeroncache-http/-ws/-sse): optional, enabled per app
+#     with `javaagent.enabled=true`, which serves JVM + auto-instrumented HTTP metrics and annotates
+#     the pod with prometheus.io/scrape (scraped by the aeroncache-pods job below).
 #   - Cache/gateway charts (aeroncache-cluster/-ephemeral/-gateway): their clustertools sidecar
 #     exports the shared Aeron media driver counters (media driver + cache type 2000 + subscription
 #     type 2200 + gateway type 2100) on /prometheus, and the pods carry prometheus.io/scrape by default
 #     (no flag needed).
 # Prometheus below discovers all annotated pods automatically, so no per-app target config is needed
-# here. The pre-provisioned Grafana dashboards cover the interface apps, the transport gateway, the
-# cache service, cache subscriptions and the raw media driver counters.
+# here. The pre-provisioned Grafana dashboards cover the interface apps, the web gateways, the transport
+# gateway, the cache service, cache subscriptions and the raw media driver counters.
 #
 # From the Makefiles:
 #   make install-observability                 # deploy Prometheus + Grafana

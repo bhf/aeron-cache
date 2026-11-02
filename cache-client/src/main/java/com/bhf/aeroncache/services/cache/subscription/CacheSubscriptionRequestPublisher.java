@@ -9,15 +9,20 @@ import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.near.NearCache;
 import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.near.patch.JsonMergePatch;
+import com.bhf.aeroncache.metrics.WebGatewayMetrics;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,6 +94,71 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      */
     public boolean isNearCacheEnabled() {
         return nearCacheManager != null;
+    }
+
+    /**
+     * Register this publisher's subscription gauges on a Micrometer registry so the web gateway's
+     * {@code /prometheus} endpoint exposes the live subscriber and subscription counts. The gauges are
+     * sampled from the subscription state at scrape time, so they are always consistent with it. The
+     * internal near-cache warming session is excluded, so the counts reflect client subscriptions only.
+     *
+     * @param registry the meter registry to register on.
+     * @param domain   the cache domain this publisher serves ({@code cache} or {@code counters}),
+     *                 attached as the {@code domain} tag.
+     */
+    public void registerMetrics(MeterRegistry registry, String domain) {
+        Gauge.builder(WebGatewayMetrics.SUBSCRIPTIONS_ACTIVE, this, p -> p.countSubscriptions(false))
+                .tag("domain", domain).tag("type", "whole")
+                .description("Active whole-cache subscriptions (one client session on one cache).")
+                .register(registry);
+        Gauge.builder(WebGatewayMetrics.SUBSCRIPTIONS_ACTIVE, this, p -> p.countSubscriptions(true))
+                .tag("domain", domain).tag("type", "keyed")
+                .description("Active keyed subscriptions (one client session on specific keys of a cache).")
+                .register(registry);
+        Gauge.builder(WebGatewayMetrics.SUBSCRIBERS_ACTIVE, this, CacheSubscriptionRequestPublisher::countSubscriberSessions)
+                .tag("domain", domain)
+                .description("Distinct client sessions holding at least one subscription.")
+                .register(registry);
+    }
+
+    /**
+     * Count active subscriptions of the requested kind, excluding the internal near-cache session.
+     *
+     * @param keyed {@code true} to count keyed subscriptions, {@code false} for whole-cache ones.
+     * @return the number of matching subscriptions.
+     */
+    private double countSubscriptions(boolean keyed) {
+        long count = 0;
+        for (var consumers : cacheSubscriptions.values()) {
+            for (var consumer : consumers) {
+                if (Objects.equals(consumer.sessionId, nearCacheSessionId)) {
+                    continue;
+                }
+                boolean consumerKeyed = consumer.keys != null && !consumer.keys.isEmpty();
+                if (consumerKeyed == keyed) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Count the distinct client sessions holding at least one subscription, excluding the internal
+     * near-cache session.
+     *
+     * @return the number of distinct subscriber sessions.
+     */
+    private double countSubscriberSessions() {
+        Set<String> sessions = new HashSet<>();
+        for (var consumers : cacheSubscriptions.values()) {
+            for (var consumer : consumers) {
+                if (!Objects.equals(consumer.sessionId, nearCacheSessionId)) {
+                    sessions.add(consumer.sessionId);
+                }
+            }
+        }
+        return sessions.size();
     }
 
     private static String clusterSubscriptionKey(String cacheId, String key, SubscriptionMode mode) {

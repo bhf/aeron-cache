@@ -8,6 +8,7 @@ import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.http.responses.SubscriptionAck;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.metrics.WebGatewayMetrics;
 import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
 import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
@@ -39,6 +40,14 @@ import io.jooby.handler.Cors;
 import io.jooby.handler.CorsHandler;
 import io.jooby.jackson.JacksonModule;
 import io.jooby.netty.NettyServer;
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
+import io.micrometer.core.instrument.binder.system.UptimeMetrics;
+import io.micrometer.prometheusmetrics.PrometheusConfig;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.opentelemetry.api.trace.Span;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -82,6 +91,8 @@ public class SSEApplication extends Jooby {
     private static final ObjectWriter writer = new ObjectMapper().writer();
     private static boolean CLUSTERED_MODE;
     public static int BOUND_PORT;
+    private static PrometheusMeterRegistry metricsRegistry;
+    private static WebGatewayMetrics metrics;
 
     public static void main(final String[] args) {
         BOUND_PORT = startSSEInterface(args, DEFAULT_SSE_PORT);
@@ -89,6 +100,7 @@ public class SSEApplication extends Jooby {
 
     public static int startSSEInterface(String[] args, int port) {
         System.out.println("Starting SSE interface");
+        initMetrics();
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
         nearCacheEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false"));
         System.out.println("Near cache hydration enabled: " + nearCacheEnabled);
@@ -98,6 +110,23 @@ public class SSEApplication extends Jooby {
         var boundPort = startHTTPServer(args, port);
         setupCacheConnection();
         return boundPort;
+    }
+
+    /**
+     * Build the Micrometer registry that backs the {@code /prometheus} endpoint. SSE has no metrics
+     * surface of its own otherwise, so this gives it JVM/process metrics plus the web gateway
+     * subscription and operation metrics, on the same Micrometer path the HTTP and WS interfaces use.
+     */
+    private static void initMetrics() {
+        metricsRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        metricsRegistry.config().commonTags("application", "aeron-cache-sse");
+        new ClassLoaderMetrics().bindTo(metricsRegistry);
+        new JvmMemoryMetrics().bindTo(metricsRegistry);
+        new JvmGcMetrics().bindTo(metricsRegistry);
+        new JvmThreadMetrics().bindTo(metricsRegistry);
+        new UptimeMetrics().bindTo(metricsRegistry);
+        new ProcessorMetrics().bindTo(metricsRegistry);
+        metrics = new WebGatewayMetrics(metricsRegistry);
     }
 
     {
@@ -120,6 +149,10 @@ public class SSEApplication extends Jooby {
 
         get(LIVENESS, SSEApplication::handleGetLiveness);
         get(READINESS, SSEApplication::handleGetReadiness);
+        get("/prometheus", ctx -> {
+            ctx.setResponseType("text/plain; version=0.0.4; charset=utf-8");
+            return metricsRegistry.scrape();
+        });
 
         if (nearCacheEnabled) {
             get(NEAR_CACHES_API, ctx -> handleGetNearCaches(ctx, subscriptionService));
@@ -285,6 +318,7 @@ public class SSEApplication extends Jooby {
     }
 
     private static void handleSingleCacheSSE(ServerSentEmitter serverSentEmitter) {
+        metrics.recordOperation("subscribeCache");
         try {
             var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
             var requestId = getRequestId(serverSentEmitter.getContext());
@@ -320,6 +354,7 @@ public class SSEApplication extends Jooby {
     }
 
     private static void handleSingleCountersCacheSSE(ServerSentEmitter serverSentEmitter) {
+        metrics.recordOperation("subscribeCounter");
         try {
             var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
             var requestId = getRequestId(serverSentEmitter.getContext());
@@ -355,6 +390,7 @@ public class SSEApplication extends Jooby {
     }
 
     private static void handleSingleCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
+        metrics.recordOperation("subscribeCacheHydrate");
         try {
             var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
             var requestId = getRequestId(serverSentEmitter.getContext());
@@ -390,6 +426,7 @@ public class SSEApplication extends Jooby {
     }
 
     private static void handleSingleCountersCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
+        metrics.recordOperation("subscribeCounterHydrate");
         try {
             var cacheId = serverSentEmitter.getContext().path("cacheId").toString();
             var requestId = getRequestId(serverSentEmitter.getContext());
@@ -426,6 +463,7 @@ public class SSEApplication extends Jooby {
 
 
     private static void handleMultiCacheSSE(ServerSentEmitter serverSentEmitter) {
+        metrics.recordOperation("subscribeCaches");
         var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
         log.info("Got cache Ids: "+cacheIds);
         List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
@@ -451,6 +489,7 @@ public class SSEApplication extends Jooby {
     }
 
     private static void handleMultiCountersCacheSSE(ServerSentEmitter serverSentEmitter) {
+        metrics.recordOperation("subscribeCounters");
         var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
         log.info("Got cache Ids: "+cacheIds);
         List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
@@ -476,6 +515,7 @@ public class SSEApplication extends Jooby {
     }
 
     private static void handleMultiCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
+        metrics.recordOperation("subscribeCachesHydrate");
         var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
         log.info("Got cache Ids: "+cacheIds);
         List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
@@ -501,6 +541,7 @@ public class SSEApplication extends Jooby {
     }
 
     private static void handleMultiCountersCacheSSEWithHydration(ServerSentEmitter serverSentEmitter) {
+        metrics.recordOperation("subscribeCountersHydrate");
         var cacheIds = serverSentEmitter.getContext().path("cacheIds").toString();
         log.info("Got cache Ids: "+cacheIds);
         List<String> caches = Arrays.stream(cacheIds.split(",")).toList();
@@ -581,6 +622,11 @@ public class SSEApplication extends Jooby {
 
                 CacheRequestPublisher<String, String, Long> countersRbPublisher = new RBCountersRequestPublisher(rb);
                 countersSubscriptionService = new CacheSubscriptionRequestPublisher(countersRbPublisher, countersNearCacheManager);
+            }
+
+            subscriptionService.registerMetrics(metricsRegistry, "cache");
+            if (countersSubscriptionService != null) {
+                countersSubscriptionService.registerMetrics(metricsRegistry, "counters");
             }
 
             client = new AeronCacheClusterListener(responseDecoder, schemaDetailsProvider, indexSupplier, keySupplier, valueSupplier);

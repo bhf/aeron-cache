@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.ws.handlers;
 
 import com.bhf.aeroncache.http.responses.SubscriptionAck;
+import com.bhf.aeroncache.metrics.WebGatewayMetrics;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.ws.application.CacheSubscriptionRequestPublisher;
 import com.bhf.aeroncache.ws.application.WebsocketApplication;
@@ -35,11 +36,16 @@ public abstract class AbstractWsRouteHandlers {
     protected final CacheSubscriptionRequestPublisher subscriptionService;
     protected final boolean allowPatch;
     protected final String entityLabel;
+    protected final WebGatewayMetrics metrics;
+    protected final String subscribeOp;
 
-    protected AbstractWsRouteHandlers(CacheSubscriptionRequestPublisher subscriptionService, boolean allowPatch, String entityLabel) {
+    protected AbstractWsRouteHandlers(CacheSubscriptionRequestPublisher subscriptionService, boolean allowPatch, String entityLabel,
+                                      WebGatewayMetrics metrics, String subscribeOp) {
         this.subscriptionService = subscriptionService;
         this.allowPatch = allowPatch;
         this.entityLabel = entityLabel;
+        this.metrics = metrics;
+        this.subscribeOp = subscribeOp;
     }
 
     /**
@@ -111,6 +117,7 @@ public abstract class AbstractWsRouteHandlers {
     }
 
     private void subscribe(WsConnectContext ctx, List<String> caches, boolean hydrate) {
+        metrics.recordOperation(hydrate ? subscribeOp + "Hydrate" : subscribeOp);
         var requestId = getRequestId(ctx.getUpgradeCtx$javalin());
         final Consumer<Void> subscriptionFailureHandler = _ ->
                 ctx.closeSession(WsCloseStatus.SERVER_ERROR, "Couldn't subscribe to " + entityLabel);

@@ -7,6 +7,7 @@ import com.bhf.aeroncache.http.responses.RequestErrorResponse;
 import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.metrics.WebGatewayMetrics;
 import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
 import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
@@ -88,6 +89,8 @@ public class WebsocketApplication {
     private static MediaDriver mediaDriver;
     private static boolean CLUSTERED_MODE;
     public static int BOUND_PORT;
+    private static PrometheusMeterRegistry metricsRegistry;
+    private static WebGatewayMetrics metrics;
 
     public static void main(String[] args) {
         BOUND_PORT = startWebsocketInterface(DEFAULT_WS_PORT);
@@ -137,6 +140,11 @@ public class WebsocketApplication {
             client.setCacheResultsCallbacks(subscriptionService);
             client.setCountersResultsCallbacks(countersSubscriptionService);
             client.setCountersCacheResponseDecoder(countersResponseDecoder);
+
+            subscriptionService.registerMetrics(metricsRegistry, "cache");
+            if (countersSubscriptionService != null) {
+                countersSubscriptionService.registerMetrics(metricsRegistry, "counters");
+            }
 
             setupCacheWsRouteHandlers(app);
             setupCountersWsRouteHandlers(app);
@@ -258,6 +266,8 @@ public class WebsocketApplication {
 
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         registry.config().commonTags("application", "aeron-cache-ws");
+        metricsRegistry = registry;
+        metrics = new WebGatewayMetrics(registry);
 
         new ClassLoaderMetrics().bindTo(registry);
         new JvmMemoryMetrics().bindTo(registry);
@@ -286,7 +296,7 @@ public class WebsocketApplication {
      * @param app The Javalin instance.
      */
     private static void setupCacheWsRouteHandlers(Javalin app) {
-        var handlers = new CacheWsRouteHandlers(subscriptionService);
+        var handlers = new CacheWsRouteHandlers(subscriptionService, metrics);
         app.ws(CACHE_API_PREFIX + "hydrate/{cacheId}", handlers::handleSingleCacheWsWithHydration)
                 .ws(CACHE_MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", handlers::handleMultiCacheWsWithHydration)
                 .ws(CACHE_API_PREFIX + "{cacheId}", handlers::handleSingleCacheWs)
@@ -382,7 +392,7 @@ public class WebsocketApplication {
      * @param app The Javalin instance.
      */
     private static void setupCountersWsRouteHandlers(Javalin app) {
-        var handlers = new CountersWsRouteHandlers(countersSubscriptionService);
+        var handlers = new CountersWsRouteHandlers(countersSubscriptionService, metrics);
         app.ws(COUNTERS_API_PREFIX + "hydrate/{cacheId}", handlers::handleSingleCacheWsWithHydration)
                 .ws(COUNTERS_MULTI_SUB_API_PREFIX + "hydrate/{cacheIds}", handlers::handleMultiCacheWsWithHydration)
                 .ws(COUNTERS_API_PREFIX + "{cacheId}", handlers::handleSingleCacheWs)
@@ -397,7 +407,7 @@ public class WebsocketApplication {
      * @param app The Javalin instance.
      */
     private static void setupBidiWsRouteHandler(Javalin app) {
-        var handler = new BidiWsRouteHandler(subscriptionService, countersSubscriptionService);
+        var handler = new BidiWsRouteHandler(subscriptionService, countersSubscriptionService, metrics);
         app.ws(BIDI_API, handler::handleBidi);
     }
 
