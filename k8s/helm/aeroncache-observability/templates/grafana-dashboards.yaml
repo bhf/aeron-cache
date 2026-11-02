@@ -328,6 +328,96 @@ data:
         }
       ]
     }
+  # Web gateways dashboard, built on the Micrometer metrics the HTTP / WebSocket / SSE interface apps
+  # expose on their own /prometheus endpoints (not the Aeron media driver counters): per-operation
+  # counters (aeroncache_operations_total) and the subscription gauges (aeroncache_subscriptions_active,
+  # aeroncache_subscribers_active). Series are broken down by the `application` common tag
+  # (aeron-cache-http / -ws / -sse) so the three web interfaces are compared side by side.
+  aeron-cache-web-gateways.json: |
+    {
+      "title": "Aeron Cache - Web Gateways",
+      "uid": "aeron-cache-web-gateways",
+      "schemaVersion": 39,
+      "editable": true,
+      "time": { "from": "now-30m", "to": "now" },
+      "refresh": "10s",
+      "templating": {
+        "list": [
+          { "name": "datasource", "type": "datasource", "query": "prometheus", "hide": 0, "current": {} }
+        ]
+      },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Active subscribers",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "targets": [ { "expr": "sum(aeroncache_subscribers_active)", "legendFormat": "subscribers" } ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null } ] } } }
+        },
+        {
+          "type": "stat",
+          "title": "Active subscriptions",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "targets": [ { "expr": "sum(aeroncache_subscriptions_active)", "legendFormat": "subscriptions" } ]
+        },
+        {
+          "type": "stat",
+          "title": "Operation rate",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "ops" } },
+          "targets": [ { "expr": "sum(rate(aeroncache_operations_total[1m]))", "legendFormat": "ops" } ]
+        },
+        {
+          "type": "stat",
+          "title": "Web interfaces reporting",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "targets": [ { "expr": "count(group by (application) (aeroncache_operations_total))", "legendFormat": "interfaces" } ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } }
+        },
+        {
+          "type": "timeseries",
+          "title": "Subscribers by interface",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 4 },
+          "targets": [ { "expr": "sum by (application) (aeroncache_subscribers_active)", "legendFormat": "{{`{{application}}`}}" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Subscriptions: whole vs keyed",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 4 },
+          "targets": [ { "expr": "sum by (application, type) (aeroncache_subscriptions_active)", "legendFormat": "{{`{{application}}`}} {{`{{type}}`}}" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Operation rate by operation",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 13 },
+          "fieldConfig": { "defaults": { "unit": "ops" } },
+          "targets": [ { "expr": "sum by (operation) (rate(aeroncache_operations_total[1m]))", "legendFormat": "{{`{{operation}}`}}" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Operation rate by interface",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 13 },
+          "fieldConfig": { "defaults": { "unit": "ops" } },
+          "targets": [ { "expr": "sum by (application) (rate(aeroncache_operations_total[1m]))", "legendFormat": "{{`{{application}}`}}" } ]
+        },
+        {
+          "type": "bargauge",
+          "title": "Operations by type (cumulative)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 22 },
+          "options": { "orientation": "horizontal", "displayMode": "gradient" },
+          "targets": [ { "expr": "sum by (operation) (aeroncache_operations_total)", "legendFormat": "{{`{{operation}}`}}", "instant": true } ]
+        }
+      ]
+    }
   # General Aeron transport / media driver dashboard, built on the raw aeron_counter export (every
   # allocated media driver counter from the CnC file) exported by the clustertools sidecar. This is
   # deployment agnostic: it shows whatever the co-located media driver publishes, whether the pod is a

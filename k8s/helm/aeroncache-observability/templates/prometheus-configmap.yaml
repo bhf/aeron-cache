@@ -44,6 +44,41 @@ data:
           - source_labels: [__meta_kubernetes_namespace]
             action: replace
             target_label: namespace
+      # Annotation-based auto-discovery of the web interface apps' own Micrometer metrics (the
+      # subscription gauges and per-operation counters from WebGatewayMetrics, plus JVM metrics),
+      # served on the app's HTTP port at /prometheus. The HTTP/WS/SSE pods carry
+      # aeroncache.io/app-metrics-scrape=true plus the app metrics port/path (enabled by default,
+      # independent of the optional OTel javaagent scraped by aeroncache-pods above).
+      - job_name: aeroncache-app-metrics
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                {{- range .Values.prometheus.scrapeNamespaces }}
+                - {{ . }}
+                {{- end }}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_aeroncache_io_app_metrics_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_aeroncache_io_app_metrics_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_aeroncache_io_app_metrics_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+            action: replace
+            target_label: app
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
       # Prometheus scraping itself, handy as a liveness signal in Grafana.
       - job_name: prometheus
         static_configs:

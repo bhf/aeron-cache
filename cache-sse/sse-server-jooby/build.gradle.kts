@@ -26,6 +26,8 @@ dependencies {
     implementation(libs.opentelemetry.api)
     implementation(libs.opentelemetry.sdk)
     implementation(libs.opentelemetry.exporter.otlp)
+    implementation(libs.micrometer.core)
+    implementation(libs.micrometer.prometheus)
     implementation(libs.jooby.kotlin)
     implementation(libs.jooby.netty)
     implementation(libs.jooby.jackson)

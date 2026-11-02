@@ -1,6 +1,7 @@
 package com.bhf.aeroncache.ws.bidi;
 
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.metrics.WebGatewayMetrics;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.bulk.responses.CacheOperationResponse;
@@ -79,13 +80,16 @@ public class BidiWsRouteHandler {
 
     private final CacheSubscriptionRequestPublisher cacheSubs;
     private final CacheSubscriptionRequestPublisher countersSubs;
+    private final WebGatewayMetrics metrics;
     private final BidiMessageCodec codec = new BidiMessageCodec();
     private final Map<String, BidiSession> sessions = new ConcurrentHashMap<>();
 
     public BidiWsRouteHandler(CacheSubscriptionRequestPublisher cacheSubs,
-                              CacheSubscriptionRequestPublisher countersSubs) {
+                              CacheSubscriptionRequestPublisher countersSubs,
+                              WebGatewayMetrics metrics) {
         this.cacheSubs = cacheSubs;
         this.countersSubs = countersSubs;
+        this.metrics = metrics;
     }
 
     /**
@@ -122,10 +126,22 @@ public class BidiWsRouteHandler {
 
         try {
             switch (message) {
-                case BidiCommand command -> handleCommand(session, command);
-                case BidiSubscribe subscribe -> handleSubscribe(session, subscribe);
-                case BidiUnsubscribe unsubscribe -> handleUnsubscribe(session, unsubscribe);
-                case BidiBulk bulk -> handleBulk(session, bulk);
+                case BidiCommand command -> {
+                    metrics.recordOperation(command.op().name());
+                    handleCommand(session, command);
+                }
+                case BidiSubscribe subscribe -> {
+                    metrics.recordOperation("subscribe");
+                    handleSubscribe(session, subscribe);
+                }
+                case BidiUnsubscribe unsubscribe -> {
+                    metrics.recordOperation("unsubscribe");
+                    handleUnsubscribe(session, unsubscribe);
+                }
+                case BidiBulk bulk -> {
+                    metrics.recordOperation("bulkOps");
+                    handleBulk(session, bulk);
+                }
             }
         } catch (Exception e) {
             log.warn("Error handling BIDI frame on sessionId {}", ctx.sessionId(), e);

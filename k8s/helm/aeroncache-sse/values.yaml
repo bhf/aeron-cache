@@ -76,6 +76,15 @@ javaagent:
   # Extra OTEL_*/agent env, e.g. [{name: OTEL_METRIC_EXPORT_INTERVAL, value: "5000"}].
   extraEnv: []
 
+# The application's own Micrometer metrics, served on the HTTP service port at appMetrics.path
+# (subscription gauges, per-operation counters and JVM metrics). Unlike the OTel javaagent above this
+# is enabled by default: the pod is annotated with aeroncache.io/app-metrics-scrape so the
+# aeroncache-observability Prometheus scrapes this endpoint via its aeroncache-app-metrics job. It is
+# independent of the javaagent, so both can be scraped at once.
+appMetrics:
+  enabled: true
+  path: /prometheus
+
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   repository: aeroncache-sse

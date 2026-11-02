@@ -24,6 +24,7 @@ import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.bulk.responses.BulkCacheOpsResponse;
 import com.bhf.aeroncache.models.results.BulkCacheOpsResult;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
+import com.bhf.aeroncache.metrics.WebGatewayMetrics;
 import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
 import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.ReconnectingAeronCache;
@@ -133,6 +134,7 @@ public class HttpApplication {
     private static AeronCache cache;
     private static final AtomicBoolean clusterConnected = new AtomicBoolean(false);
     public static final CacheStatsTracker statsTracker = new CacheStatsTracker();
+    private static WebGatewayMetrics metrics;
     public static final Set<String> allCaches = new ConcurrentSkipListSet<>();
     public static final Map<String, Long> cacheToSize = new ConcurrentHashMap<>();
     public static final Set<String> allCounterCaches = new ConcurrentSkipListSet<>();
@@ -350,6 +352,7 @@ public class HttpApplication {
 
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         registry.config().commonTags("application", "aeron-cache-http");
+        metrics = new WebGatewayMetrics(registry);
 
         new ClassLoaderMetrics().bindTo(registry);
         new JvmMemoryMetrics().bindTo(registry);
@@ -367,7 +370,7 @@ public class HttpApplication {
         return Javalin.create(config)
                 .beforeMatched(HttpApplication::checkClusterConnectivity)
                 .before(CACHE_API_PREFIX + "*", _ -> statsTracker.getTotalOpsCount().incrementAndGet())
-                .post(CACHE_API_PREFIX + "bulkops/", HttpApplication::handleBulkOpsRequest)
+                .post(CACHE_API_PREFIX + "bulkops/", counted("bulkOps", HttpApplication::handleBulkOpsRequest))
                 .post("/api/v1/shutdown", HttpApplication::handleShutdownCluster)
                 .post("/api/v1/snapshot", HttpApplication::handleTakeSnapshot)
                 .post("/api/v1/snapshot-and-purge", HttpApplication::handleSnapshotAndPurge)
@@ -387,20 +390,35 @@ public class HttpApplication {
         // transparently from the near cache on the same URIs; otherwise they are strong cluster reads.
         Handler getItem = nearCacheEnabled ? countersNearCacheHandlers::handleGetItemRequest : countersHandlers::handleGetItemRequest;
         Handler getCache = nearCacheEnabled ? countersNearCacheHandlers::handleGetCacheRequest : countersHandlers::handleGetCacheRequest;
-        app.post(COUNTERS_API_PREFIX, countersHandlers::handleCreateCacheRequest)
-                .get(COUNTERS_API_PREFIX + "<cacheId>/<key>", getItem)
-                .get(COUNTERS_API_PREFIX + "<cacheId>", getCache)
-                .post(COUNTERS_API_PREFIX + "timed/<cacheId>", countersHandlers::handlePutTimedItemRequest)
-                .post(COUNTERS_API_PREFIX + "increment/<cacheId>", countersHandlers::handleIncrementItemRequest)
-                .post(COUNTERS_API_PREFIX + "decrement/<cacheId>", countersHandlers::handleDecrementItemRequest)
-                .post(COUNTERS_API_PREFIX + "set/<cacheId>", countersHandlers::handleSetItemRequest)
-                .post(COUNTERS_API_PREFIX + "<cacheId>/<key>/cancel-removal", countersHandlers::handleCancelItemRemovalRequest)
-                .post(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handlePutItemRequest)
-                .delete(COUNTERS_API_PREFIX + "<cacheId>/<key>", countersHandlers::handleDeleteItemRequest)
-                .delete(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handleDeleteCacheRequest)
-                .patch(COUNTERS_API_PREFIX + "<cacheId>", countersHandlers::handleClearCacheRequest)
-                .get("/api/v1/counters-caches", countersHandlers::handleGetCachesRequest)
-                .get("/api/v1/counters-stats", countersHandlers::handleGetStatsRequest);
+        app.post(COUNTERS_API_PREFIX, counted("createCounterCache", countersHandlers::handleCreateCacheRequest))
+                .get(COUNTERS_API_PREFIX + "<cacheId>/<key>", counted("getCounter", getItem))
+                .get(COUNTERS_API_PREFIX + "<cacheId>", counted("getCounterCache", getCache))
+                .post(COUNTERS_API_PREFIX + "timed/<cacheId>", counted("putTimedCounter", countersHandlers::handlePutTimedItemRequest))
+                .post(COUNTERS_API_PREFIX + "increment/<cacheId>", counted("incrementCounter", countersHandlers::handleIncrementItemRequest))
+                .post(COUNTERS_API_PREFIX + "decrement/<cacheId>", counted("decrementCounter", countersHandlers::handleDecrementItemRequest))
+                .post(COUNTERS_API_PREFIX + "set/<cacheId>", counted("setCounter", countersHandlers::handleSetItemRequest))
+                .post(COUNTERS_API_PREFIX + "<cacheId>/<key>/cancel-removal", counted("cancelCounterRemoval", countersHandlers::handleCancelItemRemovalRequest))
+                .post(COUNTERS_API_PREFIX + "<cacheId>", counted("putCounter", countersHandlers::handlePutItemRequest))
+                .delete(COUNTERS_API_PREFIX + "<cacheId>/<key>", counted("deleteCounter", countersHandlers::handleDeleteItemRequest))
+                .delete(COUNTERS_API_PREFIX + "<cacheId>", counted("deleteCounterCache", countersHandlers::handleDeleteCacheRequest))
+                .patch(COUNTERS_API_PREFIX + "<cacheId>", counted("clearCounterCache", countersHandlers::handleClearCacheRequest))
+                .get("/api/v1/counters-caches", counted("getCounterCaches", countersHandlers::handleGetCachesRequest))
+                .get("/api/v1/counters-stats", counted("getCounterStats", countersHandlers::handleGetStatsRequest));
+    }
+
+    /**
+     * Wrap a route handler so each invocation records one {@code aeroncache_operations_total} count
+     * tagged with the given operation, giving per-endpoint operation metrics on {@code /prometheus}.
+     *
+     * @param operation the operation name for the {@code operation} tag.
+     * @param delegate  the handler to invoke.
+     * @return the wrapped handler.
+     */
+    private static Handler counted(String operation, Handler delegate) {
+        return ctx -> {
+            metrics.recordOperation(operation);
+            delegate.handle(ctx);
+        };
     }
 
     private static void setupCacheRouteHandlers(Javalin app) {
@@ -411,19 +429,19 @@ public class HttpApplication {
         // cluster regardless, and the near cache picks them up through its own subscription.
         Handler getItem = nearCacheEnabled ? nearCacheHandlers::handleGetItemRequest : handlers::handleGetItemRequest;
         Handler getCache = nearCacheEnabled ? nearCacheHandlers::handleGetCacheRequest : handlers::handleGetCacheRequest;
-        app.post(CACHE_API_PREFIX, handlers::handleCreateCacheRequest)
-                .get(CACHE_API_PREFIX + "<cacheId>/<key>", getItem)
-                .get(CACHE_API_PREFIX + "<cacheId>", getCache)
-                .post(CACHE_API_PREFIX + "timed/<cacheId>", handlers::handlePutTimedItemRequest)
-                .post(CACHE_API_PREFIX + "<cacheId>/<key>/cancel-removal", handlers::handleCancelItemRemovalRequest)
-                .post(CACHE_API_PREFIX + "<cacheId>", handlers::handlePutItemRequest)
-                .delete(CACHE_API_PREFIX + "<cacheId>/<key>", handlers::handleDeleteItemRequest)
-                .delete(CACHE_API_PREFIX + "<cacheId>", handlers::handleDeleteCacheRequest)
-                .patch(CACHE_API_PREFIX + "<cacheId>/<key>", handlers::handlePatchItemRequest)
-                .patch(CACHE_API_PREFIX + "<cacheId>", handlers::handleClearCacheRequest)
-                .get("/api/v1/caches", handlers::handleGetCachesRequest)
-                .get("/api/v1/stats", handlers::handleGetStatsRequest)
-                .get("/api/v1/timers", handlers::handleGetTimersRequest);
+        app.post(CACHE_API_PREFIX, counted("createCache", handlers::handleCreateCacheRequest))
+                .get(CACHE_API_PREFIX + "<cacheId>/<key>", counted("getItem", getItem))
+                .get(CACHE_API_PREFIX + "<cacheId>", counted("getCache", getCache))
+                .post(CACHE_API_PREFIX + "timed/<cacheId>", counted("putTimedItem", handlers::handlePutTimedItemRequest))
+                .post(CACHE_API_PREFIX + "<cacheId>/<key>/cancel-removal", counted("cancelItemRemoval", handlers::handleCancelItemRemovalRequest))
+                .post(CACHE_API_PREFIX + "<cacheId>", counted("putItem", handlers::handlePutItemRequest))
+                .delete(CACHE_API_PREFIX + "<cacheId>/<key>", counted("deleteItem", handlers::handleDeleteItemRequest))
+                .delete(CACHE_API_PREFIX + "<cacheId>", counted("deleteCache", handlers::handleDeleteCacheRequest))
+                .patch(CACHE_API_PREFIX + "<cacheId>/<key>", counted("patchItem", handlers::handlePatchItemRequest))
+                .patch(CACHE_API_PREFIX + "<cacheId>", counted("clearCache", handlers::handleClearCacheRequest))
+                .get("/api/v1/caches", counted("getCaches", handlers::handleGetCachesRequest))
+                .get("/api/v1/stats", counted("getStats", handlers::handleGetStatsRequest))
+                .get("/api/v1/timers", counted("getTimers", handlers::handleGetTimersRequest));
     }
 
     /**
