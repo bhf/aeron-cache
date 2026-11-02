@@ -4,6 +4,7 @@ import com.bhf.aeroncache.application.ephemeral.EphemeralCacheApplication;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
+import com.bhf.aeroncache.services.subscription.metrics.AeronCounterSubscriptionServiceMetricsFactory;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import com.bhf.aeroncache.services.tracing.impl.AeronCounterTracingService;
 import com.bhf.aeroncache.services.tracing.impl.OtelTracingService;
@@ -302,7 +303,8 @@ public class CacheNodeApplication {
 
     private static SBEDecodingCacheClusterService<Reusable<?>, Reusable<?>, Reusable<?>> getSbeDecodingCacheClusterService(
             int nodeId, String aeronDirName, CacheManagerFactory<Reusable<?>, Reusable<?>, Reusable<?>> cacheManagerFactory, boolean dynamicCacheCreation) {
-        return new SBEDecodingCacheClusterService<>(String.valueOf(nodeId), getTracingService(nodeId, aeronDirName), cacheManagerFactory, dynamicCacheCreation);
+        return new SBEDecodingCacheClusterService<>(String.valueOf(nodeId), getTracingService(nodeId, aeronDirName), cacheManagerFactory,
+                new AeronCounterSubscriptionServiceMetricsFactory(aeronDirName, String.valueOf(nodeId)), dynamicCacheCreation);
     }
 
     private static CacheManagerFactory getCacheManagerFactory() {

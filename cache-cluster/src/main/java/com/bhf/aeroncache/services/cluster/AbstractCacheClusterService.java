@@ -22,6 +22,8 @@ import com.bhf.aeroncache.services.cachemanager.CacheSchemaDetailsProvider;
 import com.bhf.aeroncache.services.cachemanager.CountersCacheManager;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionServiceImpl;
+import com.bhf.aeroncache.services.subscription.metrics.NoOpSubscriptionServiceMetricsFactory;
+import com.bhf.aeroncache.services.subscription.metrics.SubscriptionServiceMetricsFactory;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
@@ -60,6 +62,7 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     private final MutableDirectBuffer egressBuffer = new ExpandableArrayBuffer();
     private final MutableDirectBuffer snapshotBuffer = new ExpandableArrayBuffer();
     private final CacheTracingService tracingService;
+    private final SubscriptionServiceMetricsFactory subscriptionMetricsFactory;
     private final PublicationFailureHandler publicationFailureHandler = new NoOpPublicationFailureHandler();
     private final TimerCorrelationIdProvider timerCorrelationIdProvider = new TimerCorrelationIdProvider();
     private IdleStrategy idleStrategy;
@@ -135,6 +138,12 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
     };
 
     protected AbstractCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory) {
+        this(nodeId, tracingService, cacheManagerFactory, new NoOpSubscriptionServiceMetricsFactory());
+    }
+
+    protected AbstractCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory,
+                                          SubscriptionServiceMetricsFactory subscriptionMetricsFactory) {
+        this.subscriptionMetricsFactory = subscriptionMetricsFactory;
         this.createCacheRequestDetails = new CreateCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.clearCacheRequestDetails = new ClearCacheRequestDetails<>(cacheManagerFactory.getIndexSupplier().get());
         this.removeCacheEntryRequestDetails = new RemoveCacheEntryRequestDetails<>(cacheManagerFactory.getIndexSupplier().get(), cacheManagerFactory.getKeySupplier().get());
@@ -294,9 +303,9 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         }
 
         log.info("Starting subscription service");
-        this.subscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscribeResult, unsubscribeResult, indexSupplier, cacheManagerFactory.getKeySupplier());
-        this.patchSubscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, patchSubscribeResult, unsubscribeResult, indexSupplier, cacheManagerFactory.getKeySupplier());
-        this.countersSubscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, countersSubscribeResult, unsubscribeResult, indexSupplier, cacheManagerFactory.getKeySupplier());
+        this.subscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscribeResult, unsubscribeResult, indexSupplier, cacheManagerFactory.getKeySupplier(), subscriptionMetricsFactory.create("cache"));
+        this.patchSubscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, patchSubscribeResult, unsubscribeResult, indexSupplier, cacheManagerFactory.getKeySupplier(), subscriptionMetricsFactory.create("patch"));
+        this.countersSubscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, countersSubscribeResult, unsubscribeResult, indexSupplier, cacheManagerFactory.getKeySupplier(), subscriptionMetricsFactory.create("counters"));
     }
 
     private Consumer<TimerDetailsFlyweight<I, K>> getCountersTimerDetailsFlyweightConsumer() {

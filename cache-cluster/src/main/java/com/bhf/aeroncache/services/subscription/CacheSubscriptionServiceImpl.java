@@ -4,6 +4,7 @@ import com.bhf.aeroncache.models.CompoundCacheKey;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.CacheUnsubscribeRequestDetails;
 import com.bhf.aeroncache.models.results.*;
+import com.bhf.aeroncache.services.subscription.metrics.SubscriptionServiceMetrics;
 import io.aeron.cluster.service.ClientSession;
 import lombok.extern.log4j.Log4j2;
 import org.agrona.MutableDirectBuffer;
@@ -20,21 +21,31 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
     private final CacheUnsubscribeResult<I> unsubscribeResult;
     private final Supplier<I> indexSupplier;
     private final Supplier<K> keySupplier;
+    private final SubscriptionServiceMetrics metrics;
     private final Map<I, Set<ClientSession>> wholeCacheSubscriptions = new HashMap<>();
     private final Map<CompoundCacheKey<I, K>, Set<ClientSession>> keySubscriptions = new HashMap<>();
     private final CompoundCacheKey<I, K> keyLookupKey;
     private final Set<ClientSession> sessionUnionScratch = new HashSet<>();
 
+    /**
+     * Current number of active subscriptions, where one subscription is one session registered against
+     * one subscription target (a whole cache or a key). Maintained incrementally and mirrored to
+     * {@link SubscriptionServiceMetrics#setActiveSubscriptions(long)} whenever it changes.
+     */
+    private int activeSubscriptions;
+
     public CacheSubscriptionServiceImpl(IdleStrategy idleStrategy,
                                         CacheSubscriptionResult<I, K, V> subscriptionResult,
                                         CacheUnsubscribeResult<I> unsubscribeResult,
                                         Supplier<I> indexSupplier,
-                                        Supplier<K> keySupplier) {
+                                        Supplier<K> keySupplier,
+                                        SubscriptionServiceMetrics metrics) {
         this.idleStrategy = idleStrategy;
         this.subscriptionResult = subscriptionResult;
         this.unsubscribeResult = unsubscribeResult;
         this.indexSupplier = indexSupplier;
         this.keySupplier = keySupplier;
+        this.metrics = metrics;
         this.keyLookupKey = new CompoundCacheKey<>(indexSupplier.get(), keySupplier.get());
     }
 
@@ -47,7 +58,7 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
             storedId.copyFrom(cacheId);
             wholeCacheSubscriptions.put(storedId, existingSubscribers);
         }
-        return recordSubscription(session, cacheId, existingSubscribers, requestId);
+        return recordSubscription(session, cacheId, existingSubscribers, requestId, true);
     }
 
     @Override
@@ -64,18 +75,27 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
             storedKey.getKey().copyFrom(key);
             keySubscriptions.put(storedKey, existingSubscribers);
         }
-        return recordSubscription(session, cacheId, existingSubscribers, requestId);
+        return recordSubscription(session, cacheId, existingSubscribers, requestId, false);
     }
 
     private CacheSubscriptionResult<I,K,V> recordSubscription(ClientSession session, I cacheId,
-                                                              Set<ClientSession> subscribers, String requestId) {
+                                                              Set<ClientSession> subscribers, String requestId,
+                                                              boolean wholeCacheSubscription) {
         subscriptionResult.clear();
         subscriptionResult.setRequestId(requestId);
         subscriptionResult.getCacheId().copyFrom(cacheId);
         if (subscribers.add(session)) {
             subscriptionResult.setStatus(CacheOperationStatus.SUCCESS);
+            activeSubscriptions++;
+            metrics.setActiveSubscriptions(activeSubscriptions);
+            if (wholeCacheSubscription) {
+                metrics.onWholeCacheSubscription();
+            } else {
+                metrics.onKeySubscription();
+            }
         } else {
             subscriptionResult.setStatus(CacheOperationStatus.DUPLICATE_SUBSCRIPTION);
+            metrics.onDuplicateSubscription();
         }
         log.debug("Total subscriptions for cache {}: {}", cacheId, subscribers.size());
         return subscriptionResult;
@@ -94,6 +114,9 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
             if (subscribers.remove(session)) {
                 log.info("Unsubscribed on cache {}, session {}", cacheId, session.id());
                 unsubscribeResult.setStatus(CacheOperationStatus.SUCCESS);
+                activeSubscriptions--;
+                metrics.setActiveSubscriptions(activeSubscriptions);
+                metrics.onUnsubscription();
             } else {
                 unsubscribeResult.setStatus(CacheOperationStatus.UNKNOWN_SUBSCRIPTION);
             }
@@ -108,6 +131,7 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
         while (session.offer(msgBuffer, 0, len) < 0) {
             idleStrategy.idle();
         }
+        metrics.onUpdatePublished();
     }
 
     /**
@@ -238,15 +262,23 @@ public class CacheSubscriptionServiceImpl<I extends Reusable, K extends Reusable
     @Override
     public void onSessionClose(ClientSession session) {
         log.info("Handling client session closed, sessionId: {}", session.id());
-        wholeCacheSubscriptions.forEach((cacheId, clientSessions) -> {
-            if (clientSessions.remove(session)) {
-                log.info("Removed whole-cache subscription for cache {}, sessionId: {}", cacheId, session.id());
+        int removed = 0;
+        for (var entry : wholeCacheSubscriptions.entrySet()) {
+            if (entry.getValue().remove(session)) {
+                removed++;
+                log.info("Removed whole-cache subscription for cache {}, sessionId: {}", entry.getKey(), session.id());
             }
-        });
-        keySubscriptions.forEach((compoundKey, clientSessions) -> {
-            if (clientSessions.remove(session)) {
-                log.info("Removed key subscription for {}, sessionId: {}", compoundKey, session.id());
+        }
+        for (var entry : keySubscriptions.entrySet()) {
+            if (entry.getValue().remove(session)) {
+                removed++;
+                log.info("Removed key subscription for {}, sessionId: {}", entry.getKey(), session.id());
             }
-        });
+        }
+        if (removed > 0) {
+            activeSubscriptions -= removed;
+            metrics.setActiveSubscriptions(activeSubscriptions);
+        }
+        metrics.onSessionClosed();
     }
 }
