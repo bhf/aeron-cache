@@ -245,6 +245,89 @@ data:
         }
       ]
     }
+  # Cache subscriptions dashboard, built on the subscription metrics counters (Aeron counter type 2200)
+  # exported in Prometheus format by the clustertools sidecar. The cluster/ephemeral cache runs three
+  # subscription services per node (cache / patch / counters), broken out by the `subscription` label;
+  # series are broken down by pod so clustered and ephemeral deployments never collide.
+  aeron-cache-subscriptions.json: |
+    {
+      "title": "Aeron Cache - Subscriptions",
+      "uid": "aeron-cache-subscriptions",
+      "schemaVersion": 39,
+      "editable": true,
+      "time": { "from": "now-30m", "to": "now" },
+      "refresh": "10s",
+      "templating": {
+        "list": [
+          { "name": "datasource", "type": "datasource", "query": "prometheus", "hide": 0, "current": {} }
+        ]
+      },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Active subscriptions",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "targets": [ { "expr": "sum(aeron_cache_subscriptions_active)", "legendFormat": "active" } ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null } ] } } }
+        },
+        {
+          "type": "stat",
+          "title": "Subscribe rate",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "ops" } },
+          "targets": [ { "expr": "sum(rate(aeron_cache_subscriptions_total{event=~\"WholeCacheSubscribe|KeySubscribe\"}[1m]))", "legendFormat": "subscribes" } ]
+        },
+        {
+          "type": "stat",
+          "title": "Update publish rate",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "ops" } },
+          "targets": [ { "expr": "sum(rate(aeron_cache_subscriptions_total{event=\"UpdatePublished\"}[1m]))", "legendFormat": "updates" } ]
+        },
+        {
+          "type": "stat",
+          "title": "Nodes reporting",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "targets": [ { "expr": "count(group by (pod) (aeron_cache_subscriptions_total))", "legendFormat": "nodes" } ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } }
+        },
+        {
+          "type": "timeseries",
+          "title": "Active subscriptions by type",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 4 },
+          "targets": [ { "expr": "sum by (subscription) (aeron_cache_subscriptions_active)", "legendFormat": "{{`{{subscription}}`}}" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Subscription event rate by event",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 4 },
+          "fieldConfig": { "defaults": { "unit": "ops" } },
+          "targets": [ { "expr": "sum by (event) (rate(aeron_cache_subscriptions_total[1m]))", "legendFormat": "{{`{{event}}`}}" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Updates published rate by type",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 13 },
+          "fieldConfig": { "defaults": { "unit": "ops" } },
+          "targets": [ { "expr": "sum by (subscription) (rate(aeron_cache_subscriptions_total{event=\"UpdatePublished\"}[1m]))", "legendFormat": "{{`{{subscription}}`}}" } ]
+        },
+        {
+          "type": "bargauge",
+          "title": "Subscription events by event (cumulative)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 13 },
+          "options": { "orientation": "horizontal", "displayMode": "gradient" },
+          "targets": [ { "expr": "sum by (event) (aeron_cache_subscriptions_total)", "legendFormat": "{{`{{event}}`}}", "instant": true } ]
+        }
+      ]
+    }
   # General Aeron transport / media driver dashboard, built on the raw aeron_counter export (every
   # allocated media driver counter from the CnC file) exported by the clustertools sidecar. This is
   # deployment agnostic: it shows whatever the co-located media driver publishes, whether the pod is a

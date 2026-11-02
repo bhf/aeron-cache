@@ -24,6 +24,10 @@ import java.util.regex.Pattern;
  *     {@code aeron_gateway_requests_total{type,node}}, {@code aeron_gateway_sessions_connected{node}},
  *     {@code aeron_gateway_sessions_total{node}} and
  *     {@code aeron_gateway_stream_updates_published_total{node}} for the gateway dashboard.</li>
+ *     <li>The subscription metrics counters registered by the cache subscription services (type id
+ *     {@value #SUBSCRIPTION_TYPE_ID}) are additionally parsed into
+ *     {@code aeron_cache_subscriptions_total{subscription,event,node}} for subscribe/unsubscribe/update
+ *     events and {@code aeron_cache_subscriptions_active{subscription,node}} for the active gauge.</li>
  * </ul>
  *
  * <p>The parsed families are a convenience layer on top of the raw {@code aeron_counter} export: a
@@ -44,9 +48,20 @@ public final class AeronCountersPrometheusFormatter {
      */
     public static final int GATEWAY_TYPE_ID = 2100;
 
+    /**
+     * Type id of the counters registered by the cache subscription services
+     * ({@code com.bhf.aeroncache.services.subscription.metrics.AeronCounterSubscriptionServiceMetrics}).
+     */
+    public static final int SUBSCRIPTION_TYPE_ID = 2200;
+
     // AeronCache-Requests-<Operation>-node<nodeId> (operation labels never contain a hyphen).
     private static final Pattern CACHE_REQUEST =
             Pattern.compile("^AeronCache-Requests-([^-]+)-node(.+)$");
+    // AeronCache-Subscriptions-<type>-<Event>-node<nodeId> (type and event labels never contain a hyphen).
+    private static final Pattern SUBSCRIPTION =
+            Pattern.compile("^AeronCache-Subscriptions-([^-]+)-([^-]+)-node(.+)$");
+    // The one subscription event that is a gauge rather than a monotonic counter.
+    private static final String SUBSCRIPTION_ACTIVE_EVENT = "Active";
     // AeronCache-Gateway-Requests-<Type>-<nodeId> (request-type labels never contain a hyphen).
     private static final Pattern GATEWAY_REQUEST =
             Pattern.compile("^AeronCache-Gateway-Requests-([^-]+)-(.+)$");
@@ -68,6 +83,8 @@ public final class AeronCountersPrometheusFormatter {
      */
     public static String format(final AeronCountersResponse response) {
         final List<String> cacheRequests = new ArrayList<>();
+        final List<String> subscriptionEvents = new ArrayList<>();
+        final List<String> subscriptionsActive = new ArrayList<>();
         final List<String> gatewayRequests = new ArrayList<>();
         final List<String> gatewaySessionsConnected = new ArrayList<>();
         final List<String> gatewaySessionsTotal = new ArrayList<>();
@@ -83,13 +100,19 @@ public final class AeronCountersPrometheusFormatter {
                     .append("\",label=\"").append(escape(counter.label()))
                     .append("\"} ").append(counter.value()).append('\n');
 
-            parseKnown(counter, cacheRequests, gatewayRequests, gatewaySessionsConnected,
-                    gatewaySessionsTotal, gatewayStreamUpdates);
+            parseKnown(counter, cacheRequests, subscriptionEvents, subscriptionsActive, gatewayRequests,
+                    gatewaySessionsConnected, gatewaySessionsTotal, gatewayStreamUpdates);
         }
 
         final StringBuilder out = new StringBuilder(raw);
         appendFamily(out, "aeron_cache_requests_total",
                 "Cache requests counted by the Aeron counter tracing service.", "counter", cacheRequests);
+        appendFamily(out, "aeron_cache_subscriptions_total",
+                "Cache subscription events counted by the subscription services, by event.", "counter",
+                subscriptionEvents);
+        appendFamily(out, "aeron_cache_subscriptions_active",
+                "Active cache subscriptions (one session registered against one target).", "gauge",
+                subscriptionsActive);
         appendFamily(out, "aeron_gateway_requests_total",
                 "Requests serviced by the Aeron transport gateway, by type.", "counter", gatewayRequests);
         appendFamily(out, "aeron_gateway_sessions_connected",
@@ -105,6 +128,8 @@ public final class AeronCountersPrometheusFormatter {
     private static void parseKnown(
             final AeronCounter counter,
             final List<String> cacheRequests,
+            final List<String> subscriptionEvents,
+            final List<String> subscriptionsActive,
             final List<String> gatewayRequests,
             final List<String> gatewaySessionsConnected,
             final List<String> gatewaySessionsTotal,
@@ -116,6 +141,19 @@ public final class AeronCountersPrometheusFormatter {
             if (m.matches()) {
                 cacheRequests.add("{operation=\"" + escape(m.group(1)) + "\",node=\""
                         + escape(m.group(2)) + "\"} " + value);
+            }
+        } else if (counter.typeId() == SUBSCRIPTION_TYPE_ID) {
+            final Matcher m = SUBSCRIPTION.matcher(counter.label());
+            if (m.matches()) {
+                final String subscription = escape(m.group(1));
+                final String event = m.group(2);
+                final String node = escape(m.group(3));
+                if (SUBSCRIPTION_ACTIVE_EVENT.equals(event)) {
+                    subscriptionsActive.add("{subscription=\"" + subscription + "\",node=\"" + node + "\"} " + value);
+                } else {
+                    subscriptionEvents.add("{subscription=\"" + subscription + "\",event=\"" + escape(event)
+                            + "\",node=\"" + node + "\"} " + value);
+                }
             }
         } else if (counter.typeId() == GATEWAY_TYPE_ID) {
             Matcher m = GATEWAY_REQUEST.matcher(counter.label());

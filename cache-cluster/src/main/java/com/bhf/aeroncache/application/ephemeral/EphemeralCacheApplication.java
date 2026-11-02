@@ -2,6 +2,7 @@ package com.bhf.aeroncache.application.ephemeral;
 
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.cluster.SBEDecodingCacheClusterService;
+import com.bhf.aeroncache.services.subscription.metrics.AeronCounterSubscriptionServiceMetricsFactory;
 import com.bhf.aeroncache.services.tracing.impl.AeronCounterTracingService;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.utils.DNSUtils;
@@ -106,7 +107,8 @@ public class EphemeralCacheApplication {
         final var cacheManagerFactory = getCacheManagerFactory();
 
         final SBEDecodingCacheClusterService service = new SBEDecodingCacheClusterService("0",
-                new AeronCounterTracingService(aeron, "0"), cacheManagerFactory, dynamicCacheCreation);
+                new AeronCounterTracingService(aeron, "0"), cacheManagerFactory,
+                new AeronCounterSubscriptionServiceMetricsFactory(aeron, "0"), dynamicCacheCreation);
         final EphemeralTimerService timerService = new EphemeralTimerService(service::onTimerEvent);
         final EphemeralSessionRegistry registry =
                 new EphemeralSessionRegistry(aeron, responseControlEndpoint, responseStreamId);

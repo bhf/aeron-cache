@@ -6,11 +6,12 @@
 #     `javaagent.enabled=true`, which activates the bundled OpenTelemetry Java agent, serves a
 #     Prometheus endpoint and annotates the pod with prometheus.io/scrape.
 #   - Cache/gateway charts (aeroncache-cluster/-ephemeral/-gateway): their clustertools sidecar
-#     exports the shared Aeron media driver counters (media driver + cache type 2000 + gateway type
-#     2100) on /prometheus, and the pods carry prometheus.io/scrape by default (no flag needed).
+#     exports the shared Aeron media driver counters (media driver + cache type 2000 + subscription
+#     type 2200 + gateway type 2100) on /prometheus, and the pods carry prometheus.io/scrape by default
+#     (no flag needed).
 # Prometheus below discovers all annotated pods automatically, so no per-app target config is needed
 # here. The pre-provisioned Grafana dashboards cover the interface apps, the transport gateway, the
-# cache service and the raw media driver counters.
+# cache service, cache subscriptions and the raw media driver counters.
 #
 # From the Makefiles:
 #   make install-observability                 # deploy Prometheus + Grafana

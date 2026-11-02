@@ -11,6 +11,7 @@ import com.bhf.aeroncache.services.TestUtils;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionService;
 import com.bhf.aeroncache.services.subscription.CacheSubscriptionServiceImpl;
+import com.bhf.aeroncache.services.subscription.metrics.NoOpSubscriptionServiceMetrics;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.ClientSession;
@@ -45,7 +46,7 @@ public class CountersSubscribeCacheTest extends AbstractSubscribeCacheTest<Reusa
         CacheSubscriptionResult<ReusableString, ReusableString, ReusableLong> subscriptionResult = new CacheSubscriptionResult<>(new ReusableString());
         CacheUnsubscribeResult<ReusableString> unsubscribeResult = new CacheUnsubscribeResult<>(new ReusableString());
         Supplier<ReusableString> indexSupplier = ReusableString::new;
-        sut.countersSubscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult, indexSupplier, ReusableString::new);
+        sut.countersSubscriptionService = new CacheSubscriptionServiceImpl<>(idleStrategy, subscriptionResult, unsubscribeResult, indexSupplier, ReusableString::new, new NoOpSubscriptionServiceMetrics());
         sut.subscriptionService = Mockito.mock(CacheSubscriptionService.class);
     }
 

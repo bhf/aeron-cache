@@ -47,6 +47,27 @@ class AeronCountersPrometheusFormatterTest {
     }
 
     @Test
+    @DisplayName("Parses subscription counters (type 2200) into the subscription metric families")
+    void parsesSubscriptionCounters() {
+        String out = AeronCountersPrometheusFormatter.format(response(
+                new AeronCounter(30, 2200, 12L, "AeronCache-Subscriptions-cache-WholeCacheSubscribe-node0"),
+                new AeronCounter(31, 2200, 4L, "AeronCache-Subscriptions-cache-KeySubscribe-node0"),
+                new AeronCounter(32, 2200, 99L, "AeronCache-Subscriptions-patch-UpdatePublished-node1"),
+                new AeronCounter(33, 2200, 7L, "AeronCache-Subscriptions-counters-Active-node2")));
+
+        assertTrue(out.contains("# TYPE aeron_cache_subscriptions_total counter"));
+        assertTrue(out.contains(
+                "aeron_cache_subscriptions_total{subscription=\"cache\",event=\"WholeCacheSubscribe\",node=\"0\"} 12"));
+        assertTrue(out.contains(
+                "aeron_cache_subscriptions_total{subscription=\"cache\",event=\"KeySubscribe\",node=\"0\"} 4"));
+        assertTrue(out.contains(
+                "aeron_cache_subscriptions_total{subscription=\"patch\",event=\"UpdatePublished\",node=\"1\"} 99"));
+        assertTrue(out.contains("# TYPE aeron_cache_subscriptions_active gauge"));
+        assertTrue(out.contains(
+                "aeron_cache_subscriptions_active{subscription=\"counters\",node=\"2\"} 7"));
+    }
+
+    @Test
     @DisplayName("Parses gateway counters (type 2100) into the gateway metric families")
     void parsesGatewayCounters() {
         String out = AeronCountersPrometheusFormatter.format(response(

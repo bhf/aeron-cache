@@ -2,6 +2,7 @@ package com.bhf.aeroncache.services.cluster;
 
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.services.cachemanager.CacheManagerFactory;
+import com.bhf.aeroncache.services.subscription.metrics.SubscriptionServiceMetricsFactory;
 import com.bhf.aeroncache.services.tracing.CacheTracingService;
 import lombok.extern.log4j.Log4j2;
 
@@ -17,6 +18,12 @@ public class SBEDecodingCacheClusterService<I extends Reusable, K extends Reusab
 
     public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory, boolean dynamicCacheCreation) {
         super(nodeId, tracingService, cacheManagerFactory);
+        setDynamicCacheCreationEnabled(dynamicCacheCreation);
+    }
+
+    public SBEDecodingCacheClusterService(String nodeId, CacheTracingService tracingService, CacheManagerFactory<I, K, V> cacheManagerFactory,
+                                          SubscriptionServiceMetricsFactory subscriptionMetricsFactory, boolean dynamicCacheCreation) {
+        super(nodeId, tracingService, cacheManagerFactory, subscriptionMetricsFactory);
         setDynamicCacheCreationEnabled(dynamicCacheCreation);
     }
 
