@@ -167,6 +167,35 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
           "options": { "orientation": "horizontal", "displayMode": "gradient" },
           "targets": [ { "expr": "sum by (type) (aeron_gateway_requests_total)", "legendFormat": "{{`{{type}}`}}", "instant": true } ]
+        },
+        {
+          "type": "stat",
+          "title": "Active subscribers",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 22 },
+          "targets": [ { "expr": "sum(aeron_gateway_subscribers)", "legendFormat": "subscribers" } ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null } ] } } }
+        },
+        {
+          "type": "stat",
+          "title": "Active subscriptions",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 22 },
+          "targets": [ { "expr": "sum(aeron_gateway_subscriptions_active)", "legendFormat": "subscriptions" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Subscriptions: whole vs keyed",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+          "targets": [ { "expr": "sum by (domain, type) (aeron_gateway_subscriptions_active)", "legendFormat": "{{`{{domain}}`}} {{`{{type}}`}}" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Subscribers by domain",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+          "targets": [ { "expr": "sum by (domain) (aeron_gateway_subscribers)", "legendFormat": "{{`{{domain}}`}}" } ]
         }
       ]
     }

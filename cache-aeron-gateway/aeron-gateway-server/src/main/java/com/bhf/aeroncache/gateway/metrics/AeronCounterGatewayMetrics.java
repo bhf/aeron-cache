@@ -4,6 +4,9 @@ import io.aeron.Aeron;
 import io.aeron.Counter;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * A {@link GatewayMetrics} backed by counters in the Aeron media driver.
  * <p>
@@ -27,17 +30,30 @@ public class AeronCounterGatewayMetrics implements GatewayMetrics {
 
     private static final String LABEL_PREFIX = "AeronCache-Gateway-";
 
+    private final Aeron aeron;
+    private final String suffix;
     private final Counter sessionsConnected;
     private final Counter sessionsTotal;
     private final Counter streamUpdatesPublished;
     private final Counter[] requestCounters;
 
     /**
+     * Per-domain subscription gauges, registered lazily on the first {@link #setSubscriptions} call for a
+     * domain. One set of counters (whole, keyed, subscribers) per cache domain (cache / counters).
+     */
+    private final Map<String, SubscriptionGauges> subscriptionGauges = new ConcurrentHashMap<>();
+
+    private record SubscriptionGauges(Counter whole, Counter keyed, Counter subscribers) {
+    }
+
+    /**
      * @param aeron  client connected to the media driver the counters are registered with.
      * @param nodeId identifier for this gateway, included in the counter labels.
      */
     public AeronCounterGatewayMetrics(Aeron aeron, String nodeId) {
+        this.aeron = aeron;
         final String suffix = "-" + nodeId;
+        this.suffix = suffix;
         sessionsConnected = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "SessionsConnected" + suffix);
         sessionsTotal = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "SessionsTotal" + suffix);
         streamUpdatesPublished = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "StreamUpdatesPublished" + suffix);
@@ -68,5 +84,21 @@ public class AeronCounterGatewayMetrics implements GatewayMetrics {
     @Override
     public void onStreamUpdatePublished() {
         streamUpdatesPublished.incrementOrdered();
+    }
+
+    @Override
+    public void setSubscriptions(String domain, long wholeCacheSubscriptions, long keyedSubscriptions, long subscribers) {
+        final SubscriptionGauges gauges = subscriptionGauges.computeIfAbsent(domain, this::registerSubscriptionGauges);
+        gauges.whole().setOrdered(wholeCacheSubscriptions);
+        gauges.keyed().setOrdered(keyedSubscriptions);
+        gauges.subscribers().setOrdered(subscribers);
+    }
+
+    private SubscriptionGauges registerSubscriptionGauges(String domain) {
+        final Counter whole = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "Subscriptions-" + domain + "-whole" + suffix);
+        final Counter keyed = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "Subscriptions-" + domain + "-keyed" + suffix);
+        final Counter subscribers = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "Subscribers-" + domain + suffix);
+        log.info("Registered gateway subscription gauges for {} domain", domain);
+        return new SubscriptionGauges(whole, keyed, subscribers);
     }
 }

@@ -85,6 +85,27 @@ class AeronCountersPrometheusFormatterTest {
     }
 
     @Test
+    @DisplayName("Parses gateway subscription counters (type 2100) into the subscription gauges")
+    void parsesGatewaySubscriptionCounters() {
+        String out = AeronCountersPrometheusFormatter.format(response(
+                new AeronCounter(40, 2100, 8L, "AeronCache-Gateway-Subscriptions-cache-whole-aeroncache-gateway-0"),
+                new AeronCounter(41, 2100, 3L, "AeronCache-Gateway-Subscriptions-cache-keyed-aeroncache-gateway-0"),
+                new AeronCounter(42, 2100, 5L, "AeronCache-Gateway-Subscribers-cache-aeroncache-gateway-0"),
+                new AeronCounter(43, 2100, 2L, "AeronCache-Gateway-Subscriptions-counters-whole-aeroncache-gateway-0")));
+
+        assertTrue(out.contains("# TYPE aeron_gateway_subscriptions_active gauge"));
+        assertTrue(out.contains(
+                "aeron_gateway_subscriptions_active{domain=\"cache\",type=\"whole\",node=\"aeroncache-gateway-0\"} 8"));
+        assertTrue(out.contains(
+                "aeron_gateway_subscriptions_active{domain=\"cache\",type=\"keyed\",node=\"aeroncache-gateway-0\"} 3"));
+        assertTrue(out.contains(
+                "aeron_gateway_subscriptions_active{domain=\"counters\",type=\"whole\",node=\"aeroncache-gateway-0\"} 2"));
+        assertTrue(out.contains("# TYPE aeron_gateway_subscribers gauge"));
+        assertTrue(out.contains(
+                "aeron_gateway_subscribers{domain=\"cache\",node=\"aeroncache-gateway-0\"} 5"));
+    }
+
+    @Test
     @DisplayName("A counter with an unexpected label is still exported as aeron_counter")
     void keepsUnparseableCounters() {
         String out = AeronCountersPrometheusFormatter.format(response(

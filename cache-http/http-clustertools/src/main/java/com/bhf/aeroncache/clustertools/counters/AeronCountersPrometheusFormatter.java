@@ -22,8 +22,10 @@ import java.util.regex.Pattern;
  *     {@code aeron_cache_requests_total{operation,node}} for a clean per-operation cache dashboard.</li>
  *     <li>The gateway counters (type id {@value #GATEWAY_TYPE_ID}) are additionally parsed into
  *     {@code aeron_gateway_requests_total{type,node}}, {@code aeron_gateway_sessions_connected{node}},
- *     {@code aeron_gateway_sessions_total{node}} and
- *     {@code aeron_gateway_stream_updates_published_total{node}} for the gateway dashboard.</li>
+ *     {@code aeron_gateway_sessions_total{node}},
+ *     {@code aeron_gateway_stream_updates_published_total{node}}, and the subscription gauges
+ *     {@code aeron_gateway_subscriptions_active{domain,type,node}} and
+ *     {@code aeron_gateway_subscribers{domain,node}} for the gateway dashboard.</li>
  *     <li>The subscription metrics counters registered by the cache subscription services (type id
  *     {@value #SUBSCRIPTION_TYPE_ID}) are additionally parsed into
  *     {@code aeron_cache_subscriptions_total{subscription,event,node}} for subscribe/unsubscribe/update
@@ -71,8 +73,27 @@ public final class AeronCountersPrometheusFormatter {
             Pattern.compile("^AeronCache-Gateway-SessionsTotal-(.+)$");
     private static final Pattern GATEWAY_STREAM_UPDATES =
             Pattern.compile("^AeronCache-Gateway-StreamUpdatesPublished-(.+)$");
+    // AeronCache-Gateway-Subscriptions-<domain>-<type>-<nodeId> (domain and type never contain a hyphen).
+    private static final Pattern GATEWAY_SUBSCRIPTIONS =
+            Pattern.compile("^AeronCache-Gateway-Subscriptions-([^-]+)-([^-]+)-(.+)$");
+    // AeronCache-Gateway-Subscribers-<domain>-<nodeId> (domain never contains a hyphen).
+    private static final Pattern GATEWAY_SUBSCRIBERS =
+            Pattern.compile("^AeronCache-Gateway-Subscribers-([^-]+)-(.+)$");
 
     private AeronCountersPrometheusFormatter() {
+    }
+
+    /** Accumulates the parsed samples for each structured metric family while scanning the counters. */
+    private static final class Families {
+        final List<String> cacheRequests = new ArrayList<>();
+        final List<String> subscriptionEvents = new ArrayList<>();
+        final List<String> subscriptionsActive = new ArrayList<>();
+        final List<String> gatewayRequests = new ArrayList<>();
+        final List<String> gatewaySessionsConnected = new ArrayList<>();
+        final List<String> gatewaySessionsTotal = new ArrayList<>();
+        final List<String> gatewayStreamUpdates = new ArrayList<>();
+        final List<String> gatewaySubscriptionsActive = new ArrayList<>();
+        final List<String> gatewaySubscribers = new ArrayList<>();
     }
 
     /**
@@ -82,13 +103,7 @@ public final class AeronCountersPrometheusFormatter {
      * @return the metrics as a single Prometheus exposition string, ending with a newline.
      */
     public static String format(final AeronCountersResponse response) {
-        final List<String> cacheRequests = new ArrayList<>();
-        final List<String> subscriptionEvents = new ArrayList<>();
-        final List<String> subscriptionsActive = new ArrayList<>();
-        final List<String> gatewayRequests = new ArrayList<>();
-        final List<String> gatewaySessionsConnected = new ArrayList<>();
-        final List<String> gatewaySessionsTotal = new ArrayList<>();
-        final List<String> gatewayStreamUpdates = new ArrayList<>();
+        final Families families = new Families();
 
         final StringBuilder raw = new StringBuilder();
         raw.append("# HELP aeron_counter Raw Aeron media driver counter value scraped from the CnC file.\n");
@@ -100,46 +115,42 @@ public final class AeronCountersPrometheusFormatter {
                     .append("\",label=\"").append(escape(counter.label()))
                     .append("\"} ").append(counter.value()).append('\n');
 
-            parseKnown(counter, cacheRequests, subscriptionEvents, subscriptionsActive, gatewayRequests,
-                    gatewaySessionsConnected, gatewaySessionsTotal, gatewayStreamUpdates);
+            parseKnown(counter, families);
         }
 
         final StringBuilder out = new StringBuilder(raw);
         appendFamily(out, "aeron_cache_requests_total",
-                "Cache requests counted by the Aeron counter tracing service.", "counter", cacheRequests);
+                "Cache requests counted by the Aeron counter tracing service.", "counter", families.cacheRequests);
         appendFamily(out, "aeron_cache_subscriptions_total",
                 "Cache subscription events counted by the subscription services, by event.", "counter",
-                subscriptionEvents);
+                families.subscriptionEvents);
         appendFamily(out, "aeron_cache_subscriptions_active",
                 "Active cache subscriptions (one session registered against one target).", "gauge",
-                subscriptionsActive);
+                families.subscriptionsActive);
         appendFamily(out, "aeron_gateway_requests_total",
-                "Requests serviced by the Aeron transport gateway, by type.", "counter", gatewayRequests);
+                "Requests serviced by the Aeron transport gateway, by type.", "counter", families.gatewayRequests);
         appendFamily(out, "aeron_gateway_sessions_connected",
-                "Clients currently connected to the Aeron transport gateway.", "gauge", gatewaySessionsConnected);
+                "Clients currently connected to the Aeron transport gateway.", "gauge", families.gatewaySessionsConnected);
         appendFamily(out, "aeron_gateway_sessions_total",
-                "Client connections to the Aeron transport gateway since start.", "counter", gatewaySessionsTotal);
+                "Client connections to the Aeron transport gateway since start.", "counter", families.gatewaySessionsTotal);
         appendFamily(out, "aeron_gateway_stream_updates_published_total",
-                "Streaming subscription updates published to gateway clients.", "counter", gatewayStreamUpdates);
+                "Streaming subscription updates published to gateway clients.", "counter", families.gatewayStreamUpdates);
+        appendFamily(out, "aeron_gateway_subscriptions_active",
+                "Active gateway subscriptions (one client session on one cache), by domain and whole/keyed type.",
+                "gauge", families.gatewaySubscriptionsActive);
+        appendFamily(out, "aeron_gateway_subscribers",
+                "Distinct gateway client sessions holding at least one subscription, by domain.", "gauge",
+                families.gatewaySubscribers);
 
         return out.toString();
     }
 
-    private static void parseKnown(
-            final AeronCounter counter,
-            final List<String> cacheRequests,
-            final List<String> subscriptionEvents,
-            final List<String> subscriptionsActive,
-            final List<String> gatewayRequests,
-            final List<String> gatewaySessionsConnected,
-            final List<String> gatewaySessionsTotal,
-            final List<String> gatewayStreamUpdates) {
-
+    private static void parseKnown(final AeronCounter counter, final Families families) {
         final long value = counter.value();
         if (counter.typeId() == CACHE_REQUEST_TYPE_ID) {
             final Matcher m = CACHE_REQUEST.matcher(counter.label());
             if (m.matches()) {
-                cacheRequests.add("{operation=\"" + escape(m.group(1)) + "\",node=\""
+                families.cacheRequests.add("{operation=\"" + escape(m.group(1)) + "\",node=\""
                         + escape(m.group(2)) + "\"} " + value);
             }
         } else if (counter.typeId() == SUBSCRIPTION_TYPE_ID) {
@@ -149,33 +160,49 @@ public final class AeronCountersPrometheusFormatter {
                 final String event = m.group(2);
                 final String node = escape(m.group(3));
                 if (SUBSCRIPTION_ACTIVE_EVENT.equals(event)) {
-                    subscriptionsActive.add("{subscription=\"" + subscription + "\",node=\"" + node + "\"} " + value);
+                    families.subscriptionsActive.add("{subscription=\"" + subscription + "\",node=\"" + node + "\"} " + value);
                 } else {
-                    subscriptionEvents.add("{subscription=\"" + subscription + "\",event=\"" + escape(event)
+                    families.subscriptionEvents.add("{subscription=\"" + subscription + "\",event=\"" + escape(event)
                             + "\",node=\"" + node + "\"} " + value);
                 }
             }
         } else if (counter.typeId() == GATEWAY_TYPE_ID) {
-            Matcher m = GATEWAY_REQUEST.matcher(counter.label());
-            if (m.matches()) {
-                gatewayRequests.add("{type=\"" + escape(m.group(1)) + "\",node=\""
-                        + escape(m.group(2)) + "\"} " + value);
-                return;
-            }
-            m = GATEWAY_SESSIONS_CONNECTED.matcher(counter.label());
-            if (m.matches()) {
-                gatewaySessionsConnected.add("{node=\"" + escape(m.group(1)) + "\"} " + value);
-                return;
-            }
-            m = GATEWAY_SESSIONS_TOTAL.matcher(counter.label());
-            if (m.matches()) {
-                gatewaySessionsTotal.add("{node=\"" + escape(m.group(1)) + "\"} " + value);
-                return;
-            }
-            m = GATEWAY_STREAM_UPDATES.matcher(counter.label());
-            if (m.matches()) {
-                gatewayStreamUpdates.add("{node=\"" + escape(m.group(1)) + "\"} " + value);
-            }
+            parseGatewayCounter(counter, value, families);
+        }
+    }
+
+    private static void parseGatewayCounter(final AeronCounter counter, final long value, final Families families) {
+        Matcher m = GATEWAY_REQUEST.matcher(counter.label());
+        if (m.matches()) {
+            families.gatewayRequests.add("{type=\"" + escape(m.group(1)) + "\",node=\""
+                    + escape(m.group(2)) + "\"} " + value);
+            return;
+        }
+        m = GATEWAY_SUBSCRIPTIONS.matcher(counter.label());
+        if (m.matches()) {
+            families.gatewaySubscriptionsActive.add("{domain=\"" + escape(m.group(1)) + "\",type=\""
+                    + escape(m.group(2)) + "\",node=\"" + escape(m.group(3)) + "\"} " + value);
+            return;
+        }
+        m = GATEWAY_SUBSCRIBERS.matcher(counter.label());
+        if (m.matches()) {
+            families.gatewaySubscribers.add("{domain=\"" + escape(m.group(1)) + "\",node=\""
+                    + escape(m.group(2)) + "\"} " + value);
+            return;
+        }
+        m = GATEWAY_SESSIONS_CONNECTED.matcher(counter.label());
+        if (m.matches()) {
+            families.gatewaySessionsConnected.add("{node=\"" + escape(m.group(1)) + "\"} " + value);
+            return;
+        }
+        m = GATEWAY_SESSIONS_TOTAL.matcher(counter.label());
+        if (m.matches()) {
+            families.gatewaySessionsTotal.add("{node=\"" + escape(m.group(1)) + "\"} " + value);
+            return;
+        }
+        m = GATEWAY_STREAM_UPDATES.matcher(counter.label());
+        if (m.matches()) {
+            families.gatewayStreamUpdates.add("{node=\"" + escape(m.group(1)) + "\"} " + value);
         }
     }
 
