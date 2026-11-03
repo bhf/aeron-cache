@@ -106,7 +106,8 @@ serviceAccount:
 #
 # The prometheus.io/* annotations make the aeroncache-observability Prometheus auto-discover and
 # scrape the co-located clustertools sidecar, which exports the shared Aeron media driver counters
-# (media driver system counters + the gateway metrics counters, type 2100) in Prometheus format on
+# (media driver system counters + the gateway metrics counters, type 2100, which include the request,
+# session, stream-update, subscription and subscriber metrics) in Prometheus format on
 # /prometheus. One scrape per pod captures everything the driver publishes. The annotations are inert
 # if the observability stack is not deployed. The port must match clustertools.port above.
 podAnnotations:

@@ -30,4 +30,20 @@ public interface GatewayMetrics {
      * A streaming subscription update was published to a client.
      */
     void onStreamUpdatePublished();
+
+    /**
+     * Record the current subscription state for a cache domain. Unlike the other methods this is a
+     * control-plane gauge update, called from the subscription publisher when a client subscribes,
+     * unsubscribes or disconnects - not from the per-message hot path.
+     * <p>
+     * A "subscription" is one client session registered against one cache; "subscribers" is the number
+     * of distinct client sessions holding at least one subscription. The internal near-cache warming
+     * session is excluded, so these reflect client subscriptions only.
+     *
+     * @param domain                   the cache domain ({@code cache} or {@code counters}).
+     * @param wholeCacheSubscriptions  active whole-cache subscriptions.
+     * @param keyedSubscriptions       active keyed (per-key) subscriptions.
+     * @param subscribers              distinct client sessions holding at least one subscription.
+     */
+    void setSubscriptions(String domain, long wholeCacheSubscriptions, long keyedSubscriptions, long subscribers);
 }

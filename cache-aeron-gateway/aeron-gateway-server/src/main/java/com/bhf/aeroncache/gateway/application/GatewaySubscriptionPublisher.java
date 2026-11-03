@@ -1,6 +1,8 @@
 package com.bhf.aeroncache.gateway.application;
 
 import com.bhf.aeroncache.AeronCache;
+import com.bhf.aeroncache.gateway.metrics.GatewayMetrics;
+import com.bhf.aeroncache.gateway.metrics.NoOpGatewayMetrics;
 import com.bhf.aeroncache.models.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
 import com.bhf.aeroncache.models.Reusable;
@@ -14,10 +16,12 @@ import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -74,6 +78,10 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
     /** Caches currently kept warm in the near cache (subscribed by the near cache session). */
     private final Set<String> nearWarmCaches = ConcurrentHashMap.newKeySet();
 
+    /** Metrics sink for the subscription gauges, and the domain tag they are published under. */
+    private GatewayMetrics metrics = new NoOpGatewayMetrics();
+    private String metricsDomain = "cache";
+
     public GatewaySubscriptionPublisher(CacheRequestPublisher rbPublisher) {
         this(rbPublisher, null, null);
     }
@@ -89,6 +97,44 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         super(rbPublisher);
         this.nearCacheManager = nearCacheManager;
         this.nearCacheSessionId = nearCacheSessionId;
+    }
+
+    /**
+     * Wire the metrics sink for this publisher's subscription gauges. Called once at startup on the main
+     * thread; the initial publish registers and zeroes the gauges before the ingress agent starts.
+     *
+     * @param metrics the gateway metrics to publish subscription gauges to.
+     * @param domain  the cache domain tag for the gauges ({@code cache} or {@code counters}).
+     */
+    public void setMetrics(GatewayMetrics metrics, String domain) {
+        this.metrics = metrics;
+        this.metricsDomain = domain;
+        publishSubscriptionMetrics();
+    }
+
+    /**
+     * Recompute the active subscription counts from the subscription state and publish them to the
+     * metrics. Called on each client subscribe / unsubscribe / disconnect (control plane, not the hot
+     * path). The internal near-cache warming session is excluded so the gauges reflect client traffic.
+     */
+    private void publishSubscriptionMetrics() {
+        long wholeCache = 0;
+        long keyed = 0;
+        final Set<String> subscribers = new HashSet<>();
+        for (var consumers : cacheSubscriptions.values()) {
+            for (var consumer : consumers) {
+                if (Objects.equals(consumer.getId(), nearCacheSessionId)) {
+                    continue;
+                }
+                if (consumer.keys != null && !consumer.keys.isEmpty()) {
+                    keyed++;
+                } else {
+                    wholeCache++;
+                }
+                subscribers.add(consumer.getId());
+            }
+        }
+        metrics.setSubscriptions(metricsDomain, wholeCache, keyed, subscribers.size());
     }
 
     /**
@@ -392,6 +438,8 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         if (subscribeCacheIds.isEmpty()) {
             subscriptionAckHandler.run();
         }
+
+        publishSubscriptionMetrics();
     }
 
     /**
@@ -482,6 +530,7 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
                 }
             }
         });
+        publishSubscriptionMetrics();
     }
 
     /**
@@ -505,6 +554,9 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
             sendCacheUnsubscribeRequest(cluster, requestId, cacheId);
             cacheSubscriptions.remove(cacheId);
             clusterSubscriptions.removeIf(k -> k.startsWith(cacheId + '\u0001'));
+        }
+        if (removed) {
+            publishSubscriptionMetrics();
         }
     }
 

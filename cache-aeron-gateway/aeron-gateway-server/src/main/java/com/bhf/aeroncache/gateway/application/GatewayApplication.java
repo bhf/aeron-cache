@@ -241,9 +241,14 @@ public class GatewayApplication {
                 DNSUtils.getThisHostName() + ":" + DEFAULT_RESPONSE_CONTROL_PORT);
 
         var egressWriter = new GatewayResponseWriter();
+        var gatewayMetrics = new AeronCounterGatewayMetrics(gatewayAeron, DNSUtils.getThisHostName());
+        // Publish the subscription gauges per cache domain; registers and zeroes them on this thread
+        // before the ingress agent starts.
+        cacheSubs.setMetrics(gatewayMetrics, "cache");
+        countersSubs.setMetrics(gatewayMetrics, "counters");
         var ingressAgent = new GatewayIngressAgent(gatewayAeron, media, requestEndpoint, responseControlEndpoint,
                 REQUEST_STREAM_ID, RESPONSE_STREAM_ID, cache, cacheSubs, countersSubs, egressWriter,
-                new AeronCounterGatewayMetrics(gatewayAeron, DNSUtils.getThisHostName()));
+                gatewayMetrics);
 
         if (media.isIpc()) {
             log.info("Gateway ingress transport media IPC (endpoints ignored; client must share this media driver)");

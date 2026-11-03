@@ -23,4 +23,9 @@ public class NoOpGatewayMetrics implements GatewayMetrics {
     public void onStreamUpdatePublished() {
 
     }
+
+    @Override
+    public void setSubscriptions(String domain, long wholeCacheSubscriptions, long keyedSubscriptions, long subscribers) {
+
+    }
 }
