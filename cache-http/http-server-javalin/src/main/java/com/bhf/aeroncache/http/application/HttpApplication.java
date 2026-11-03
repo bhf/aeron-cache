@@ -219,6 +219,10 @@ public class HttpApplication {
                 // cache warm alongside the normal observing publisher.
                 nearCacheManager = new ConcurrentNearCacheManager<>();
                 countersNearCacheManager = new ConcurrentNearCacheManager<>();
+                // Dedicated near-cache metric: how many caches are currently held warm locally. The HTTP
+                // near cache is request/response, so it has no streaming subscribers to count - only warmth.
+                metrics.registerNearWarmCaches("cache", nearCacheManager);
+                metrics.registerNearWarmCaches("counters", countersNearCacheManager);
                 nearCacheHandlers = new NearCacheRouteHandlers(cachePublisher, nearCacheManager,
                         HttpApplication::subscribeNearCache, HttpApplication::unsubscribeNearCache);
                 countersNearCacheHandlers = new CountersNearCacheRouteHandlers(countersPublisher, countersNearCacheManager,

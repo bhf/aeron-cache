@@ -116,11 +116,15 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
      * Recompute the active subscription counts from the subscription state and publish them to the
      * metrics. Called on each client subscribe / unsubscribe / disconnect (control plane, not the hot
      * path). The internal near-cache warming session is excluded so the gauges reflect client traffic.
+     * When the near cache is enabled, the dedicated near-cache gauges (warm caches, and distinct
+     * subscriber sessions split by whole / keyed) are published in the same pass.
      */
     private void publishSubscriptionMetrics() {
         long wholeCache = 0;
         long keyed = 0;
         final Set<String> subscribers = new HashSet<>();
+        final Set<String> wholeSubscribers = new HashSet<>();
+        final Set<String> keyedSubscribers = new HashSet<>();
         for (var consumers : cacheSubscriptions.values()) {
             for (var consumer : consumers) {
                 if (Objects.equals(consumer.getId(), nearCacheSessionId)) {
@@ -128,13 +132,18 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
                 }
                 if (consumer.keys != null && !consumer.keys.isEmpty()) {
                     keyed++;
+                    keyedSubscribers.add(consumer.getId());
                 } else {
                     wholeCache++;
+                    wholeSubscribers.add(consumer.getId());
                 }
                 subscribers.add(consumer.getId());
             }
         }
         metrics.setSubscriptions(metricsDomain, wholeCache, keyed, subscribers.size());
+        if (isNearCacheEnabled()) {
+            metrics.setNearCache(metricsDomain, nearWarmCaches.size(), wholeSubscribers.size(), keyedSubscribers.size());
+        }
     }
 
     /**
@@ -252,10 +261,17 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
             };
             doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
                     sessionId, requestId, true, true, false, teeConsumer);
+            boolean warmed = false;
             for (var cacheId : distinctCaches) {
                 if (nearWarmCaches.add(cacheId)) {
                     registerNearCacheSession(cluster, cacheId);
+                    warmed = true;
                 }
+            }
+            // doSubscribe above published the gauges before these caches were added to the warm set, so
+            // republish to pick up the new warm count.
+            if (warmed) {
+                publishSubscriptionMetrics();
             }
         } else {
             // Cold and either key-based or PATCH mode: a key snapshot cannot warm a full local copy, and a
@@ -585,7 +601,9 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         // dispatching streaming events to subscribers.
         super.handleCacheDeleted(deleteCacheResult);
         // A deleted cache is no longer warm; the near cache copy is dropped by handleCacheUpdate.
-        nearWarmCaches.remove(String.valueOf(deleteCacheResult.getCacheId().value()));
+        if (nearWarmCaches.remove(String.valueOf(deleteCacheResult.getCacheId().value())) && isNearCacheEnabled()) {
+            publishSubscriptionMetrics();
+        }
         var subscribers = cacheSubscriptions.get(deleteCacheResult.getCacheId().value());
         if (subscribers != null) {
             var cacheId = String.valueOf(deleteCacheResult.getCacheId());
