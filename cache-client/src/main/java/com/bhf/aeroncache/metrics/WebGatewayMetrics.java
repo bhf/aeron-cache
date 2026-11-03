@@ -49,6 +49,14 @@ public final class WebGatewayMetrics {
      */
     public static final String NEAR_SUBSCRIBERS = "aeroncache.near.subscribers";
 
+    /**
+     * Counter: hydrating subscriptions served from the local near cache (replayed from the warm copy
+     * without a cluster snapshot), tagged by {@code domain} and {@code type} (whole / keyed). This is the
+     * near cache hit signal: it increments only on the local-replay path, so a non-zero delta proves a
+     * subscription was served by the near cache rather than the cluster.
+     */
+    public static final String NEAR_HYDRATIONS_SERVED = "aeroncache.near.hydrations.served";
+
     private final MeterRegistry registry;
 
     public WebGatewayMetrics(MeterRegistry registry) {

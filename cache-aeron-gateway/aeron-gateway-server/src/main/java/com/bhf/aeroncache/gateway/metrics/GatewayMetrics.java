@@ -64,4 +64,15 @@ public interface GatewayMetrics {
      * @param keyedSubscribers     distinct client sessions subscribed to specific keys.
      */
     void setNearCache(String domain, long warmCaches, long wholeCacheSubscribers, long keyedSubscribers);
+
+    /**
+     * Record a near cache hit: one hydrating subscription on one cache served from the warm local copy
+     * (replayed from the near cache, with no cluster snapshot). Called from the gateway ingress thread on
+     * the local-replay path, so it increments only when a subscription really was served by the near cache
+     * - the hit signal used to prove near-cache serving. Only meaningful when the near cache is enabled.
+     *
+     * @param domain the cache domain ({@code cache} or {@code counters}).
+     * @param keyed  {@code true} for a keyed subscription, {@code false} for a whole-cache one.
+     */
+    void onNearCacheHydrationServed(String domain, boolean keyed);
 }

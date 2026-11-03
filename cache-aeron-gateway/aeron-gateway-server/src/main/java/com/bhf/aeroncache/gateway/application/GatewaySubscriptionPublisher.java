@@ -249,6 +249,8 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
             var keysByCache = groupKeysByCache(cacheIds, keys);
             for (var cacheId : distinctCaches) {
                 replayNearCache(cacheId, keysByCache.get(cacheId), requestId, consumer);
+                // Near cache hit: this cache was hydrated from the warm local copy, not the cluster.
+                metrics.onNearCacheHydrationServed(metricsDomain, !wholeCache);
             }
         } else if (wholeCache && effectiveMode == SubscriptionMode.FULL) {
             // At least one cache is cold. Hydrate this subscriber from the cluster snapshot (the single
