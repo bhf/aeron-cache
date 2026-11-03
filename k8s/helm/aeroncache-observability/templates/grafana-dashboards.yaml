@@ -196,6 +196,35 @@ data:
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
           "targets": [ { "expr": "sum by (domain) (aeron_gateway_subscribers)", "legendFormat": "{{`{{domain}}`}}" } ]
+        },
+        {
+          "type": "stat",
+          "title": "Near warm caches",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 34 },
+          "targets": [ { "expr": "sum(aeron_gateway_near_warm_caches)", "legendFormat": "warm caches" } ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null } ] } } }
+        },
+        {
+          "type": "stat",
+          "title": "Near subscribers",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 34 },
+          "targets": [ { "expr": "sum(aeron_gateway_near_subscribers)", "legendFormat": "subscribers" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Near warm caches by domain",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
+          "targets": [ { "expr": "sum by (domain) (aeron_gateway_near_warm_caches)", "legendFormat": "{{`{{domain}}`}}" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Near subscribers: whole vs keyed",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 38 },
+          "targets": [ { "expr": "sum by (domain, type) (aeron_gateway_near_subscribers)", "legendFormat": "{{`{{domain}}`}} {{`{{type}}`}}" } ]
         }
       ]
     }
@@ -359,9 +388,11 @@ data:
     }
   # Web gateways dashboard, built on the Micrometer metrics the HTTP / WebSocket / SSE interface apps
   # expose on their own /prometheus endpoints (not the Aeron media driver counters): per-operation
-  # counters (aeroncache_operations_total) and the subscription gauges (aeroncache_subscriptions_active,
-  # aeroncache_subscribers_active). Series are broken down by the `application` common tag
-  # (aeron-cache-http / -ws / -sse) so the three web interfaces are compared side by side.
+  # counters (aeroncache_operations_total), the subscription gauges (aeroncache_subscriptions_active,
+  # aeroncache_subscribers_active) and, when near caching is enabled, the dedicated near cache gauges
+  # (aeroncache_near_warm_caches, aeroncache_near_subscribers). Series are broken down by the
+  # `application` common tag (aeron-cache-http / -ws / -sse) so the three web interfaces are compared
+  # side by side.
   aeron-cache-web-gateways.json: |
     {
       "title": "Aeron Cache - Web Gateways",
@@ -444,6 +475,35 @@ data:
           "gridPos": { "h": 10, "w": 24, "x": 0, "y": 22 },
           "options": { "orientation": "horizontal", "displayMode": "gradient" },
           "targets": [ { "expr": "sum by (operation) (aeroncache_operations_total)", "legendFormat": "{{`{{operation}}`}}", "instant": true } ]
+        },
+        {
+          "type": "stat",
+          "title": "Near warm caches",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 32 },
+          "targets": [ { "expr": "sum(aeroncache_near_warm_caches)", "legendFormat": "warm caches" } ],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null } ] } } }
+        },
+        {
+          "type": "stat",
+          "title": "Near subscribers",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 32 },
+          "targets": [ { "expr": "sum(aeroncache_near_subscribers)", "legendFormat": "subscribers" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Near warm caches by interface",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+          "targets": [ { "expr": "sum by (application, domain) (aeroncache_near_warm_caches)", "legendFormat": "{{`{{application}}`}} {{`{{domain}}`}}" } ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Near subscribers: whole vs keyed",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+          "targets": [ { "expr": "sum by (application, type) (aeroncache_near_subscribers)", "legendFormat": "{{`{{application}}`}} {{`{{type}}`}}" } ]
         }
       ]
     }

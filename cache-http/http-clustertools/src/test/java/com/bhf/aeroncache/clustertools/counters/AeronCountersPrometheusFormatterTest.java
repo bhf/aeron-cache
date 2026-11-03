@@ -106,6 +106,27 @@ class AeronCountersPrometheusFormatterTest {
     }
 
     @Test
+    @DisplayName("Parses gateway near cache counters (type 2100) into the near cache gauges")
+    void parsesGatewayNearCacheCounters() {
+        String out = AeronCountersPrometheusFormatter.format(response(
+                new AeronCounter(50, 2100, 4L, "AeronCache-Gateway-NearWarmCaches-cache-aeroncache-gateway-0"),
+                new AeronCounter(51, 2100, 6L, "AeronCache-Gateway-NearSubscribers-cache-whole-aeroncache-gateway-0"),
+                new AeronCounter(52, 2100, 2L, "AeronCache-Gateway-NearSubscribers-cache-keyed-aeroncache-gateway-0"),
+                new AeronCounter(53, 2100, 1L, "AeronCache-Gateway-NearWarmCaches-counters-aeroncache-gateway-0")));
+
+        assertTrue(out.contains("# TYPE aeron_gateway_near_warm_caches gauge"));
+        assertTrue(out.contains(
+                "aeron_gateway_near_warm_caches{domain=\"cache\",node=\"aeroncache-gateway-0\"} 4"));
+        assertTrue(out.contains(
+                "aeron_gateway_near_warm_caches{domain=\"counters\",node=\"aeroncache-gateway-0\"} 1"));
+        assertTrue(out.contains("# TYPE aeron_gateway_near_subscribers gauge"));
+        assertTrue(out.contains(
+                "aeron_gateway_near_subscribers{domain=\"cache\",type=\"whole\",node=\"aeroncache-gateway-0\"} 6"));
+        assertTrue(out.contains(
+                "aeron_gateway_near_subscribers{domain=\"cache\",type=\"keyed\",node=\"aeroncache-gateway-0\"} 2"));
+    }
+
+    @Test
     @DisplayName("A counter with an unexpected label is still exported as aeron_counter")
     void keepsUnparseableCounters() {
         String out = AeronCountersPrometheusFormatter.format(response(

@@ -28,4 +28,9 @@ public class NoOpGatewayMetrics implements GatewayMetrics {
     public void setSubscriptions(String domain, long wholeCacheSubscriptions, long keyedSubscriptions, long subscribers) {
 
     }
+
+    @Override
+    public void setNearCache(String domain, long warmCaches, long wholeCacheSubscribers, long keyedSubscribers) {
+
+    }
 }

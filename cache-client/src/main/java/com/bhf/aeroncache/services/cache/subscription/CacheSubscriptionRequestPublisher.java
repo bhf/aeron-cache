@@ -119,6 +119,46 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                 .tag("domain", domain)
                 .description("Distinct client sessions holding at least one subscription.")
                 .register(registry);
+
+        // Dedicated near-cache gauges, meaningful only when this publisher is backed by a near cache.
+        if (isNearCacheEnabled()) {
+            Gauge.builder(WebGatewayMetrics.NEAR_WARM_CACHES, this, p -> p.nearWarmCaches.size())
+                    .tag("domain", domain)
+                    .description("Caches currently kept warm in the near cache.")
+                    .register(registry);
+            Gauge.builder(WebGatewayMetrics.NEAR_SUBSCRIBERS, this, p -> p.countNearSubscribers(false))
+                    .tag("domain", domain).tag("type", "whole")
+                    .description("Distinct client sessions subscribed to whole caches served by the near cache.")
+                    .register(registry);
+            Gauge.builder(WebGatewayMetrics.NEAR_SUBSCRIBERS, this, p -> p.countNearSubscribers(true))
+                    .tag("domain", domain).tag("type", "keyed")
+                    .description("Distinct client sessions subscribed to specific keys served by the near cache.")
+                    .register(registry);
+        }
+    }
+
+    /**
+     * Count the distinct client sessions holding at least one subscription of the requested kind,
+     * excluding the internal near-cache warming session. A session subscribed to both whole caches and
+     * specific keys is counted under each kind.
+     *
+     * @param keyed {@code true} to count sessions with keyed subscriptions, {@code false} for whole-cache ones.
+     * @return the number of matching distinct subscriber sessions.
+     */
+    private double countNearSubscribers(boolean keyed) {
+        Set<String> sessions = new HashSet<>();
+        for (var consumers : cacheSubscriptions.values()) {
+            for (var consumer : consumers) {
+                if (Objects.equals(consumer.sessionId, nearCacheSessionId)) {
+                    continue;
+                }
+                boolean consumerKeyed = consumer.keys != null && !consumer.keys.isEmpty();
+                if (consumerKeyed == keyed) {
+                    sessions.add(consumer.sessionId);
+                }
+            }
+        }
+        return sessions.size();
     }
 
     /**

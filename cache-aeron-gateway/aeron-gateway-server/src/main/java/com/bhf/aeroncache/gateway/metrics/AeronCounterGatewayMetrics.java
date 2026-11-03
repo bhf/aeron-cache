@@ -16,6 +16,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *     <li>{@code SessionsTotal} - the number of client connections since the gateway started.</li>
  *     <li>{@code StreamUpdatesPublished} - streaming subscription updates sent to clients.</li>
  *     <li>One {@code Requests-<type>} counter per {@link GatewayRequestType}.</li>
+ *     <li>Per-domain subscription gauges ({@code Subscriptions-<domain>-whole/-keyed}, {@code Subscribers-<domain>}).</li>
+ *     <li>Per-domain near cache gauges ({@code NearWarmCaches-<domain>}, {@code NearSubscribers-<domain>-whole/-keyed}),
+ *     registered only when the near cache is enabled.</li>
  * </ul>
  * The session counters are updated from the Aeron conductor thread so use atomic updates. Request counters are
  * written only by the gateway ingress thread, and the update counter only by the cluster egress thread, so each
@@ -44,6 +47,15 @@ public class AeronCounterGatewayMetrics implements GatewayMetrics {
     private final Map<String, SubscriptionGauges> subscriptionGauges = new ConcurrentHashMap<>();
 
     private record SubscriptionGauges(Counter whole, Counter keyed, Counter subscribers) {
+    }
+
+    /**
+     * Per-domain near cache gauges, registered lazily on the first {@link #setNearCache} call for a domain.
+     * One set of counters (warm caches, whole-cache subscribers, keyed subscribers) per cache domain.
+     */
+    private final Map<String, NearCacheGauges> nearCacheGauges = new ConcurrentHashMap<>();
+
+    private record NearCacheGauges(Counter warmCaches, Counter wholeSubscribers, Counter keyedSubscribers) {
     }
 
     /**
@@ -100,5 +112,21 @@ public class AeronCounterGatewayMetrics implements GatewayMetrics {
         final Counter subscribers = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "Subscribers-" + domain + suffix);
         log.info("Registered gateway subscription gauges for {} domain", domain);
         return new SubscriptionGauges(whole, keyed, subscribers);
+    }
+
+    @Override
+    public void setNearCache(String domain, long warmCaches, long wholeCacheSubscribers, long keyedSubscribers) {
+        final NearCacheGauges gauges = nearCacheGauges.computeIfAbsent(domain, this::registerNearCacheGauges);
+        gauges.warmCaches().setOrdered(warmCaches);
+        gauges.wholeSubscribers().setOrdered(wholeCacheSubscribers);
+        gauges.keyedSubscribers().setOrdered(keyedSubscribers);
+    }
+
+    private NearCacheGauges registerNearCacheGauges(String domain) {
+        final Counter warmCaches = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "NearWarmCaches-" + domain + suffix);
+        final Counter wholeSubscribers = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "NearSubscribers-" + domain + "-whole" + suffix);
+        final Counter keyedSubscribers = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "NearSubscribers-" + domain + "-keyed" + suffix);
+        log.info("Registered gateway near cache gauges for {} domain", domain);
+        return new NearCacheGauges(warmCaches, wholeSubscribers, keyedSubscribers);
     }
 }
