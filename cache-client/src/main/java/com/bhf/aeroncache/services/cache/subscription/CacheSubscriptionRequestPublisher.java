@@ -70,6 +70,13 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
     /** Caches currently kept warm in the near cache (subscribed by the near cache session). */
     private final Set<String> nearWarmCaches = ConcurrentHashMap.newKeySet();
 
+    /**
+     * The registry and domain tag the near cache hit counter is recorded against, captured in
+     * {@link #registerMetrics}. {@code null} when metrics are not wired (the counter is then a no-op).
+     */
+    private MeterRegistry meterRegistry;
+    private String metricsDomain;
+
     public CacheSubscriptionRequestPublisher(CacheRequestPublisher rbPublisher) {
         this(rbPublisher, null, null);
     }
@@ -107,6 +114,8 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      *                 attached as the {@code domain} tag.
      */
     public void registerMetrics(MeterRegistry registry, String domain) {
+        this.meterRegistry = registry;
+        this.metricsDomain = domain;
         Gauge.builder(WebGatewayMetrics.SUBSCRIPTIONS_ACTIVE, this, p -> p.countSubscriptions(false))
                 .tag("domain", domain).tag("type", "whole")
                 .description("Active whole-cache subscriptions (one client session on one cache).")
@@ -199,6 +208,19 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             }
         }
         return sessions.size();
+    }
+
+    /**
+     * Record a near cache hit: one hydrating subscription on one cache served from the warm local copy
+     * (replayed, no cluster snapshot). A no-op when metrics are not wired.
+     *
+     * @param keyed {@code true} for a keyed subscription, {@code false} for a whole-cache one.
+     */
+    private void recordNearHydrationServed(boolean keyed) {
+        if (meterRegistry != null) {
+            meterRegistry.counter(WebGatewayMetrics.NEAR_HYDRATIONS_SERVED,
+                    "domain", metricsDomain, "type", keyed ? "keyed" : "whole").increment();
+        }
     }
 
     private static String clusterSubscriptionKey(String cacheId, String key, SubscriptionMode mode) {
@@ -320,6 +342,8 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             var keysByCache = groupKeysByCache(cacheIds, keys);
             for (var cacheId : distinctCaches) {
                 replayNearCache(cacheId, keysByCache.get(cacheId), requestId, consumer);
+                // Near cache hit: this cache was hydrated from the warm local copy, not the cluster.
+                recordNearHydrationServed(!wholeCache);
             }
         } else if (wholeCache && effectiveMode == SubscriptionMode.FULL) {
             // At least one cache is cold. Hydrate this subscriber from the cluster snapshot (the single

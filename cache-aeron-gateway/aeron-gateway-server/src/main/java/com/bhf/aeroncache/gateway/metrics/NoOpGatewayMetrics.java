@@ -33,4 +33,9 @@ public class NoOpGatewayMetrics implements GatewayMetrics {
     public void setNearCache(String domain, long warmCaches, long wholeCacheSubscribers, long keyedSubscribers) {
 
     }
+
+    @Override
+    public void onNearCacheHydrationServed(String domain, boolean keyed) {
+
+    }
 }

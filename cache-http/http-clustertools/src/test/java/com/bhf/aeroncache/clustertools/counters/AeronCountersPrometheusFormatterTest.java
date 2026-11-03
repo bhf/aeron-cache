@@ -112,7 +112,9 @@ class AeronCountersPrometheusFormatterTest {
                 new AeronCounter(50, 2100, 4L, "AeronCache-Gateway-NearWarmCaches-cache-aeroncache-gateway-0"),
                 new AeronCounter(51, 2100, 6L, "AeronCache-Gateway-NearSubscribers-cache-whole-aeroncache-gateway-0"),
                 new AeronCounter(52, 2100, 2L, "AeronCache-Gateway-NearSubscribers-cache-keyed-aeroncache-gateway-0"),
-                new AeronCounter(53, 2100, 1L, "AeronCache-Gateway-NearWarmCaches-counters-aeroncache-gateway-0")));
+                new AeronCounter(53, 2100, 1L, "AeronCache-Gateway-NearWarmCaches-counters-aeroncache-gateway-0"),
+                new AeronCounter(54, 2100, 9L, "AeronCache-Gateway-NearHydrationsServed-cache-whole-aeroncache-gateway-0"),
+                new AeronCounter(55, 2100, 3L, "AeronCache-Gateway-NearHydrationsServed-cache-keyed-aeroncache-gateway-0")));
 
         assertTrue(out.contains("# TYPE aeron_gateway_near_warm_caches gauge"));
         assertTrue(out.contains(
@@ -124,6 +126,11 @@ class AeronCountersPrometheusFormatterTest {
                 "aeron_gateway_near_subscribers{domain=\"cache\",type=\"whole\",node=\"aeroncache-gateway-0\"} 6"));
         assertTrue(out.contains(
                 "aeron_gateway_near_subscribers{domain=\"cache\",type=\"keyed\",node=\"aeroncache-gateway-0\"} 2"));
+        assertTrue(out.contains("# TYPE aeron_gateway_near_hydrations_served_total counter"));
+        assertTrue(out.contains(
+                "aeron_gateway_near_hydrations_served_total{domain=\"cache\",type=\"whole\",node=\"aeroncache-gateway-0\"} 9"));
+        assertTrue(out.contains(
+                "aeron_gateway_near_hydrations_served_total{domain=\"cache\",type=\"keyed\",node=\"aeroncache-gateway-0\"} 3"));
     }
 
     @Test
