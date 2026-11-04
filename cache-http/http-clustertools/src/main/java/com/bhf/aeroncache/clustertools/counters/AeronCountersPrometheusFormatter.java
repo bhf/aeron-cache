@@ -27,8 +27,10 @@ import java.util.regex.Pattern;
  *     {@code aeron_gateway_subscriptions_active{domain,type,node}} and
  *     {@code aeron_gateway_subscribers{domain,node}}, and the near cache gauges
  *     {@code aeron_gateway_near_warm_caches{domain,node}},
- *     {@code aeron_gateway_near_subscribers{domain,type,node}} and the hit counter
- *     {@code aeron_gateway_near_hydrations_served_total{domain,type,node}} for the gateway dashboard.</li>
+ *     {@code aeron_gateway_near_subscribers{domain,type,node}}, the PATCH subscriber gauge
+ *     {@code aeron_gateway_near_patch_subscribers{domain,node}}, the hit counter
+ *     {@code aeron_gateway_near_hydrations_served_total{domain,type,node}} and the synthetic patch counter
+ *     {@code aeron_gateway_near_patches_total{domain,outcome,node}} for the gateway dashboard.</li>
  *     <li>The subscription metrics counters registered by the cache subscription services (type id
  *     {@value #SUBSCRIPTION_TYPE_ID}) are additionally parsed into
  *     {@code aeron_cache_subscriptions_total{subscription,event,node}} for subscribe/unsubscribe/update
@@ -91,6 +93,12 @@ public final class AeronCountersPrometheusFormatter {
     // AeronCache-Gateway-NearHydrationsServed-<domain>-<type>-<nodeId> (domain and type never contain a hyphen).
     private static final Pattern GATEWAY_NEAR_HYDRATIONS =
             Pattern.compile("^AeronCache-Gateway-NearHydrationsServed-([^-]+)-([^-]+)-(.+)$");
+    // AeronCache-Gateway-NearPatchSubscribers-<domain>-<nodeId> (domain never contains a hyphen).
+    private static final Pattern GATEWAY_NEAR_PATCH_SUBSCRIBERS =
+            Pattern.compile("^AeronCache-Gateway-NearPatchSubscribers-([^-]+)-(.+)$");
+    // AeronCache-Gateway-NearPatches-<domain>-<outcome>-<nodeId> (domain and outcome never contain a hyphen).
+    private static final Pattern GATEWAY_NEAR_PATCHES =
+            Pattern.compile("^AeronCache-Gateway-NearPatches-([^-]+)-([^-]+)-(.+)$");
 
     private AeronCountersPrometheusFormatter() {
     }
@@ -109,6 +117,8 @@ public final class AeronCountersPrometheusFormatter {
         final List<String> gatewayNearWarmCaches = new ArrayList<>();
         final List<String> gatewayNearSubscribers = new ArrayList<>();
         final List<String> gatewayNearHydrations = new ArrayList<>();
+        final List<String> gatewayNearPatchSubscribers = new ArrayList<>();
+        final List<String> gatewayNearPatches = new ArrayList<>();
     }
 
     /**
@@ -165,6 +175,12 @@ public final class AeronCountersPrometheusFormatter {
         appendFamily(out, "aeron_gateway_near_hydrations_served_total",
                 "Hydrating subscriptions served from the gateway near cache, by domain and whole/keyed type.",
                 "counter", families.gatewayNearHydrations);
+        appendFamily(out, "aeron_gateway_near_patch_subscribers",
+                "Distinct gateway client sessions holding a PATCH-mode near cache subscription, by domain.",
+                "gauge", families.gatewayNearPatchSubscribers);
+        appendFamily(out, "aeron_gateway_near_patches_total",
+                "Synthetic patches generated for gateway near cache PATCH subscribers, by domain and outcome "
+                        + "(delta/baseline/suppressed).", "counter", families.gatewayNearPatches);
 
         return out.toString();
     }
@@ -229,6 +245,18 @@ public final class AeronCountersPrometheusFormatter {
         m = GATEWAY_NEAR_HYDRATIONS.matcher(counter.label());
         if (m.matches()) {
             families.gatewayNearHydrations.add("{domain=\"" + escape(m.group(1)) + "\",type=\""
+                    + escape(m.group(2)) + "\",node=\"" + escape(m.group(3)) + "\"} " + value);
+            return;
+        }
+        m = GATEWAY_NEAR_PATCH_SUBSCRIBERS.matcher(counter.label());
+        if (m.matches()) {
+            families.gatewayNearPatchSubscribers.add("{domain=\"" + escape(m.group(1)) + "\",node=\""
+                    + escape(m.group(2)) + "\"} " + value);
+            return;
+        }
+        m = GATEWAY_NEAR_PATCHES.matcher(counter.label());
+        if (m.matches()) {
+            families.gatewayNearPatches.add("{domain=\"" + escape(m.group(1)) + "\",outcome=\""
                     + escape(m.group(2)) + "\",node=\"" + escape(m.group(3)) + "\"} " + value);
             return;
         }

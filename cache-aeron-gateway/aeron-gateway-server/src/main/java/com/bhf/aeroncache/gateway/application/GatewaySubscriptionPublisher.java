@@ -2,6 +2,7 @@ package com.bhf.aeroncache.gateway.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.gateway.metrics.GatewayMetrics;
+import com.bhf.aeroncache.gateway.metrics.NearPatchOutcome;
 import com.bhf.aeroncache.gateway.metrics.NoOpGatewayMetrics;
 import com.bhf.aeroncache.models.consumer.IdentifiableConsumer;
 import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
@@ -116,8 +117,9 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
      * Recompute the active subscription counts from the subscription state and publish them to the
      * metrics. Called on each client subscribe / unsubscribe / disconnect (control plane, not the hot
      * path). The internal near-cache warming session is excluded so the gauges reflect client traffic.
-     * When the near cache is enabled, the dedicated near-cache gauges (warm caches, and distinct
-     * subscriber sessions split by whole / keyed) are published in the same pass.
+     * When the near cache is enabled, the dedicated near-cache gauges (warm caches, distinct subscriber
+     * sessions split by whole / keyed, and distinct PATCH-mode subscriber sessions) are published in the
+     * same pass.
      */
     private void publishSubscriptionMetrics() {
         long wholeCache = 0;
@@ -125,6 +127,7 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         final Set<String> subscribers = new HashSet<>();
         final Set<String> wholeSubscribers = new HashSet<>();
         final Set<String> keyedSubscribers = new HashSet<>();
+        final Set<String> patchSubscribers = new HashSet<>();
         for (var consumers : cacheSubscriptions.values()) {
             for (var consumer : consumers) {
                 if (Objects.equals(consumer.getId(), nearCacheSessionId)) {
@@ -137,12 +140,16 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
                     wholeCache++;
                     wholeSubscribers.add(consumer.getId());
                 }
+                if (consumer.generatesPatch()) {
+                    patchSubscribers.add(consumer.getId());
+                }
                 subscribers.add(consumer.getId());
             }
         }
         metrics.setSubscriptions(metricsDomain, wholeCache, keyed, subscribers.size());
         if (isNearCacheEnabled()) {
-            metrics.setNearCache(metricsDomain, nearWarmCaches.size(), wholeSubscribers.size(), keyedSubscribers.size());
+            metrics.setNearCache(metricsDomain, nearWarmCaches.size(), wholeSubscribers.size(), keyedSubscribers.size(),
+                    patchSubscribers.size());
         }
     }
 
@@ -705,12 +712,16 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         if (prevJson == null) {
             streamUpdate.set(cacheId, CacheUpdateEvent.EventType.ADD_ITEM, key, newJson, requestId);
             c.accept(streamUpdate);
+            metrics.onNearPatch(metricsDomain, NearPatchOutcome.BASELINE);
             return;
         }
         String delta = JsonMergePatch.computeMergePatch(prevJson, newJson);
         if (delta != null) {
             streamUpdate.set(cacheId, CacheUpdateEvent.EventType.PATCH_ITEM, key, delta, requestId);
             c.accept(streamUpdate);
+            metrics.onNearPatch(metricsDomain, NearPatchOutcome.DELTA);
+        } else {
+            metrics.onNearPatch(metricsDomain, NearPatchOutcome.SUPPRESSED);
         }
     }
 

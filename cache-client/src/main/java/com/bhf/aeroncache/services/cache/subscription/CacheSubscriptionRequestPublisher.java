@@ -143,6 +143,10 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                     .tag("domain", domain).tag("type", "keyed")
                     .description("Distinct client sessions subscribed to specific keys served by the near cache.")
                     .register(registry);
+            Gauge.builder(WebGatewayMetrics.NEAR_PATCH_SUBSCRIBERS, this, CacheSubscriptionRequestPublisher::countPatchSubscribers)
+                    .tag("domain", domain)
+                    .description("Distinct client sessions holding a PATCH-mode subscription served by the near cache.")
+                    .register(registry);
         }
     }
 
@@ -193,6 +197,25 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
     }
 
     /**
+     * Count the distinct client sessions holding at least one PATCH-mode (patch-generating) subscription,
+     * excluding the internal near-cache session. These are the sessions whose updates are turned into
+     * synthetic merge-patch deltas from the warm copy.
+     *
+     * @return the number of distinct patch-subscriber sessions.
+     */
+    private double countPatchSubscribers() {
+        Set<String> sessions = new HashSet<>();
+        for (var consumers : cacheSubscriptions.values()) {
+            for (var consumer : consumers) {
+                if (consumer.generatesPatch() && !Objects.equals(consumer.sessionId, nearCacheSessionId)) {
+                    sessions.add(consumer.sessionId);
+                }
+            }
+        }
+        return sessions.size();
+    }
+
+    /**
      * Count the distinct client sessions holding at least one subscription, excluding the internal
      * near-cache session.
      *
@@ -220,6 +243,20 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         if (meterRegistry != null) {
             meterRegistry.counter(WebGatewayMetrics.NEAR_HYDRATIONS_SERVED,
                     "domain", metricsDomain, "type", keyed ? "keyed" : "whole").increment();
+        }
+    }
+
+    /**
+     * Record one synthetic patch generation for a near-cache PATCH subscriber: a merge-patch {@code delta},
+     * a full {@code baseline} (first-seen key, nothing to diff against), or a {@code suppressed} no-op delta.
+     * A no-op when metrics are not wired.
+     *
+     * @param outcome the patch outcome tag value ({@code delta} / {@code baseline} / {@code suppressed}).
+     */
+    private void recordNearPatch(String outcome) {
+        if (meterRegistry != null) {
+            meterRegistry.counter(WebGatewayMetrics.NEAR_PATCHES,
+                    "domain", metricsDomain, "outcome", outcome).increment();
         }
     }
 
@@ -798,11 +835,15 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                                String requestId) {
         if (prevJson == null) {
             c.accept(new CacheUpdateEvent(cacheId, CacheUpdateEvent.EventType.ADD_ITEM, key, newJson, requestId));
+            recordNearPatch("baseline");
             return;
         }
         String delta = JsonMergePatch.computeMergePatch(prevJson, newJson);
         if (delta != null) {
             c.accept(new CacheUpdateEvent(cacheId, CacheUpdateEvent.EventType.PATCH_ITEM, key, delta, requestId));
+            recordNearPatch("delta");
+        } else {
+            recordNearPatch("suppressed");
         }
     }
 

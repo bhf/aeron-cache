@@ -77,6 +77,16 @@ copy. A patch subscription to a *cold* cache takes the plain cluster path (warm 
 get near-generated deltas), and patch deltas are only generated for JSON (string) values, not scalar
 counters.
 
+The synthetic patch generation is observable on each interface's metrics. A `patch subscribers` gauge
+counts the distinct client sessions holding a patch-mode near-cache subscription, and a per-item patch
+counter breaks every generation down by outcome: `delta` (a merge patch was computed and forwarded),
+`baseline` (a first-seen key with nothing to diff, sent as a full `ADD_ITEM`) and `suppressed` (the delta
+came out empty - a no-op write - and was dropped). On the web interfaces these are the Micrometer meters
+`aeroncache_near_patch_subscribers` and `aeroncache_near_patches_total{outcome}`; on the Aeron gateway they
+are the driver counters `NearPatchSubscribers-<domain>` and `NearPatches-<domain>-<outcome>`, exported as
+`aeron_gateway_near_patch_subscribers` and `aeron_gateway_near_patches_total{outcome}`. The `delta`/`suppressed`
+split shows how much subscriber wake-up and bandwidth the local patching saves.
+
 This is transparent to downstream consumers that embed a near cache: `ConcurrentNearCacheManager` applies a
 `PATCH_ITEM` by merging the delta onto the value it already holds (`JsonMergePatch.applyMergePatch`), so an
 embedded client just feeds every `CacheUpdateEvent` into its near cache manager as before and reconstructs
