@@ -114,7 +114,11 @@ class AeronCountersPrometheusFormatterTest {
                 new AeronCounter(52, 2100, 2L, "AeronCache-Gateway-NearSubscribers-cache-keyed-aeroncache-gateway-0"),
                 new AeronCounter(53, 2100, 1L, "AeronCache-Gateway-NearWarmCaches-counters-aeroncache-gateway-0"),
                 new AeronCounter(54, 2100, 9L, "AeronCache-Gateway-NearHydrationsServed-cache-whole-aeroncache-gateway-0"),
-                new AeronCounter(55, 2100, 3L, "AeronCache-Gateway-NearHydrationsServed-cache-keyed-aeroncache-gateway-0")));
+                new AeronCounter(55, 2100, 3L, "AeronCache-Gateway-NearHydrationsServed-cache-keyed-aeroncache-gateway-0"),
+                new AeronCounter(56, 2100, 7L, "AeronCache-Gateway-NearPatchSubscribers-cache-aeroncache-gateway-0"),
+                new AeronCounter(57, 2100, 11L, "AeronCache-Gateway-NearPatches-cache-delta-aeroncache-gateway-0"),
+                new AeronCounter(58, 2100, 4L, "AeronCache-Gateway-NearPatches-cache-baseline-aeroncache-gateway-0"),
+                new AeronCounter(59, 2100, 2L, "AeronCache-Gateway-NearPatches-cache-suppressed-aeroncache-gateway-0")));
 
         assertTrue(out.contains("# TYPE aeron_gateway_near_warm_caches gauge"));
         assertTrue(out.contains(
@@ -131,6 +135,16 @@ class AeronCountersPrometheusFormatterTest {
                 "aeron_gateway_near_hydrations_served_total{domain=\"cache\",type=\"whole\",node=\"aeroncache-gateway-0\"} 9"));
         assertTrue(out.contains(
                 "aeron_gateway_near_hydrations_served_total{domain=\"cache\",type=\"keyed\",node=\"aeroncache-gateway-0\"} 3"));
+        assertTrue(out.contains("# TYPE aeron_gateway_near_patch_subscribers gauge"));
+        assertTrue(out.contains(
+                "aeron_gateway_near_patch_subscribers{domain=\"cache\",node=\"aeroncache-gateway-0\"} 7"));
+        assertTrue(out.contains("# TYPE aeron_gateway_near_patches_total counter"));
+        assertTrue(out.contains(
+                "aeron_gateway_near_patches_total{domain=\"cache\",outcome=\"delta\",node=\"aeroncache-gateway-0\"} 11"));
+        assertTrue(out.contains(
+                "aeron_gateway_near_patches_total{domain=\"cache\",outcome=\"baseline\",node=\"aeroncache-gateway-0\"} 4"));
+        assertTrue(out.contains(
+                "aeron_gateway_near_patches_total{domain=\"cache\",outcome=\"suppressed\",node=\"aeroncache-gateway-0\"} 2"));
     }
 
     @Test

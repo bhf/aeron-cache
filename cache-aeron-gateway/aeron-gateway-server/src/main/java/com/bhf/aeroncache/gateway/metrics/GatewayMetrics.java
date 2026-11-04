@@ -62,8 +62,11 @@ public interface GatewayMetrics {
      * @param warmCaches           caches currently kept warm in the near cache.
      * @param wholeCacheSubscribers distinct client sessions subscribed to whole caches.
      * @param keyedSubscribers     distinct client sessions subscribed to specific keys.
+     * @param patchSubscribers     distinct client sessions holding a PATCH-mode subscription (whose updates
+     *                             are turned into synthetic merge-patch deltas from the warm copy).
      */
-    void setNearCache(String domain, long warmCaches, long wholeCacheSubscribers, long keyedSubscribers);
+    void setNearCache(String domain, long warmCaches, long wholeCacheSubscribers, long keyedSubscribers,
+                      long patchSubscribers);
 
     /**
      * Record a near cache hit: one hydrating subscription on one cache served from the warm local copy
@@ -75,4 +78,15 @@ public interface GatewayMetrics {
      * @param keyed  {@code true} for a keyed subscription, {@code false} for a whole-cache one.
      */
     void onNearCacheHydrationServed(String domain, boolean keyed);
+
+    /**
+     * Record one synthetic patch generation for a near-cache PATCH subscriber. Called from the cluster
+     * egress thread on the local patch-emission path, once per subscriber per update, so it increments only
+     * when a patch was actually generated for a subscriber. Only meaningful when the near cache is enabled.
+     *
+     * @param domain  the cache domain ({@code cache} or {@code counters}).
+     * @param outcome whether a merge-patch delta was emitted, a full baseline was sent, or a no-op delta
+     *                was suppressed.
+     */
+    void onNearPatch(String domain, NearPatchOutcome outcome);
 }

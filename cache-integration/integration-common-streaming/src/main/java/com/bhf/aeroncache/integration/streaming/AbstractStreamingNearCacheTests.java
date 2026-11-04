@@ -240,6 +240,7 @@ public abstract class AbstractStreamingNearCacheTests {
 
         // Act: open a patch-mode hydrating subscription (served from the warm copy), and once it is
         // established, overwrite the value with a new full value.
+        int deltasBefore = nearPatches(backend, "delta");
         CompletableFuture<Void> ready = new CompletableFuture<>();
         var eventsFuture = streamingHelper.getPatchEventsWithHydration(backend, cacheId, 2, ready);
         Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(ready::isDone);
@@ -260,6 +261,11 @@ public abstract class AbstractStreamingNearCacheTests {
                 .findFirst().orElseThrow(() -> new AssertionError("expected a PATCH_ITEM delta, got " + events));
         MatcherAssert.assertThat(patch.itemKey(), Matchers.is("Key1"));
         MatcherAssert.assertThat(patch.itemValue(), Matchers.is("{\"b\":3}"));
+
+        // Assert: the synthetic patch counter recorded exactly the one merge-patch delta we generated for
+        // this subscriber, proving the patch was produced locally from the warm copy.
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                MatcherAssert.assertThat(nearPatches(backend, "delta"), Matchers.is(deltasBefore + 1)));
 
         // Clean up so repeated runs in this class instance start from a cold cache.
         RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
@@ -336,6 +342,17 @@ public abstract class AbstractStreamingNearCacheTests {
     private int nearHydrationsServed(BackendTestResource backend, String type) {
         return (int) PrometheusMetrics.sampleValue(managementBaseUri(backend), managementPort(backend),
                 "aeroncache_near_hydrations_served_total", Map.of("domain", "cache", "type", type));
+    }
+
+    /**
+     * Read the synthetic patch counter ({@code aeroncache_near_patches_total}) for the cache domain and the
+     * given outcome ({@code delta} / {@code baseline} / {@code suppressed}) from {@code /prometheus}. The
+     * counter increments once per subscriber per update on the local patch path, so a delta of one across a
+     * single-subscriber update proves a patch of that outcome was generated from the warm copy.
+     */
+    private int nearPatches(BackendTestResource backend, String outcome) {
+        return (int) PrometheusMetrics.sampleValue(managementBaseUri(backend), managementPort(backend),
+                "aeroncache_near_patches_total", Map.of("domain", "cache", "outcome", outcome));
     }
 
     @Test

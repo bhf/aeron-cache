@@ -57,6 +57,28 @@ public final class WebGatewayMetrics {
      */
     public static final String NEAR_HYDRATIONS_SERVED = "aeroncache.near.hydrations.served";
 
+    /**
+     * Gauge: distinct client sessions holding a PATCH-mode subscription served from the near cache, tagged
+     * by {@code domain}. These are the subscribers whose live updates are turned into synthetic merge-patch
+     * deltas generated locally from the warm copy; a dedicated near-cache metric, present only when near
+     * caching is enabled.
+     */
+    public static final String NEAR_PATCH_SUBSCRIBERS = "aeroncache.near.patch.subscribers";
+
+    /**
+     * Counter: per-item synthetic patch generations for near-cache PATCH subscribers, tagged by
+     * {@code domain} and {@code outcome}. One increment per subscriber per update on the local patch path
+     * (see the subscription publisher's near-patch emission), with {@code outcome}:
+     * <ul>
+     *     <li>{@code delta} - a merge-patch {@code PATCH_ITEM} was computed from the warm copy and emitted;</li>
+     *     <li>{@code baseline} - a first-seen key had no prior value to diff, so a full {@code ADD_ITEM}
+     *     baseline was emitted instead;</li>
+     *     <li>{@code suppressed} - the computed delta was empty (no effective change) and the update was dropped.</li>
+     * </ul>
+     * A dedicated near-cache metric, present only when near caching is enabled.
+     */
+    public static final String NEAR_PATCHES = "aeroncache.near.patches";
+
     private final MeterRegistry registry;
 
     public WebGatewayMetrics(MeterRegistry registry) {
