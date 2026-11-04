@@ -820,9 +820,11 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
 
     /**
      * Emit a near-cache-generated update to a patch subscriber: a merge-patch {@code PATCH_ITEM} delta when
-     * the warm copy already held a value for the key, or a full {@code ADD_ITEM} baseline otherwise (a
-     * first-seen key has nothing to diff against). A delta that comes out empty (no effective change) is
-     * dropped, so the subscriber is not woken for a no-op write.
+     * the warm copy already held a value for the key, or a full {@code ADD_ITEM} value otherwise - either
+     * because a first-seen key had nothing to diff against (baseline), or because a valid patch could not be
+     * built from the two values (fallback). Only a delta that comes out empty (no effective change) is dropped,
+     * so the subscriber is not woken for a no-op write; a patch-generation failure must still deliver the whole
+     * value, or the subscriber would silently retain stale state.
      *
      * @param c         the patch subscriber.
      * @param cacheId   the cache id.
@@ -838,10 +840,14 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             recordNearPatch("baseline");
             return;
         }
-        String delta = JsonMergePatch.computeMergePatch(prevJson, newJson);
-        if (delta != null) {
-            c.accept(new CacheUpdateEvent(cacheId, CacheUpdateEvent.EventType.PATCH_ITEM, key, delta, requestId));
+        var result = JsonMergePatch.computeMergePatch(prevJson, newJson);
+        if (result.isDelta()) {
+            c.accept(new CacheUpdateEvent(cacheId, CacheUpdateEvent.EventType.PATCH_ITEM, key, result.delta(), requestId));
             recordNearPatch("delta");
+        } else if (result.isFailed()) {
+            // Could not build a valid patch - send the whole value so the subscriber does not go stale.
+            c.accept(new CacheUpdateEvent(cacheId, CacheUpdateEvent.EventType.ADD_ITEM, key, newJson, requestId));
+            recordNearPatch("full_fallback");
         } else {
             recordNearPatch("suppressed");
         }

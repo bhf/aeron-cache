@@ -26,17 +26,64 @@ public final class JsonMergePatch {
     }
 
     /**
+     * The outcome of attempting to compute a merge-patch delta between two whole values, together with the
+     * delta itself when one was produced. The three cases are kept distinct so a caller can react
+     * differently to "nothing changed" (drop the update) and "could not build a valid patch" (fall back to
+     * sending the whole value) rather than conflating both into a single null - which would leave a patch
+     * subscriber holding stale state whenever patch generation failed.
+     *
+     * @param kind  which of the three outcomes occurred.
+     * @param delta the computed delta JSON, non-null only when {@link Kind#DELTA}.
+     */
+    public record MergePatchResult(Kind kind, String delta) {
+
+        public enum Kind {
+            /** A non-empty delta was produced; emit it as a patch update. */
+            DELTA,
+            /** The two values were equal; no update need be sent. */
+            UNCHANGED,
+            /** A delta could not be produced (unparseable or null input); emit the whole value instead. */
+            FAILED
+        }
+
+        private static final MergePatchResult UNCHANGED = new MergePatchResult(Kind.UNCHANGED, null);
+        private static final MergePatchResult FAILED = new MergePatchResult(Kind.FAILED, null);
+
+        static MergePatchResult delta(String delta) {
+            return new MergePatchResult(Kind.DELTA, delta);
+        }
+
+        static MergePatchResult unchanged() {
+            return UNCHANGED;
+        }
+
+        static MergePatchResult failed() {
+            return FAILED;
+        }
+
+        public boolean isDelta() {
+            return kind == Kind.DELTA;
+        }
+
+        public boolean isFailed() {
+            return kind == Kind.FAILED;
+        }
+    }
+
+    /**
      * Compute an RFC 7386 JSON merge patch describing the change from {@code previousJson} to
      * {@code newJson}.
      *
      * @param previousJson the value already held locally.
      * @param newJson      the new whole value.
-     * @return the merge patch as a JSON string, or {@code null} when nothing changed or either side is not
-     *         parseable JSON (in which case the caller should fall back to sending the whole value).
+     * @return a {@link MergePatchResult} describing whether a delta was produced ({@link MergePatchResult.Kind#DELTA}),
+     *         nothing changed ({@link MergePatchResult.Kind#UNCHANGED}), or a valid patch could not be built
+     *         ({@link MergePatchResult.Kind#FAILED}, e.g. either side is not parseable JSON - the caller should
+     *         then fall back to sending the whole value rather than nothing, so the subscriber does not go stale).
      */
-    public static String computeMergePatch(String previousJson, String newJson) {
+    public static MergePatchResult computeMergePatch(String previousJson, String newJson) {
         if (previousJson == null || newJson == null) {
-            return null;
+            return MergePatchResult.failed();
         }
         try {
             JsonNode oldNode = OBJECT_MAPPER.readTree(previousJson);
@@ -45,12 +92,12 @@ public final class JsonMergePatch {
 
             if (patchNode.isObject() && patchNode.isEmpty()) {
                 // Nothing changed; no patch update required.
-                return null;
+                return MergePatchResult.unchanged();
             }
-            return OBJECT_MAPPER.writeValueAsString(patchNode);
+            return MergePatchResult.delta(OBJECT_MAPPER.writeValueAsString(patchNode));
         } catch (JsonProcessingException e) {
             log.warn("Failed to compute merge patch, falling back to whole value, reason: {}", e.getMessage());
-            return null;
+            return MergePatchResult.failed();
         }
     }
 

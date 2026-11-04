@@ -276,6 +276,72 @@ public abstract class AbstractStreamingNearCacheTests {
     }
 
     @Test
+    @DisplayName("Should fall back to a full ADD_ITEM for a patch subscriber when a valid merge patch cannot be generated")
+    @HappyPath
+    void shouldFallBackToFullValueWhenPatchGenerationFails(BackendTestResource backend) {
+        // Arrange: seed a valid JSON value (so the warm copy has a parseable baseline to diff against) and
+        // prime the cache so it is warm before the patch subscription arrives.
+        var cacheId = getCacheId() + "-patch-fallback";
+        var initial = "{\"a\":1,\"b\":2}";
+        var corrupt = "not valid json";
+        CacheTestUtils.createCache(cacheId, backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", initial, backend, httpEndpoints);
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(1)));
+
+        // Act: open a patch-mode hydrating subscription (served from the warm copy), then overwrite the value
+        // with one that is not parseable JSON, so no valid merge-patch delta can be computed from the warm copy.
+        int fallbacksBefore = nearPatches(backend, "full_fallback");
+        int deltasBefore = nearPatches(backend, "delta");
+        CompletableFuture<Void> ready = new CompletableFuture<>();
+        var eventsFuture = streamingHelper.getPatchEventsWithHydration(backend, cacheId, 2, ready);
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(ready::isDone);
+        CacheTestUtils.addItem(cacheId, "Key1", corrupt, backend, httpEndpoints);
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(eventsFuture::isDone);
+        var events = eventsFuture.join();
+
+        // Assert: the subscription receives the full ADD_ITEM baseline, then - because the patch could not be
+        // built - the whole new value as another full ADD_ITEM rather than a PATCH_ITEM delta (which would have
+        // left the subscriber stale) and never a PATCH_ITEM.
+        MatcherAssert.assertThat("expected no PATCH_ITEM when patch generation fails, got " + events,
+                events.stream().anyMatch(e -> e.eventType() == CacheUpdateEvent.EventType.PATCH_ITEM),
+                Matchers.is(false));
+
+        var adds = events.stream()
+                .filter(e -> e.eventType() == CacheUpdateEvent.EventType.ADD_ITEM)
+                .collect(Collectors.toList());
+        MatcherAssert.assertThat(adds, Matchers.hasSize(2));
+        MatcherAssert.assertThat(adds.get(0).itemKey(), Matchers.is("Key1"));
+        MatcherAssert.assertThat(adds.get(0).itemValue(), Matchers.is(initial));
+        MatcherAssert.assertThat(adds.get(1).itemKey(), Matchers.is("Key1"));
+        MatcherAssert.assertThat(adds.get(1).itemValue(), Matchers.is(corrupt));
+
+        // Assert: the fallback was recorded as a full_fallback (not a delta), proving the whole value was sent
+        // because the patch could not be generated rather than as an ordinary delta or baseline.
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                MatcherAssert.assertThat(nearPatches(backend, "full_fallback"), Matchers.is(fallbacksBefore + 1)));
+        MatcherAssert.assertThat(nearPatches(backend, "delta"), Matchers.is(deltasBefore));
+
+        // Clean up so repeated runs in this class instance start from a cold cache.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200);
+    }
+
+    @Test
     @DisplayName("Near warm caches gauge on /prometheus should match the warm cache listing and track stop")
     @HappyPath
     void shouldExposeWarmCacheCountAsNearWarmCachesMetric(BackendTestResource backend) {
@@ -346,7 +412,8 @@ public abstract class AbstractStreamingNearCacheTests {
 
     /**
      * Read the synthetic patch counter ({@code aeroncache_near_patches_total}) for the cache domain and the
-     * given outcome ({@code delta} / {@code baseline} / {@code suppressed}) from {@code /prometheus}. The
+     * given outcome ({@code delta} / {@code baseline} / {@code suppressed} / {@code full_fallback}) from
+     * {@code /prometheus}. The
      * counter increments once per subscriber per update on the local patch path, so a delta of one across a
      * single-subscriber update proves a patch of that outcome was generated from the warm copy.
      */

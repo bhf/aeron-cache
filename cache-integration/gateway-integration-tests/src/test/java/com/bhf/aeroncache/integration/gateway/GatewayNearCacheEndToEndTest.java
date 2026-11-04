@@ -296,6 +296,53 @@ class GatewayNearCacheEndToEndTest {
     }
 
     @Test
+    @DisplayName("Should fall back to a full ADD_ITEM for a patch-mode subscription when a valid merge patch cannot be generated")
+    void shouldFallBackToFullValueWhenPatchGenerationFails() {
+        var cacheId = uniqueCache("gateway-near-patch-fallback");
+        var initial = "{\"a\":1,\"b\":2}";
+        var corrupt = "not valid json";
+
+        // Seed a valid JSON value (a parseable baseline to diff against) and prime the cache so it is warm
+        // before the patch subscription arrives.
+        createCache(cacheId);
+        addEntry(cacheId, "Key1", initial);
+
+        RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200);
+
+        await().atMost(60, SECONDS).untilAsserted(() ->
+                RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(1)));
+
+        // A whole-cache PATCH-mode hydrating subscription served from the warm copy: a full ADD_ITEM baseline.
+        var subCorr = correlationId();
+        client.subscribe(subCorr, List.of(cacheId), null, true, true, false);
+        awaitSubscribeAck(subCorr);
+        await().atMost(60, SECONDS).until(() -> streamed(UpdateEventType.ADD_ITEM, cacheId, "Key1", initial));
+
+        // Overwrite with a value that is not parseable JSON, so no valid merge-patch delta can be computed
+        // from the warm copy. The gateway must fall back to streaming the whole new value as a full ADD_ITEM
+        // rather than dropping the update and leaving the subscriber stale.
+        addEntry(cacheId, "Key1", corrupt);
+        await().atMost(60, SECONDS).until(() -> streamed(UpdateEventType.ADD_ITEM, cacheId, "Key1", corrupt));
+
+        // And it must never have been turned into a PATCH_ITEM delta for this update.
+        assertFalse(streamed(UpdateEventType.PATCH_ITEM, cacheId, "Key1", corrupt),
+                "a failed patch must not be streamed as a PATCH_ITEM");
+
+        // Clean up.
+        RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200);
+    }
+
+    @Test
     @DisplayName("Should succeed with wasCached=false when stopping a cache that was never warm")
     void shouldReportNotCachedWhenStoppingUnwarmedCache() {
         RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)

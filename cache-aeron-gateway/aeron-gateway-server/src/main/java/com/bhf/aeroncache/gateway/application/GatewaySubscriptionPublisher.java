@@ -696,9 +696,11 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
     /**
      * Emit a near-cache-generated update to a patch subscriber via the egress-owned {@link #streamUpdate}
      * flyweight: a merge-patch {@code PATCH_ITEM} delta when the warm copy already held a value for the key,
-     * or a full {@code ADD_ITEM} baseline otherwise (a first-seen key has nothing to diff against). A delta
-     * that comes out empty (no effective change) is dropped. Runs on the egress thread alongside the rest of
-     * {@link #handleCacheEntryUpdated}, so reusing the egress flyweight per subscriber is safe.
+     * or a full {@code ADD_ITEM} value otherwise - either because a first-seen key had nothing to diff against
+     * (baseline), or because a valid patch could not be built from the two values (fallback). Only a delta
+     * that comes out empty (no effective change) is dropped; a patch-generation failure must still deliver the
+     * whole value, or the subscriber would silently retain stale state. Runs on the egress thread alongside the
+     * rest of {@link #handleCacheEntryUpdated}, so reusing the egress flyweight per subscriber is safe.
      *
      * @param c         the patch subscriber.
      * @param cacheId   the cache id.
@@ -715,11 +717,16 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
             metrics.onNearPatch(metricsDomain, NearPatchOutcome.BASELINE);
             return;
         }
-        String delta = JsonMergePatch.computeMergePatch(prevJson, newJson);
-        if (delta != null) {
-            streamUpdate.set(cacheId, CacheUpdateEvent.EventType.PATCH_ITEM, key, delta, requestId);
+        var result = JsonMergePatch.computeMergePatch(prevJson, newJson);
+        if (result.isDelta()) {
+            streamUpdate.set(cacheId, CacheUpdateEvent.EventType.PATCH_ITEM, key, result.delta(), requestId);
             c.accept(streamUpdate);
             metrics.onNearPatch(metricsDomain, NearPatchOutcome.DELTA);
+        } else if (result.isFailed()) {
+            // Could not build a valid patch - send the whole value so the subscriber does not go stale.
+            streamUpdate.set(cacheId, CacheUpdateEvent.EventType.ADD_ITEM, key, newJson, requestId);
+            c.accept(streamUpdate);
+            metrics.onNearPatch(metricsDomain, NearPatchOutcome.FULL_FALLBACK);
         } else {
             metrics.onNearPatch(metricsDomain, NearPatchOutcome.SUPPRESSED);
         }

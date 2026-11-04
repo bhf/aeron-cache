@@ -1347,17 +1347,35 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
         // If a patch subscriber is listening and the add produced a merge patch
         // (i.e. it overwrote an existing value), notify patch subscribers with the delta.
-        if (patchSubscriptionService != null && mergePatchResult != null
-                && mergePatchResult.getStatus() == CacheOperationStatus.SUCCESS) {
-            VT patchValue = mergePatchResult.getEntryValue();
-            patchEntryUpdateResult.clear();
-            patchEntryUpdateResult.setRequestId(addCacheEntryResult.getRequestId());
-            patchEntryUpdateResult.getCacheId().copyFrom(cacheId);
-            patchEntryUpdateResult.getEntryKey().copyFrom(key);
-            patchEntryUpdateResult.setStatus(CacheOperationStatus.SUCCESS);
+        //
+        // A SUCCESS result carries a delta and is sent as a PATCH_ITEM. An ERROR result means a valid merge
+        // patch could not be computed (e.g. the stored or incoming value was not parseable JSON); rather than
+        // sending nothing - which would leave the patch subscriber holding stale state - fall back to sending
+        // the whole value as a full ADD_ITEM. A NONE result means there was no effective change (or no prior
+        // value to diff), for which no patch update is required.
+        if (patchSubscriptionService != null && mergePatchResult != null) {
+            var patchStatus = mergePatchResult.getStatus();
+            if (patchStatus == CacheOperationStatus.SUCCESS) {
+                VT patchValue = mergePatchResult.getEntryValue();
+                patchEntryUpdateResult.clear();
+                patchEntryUpdateResult.setRequestId(addCacheEntryResult.getRequestId());
+                patchEntryUpdateResult.getCacheId().copyFrom(cacheId);
+                patchEntryUpdateResult.getEntryKey().copyFrom(key);
+                patchEntryUpdateResult.setStatus(CacheOperationStatus.SUCCESS);
 
-            var entryPatchedLength = encoder.encodeEntryPatched(key, patchValue, patchEntryUpdateResult, egressBuffer);
-            patchSubscriptionService.handleEntryAdded(patchEntryUpdateResult, egressBuffer, key, patchValue, entryPatchedLength);
+                var entryPatchedLength = encoder.encodeEntryPatched(key, patchValue, patchEntryUpdateResult, egressBuffer);
+                patchSubscriptionService.handleEntryAdded(patchEntryUpdateResult, egressBuffer, key, patchValue, entryPatchedLength);
+            } else if (patchStatus == CacheOperationStatus.ERROR) {
+                // Patch generation failed - send the whole value so patch subscribers don't go stale.
+                patchEntryUpdateResult.clear();
+                patchEntryUpdateResult.setRequestId(addCacheEntryResult.getRequestId());
+                patchEntryUpdateResult.getCacheId().copyFrom(cacheId);
+                patchEntryUpdateResult.getEntryKey().copyFrom(key);
+                patchEntryUpdateResult.setStatus(CacheOperationStatus.SUCCESS);
+
+                var patchFullValueLength = encoder.encodeEntryUpdated(key, value, patchEntryUpdateResult, egressBuffer);
+                patchSubscriptionService.handleEntryAdded(patchEntryUpdateResult, egressBuffer, key, value, patchFullValueLength);
+            }
         }
     }
 
