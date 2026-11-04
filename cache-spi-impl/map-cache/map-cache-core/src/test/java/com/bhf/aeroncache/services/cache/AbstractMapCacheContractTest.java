@@ -323,17 +323,20 @@ public abstract class AbstractMapCacheContractTest<C extends Cache<ReusableStrin
     }
 
     @Test
-    @DisplayName("Should not produce a merge patch when an add creates a new key")
-    void testAddProducesNoMergePatchOnFirstAdd() {
+    @DisplayName("Should signal a baseline (UNKNOWN_KEY) rather than a delta when an add creates a new key")
+    void testAddSignalsBaselineOnFirstAdd() {
         // Arrange
         var mergePatchOut = newMergePatchOut();
 
         // Act
         var result = cache.add(reusable("key1"), reusable("{\"a\":1}"), mergePatchOut);
 
-        // Assert
+        // Assert - with no prior value there is no delta to compute, but the outcome is UNKNOWN_KEY (not
+        // NONE) so the caller knows to send the whole value as an initial baseline rather than suppressing
+        // the update, which would leave a patch subscriber that joined first with a stale (empty) view.
         assertEquals(CacheOperationStatus.SUCCESS, result.getStatus());
-        assertEquals(CacheOperationStatus.NONE, mergePatchOut.getStatus());
+        assertEquals(CacheOperationStatus.UNKNOWN_KEY, mergePatchOut.getStatus());
+        assertEquals("key1", mergePatchOut.getEntryKey().value());
     }
 
     @Test

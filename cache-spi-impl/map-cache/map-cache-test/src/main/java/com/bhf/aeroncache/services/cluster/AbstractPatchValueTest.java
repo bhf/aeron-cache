@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -197,6 +198,9 @@ public abstract class AbstractPatchValueTest<I extends Reusable, K extends Reusa
         // Arrange
         sut.patchSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
         when(sut.patchSubscriptionService.hasSubscriber(any(), any())).thenReturn(true);
+        // The notified value is a reused flyweight, so snapshot it to a String at call time rather than
+        // capturing the reference (which would show only its final mutated state at assertion time).
+        var notifiedValues = recordPatchNotificationValues();
 
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         I cacheId = getCacheId();
@@ -205,27 +209,23 @@ public abstract class AbstractPatchValueTest<I extends Reusable, K extends Reusa
         createCache(cacheId, session, requestBuffer, sut);
 
         var requestId = UUID.randomUUID().toString();
-        // initial add - no prior value, so no patch is produced
+        // initial add - no prior value, so the patch subscriber is sent the whole value as a baseline
         var length = encodeAddCacheEntry(requestId, cacheId, key, getInitialValue(), 0, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-
-        verify(sut.patchSubscriptionService, Mockito.never()).handleEntryAdded(
-                any(AddCacheEntryResult.class), any(MutableDirectBuffer.class), any(), any(), anyInt());
 
         // Act - overwrite the key with a new value that differs from the previous one
         length = encodeAddCacheEntry(requestId, cacheId, key, getExpectedPatchedValue(), 0, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
-        // Assert - the patch subscriber is notified once with the merge patch (the delta)
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<V> valueCaptor = ArgumentCaptor.forClass((Class<V>) getPatch().getClass());
-        verify(sut.patchSubscriptionService, times(1)).handleEntryAdded(
+        // Assert - the patch subscriber is notified twice: first with the whole value as the initial
+        // baseline, then with the merge patch (the delta) for the overwrite.
+        verify(sut.patchSubscriptionService, times(2)).handleEntryAdded(
                 any(AddCacheEntryResult.class),
                 any(MutableDirectBuffer.class),
                 eq(key),
-                valueCaptor.capture(),
+                any(),
                 anyInt());
-        assertEquals(getPatch().value(), valueCaptor.getValue().value());
+        assertEquals(List.of(String.valueOf(getInitialValue().value()), String.valueOf(getPatch().value())), notifiedValues);
     }
 
     @Test
@@ -234,6 +234,9 @@ public abstract class AbstractPatchValueTest<I extends Reusable, K extends Reusa
         // Arrange
         sut.patchSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
         when(sut.patchSubscriptionService.hasSubscriber(any(), any())).thenReturn(true);
+        // The notified value is a reused flyweight, so snapshot it to a String at call time rather than
+        // capturing the reference (which would show only its final mutated state at assertion time).
+        var notifiedValues = recordPatchNotificationValues();
 
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         I cacheId = getCacheId();
@@ -246,32 +249,29 @@ public abstract class AbstractPatchValueTest<I extends Reusable, K extends Reusa
         var length = encodeAddCacheEntry(requestId, cacheId, key, getInitialValue(), 0, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
-        verify(sut.patchSubscriptionService, Mockito.never()).handleEntryAdded(
-                any(AddCacheEntryResult.class), any(MutableDirectBuffer.class), any(), any(), anyInt());
-
         // Act - overwrite the key with a value that is not valid JSON, so no merge patch delta can be computed
         length = encodeAddCacheEntry(requestId, cacheId, key, getInvalidPatch(), 0, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
-        // Assert - rather than being left stale (no notification), the patch subscriber is notified exactly
-        // once with the whole new value as a fallback, not a delta.
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<V> valueCaptor = ArgumentCaptor.forClass((Class<V>) getInvalidPatch().getClass());
-        verify(sut.patchSubscriptionService, times(1)).handleEntryAdded(
+        // Assert - the patch subscriber is notified twice with the whole value: first as the initial
+        // baseline for the fresh key, then as the fallback for the overwrite (no delta could be computed).
+        // Neither leaves the subscriber stale.
+        verify(sut.patchSubscriptionService, times(2)).handleEntryAdded(
                 any(AddCacheEntryResult.class),
                 any(MutableDirectBuffer.class),
                 eq(key),
-                valueCaptor.capture(),
+                any(),
                 anyInt());
-        assertEquals(getInvalidPatch().value(), valueCaptor.getValue().value());
+        assertEquals(List.of(String.valueOf(getInitialValue().value()), String.valueOf(getInvalidPatch().value())), notifiedValues);
     }
 
     @Test
-    @DisplayName("Should not notify the patch subscriber when an add creates a new key")
-    void shouldNotNotifyPatchSubscriberOnFirstAdd() {
+    @DisplayName("Should notify the patch subscriber with the whole value as a baseline when an add creates a new key")
+    void shouldNotifyPatchSubscriberWithBaselineOnFirstAdd() {
         // Arrange
         sut.patchSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
         when(sut.patchSubscriptionService.hasSubscriber(any(), any())).thenReturn(true);
+        var notifiedValues = recordPatchNotificationValues();
 
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         I cacheId = getCacheId();
@@ -284,9 +284,34 @@ public abstract class AbstractPatchValueTest<I extends Reusable, K extends Reusa
         var length = encodeAddCacheEntry(requestId, cacheId, key, getInitialValue(), 0, requestBuffer);
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
-        // Assert - no prior value means no merge patch, so the patch subscriber is not notified
-        verify(sut.patchSubscriptionService, Mockito.never()).handleEntryAdded(
+        // Assert - with no prior value there is no delta, but the patch subscriber must still receive the
+        // whole value as an initial baseline, otherwise a subscriber that joined before the key existed would
+        // hold a stale (empty) view.
+        verify(sut.patchSubscriptionService, times(1)).handleEntryAdded(
+                any(AddCacheEntryResult.class),
+                any(MutableDirectBuffer.class),
+                eq(key),
+                any(),
+                anyInt());
+        assertEquals(List.of(String.valueOf(getInitialValue().value())), notifiedValues);
+    }
+
+    /**
+     * Record, at call time, the {@code String} form of the value the patch subscription service is notified
+     * with. The notified value is a reused flyweight, so a deferred {@link ArgumentCaptor} would show only
+     * its final mutated state; snapshotting on each invocation keeps per-call values distinct.
+     *
+     * @return a live list that accumulates one entry per {@code handleEntryAdded} call.
+     */
+    private java.util.List<String> recordPatchNotificationValues() {
+        java.util.List<String> values = new java.util.ArrayList<>();
+        Mockito.doAnswer(invocation -> {
+            Reusable<?> value = invocation.getArgument(3);
+            values.add(String.valueOf(value.value()));
+            return null;
+        }).when(sut.patchSubscriptionService).handleEntryAdded(
                 any(AddCacheEntryResult.class), any(MutableDirectBuffer.class), any(), any(), anyInt());
+        return values;
     }
 
     @Test

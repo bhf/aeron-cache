@@ -26,8 +26,12 @@ public interface Cache<I extends Reusable, K extends Reusable, V extends Reusabl
      * <p>When {@code mergePatchOut} is non-null and the key already held a value,
      * the implementation populates {@code mergePatchOut} with the merge patch
      * (status {@link com.bhf.aeroncache.models.results.CacheOperationStatus#SUCCESS}
-     * and the patch document as the entry value). When {@code mergePatchOut} is null,
-     * or there was no previous value, no patch is produced.
+     * and the patch document as the entry value). When there was no previous value
+     * (a first insert), {@code mergePatchOut} carries status
+     * {@link com.bhf.aeroncache.models.results.CacheOperationStatus#UNKNOWN_KEY} to signal that there is no
+     * delta but the whole value should still be sent as an initial baseline, so a patch subscriber that
+     * joined before the key existed is not left with a stale (empty) view. When {@code mergePatchOut} is
+     * null, no patch is produced.
      *
      * @param key           The key of the entry to add.
      * @param value         The value of the entry to add.
