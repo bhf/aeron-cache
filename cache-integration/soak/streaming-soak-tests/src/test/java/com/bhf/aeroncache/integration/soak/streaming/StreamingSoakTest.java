@@ -4,6 +4,7 @@ import com.bhf.aeroncache.application.ClusterLauncher;
 import com.bhf.aeroncache.gateway.application.GatewayApplication;
 import com.bhf.aeroncache.gateway.client.GatewayClient;
 import com.bhf.aeroncache.integration.soak.common.AbstractGatewaySoakTest;
+import com.bhf.aeroncache.integration.soak.common.HttpNearCacheAdmin;
 import com.bhf.aeroncache.integration.soak.common.SoakRecordingListener;
 import com.bhf.aeroncache.integration.soak.common.SoakRun;
 import org.junit.jupiter.api.DisplayName;
@@ -23,14 +24,21 @@ class StreamingSoakTest extends AbstractGatewaySoakTest {
 
     private static final int CLUSTER_NODES = 3;
 
+    private int gatewayHttpPort;
+
     @Override
     protected void startBackend() throws Exception {
         ClusterLauncher.launchTestCluster(CLUSTER_NODES, "soak_stream");
-        GatewayApplication.start(0);
+        // Capture the gateway's HTTP port (ephemeral): the near-cache prime/list endpoints are served there, so
+        // the warm synthetic-patch rounds can prime a cache before subscribing. (The gateway's synthetic-patch
+        // counters are Aeron driver counters, not on its Micrometer /prometheus, so those rounds verify the
+        // synthetic stream events rather than the counter - see HttpNearCacheAdmin patchMetricsExposed=false.)
+        gatewayHttpPort = GatewayApplication.start(0);
     }
 
     @Override
     protected SoakRun createRun(GatewayClient client, SoakRecordingListener listener) {
-        return new StreamingSoakWorkload(client, listener, StreamingSoakConfig.fromSystemProperties());
+        var nearAdmin = new HttpNearCacheAdmin("http://localhost:" + gatewayHttpPort, "aeron_gateway_near_patches_total", false);
+        return new StreamingSoakWorkload(client, listener, nearAdmin, StreamingSoakConfig.fromSystemProperties());
     }
 }

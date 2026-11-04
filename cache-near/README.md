@@ -80,12 +80,22 @@ counters.
 The synthetic patch generation is observable on each interface's metrics. A `patch subscribers` gauge
 counts the distinct client sessions holding a patch-mode near-cache subscription, and a per-item patch
 counter breaks every generation down by outcome: `delta` (a merge patch was computed and forwarded),
-`baseline` (a first-seen key with nothing to diff, sent as a full `ADD_ITEM`) and `suppressed` (the delta
-came out empty - a no-op write - and was dropped). On the web interfaces these are the Micrometer meters
-`aeroncache_near_patch_subscribers` and `aeroncache_near_patches_total{outcome}`; on the Aeron gateway they
-are the driver counters `NearPatchSubscribers-<domain>` and `NearPatches-<domain>-<outcome>`, exported as
+`baseline` (a first-seen key with nothing to diff, sent as a full `ADD_ITEM`), `suppressed` (the delta
+came out empty - a no-op write - and was dropped) and `full_fallback` (a valid patch could not be built, e.g.
+non-JSON input, so the whole value was sent as a full `ADD_ITEM` rather than leaving the subscriber stale). On
+the web interfaces these are the Micrometer meters `aeroncache_near_patch_subscribers` and
+`aeroncache_near_patches_total{outcome}`; on the Aeron gateway they are the driver counters
+`NearPatchSubscribers-<domain>` and `NearPatches-<domain>-<outcome>`, exported as
 `aeron_gateway_near_patch_subscribers` and `aeron_gateway_near_patches_total{outcome}`. The `delta`/`suppressed`
 split shows how much subscriber wake-up and bandwidth the local patching saves.
+
+The streaming soak suites (`cache-integration/soak/*`) exercise this end to end: a `warm` matrix dimension
+primes a regular cache, opens a hydrating patch subscription served from the warm copy, and drives
+delta/suppressed/full_fallback mutations - asserting the `aeroncache_near_patches_total{outcome}` deltas on the
+web edges (WS/SSE/bidi). The Aeron gateway's near counters are driver counters not carried on its Micrometer
+`/prometheus`, so the streaming soak there verifies the synthetic stream events without the counter. Near
+caching is enabled for those suites via `NEAR_CACHE_ENABLED=true` in each module's `test.env`, and the
+dimension can be toggled with `-Psoak.includeSynthetic`.
 
 This is transparent to downstream consumers that embed a near cache: `ConcurrentNearCacheManager` applies a
 `PATCH_ITEM` by merging the delta onto the value it already holds (`JsonMergePatch.applyMergePatch`), so an
