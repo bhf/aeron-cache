@@ -10,7 +10,13 @@ public enum NearPatchOutcome {
     /** A first-seen key had no prior value to diff, so a full {@code ADD_ITEM} baseline was emitted instead. */
     BASELINE("baseline"),
     /** The computed delta was empty (no effective change) and the update was dropped. */
-    SUPPRESSED("suppressed");
+    SUPPRESSED("suppressed"),
+    /**
+     * A valid merge patch could not be built (e.g. the warm or incoming value was not parseable JSON), so a
+     * full {@code ADD_ITEM} value was emitted as a fallback rather than dropping the update and leaving the
+     * subscriber stale.
+     */
+    FULL_FALLBACK("full_fallback");
 
     private final String label;
 

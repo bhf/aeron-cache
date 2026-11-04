@@ -229,6 +229,44 @@ public abstract class AbstractPatchValueTest<I extends Reusable, K extends Reusa
     }
 
     @Test
+    @DisplayName("Should notify the patch subscriber with the whole value when a merge patch cannot be computed on an overwriting add")
+    void shouldNotifyPatchSubscriberWithFullValueWhenMergePatchFails() {
+        // Arrange
+        sut.patchSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
+        when(sut.patchSubscriptionService.hasSubscriber(any(), any())).thenReturn(true);
+
+        ClientSession session = TestUtils.getMockedSession(responseBuffer);
+        I cacheId = getCacheId();
+        K key = getKey();
+
+        createCache(cacheId, session, requestBuffer, sut);
+
+        var requestId = UUID.randomUUID().toString();
+        // initial add of a parseable value - the baseline the overwrite would be diffed against
+        var length = encodeAddCacheEntry(requestId, cacheId, key, getInitialValue(), 0, requestBuffer);
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+
+        verify(sut.patchSubscriptionService, Mockito.never()).handleEntryAdded(
+                any(AddCacheEntryResult.class), any(MutableDirectBuffer.class), any(), any(), anyInt());
+
+        // Act - overwrite the key with a value that is not valid JSON, so no merge patch delta can be computed
+        length = encodeAddCacheEntry(requestId, cacheId, key, getInvalidPatch(), 0, requestBuffer);
+        sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
+
+        // Assert - rather than being left stale (no notification), the patch subscriber is notified exactly
+        // once with the whole new value as a fallback, not a delta.
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<V> valueCaptor = ArgumentCaptor.forClass((Class<V>) getInvalidPatch().getClass());
+        verify(sut.patchSubscriptionService, times(1)).handleEntryAdded(
+                any(AddCacheEntryResult.class),
+                any(MutableDirectBuffer.class),
+                eq(key),
+                valueCaptor.capture(),
+                anyInt());
+        assertEquals(getInvalidPatch().value(), valueCaptor.getValue().value());
+    }
+
+    @Test
     @DisplayName("Should not notify the patch subscriber when an add creates a new key")
     void shouldNotNotifyPatchSubscriberOnFirstAdd() {
         // Arrange
