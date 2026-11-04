@@ -61,7 +61,8 @@ tasks.test {
         "soak.mutationsPerRound",
         "soak.wholeCacheKeys",
         "soak.opTimeoutSeconds",
-        "soak.includeCounters"
+        "soak.includeCounters",
+        "soak.includeSynthetic"
     ).forEach { prop -> soakProp(prop)?.let { systemProperty(prop, it) } }
 
     failOnNoDiscoveredTests = true

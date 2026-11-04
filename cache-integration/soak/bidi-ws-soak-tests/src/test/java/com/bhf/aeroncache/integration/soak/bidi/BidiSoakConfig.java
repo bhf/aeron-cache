@@ -37,6 +37,8 @@ final class BidiSoakConfig {
     final int mutationsPerRound;
     final int wholeCacheKeys;
     final boolean includeCounters;
+    /** Whether to include the warm near-cache synthetic-patch-generation variants in the streaming matrix. */
+    final boolean includeSynthetic;
 
     // ---- shared
     /** Per-operation / per-verification timeout; a breach means the cluster (or the socket) stalled. */
@@ -45,7 +47,7 @@ final class BidiSoakConfig {
     private BidiSoakConfig(long commandDurationSeconds, long streamingDurationSeconds, long seed,
                           int kvCacheCount, int counterCacheCount, int keySpace, int valueSizeBytes,
                           int verifyEvery, int mutationsPerRound, int wholeCacheKeys, boolean includeCounters,
-                          int opTimeoutSeconds) {
+                          boolean includeSynthetic, int opTimeoutSeconds) {
         this.commandDurationSeconds = commandDurationSeconds;
         this.streamingDurationSeconds = streamingDurationSeconds;
         this.seed = seed;
@@ -57,6 +59,7 @@ final class BidiSoakConfig {
         this.mutationsPerRound = mutationsPerRound;
         this.wholeCacheKeys = wholeCacheKeys;
         this.includeCounters = includeCounters;
+        this.includeSynthetic = includeSynthetic;
         this.opTimeoutSeconds = opTimeoutSeconds;
     }
 
@@ -73,6 +76,7 @@ final class BidiSoakConfig {
                 SoakProps.intProp("soak.mutationsPerRound", 8),
                 SoakProps.intProp("soak.wholeCacheKeys", 5),
                 SoakProps.boolProp("soak.includeCounters", true),
+                SoakProps.boolProp("soak.includeSynthetic", true),
                 SoakProps.intProp("soak.opTimeoutSeconds", 30));
     }
 
@@ -93,6 +97,7 @@ final class BidiSoakConfig {
         map.put("mutationsPerRound", mutationsPerRound);
         map.put("wholeCacheKeys", wholeCacheKeys);
         map.put("includeCounters", includeCounters);
+        map.put("includeSynthetic", includeSynthetic);
         map.put("opTimeoutSeconds", opTimeoutSeconds);
         return map;
     }
@@ -110,6 +115,7 @@ final class BidiSoakConfig {
                 + ", mutationsPerRound=" + mutationsPerRound
                 + ", wholeCacheKeys=" + wholeCacheKeys
                 + ", includeCounters=" + includeCounters
+                + ", includeSynthetic=" + includeSynthetic
                 + ", opTimeoutSeconds=" + opTimeoutSeconds + '}';
     }
 }

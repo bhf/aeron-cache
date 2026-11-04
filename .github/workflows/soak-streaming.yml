@@ -28,6 +28,10 @@ on:
         description: 'Include counter-cache subscription variants in the matrix'
         type: boolean
         default: true
+      includeSynthetic:
+        description: 'Include near-cache synthetic patch generation (warm) variants in the matrix'
+        type: boolean
+        default: true
 
 jobs:
   soak:
@@ -53,6 +57,7 @@ jobs:
           -Psoak.seed=${{ inputs.seed }}
           -Psoak.mutationsPerRound=${{ inputs.mutationsPerRound }}
           -Psoak.includeCounters=${{ inputs.includeCounters }}
+          -Psoak.includeSynthetic=${{ inputs.includeSynthetic }}
 
       - name: Upload soak report
         if: always()

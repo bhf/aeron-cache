@@ -4,6 +4,7 @@ import com.bhf.aeroncache.application.ClusterLauncher;
 import com.bhf.aeroncache.gateway.application.GatewayApplication;
 import com.bhf.aeroncache.gateway.client.GatewayClient;
 import com.bhf.aeroncache.integration.soak.common.AbstractGatewaySoakTest;
+import com.bhf.aeroncache.integration.soak.common.HttpNearCacheAdmin;
 import com.bhf.aeroncache.integration.soak.common.SoakRecordingListener;
 import com.bhf.aeroncache.integration.soak.common.SoakRun;
 import com.bhf.aeroncache.integration.soak.common.UrlStreamingSoakConfig;
@@ -47,7 +48,10 @@ class SseStreamingSoakTest extends AbstractGatewaySoakTest {
     @Override
     protected SoakRun createRun(GatewayClient client, SoakRecordingListener listener) {
         factory = new SseSoakStreamSubscriberFactory(ssePort);
-        return new UrlStreamingSoakWorkload(client, listener, factory,
+        // Priming and the synthetic-patch metric live on the SSE server (the edge that serves the subscription
+        // and holds the warm copy); mutations still flow over the SBE GatewayClient through the cluster.
+        var nearAdmin = new HttpNearCacheAdmin("http://localhost:" + ssePort, "aeroncache_near_patches_total", true);
+        return new UrlStreamingSoakWorkload(client, listener, factory, nearAdmin,
                 UrlStreamingSoakConfig.fromSystemProperties(), COUNTER_STREAMS_TWICE, "soak-sse-strm-");
     }
 

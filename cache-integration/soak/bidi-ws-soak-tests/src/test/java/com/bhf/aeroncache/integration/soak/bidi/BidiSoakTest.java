@@ -2,6 +2,7 @@ package com.bhf.aeroncache.integration.soak.bidi;
 
 import com.bhf.aeroncache.application.ClusterLauncher;
 import com.bhf.aeroncache.integration.soak.common.AbstractSoakTest;
+import com.bhf.aeroncache.integration.soak.common.HttpNearCacheAdmin;
 import com.bhf.aeroncache.integration.soak.common.SoakRun;
 import com.bhf.aeroncache.ws.application.WebsocketApplication;
 import com.bhf.aeroncache.ws.bidi.messages.WsOp;
@@ -66,7 +67,10 @@ class BidiSoakTest extends AbstractSoakTest {
 
     @Override
     protected SoakRun createRun() {
-        return new BidiSoakWorkload(mutator, subscriber, BidiSoakConfig.fromSystemProperties());
+        // The WS server is the near-cache edge here (it holds the warm copy and serves the subscription); prime
+        // and the aeroncache_near_patches_total metric are on its HTTP port.
+        var nearAdmin = new HttpNearCacheAdmin("http://localhost:" + wsPort, "aeroncache_near_patches_total", true);
+        return new BidiSoakWorkload(mutator, subscriber, nearAdmin, BidiSoakConfig.fromSystemProperties());
     }
 
     /**

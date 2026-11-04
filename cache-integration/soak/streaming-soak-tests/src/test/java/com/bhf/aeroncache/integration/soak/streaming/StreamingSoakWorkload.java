@@ -3,6 +3,7 @@ package com.bhf.aeroncache.integration.soak.streaming;
 import com.bhf.aeroncache.gateway.client.GatewayClient;
 import com.bhf.aeroncache.gateway.messages.OperationStatus;
 import com.bhf.aeroncache.gateway.messages.UpdateEventType;
+import com.bhf.aeroncache.integration.soak.common.NearCacheAdmin;
 import com.bhf.aeroncache.integration.soak.common.SoakRecordingListener;
 import com.bhf.aeroncache.integration.soak.common.SoakRecordingListener.StreamUpdate;
 import com.bhf.aeroncache.integration.soak.common.SoakReport;
@@ -51,9 +52,10 @@ final class StreamingSoakWorkload implements SoakRun {
 
     enum Card { SINGLE, MULTI }
 
-    record Variant(Kind kind, Mode mode, Scope scope, boolean hydrate, Card card) {
+    record Variant(Kind kind, Mode mode, Scope scope, boolean hydrate, Card card, boolean warm) {
         String cell() {
-            return kind + "/" + mode + "/" + scope + "/" + (hydrate ? "hydrate" : "nohydrate") + "/" + card;
+            return kind + "/" + mode + "/" + scope + "/" + (hydrate ? "hydrate" : "nohydrate") + "/" + card
+                    + (warm ? "/warm" : "");
         }
     }
 
@@ -86,27 +88,43 @@ final class StreamingSoakWorkload implements SoakRun {
     private static final String KEY_SUBSCRIBED = "k0";
     private static final String KEY_OTHER = "k1";
 
+    // Dedicated keys for the deterministic patch-outcome tail (cold rounds) and the warm synthetic-patch
+    // rounds. Kept outside the k0..kN whole-cache key range so the random overwrite phase never touches them.
+    private static final String KEY_DELTA = "kd";
+    private static final String KEY_SUPPRESS = "ks";
+    private static final String KEY_FALLBACK = "kf";
+    /** A value that is not parseable JSON, so no merge patch can be computed and the whole value is sent. */
+    private static final String UNPARSEABLE_VALUE = "not json";
+
+    private static final String OUTCOME_DELTA = "delta";
+    private static final String OUTCOME_SUPPRESSED = "suppressed";
+    private static final String OUTCOME_FALLBACK = "full_fallback";
+
     private final GatewayClient client;
     private final SoakRecordingListener listener;
+    private final NearCacheAdmin nearCacheAdmin;
     private final StreamingSoakConfig cfg;
     private final SoakReport report;
     private final java.util.Random rnd;
     private final long opTimeoutNanos;
     private final List<Variant> matrix;
     private final Map<String, Long> coverage = new TreeMap<>();
+    private final Map<String, Long> nearPatchOutcomes = new TreeMap<>();
 
     private long corrSeq;
     private long cacheSeq;
     private String currentCell = "";
 
-    StreamingSoakWorkload(GatewayClient client, SoakRecordingListener listener, StreamingSoakConfig cfg) {
+    StreamingSoakWorkload(GatewayClient client, SoakRecordingListener listener, NearCacheAdmin nearCacheAdmin,
+                          StreamingSoakConfig cfg) {
         this.client = client;
         this.listener = listener;
+        this.nearCacheAdmin = nearCacheAdmin;
         this.cfg = cfg;
         this.report = new SoakReport(cfg.seed, cfg.durationSeconds, cfg.toConfigMap());
         this.rnd = new java.util.Random(cfg.seed);
         this.opTimeoutNanos = TimeUnit.SECONDS.toNanos(cfg.opTimeoutSeconds);
-        this.matrix = buildMatrix(cfg.includeCounters);
+        this.matrix = buildMatrix(cfg.includeCounters, cfg.includeSynthetic);
         Collections.shuffle(this.matrix, rnd);
     }
 
@@ -140,6 +158,9 @@ final class StreamingSoakWorkload implements SoakRun {
 
         report.sampleHeap();
         report.putSection("coverage", coverage);
+        if (!nearPatchOutcomes.isEmpty()) {
+            report.putSection("nearPatch", nearPatchOutcomes);
+        }
 
         // A green run must prove full matrix coverage - but only once at least one full pass completed
         // (a very short run may legitimately not reach every cell).
@@ -157,7 +178,7 @@ final class StreamingSoakWorkload implements SoakRun {
         }
     }
 
-    private static List<Variant> buildMatrix(boolean includeCounters) {
+    private static List<Variant> buildMatrix(boolean includeCounters, boolean includeSynthetic) {
         var variants = new ArrayList<Variant>();
         var kinds = includeCounters ? List.of(Kind.REGULAR, Kind.COUNTER) : List.of(Kind.REGULAR);
         for (var kind : kinds) {
@@ -168,9 +189,20 @@ final class StreamingSoakWorkload implements SoakRun {
                 for (var scope : Scope.values()) {
                     for (var hydrate : List.of(Boolean.FALSE, Boolean.TRUE)) {
                         for (var card : Card.values()) {
-                            variants.add(new Variant(kind, mode, scope, hydrate, card));
+                            variants.add(new Variant(kind, mode, scope, hydrate, card, false));
                         }
                     }
+                }
+            }
+        }
+        // Synthetic patch generation (near cache): a hydrating PATCH subscription to a WARM (primed) regular
+        // cache is served merge-patch deltas computed locally by the gateway from the warm copy. Regular-only
+        // and always hydrating, so these cells layer a `warm` flag onto the regular/patch/hydrate variants
+        // across both scopes and cardinalities.
+        if (includeSynthetic) {
+            for (var scope : Scope.values()) {
+                for (var card : Card.values()) {
+                    variants.add(new Variant(Kind.REGULAR, Mode.PATCH, scope, true, card, true));
                 }
             }
         }
@@ -182,6 +214,10 @@ final class StreamingSoakWorkload implements SoakRun {
     private void runRound(Variant v) {
         currentCell = v.cell();
         drainStreamQueue();
+        if (v.warm()) {
+            runWarmRound(v);
+            return;
+        }
         var caches = createCaches(v);
         var model = new RoundModel();
         var expected = new HashMap<String, List<ExpectedEvent>>();
@@ -352,13 +388,12 @@ final class StreamingSoakWorkload implements SoakRun {
     private void buildPatchLive(Variant v, List<String> caches, RoundModel model,
                                 Map<String, List<ExpectedEvent>> expected) {
         var keys = keysFor(v);
-        // Phase 1: first-add every key. A PATCH-mode subscriber is NOT notified on the first add of a new
-        // key, so these produce no expected events (verified by the absence of extras later).
+        // Phase 1: first-add every key. A PATCH-mode subscriber present for the first insert of a key is
+        // notified with the whole value as a full ADD_ITEM baseline (there is no prior value to diff against),
+        // so a subscriber that joined before the key existed is not left holding a stale (empty) view.
         for (var cache : caches) {
             for (var key : keys) {
-                var value = regularValue();
-                putRegular(cache, key, value);
-                model.putRegular(cache, key, value);
+                addFirst(v, cache, key, model, expected);
             }
         }
         // Phase 2: overwrite existing keys. Each overwrite streams a PATCH_ITEM carrying the delta, which
@@ -366,12 +401,188 @@ final class StreamingSoakWorkload implements SoakRun {
         for (int step = 0; step < cfg.mutationsPerRound; step++) {
             var cache = caches.get(rnd.nextInt(caches.size()));
             var key = keys.get(rnd.nextInt(keys.size()));
-            var value = regularValue();
-            putRegular(cache, key, value);
-            model.putRegular(cache, key, value);
-            if (visible(v, key)) {
-                expected.get(cache).add(new ExpectedEvent(cache, UpdateEventType.PATCH_ITEM, key, value));
+            overwriteDelta(v, cache, key, model, expected);
+        }
+        // Phase 3: deterministic coverage of the two remaining patch outcomes on dedicated keys (kept outside
+        // the random key range so Phase 2 never collides with them): a no-op overwrite that is SUPPRESSED (no
+        // event at all), and an overwrite whose value is not parseable JSON, which falls back to a full
+        // ADD_ITEM rather than leaving the subscriber stale.
+        appendPatchOutcomeTail(v, caches, model, expected);
+    }
+
+    /**
+     * Append the suppressed and full-fallback patch outcomes. In whole-cache scope they run on their own
+     * dedicated keys (each first-added, which itself emits a baseline ADD_ITEM); in single-key scope only the
+     * subscribed key is visible, so they run in sequence on it (it already exists from Phase 1).
+     */
+    private void appendPatchOutcomeTail(Variant v, List<String> caches, RoundModel model,
+                                        Map<String, List<ExpectedEvent>> expected) {
+        for (var cache : caches) {
+            if (v.scope() == Scope.WHOLE) {
+                addFirst(v, cache, KEY_SUPPRESS, model, expected);
+                overwriteSuppressed(cache, KEY_SUPPRESS, model);
+                addFirst(v, cache, KEY_FALLBACK, model, expected);
+                overwriteFallback(v, cache, KEY_FALLBACK, model, expected);
+            } else {
+                overwriteSuppressed(cache, KEY_SUBSCRIBED, model);
+                overwriteFallback(v, cache, KEY_SUBSCRIBED, model, expected);
             }
+        }
+    }
+
+    // ---------------------------------------------------------------- warm (synthetic patch) round
+
+    /**
+     * A round that exercises near-cache synthetic patch generation on the gateway: seed a regular cache, prime
+     * it so the warm local copy populates, then open a hydrating PATCH subscription served from the warm copy.
+     * The subscription receives a full ADD_ITEM baseline per warm key on hydration, then one synthetic event
+     * per live mutation - a PATCH_ITEM delta or a full ADD_ITEM fallback (unparseable value), and nothing for a
+     * no-op (suppressed) overwrite. These synthetic stream events are verified in order with no extras. (The
+     * gateway's {@code aeron_gateway_near_patches_total} counter is an Aeron driver counter, not carried on its
+     * Micrometer {@code /prometheus}, so the per-outcome count is not asserted here - the web edges, whose
+     * counter is HTTP-readable, assert it; see {@link NearCacheAdmin#supportsPatchMetrics()}.)
+     */
+    private void runWarmRound(Variant v) {
+        var caches = createCaches(v);
+        var model = new RoundModel();
+        var seedKeys = warmSeedKeys(v);
+
+        for (var cache : caches) {
+            for (var key : seedKeys) {
+                var value = regularValue();
+                putRegular(cache, key, value);
+                model.putRegular(cache, key, value);
+            }
+            nearCacheAdmin.prime(cache);
+            nearCacheAdmin.awaitWarm(cache, seedKeys.size(), opTimeoutNanos);
+        }
+
+        var expected = new HashMap<String, List<ExpectedEvent>>();
+        var hydrationExpected = new HashMap<String, List<ExpectedEvent>>();
+        caches.forEach(c -> {
+            expected.put(c, new ArrayList<>());
+            hydrationExpected.put(c, new ArrayList<>());
+        });
+        for (var cache : caches) {
+            for (var key : seedKeys) {
+                if (visible(v, key)) {
+                    hydrationExpected.get(cache).add(new ExpectedEvent(cache, UpdateEventType.ADD_ITEM, key, model.regular(cache, key)));
+                }
+            }
+        }
+
+        var corr = subscribe(v, caches);
+        awaitSubscribeAck(corr);
+        verifyHydration(corr, hydrationExpected);
+
+        boolean assertMetrics = nearCacheAdmin.supportsPatchMetrics();
+        var before = assertMetrics ? snapshotOutcomes() : null;
+        var increments = new TreeMap<String, Long>();
+        for (var cache : caches) {
+            if (v.scope() == Scope.WHOLE) {
+                overwriteDelta(v, cache, KEY_DELTA, model, expected);
+                overwriteSuppressed(cache, KEY_SUPPRESS, model);
+                overwriteFallback(v, cache, KEY_FALLBACK, model, expected);
+            } else {
+                overwriteDelta(v, cache, KEY_SUBSCRIBED, model, expected);
+                overwriteSuppressed(cache, KEY_SUBSCRIBED, model);
+                overwriteFallback(v, cache, KEY_SUBSCRIBED, model, expected);
+            }
+            increments.merge(OUTCOME_DELTA, 1L, Long::sum);
+            increments.merge(OUTCOME_SUPPRESSED, 1L, Long::sum);
+            increments.merge(OUTCOME_FALLBACK, 1L, Long::sum);
+        }
+
+        verifyLiveOrdered(corr, expected);
+        report.recordVerification();
+
+        if (assertMetrics) {
+            increments.forEach((outcome, delta) -> {
+                awaitPatchCount(outcome, before.get(outcome) + delta);
+                nearPatchOutcomes.merge(outcome, delta, Long::sum);
+            });
+            report.recordVerification();
+        }
+
+        boolean counters = false;
+        caches.forEach(cache -> sendCommandNoAwait(() -> client.unsubscribe(nextCorr(), cache, counters)));
+        drainStreamQueue();
+        for (var cache : caches) {
+            nearCacheAdmin.stopNear(cache);
+        }
+        cleanup(v, caches, List.of());
+    }
+
+    /** The keys seeded (and warmed) before a synthetic-patch round: one per outcome in whole scope; just the
+     * subscribed key in single-key scope (the only visible key). */
+    private List<String> warmSeedKeys(Variant v) {
+        if (v.scope() == Scope.KEY) {
+            return List.of(KEY_SUBSCRIBED);
+        }
+        return List.of(KEY_DELTA, KEY_SUPPRESS, KEY_FALLBACK);
+    }
+
+    private Map<String, Long> snapshotOutcomes() {
+        var snapshot = new TreeMap<String, Long>();
+        for (var outcome : List.of(OUTCOME_DELTA, OUTCOME_SUPPRESSED, OUTCOME_FALLBACK)) {
+            snapshot.put(outcome, nearCacheAdmin.patchCount(outcome));
+        }
+        return snapshot;
+    }
+
+    private void awaitPatchCount(String outcome, long target) {
+        var deadline = System.nanoTime() + opTimeoutNanos;
+        long seen;
+        while ((seen = nearCacheAdmin.patchCount(outcome)) < target) {
+            if (System.nanoTime() > deadline) {
+                throw fail("near patch counter '" + outcome + "' did not reach " + target + " (last " + seen + ")");
+            }
+            LockSupport.parkNanos(PARK_NANOS);
+        }
+        if (seen != target) {
+            throw fail("near patch counter '" + outcome + "' overshot: expected " + target + " but saw " + seen);
+        }
+    }
+
+    // ---------------------------------------------------------------- single-key patch outcome primitives
+
+    /** First-add a fresh key with a valid value; a visible first-add streams a full ADD_ITEM baseline. */
+    private void addFirst(Variant v, String cache, String key, RoundModel model,
+                          Map<String, List<ExpectedEvent>> expected) {
+        var value = regularValue();
+        putRegular(cache, key, value);
+        model.putRegular(cache, key, value);
+        if (visible(v, key)) {
+            expected.get(cache).add(new ExpectedEvent(cache, UpdateEventType.ADD_ITEM, key, value));
+        }
+    }
+
+    /** Overwrite an existing key with a changed value; a visible overwrite streams a PATCH_ITEM delta (== the
+     * new value for single-field {@code {"v":N}} values). */
+    private void overwriteDelta(Variant v, String cache, String key, RoundModel model,
+                                Map<String, List<ExpectedEvent>> expected) {
+        var value = regularValueDiffering(model.regular(cache, key));
+        putRegular(cache, key, value);
+        model.putRegular(cache, key, value);
+        if (visible(v, key)) {
+            expected.get(cache).add(new ExpectedEvent(cache, UpdateEventType.PATCH_ITEM, key, value));
+        }
+    }
+
+    /** Re-add an existing key with its current value; the merge patch is empty so the update is SUPPRESSED (no
+     * event is streamed). The model value is unchanged. */
+    private void overwriteSuppressed(String cache, String key, RoundModel model) {
+        putRegular(cache, key, model.regular(cache, key));
+    }
+
+    /** Overwrite an existing key with a value that is not parseable JSON; no merge patch can be built, so the
+     * whole value is streamed as a full ADD_ITEM fallback rather than nothing. */
+    private void overwriteFallback(Variant v, String cache, String key, RoundModel model,
+                                   Map<String, List<ExpectedEvent>> expected) {
+        putRegular(cache, key, UNPARSEABLE_VALUE);
+        model.putRegular(cache, key, UNPARSEABLE_VALUE);
+        if (visible(v, key)) {
+            expected.get(cache).add(new ExpectedEvent(cache, UpdateEventType.ADD_ITEM, key, UNPARSEABLE_VALUE));
         }
     }
 
@@ -666,6 +877,16 @@ final class StreamingSoakWorkload implements SoakRun {
         return "{\"v\":" + rnd.nextInt(1_000_000) + "}";
     }
 
+    /** A {@code {"v":N}} value guaranteed to differ from {@code current}, so an overwrite always changes the
+     * value (an accidental repeat would be suppressed with no event and break the 1:1 expectation). */
+    private String regularValueDiffering(String current) {
+        String value;
+        do {
+            value = regularValue();
+        } while (value.equals(current));
+        return value;
+    }
+
     private String nextCorr() {
         return "c" + (++corrSeq);
     }
@@ -726,6 +947,10 @@ final class StreamingSoakWorkload implements SoakRun {
 
         boolean containsRegular(String cache, String key) {
             return regular.containsKey(composite(cache, key));
+        }
+
+        String regular(String cache, String key) {
+            return regular.get(composite(cache, key));
         }
 
         void putCounter(String cache, String key, long value) {

@@ -23,15 +23,18 @@ public final class UrlStreamingSoakConfig {
     public final int opTimeoutSeconds;
     /** Whether to include counter-cache subscription variants in the coverage matrix. */
     public final boolean includeCounters;
+    /** Whether to include the warm near-cache synthetic-patch-generation variants in the coverage matrix. */
+    public final boolean includeSynthetic;
 
     private UrlStreamingSoakConfig(long durationSeconds, long seed, int mutationsPerRound, int wholeCacheKeys,
-                                   int opTimeoutSeconds, boolean includeCounters) {
+                                   int opTimeoutSeconds, boolean includeCounters, boolean includeSynthetic) {
         this.durationSeconds = durationSeconds;
         this.seed = seed;
         this.mutationsPerRound = mutationsPerRound;
         this.wholeCacheKeys = wholeCacheKeys;
         this.opTimeoutSeconds = opTimeoutSeconds;
         this.includeCounters = includeCounters;
+        this.includeSynthetic = includeSynthetic;
     }
 
     public static UrlStreamingSoakConfig fromSystemProperties() {
@@ -41,7 +44,8 @@ public final class UrlStreamingSoakConfig {
                 SoakProps.intProp("soak.mutationsPerRound", 8),
                 SoakProps.intProp("soak.wholeCacheKeys", 5),
                 SoakProps.intProp("soak.opTimeoutSeconds", 30),
-                SoakProps.boolProp("soak.includeCounters", true));
+                SoakProps.boolProp("soak.includeCounters", true),
+                SoakProps.boolProp("soak.includeSynthetic", true));
     }
 
     public Map<String, Object> toConfigMap() {
@@ -50,6 +54,7 @@ public final class UrlStreamingSoakConfig {
         map.put("wholeCacheKeys", wholeCacheKeys);
         map.put("opTimeoutSeconds", opTimeoutSeconds);
         map.put("includeCounters", includeCounters);
+        map.put("includeSynthetic", includeSynthetic);
         return map;
     }
 
@@ -60,6 +65,7 @@ public final class UrlStreamingSoakConfig {
                 + ", mutationsPerRound=" + mutationsPerRound
                 + ", wholeCacheKeys=" + wholeCacheKeys
                 + ", opTimeoutSeconds=" + opTimeoutSeconds
-                + ", includeCounters=" + includeCounters + '}';
+                + ", includeCounters=" + includeCounters
+                + ", includeSynthetic=" + includeSynthetic + '}';
     }
 }

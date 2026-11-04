@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.integration.soak.bidi;
 
+import com.bhf.aeroncache.integration.soak.common.NearCacheAdmin;
 import com.bhf.aeroncache.integration.soak.common.SoakReport;
 import com.bhf.aeroncache.integration.soak.common.SoakRun;
 import org.apache.logging.log4j.LogManager;
@@ -25,13 +26,16 @@ final class BidiSoakWorkload implements SoakRun {
 
     private final BidiSoakClient mutator;
     private final BidiSoakClient subscriber;
+    private final NearCacheAdmin nearCacheAdmin;
     private final BidiSoakConfig cfg;
     private final SoakReport report;
     private final Random rnd;
 
-    BidiSoakWorkload(BidiSoakClient mutator, BidiSoakClient subscriber, BidiSoakConfig cfg) {
+    BidiSoakWorkload(BidiSoakClient mutator, BidiSoakClient subscriber, NearCacheAdmin nearCacheAdmin,
+                     BidiSoakConfig cfg) {
         this.mutator = mutator;
         this.subscriber = subscriber;
+        this.nearCacheAdmin = nearCacheAdmin;
         this.cfg = cfg;
         this.report = new SoakReport(cfg.seed, cfg.totalDurationSeconds(), cfg.toConfigMap());
         this.rnd = new Random(cfg.seed);
@@ -50,7 +54,7 @@ final class BidiSoakWorkload implements SoakRun {
         new BidiCommandSoakPhase(mutator, cfg, report, rnd).run(commandDeadline);
 
         var streamingDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(cfg.streamingDurationSeconds);
-        new BidiStreamingSoakPhase(mutator, subscriber, cfg, report, rnd).run(streamingDeadline);
+        new BidiStreamingSoakPhase(mutator, subscriber, nearCacheAdmin, cfg, report, rnd).run(streamingDeadline);
 
         log.info("Bidi soak run complete: {}", report.progressLine());
     }
