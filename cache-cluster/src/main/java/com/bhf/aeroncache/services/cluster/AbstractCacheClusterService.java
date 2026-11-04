@@ -664,9 +664,16 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         // Only ask the cache to produce a merge patch when a patch subscriber is
         // actually listening for updates on this cache/key. Counters pass a null
         // patch subscription service (and merge patch flyweight) as they never patch.
-        PatchValueResult<I, K, VT> patchOut =
-                (patchSubscriptionService != null && mergePatchOut != null && patchSubscriptionService.hasSubscriber(cacheId, key))
-                        ? mergePatchOut : null;
+        boolean producePatch = patchSubscriptionService != null && mergePatchOut != null
+                && patchSubscriptionService.hasSubscriber(cacheId, key);
+        PatchValueResult<I, K, VT> patchOut = producePatch ? mergePatchOut : null;
+
+        // When no patch is being produced, reset the shared merge-patch flyweight so a stale outcome from a
+        // previous add is not re-read by handlePostAddCacheEntry (which would notify patch subscribers of the
+        // wrong key). When producePatch is true the cache clears it before populating the outcome.
+        if (!producePatch && mergePatchOut != null) {
+            mergePatchOut.clear();
+        }
 
         var addCacheEntryResult = cache.add(key, value, patchOut);
         addCacheEntryResult.setRequestId(requestId);
@@ -1345,14 +1352,19 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         var entryUpdatedLength = encoder.encodeEntryUpdated(key, value, addCacheEntryResult, egressBuffer);
         subscriptionService.handleEntryAdded(addCacheEntryResult, egressBuffer, key, value, entryUpdatedLength);
 
-        // If a patch subscriber is listening and the add produced a merge patch
-        // (i.e. it overwrote an existing value), notify patch subscribers with the delta.
+        // If a patch subscriber is listening, notify it of the add according to the merge patch outcome:
         //
-        // A SUCCESS result carries a delta and is sent as a PATCH_ITEM. An ERROR result means a valid merge
-        // patch could not be computed (e.g. the stored or incoming value was not parseable JSON); rather than
-        // sending nothing - which would leave the patch subscriber holding stale state - fall back to sending
-        // the whole value as a full ADD_ITEM. A NONE result means there was no effective change (or no prior
-        // value to diff), for which no patch update is required.
+        //   SUCCESS     - the add overwrote an existing value and a delta was computed; send it as a
+        //                 PATCH_ITEM.
+        //   UNKNOWN_KEY - a first insert, so there was no prior value to diff against. There is no delta,
+        //                 but the whole new value is sent as an initial baseline ADD_ITEM, otherwise a patch
+        //                 subscriber that joined before the key existed would never see the first insert and
+        //                 would hold a stale (empty) view.
+        //   ERROR       - a valid merge patch could not be computed (e.g. the stored or incoming value was
+        //                 not parseable JSON); the whole new value is sent as an ADD_ITEM fallback rather
+        //                 than nothing, so the subscriber does not go stale.
+        //   NONE        - there was no effective change (equal values); no patch update is required.
+        //
         if (patchSubscriptionService != null && mergePatchResult != null) {
             var patchStatus = mergePatchResult.getStatus();
             if (patchStatus == CacheOperationStatus.SUCCESS) {
@@ -1365,18 +1377,34 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
                 var entryPatchedLength = encoder.encodeEntryPatched(key, patchValue, patchEntryUpdateResult, egressBuffer);
                 patchSubscriptionService.handleEntryAdded(patchEntryUpdateResult, egressBuffer, key, patchValue, entryPatchedLength);
-            } else if (patchStatus == CacheOperationStatus.ERROR) {
-                // Patch generation failed - send the whole value so patch subscribers don't go stale.
-                patchEntryUpdateResult.clear();
-                patchEntryUpdateResult.setRequestId(addCacheEntryResult.getRequestId());
-                patchEntryUpdateResult.getCacheId().copyFrom(cacheId);
-                patchEntryUpdateResult.getEntryKey().copyFrom(key);
-                patchEntryUpdateResult.setStatus(CacheOperationStatus.SUCCESS);
-
-                var patchFullValueLength = encoder.encodeEntryUpdated(key, value, patchEntryUpdateResult, egressBuffer);
-                patchSubscriptionService.handleEntryAdded(patchEntryUpdateResult, egressBuffer, key, value, patchFullValueLength);
+            } else if (patchStatus == CacheOperationStatus.UNKNOWN_KEY || patchStatus == CacheOperationStatus.ERROR) {
+                notifyPatchSubscriberWithFullValue(cacheId, key, value, addCacheEntryResult, encoder, patchSubscriptionService);
             }
         }
+    }
+
+    /**
+     * Notify patch subscribers with the whole value as a full {@code ADD_ITEM}, used both for the initial
+     * baseline of a first insert (no prior value to diff against) and as the fallback when a valid merge
+     * patch could not be computed. In either case sending the whole value - rather than nothing - keeps the
+     * patch subscriber from silently holding a stale view.
+     *
+     * @param cacheId               The cache the entry was added to.
+     * @param key                   The key of the added entry.
+     * @param value                 The whole new value to send.
+     * @param addCacheEntryResult   The add result, used for the request id.
+     * @param encoder               The response encoder to use.
+     * @param patchSubscriptionService The patch subscription service to notify.
+     */
+    private <VT extends Reusable> void notifyPatchSubscriberWithFullValue(I cacheId, K key, VT value, AddCacheEntryResult<I, K> addCacheEntryResult, CacheResponseEncoder<I, K, VT> encoder, CacheSubscriptionService<I, K, VT> patchSubscriptionService) {
+        patchEntryUpdateResult.clear();
+        patchEntryUpdateResult.setRequestId(addCacheEntryResult.getRequestId());
+        patchEntryUpdateResult.getCacheId().copyFrom(cacheId);
+        patchEntryUpdateResult.getEntryKey().copyFrom(key);
+        patchEntryUpdateResult.setStatus(CacheOperationStatus.SUCCESS);
+
+        var fullValueLength = encoder.encodeEntryUpdated(key, value, patchEntryUpdateResult, egressBuffer);
+        patchSubscriptionService.handleEntryAdded(patchEntryUpdateResult, egressBuffer, key, value, fullValueLength);
     }
 
     /**

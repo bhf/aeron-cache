@@ -23,7 +23,6 @@ import org.agrona.MutableDirectBuffer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.List;
@@ -158,12 +157,21 @@ class BulkOpsHappyPathTest {
         // Arrange
         sut.patchSubscriptionService = Mockito.mock(CacheSubscriptionService.class);
         when(sut.patchSubscriptionService.hasSubscriber(any(), any())).thenReturn(true);
+        // The notified value is a reused/pooled flyweight, so snapshot it to a String at call time rather
+        // than capturing the reference (which would show only its final mutated state at assertion time).
+        List<String> notifiedValues = new java.util.ArrayList<>();
+        Mockito.doAnswer(invocation -> {
+            notifiedValues.add(String.valueOf(((ReusableString) invocation.getArgument(3)).value()));
+            return null;
+        }).when(sut.patchSubscriptionService).handleEntryAdded(
+                any(AddCacheEntryResult.class), any(MutableDirectBuffer.class), any(ReusableString.class),
+                any(ReusableString.class), anyInt());
 
         ClientSession session = TestUtils.getMockedSession(responseBuffer);
         var requestId = UUID.randomUUID().toString();
         List<CacheOperationRequest> ops = List.of(
                 getCacheOperation(BulkOperationType.CREATE_CACHE, CACHE_ID, "", "", 0),
-                // first add - no prior value, so no patch is produced
+                // first add - no prior value, so the patch subscriber is sent the whole value as a baseline
                 getCacheOperation(BulkOperationType.ADD_ITEM, CACHE_ID, "key", "{\"a\":1,\"b\":2}", 0),
                 // overwrite - produces a merge patch delta for the patch subscriber
                 getCacheOperation(BulkOperationType.ADD_ITEM, CACHE_ID, "key", "{\"a\":1,\"b\":3,\"c\":4}", 0)
@@ -174,15 +182,15 @@ class BulkOpsHappyPathTest {
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
 
-        // Assert - the patch subscriber is notified exactly once, with the merge patch (the delta)
-        ArgumentCaptor<ReusableString> valueCaptor = ArgumentCaptor.forClass(ReusableString.class);
-        verify(sut.patchSubscriptionService, times(1)).handleEntryAdded(
+        // Assert - the patch subscriber is notified twice: first with the whole value as the initial baseline
+        // for the fresh key, then with the merge patch (the delta) for the overwrite.
+        verify(sut.patchSubscriptionService, times(2)).handleEntryAdded(
                 any(AddCacheEntryResult.class),
                 any(MutableDirectBuffer.class),
                 any(ReusableString.class),
-                valueCaptor.capture(),
+                any(ReusableString.class),
                 anyInt());
-        assertEquals("{\"b\":3,\"c\":4}", valueCaptor.getValue().value());
+        assertEquals(List.of("{\"a\":1,\"b\":2}", "{\"b\":3,\"c\":4}"), notifiedValues);
     }
 
 

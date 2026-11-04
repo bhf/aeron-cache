@@ -41,15 +41,32 @@ public class JSONPatchProvider<I extends Reusable, K extends Reusable, V extends
     }
 
     /**
-     * Produce an RFC 7386 JSON merge patch describing the change from a pre-existing
-     * value to the newly added value, populating the supplied out-parameter. If there
-     * was no previous value or the values are equal, the out-parameter is left cleared
-     * (status {@link CacheOperationStatus#NONE}) so no patch update is sent.
+     * Produce an RFC 7386 JSON merge patch describing the change from a pre-existing value to the newly
+     * added value, populating the supplied out-parameter. The outcome is carried on the out-parameter's
+     * status:
+     * <ul>
+     *   <li>{@link CacheOperationStatus#SUCCESS} - a non-empty delta was produced (carried as the entry
+     *       value); send it as a patch update.</li>
+     *   <li>{@link CacheOperationStatus#UNKNOWN_KEY} - there was no previous value (a first insert), so
+     *       there is nothing to diff against. There is no delta, but the caller should still send the whole
+     *       new value as an initial baseline, otherwise a patch subscriber that joined before the key
+     *       existed would never see the first insert and would hold a stale (empty) view. This mirrors the
+     *       near cache's {@code BASELINE} outcome.</li>
+     *   <li>{@link CacheOperationStatus#ERROR} - a valid merge patch could not be computed (unparseable
+     *       JSON); the caller should fall back to sending the whole value rather than nothing.</li>
+     *   <li>{@link CacheOperationStatus#NONE} - the values were equal, so there was no effective change
+     *       and no update need be sent.</li>
+     * </ul>
      */
     @Override
     public void produceMergePatch(K key, V previousValue, V newValue, PatchValueResult<I, K, V> mergePatchOut) {
         mergePatchOut.clear();
         if (previousValue == null) {
+            // No prior value to diff against (a first insert): signal a baseline so the caller sends the
+            // whole value as an initial ADD_ITEM rather than nothing. UNKNOWN_KEY reads honestly here - the
+            // key held no value before this add.
+            mergePatchOut.getEntryKey().copyFrom(key);
+            mergePatchOut.setStatus(CacheOperationStatus.UNKNOWN_KEY);
             return;
         }
         mergePatchOut.getEntryKey().copyFrom(key);
