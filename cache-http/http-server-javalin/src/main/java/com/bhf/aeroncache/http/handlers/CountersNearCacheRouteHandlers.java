@@ -1,5 +1,6 @@
 package com.bhf.aeroncache.http.handlers;
 
+import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.application.HttpApplication;
 import com.bhf.aeroncache.http.responses.CacheDetails;
 import com.bhf.aeroncache.http.responses.CounterItem;
@@ -16,6 +17,7 @@ import com.bhf.aeroncache.models.results.GetCacheEntryResult;
 import com.bhf.aeroncache.near.NearCache;
 import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
+import com.bhf.aeroncache.services.cache.subscription.CacheSubscriptionRequestPublisher;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import io.javalin.http.Context;
@@ -26,6 +28,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Handlers for near counter cache reads and their management endpoints. The counter equivalent of
@@ -33,30 +36,33 @@ import java.util.function.Consumer;
  * routes ({@code GET /api/v1/counters/<cacheId>} and {@code GET /api/v1/counters/<cacheId>/<key>}) are
  * bound to these handlers, so near caching is transparent to clients. Reads are served from a local
  * {@link NearCacheManager} of {@code Long} values kept warm by a cluster subscription, falling back to
- * the source counter cache on a miss.
+ * the source counter cache on a miss. Priming, stopping and listing the warm caches are delegated to the
+ * shared near cache API on the {@link CacheSubscriptionRequestPublisher}, so priming is idempotent and a
+ * primed counter cache appears on the warm listing immediately.
  */
 @Log4j2
 public class CountersNearCacheRouteHandlers {
 
     private final ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableLong, String, String, Long> publisher;
-    private final NearCacheManager<Long> nearCacheManager;
-    private final Consumer<String> subscribeToCache;
-    private final Consumer<String> unsubscribeFromCache;
+    private final NearCacheManager<Object> nearCacheManager;
+    private final CacheSubscriptionRequestPublisher<ReusableString, ReusableString, ReusableLong> subscriptionService;
+    private final Supplier<AeronCache> clusterSupplier;
 
     /**
      * @param publisher            the publisher used to fetch from the source counter cache over the cluster.
      * @param nearCacheManager     the local near counters store kept warm by subscription updates.
-     * @param subscribeToCache     subscribes to a counter cache's updates so the local copy is kept in sync.
-     * @param unsubscribeFromCache drops the cluster subscription for a counter cache so updates stop flowing.
+     * @param subscriptionService  the subscription service providing the shared near cache management API
+     *                             (prime / stop / warm listing), backed by {@code nearCacheManager}.
+     * @param clusterSupplier      supplies the current cluster connection for prime/stop requests.
      */
     public CountersNearCacheRouteHandlers(ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableLong, String, String, Long> publisher,
-                                          NearCacheManager<Long> nearCacheManager,
-                                          Consumer<String> subscribeToCache,
-                                          Consumer<String> unsubscribeFromCache) {
+                                          NearCacheManager<Object> nearCacheManager,
+                                          CacheSubscriptionRequestPublisher<ReusableString, ReusableString, ReusableLong> subscriptionService,
+                                          Supplier<AeronCache> clusterSupplier) {
         this.publisher = publisher;
         this.nearCacheManager = nearCacheManager;
-        this.subscribeToCache = subscribeToCache;
-        this.unsubscribeFromCache = unsubscribeFromCache;
+        this.subscriptionService = subscriptionService;
+        this.clusterSupplier = clusterSupplier;
     }
 
     /**
@@ -67,17 +73,15 @@ public class CountersNearCacheRouteHandlers {
     public void handleGetNearCachesRequest(Context ctx) {
         log.info("Got request to list warm near counter caches");
         List<CacheDetails> warmCaches = new ArrayList<>();
-        for (var cacheId : nearCacheManager.cacheIds()) {
-            var localCache = nearCacheManager.get(cacheId);
-            var itemCount = localCache == null ? 0 : localCache.size();
-            warmCaches.add(new CacheDetails(cacheId, itemCount));
+        for (var cacheId : subscriptionService.warmNearCaches()) {
+            warmCaches.add(new CacheDetails(cacheId, subscriptionService.nearCacheItemCount(cacheId)));
         }
         ctx.status(HTTPStatusUtils.OK);
         ctx.json(warmCaches);
     }
 
     /**
-     * Stop near caching a counter cache: drop the cluster subscription and remove the local copy.
+     * Stop near caching a counter cache: drop the internal subscription and remove the local copy.
      *
      * @param ctx The context.
      */
@@ -86,8 +90,7 @@ public class CountersNearCacheRouteHandlers {
             var cacheId = ctx.pathParam("cacheId");
             log.info("Got request to stop near caching counters cacheId {}", cacheId);
 
-            unsubscribeFromCache.accept(cacheId);
-            var wasCached = nearCacheManager.remove(cacheId);
+            var wasCached = subscriptionService.stopNearCaching(clusterSupplier.get(), cacheId);
 
             ctx.status(HTTPStatusUtils.OK);
             ctx.json(new StopNearCacheResponse(cacheId, wasCached, CacheOperationStatus.SUCCESS));
@@ -103,9 +106,10 @@ public class CountersNearCacheRouteHandlers {
     }
 
     /**
-     * Prime a near counter cache up front: subscribe to the counter cache (requesting a snapshot) so the
-     * local copy is warmed before any read or hydrating subscription arrives. Idempotent - priming a cache
-     * that is already warm succeeds with {@code wasAlreadyWarm=true} and does not re-subscribe.
+     * Prime a near counter cache up front: start the internal near cache subscription (requesting a
+     * snapshot) so the local copy is warmed before any read or hydrating subscription arrives. Idempotent -
+     * priming a cache that is already warm succeeds with {@code wasAlreadyWarm=true} and does not
+     * re-subscribe.
      *
      * @param ctx The context.
      */
@@ -114,13 +118,10 @@ public class CountersNearCacheRouteHandlers {
             var cacheId = ctx.pathParam("cacheId");
             log.info("Got request to prime near caching counters cacheId {}", cacheId);
 
-            var wasAlreadyWarm = nearCacheManager.contains(cacheId);
-            if (!wasAlreadyWarm) {
-                subscribeToCache.accept(cacheId);
-            }
+            var primed = subscriptionService.primeNearCache(clusterSupplier.get(), cacheId);
 
             ctx.status(HTTPStatusUtils.OK);
-            ctx.json(new PrimeNearCacheResponse(cacheId, wasAlreadyWarm, CacheOperationStatus.SUCCESS));
+            ctx.json(new PrimeNearCacheResponse(cacheId, !primed, CacheOperationStatus.SUCCESS));
         } catch (Exception e) {
             var errorMsg = "Badly formed request to prime near caching counters cacheId " + ctx.pathParam("cacheId");
             log.warn(errorMsg);
@@ -173,7 +174,7 @@ public class CountersNearCacheRouteHandlers {
             if (nearCacheManager.contains(cacheId)) {
                 var localCache = nearCacheManager.get(cacheId);
                 var items = localCache.snapshot().entrySet().stream()
-                        .map(e -> new CounterItem(e.getKey(), e.getValue()))
+                        .map(e -> new CounterItem(e.getKey(), (Long) e.getValue()))
                         .toList();
                 var response = new GetCountersResponse(cacheId, CacheOperationStatus.SUCCESS, items);
                 ctx.status(HTTPStatusUtils.getHTTPCode(CacheOperationStatus.SUCCESS));
@@ -193,24 +194,24 @@ public class CountersNearCacheRouteHandlers {
     }
 
     private void handleNewNearCacheRequest(Context ctx, String cacheId, String key) throws InterruptedException, ExecutionException {
-        subscribeToCache.accept(cacheId);
+        subscriptionService.primeNearCache(clusterSupplier.get(), cacheId);
         var response = getItemFromSourceCache(ctx, cacheId, key).get();
         ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
         ctx.json(response);
     }
 
-    private void handleExistingLocalCache(Context ctx, NearCache<Long> localCache, String key, String cacheId) throws InterruptedException, ExecutionException {
+    private void handleExistingLocalCache(Context ctx, NearCache<Object> localCache, String key, String cacheId) throws InterruptedException, ExecutionException {
         if (localCache.containsKey(key)) {
             var result = localCache.get(key);
             ctx.status(HTTPStatusUtils.OK);
-            ctx.json(new GetCounterResponse(cacheId, key, result, CacheOperationStatus.SUCCESS));
+            ctx.json(new GetCounterResponse(cacheId, key, (Long) result, CacheOperationStatus.SUCCESS));
         } else {
             returnItemFromSourceCache(ctx, key, cacheId);
         }
     }
 
     private void handleNewFullNearCacheRequest(Context ctx, String cacheId) throws InterruptedException, ExecutionException {
-        subscribeToCache.accept(cacheId);
+        subscriptionService.primeNearCache(clusterSupplier.get(), cacheId);
 
         var requestId = AbstractRouteHandlers.getRequestId(ctx);
         CompletableFuture<GetCountersResponse> future = new CompletableFuture<>();

@@ -2,7 +2,7 @@ import AboutAeronCache from "@/components/About";
 import ObservabilityButton from "@/components/observability/ObservabilityButton";
 import Link from "next/link";
 import {Button} from "@/components/ui/button";
-import {LayersIcon, KanbanIcon, CameraIcon} from "lucide-react";
+import {LayersIcon, KanbanIcon, CameraIcon, FlameIcon} from "lucide-react";
 import {HEADER_BUTTON_CLASS} from "@/lib/headerStyles";
 import {getJaegerURL, getPrometheusURL, isUrlAccessible} from "@/lib/actions";
 
@@ -29,6 +29,9 @@ export default async function MenuLinks() {
                 </Link>
             )}
             <ObservabilityButton/>
+            <Link href="/near" data-testid="menu-link-near">
+                <Button variant="link" className={HEADER_BUTTON_CLASS}><FlameIcon/>Near Cache</Button>
+            </Link>
             <Link href="/snapshot" data-testid="menu-link-snapshot">
                 <Button variant="link" className={HEADER_BUTTON_CLASS}><CameraIcon/>Snapshot</Button>
             </Link>
