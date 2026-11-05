@@ -5,15 +5,23 @@ name: Snapshot Compatibility
 # compatible from those releases to HEAD.
 #
 # Two trigger modes:
-#   * pull_request - runs automatically against the LATEST tagged release so a PR that breaks
-#     snapshot restore is flagged. A break is NON-BLOCKING: some changes break compatibility by
-#     design, so the "Restore And Assert" step is continue-on-error and the real pass/fail is
-#     recorded in the uploaded result artifact rather than failing the check. (Keep this workflow
-#     out of the required status checks in branch protection so it can never block a merge.)
+#   * pull_request - runs automatically against the most recent releases that are STRICTLY OLDER
+#     than the build under test (the newest `count` of them, default 3), so a PR that breaks
+#     snapshot restore from a real earlier release is flagged. "Strictly older" is the point: the
+#     current line's own release (e.g. v0.0.44-SNAPSHOT while gradle.properties is still
+#     0.0.44-SNAPSHOT) is skipped, because a build always restores its own snapshot and that
+#     diagonal cell is meaningless - it is what made the matrix look like it was testing a version
+#     against itself. A break is NON-BLOCKING: some changes break compatibility by design, so the
+#     "Restore And Assert" step is continue-on-error and the real pass/fail is recorded in the
+#     uploaded result artifact rather than failing the check. (Keep this workflow out of the
+#     required status checks in branch protection so it can never block a merge.)
 #   * workflow_dispatch - pass a space-separated list of release tags to test against instead, e.g.
-#     "v1.0.0 v1.1.0". Leave it blank to behave like the PR trigger (latest release only).
+#     "v1.0.0 v1.1.0" (handy for backfilling the matrix across many historical releases in a single
+#     run), or leave it blank to use the same auto-selection a PR uses. The `count` input tunes how
+#     many older releases that auto-selection covers.
 #
-# Each tested tag must have a cache-data-<tag>.tar.gz asset (produced by the release workflow).
+# Each tested tag must have a cache-data-<tag>.tar.gz asset (produced by the release workflow);
+# in auto mode, releases without that asset are skipped automatically.
 #
 # Every run uploads a snapshot-compat-<sha>-<from>.json result artifact (one per tested release),
 # whether the restore passed or failed. The aeron-cache-site repo aggregates these across runs into
@@ -25,9 +33,13 @@ on:
   workflow_dispatch:
     inputs:
       versions:
-        description: 'Space-separated release tags to test against the current build (blank = latest release only)'
+        description: 'Space-separated release tags to test against the current build (blank = auto-select older releases)'
         required: false
         default: ''
+      count:
+        description: 'Auto mode only: how many of the newest releases older than the current build to test against'
+        required: false
+        default: '3'
 
 permissions:
   contents: read
@@ -43,26 +55,62 @@ jobs:
     outputs:
       matrix: ${{ steps.parse.outputs.matrix }}
     steps:
+      # Needed so the current build version can be read from gradle.properties: "test against
+      # releases older than THIS version" is what keeps the current line's own release out of the
+      # matrix. On a PR this is the PR-merged-into-main tree, matching the restore job's "to" side.
+      - uses: actions/checkout@v4
+
       - id: parse
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           VERSIONS: ${{ github.event.inputs.versions }}
+          COUNT: ${{ github.event.inputs.count }}
         run: |
-          # Explicit dispatch list wins; otherwise resolve the latest tagged release to test against.
+          # "to" side of every edge: the version of the build under test (gradle.properties). Tags
+          # carry a leading "v" (v0.0.44-SNAPSHOT) while gradle.properties does not (0.0.44-SNAPSHOT),
+          # so compare on the bare form (${tag#v}) throughout.
+          CURRENT=$(grep -E '^version=' gradle.properties | cut -d= -f2)
+          COUNT="${COUNT:-3}"
+          [ -n "$COUNT" ] || COUNT=3
+
           if [ -n "$VERSIONS" ]; then
-            MATRIX=$(echo "$VERSIONS" | tr ', ' '\n\n' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            # Explicit dispatch list wins, taken verbatim and in the given order.
+            CANDIDATES=$(echo "$VERSIONS" | tr ', ' '\n\n' | grep -v '^[[:space:]]*$' || true)
           else
-            LATEST=$(gh release view --repo "$REPO" --json tagName --jq .tagName 2>/dev/null || true)
-            if [ -n "$LATEST" ]; then
-              MATRIX=$(jq -c -n --arg v "$LATEST" '[$v]')
-            else
-              # No releases yet (e.g. a fresh repo) - nothing to test against, skip the restore job.
-              MATRIX='[]'
-            fi
+            # Auto mode: the newest COUNT releases that (a) actually ship a cache-data-<tag>.tar.gz
+            # asset to restore from, and (b) are STRICTLY OLDER than the build under test. (b) is the
+            # fix for the self-test: without it, "latest release" resolves to the current line's own
+            # -SNAPSHOT release and every cell is a build restoring its own snapshot.
+            WITH_DATA=$(gh api --paginate "repos/$REPO/releases?per_page=100" \
+              --jq '.[] | select(.draft | not) | select([.assets[].name] | any(test("^cache-data-.*\\.tar\\.gz$"))) | .tag_name' \
+              2>/dev/null || true)
+            CANDIDATES=$(printf '%s\n' "$WITH_DATA" | sort -Vr | while read -r tag; do
+              [ -z "$tag" ] && continue
+              bare="${tag#v}"
+              [ "$bare" = "$CURRENT" ] && continue
+              # bare < CURRENT iff the smaller of the two (version sort) is bare.
+              smaller=$(printf '%s\n%s\n' "$bare" "$CURRENT" | sort -V | head -1)
+              [ "$smaller" = "$bare" ] && echo "$tag"
+            done | head -n "$COUNT")
           fi
+
+          # Final guard, applied to both paths: never test a build against a snapshot captured by its
+          # own version (from == to). That diagonal cell is always green and tells you nothing.
+          SELECTED=$(printf '%s\n' "$CANDIDATES" | while read -r tag; do
+            [ -z "$tag" ] && continue
+            if [ "${tag#v}" = "$CURRENT" ]; then
+              echo "::warning::Skipping $tag: same version as the build under test ($CURRENT); a build always restores its own snapshot." >&2
+              continue
+            fi
+            echo "$tag"
+          done)
+
+          MATRIX=$(printf '%s\n' "$SELECTED" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          [ -n "$MATRIX" ] || MATRIX='[]'
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
-          echo "Testing against: $MATRIX"
+          echo "Build under test: $CURRENT"
+          echo "Testing against:  $MATRIX"
 
   restore:
     needs: prepare-matrix
