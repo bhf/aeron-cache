@@ -97,10 +97,16 @@ public class GatewayApplication {
     private static AgentRunner ingressAgentRunner;
     private static boolean clusteredMode;
 
+    private static String gatewayAeronDirectoryName;
+
     public static int BOUND_PORT;
 
     public static void main(String[] args) {
         BOUND_PORT = start(DEFAULT_HTTP_PORT);
+    }
+
+    public static String gatewayAeronDirectoryName() {
+        return gatewayAeronDirectoryName;
     }
 
     /**
@@ -200,6 +206,7 @@ public class GatewayApplication {
             if (aeronDir != null) {
                 aeronCtx.aeronDirectoryName(aeronDir);
             }
+            gatewayAeronDirectoryName = aeronCtx.aeronDirectoryName();
 
             clusteredMode = useClusteredMode;
             log.info("Clustered mode: {}", clusteredMode);
