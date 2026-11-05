@@ -2,7 +2,7 @@
 
 import {getLogger} from "@/lib/loggingUtil";
 import {revalidatePath, updateTag} from "next/cache";
-import type {NodePurgeResult} from "@/lib/types";
+import type {NearCacheGateway, NearCacheKind, NearCacheOpResult, NodePurgeResult, WarmCacheInfo} from "@/lib/types";
 
 /**
  * React server actions.
@@ -35,6 +35,173 @@ export async function getWebsocketURL() {
 
 export async function getSSEURL(): Promise<string> {
     return process.env.AERON_CACHE_SSE_API ? process.env.AERON_CACHE_SSE_API : "http://localhost:7072";
+}
+
+/**
+ * The near cache management API base URL for each gateway, e.g. {@code http://host:7070/api/v1/near}.
+ *
+ * Every gateway (http, ws, sse and the Aeron transport gateway) exposes the same near cache management
+ * REST surface on its own HTTP port, so a near cache operation must say which gateway it targets. These
+ * are resolved from env vars, falling back to the local docker-compose ports. The Aeron gateway keeps
+ * back compatibility with the older {@code AERON_CACHE_NEAR_API} variable.
+ */
+const NEAR_API_DEFAULTS: Record<NearCacheGateway, string> = {
+    http: "http://localhost:7070/api/v1/near",
+    ws: "http://localhost:7071/api/v1/near",
+    sse: "http://localhost:7072/api/v1/near",
+    aeron: "http://localhost:7073/api/v1/near",
+};
+
+/**
+ * Resolve the near cache management API base URL for a gateway.
+ * @param gateway The gateway whose near cache is being managed.
+ */
+function nearApiBase(gateway: NearCacheGateway): string {
+    switch (gateway) {
+        case "http":
+            return process.env.AERON_CACHE_HTTP_NEAR_API ?? NEAR_API_DEFAULTS.http;
+        case "ws":
+            return process.env.AERON_CACHE_WS_NEAR_API ?? NEAR_API_DEFAULTS.ws;
+        case "sse":
+            return process.env.AERON_CACHE_SSE_NEAR_API ?? NEAR_API_DEFAULTS.sse;
+        case "aeron":
+            return process.env.AERON_CACHE_AERON_NEAR_API ?? process.env.AERON_CACHE_NEAR_API ?? NEAR_API_DEFAULTS.aeron;
+    }
+}
+
+/** Human readable gateway names for toasts and labels. */
+const GATEWAY_LABELS: Record<NearCacheGateway, string> = {
+    http: "HTTP",
+    ws: "WebSocket",
+    sse: "SSE",
+    aeron: "Aeron",
+};
+
+export async function getGatewayLabel(gateway: NearCacheGateway): Promise<string> {
+    return GATEWAY_LABELS[gateway];
+}
+
+/**
+ * The URL path segment for listing warm near caches of a given kind.
+ * Caches live under {@code /caches}; counter caches under {@code /counters-caches}.
+ */
+function warmListPath(kind: NearCacheKind): string {
+    return kind === "counters" ? "/counters-caches" : "/caches";
+}
+
+/**
+ * The URL path prefix for priming/stopping a single near cache of a given kind.
+ * Caches use {@code /cache/<id>}; counter caches use {@code /counters/<id>}.
+ */
+function singleCachePath(kind: NearCacheKind, cacheId: string): string {
+    const prefix = kind === "counters" ? "/counters/" : "/cache/";
+    return prefix + encodeURIComponent(cacheId);
+}
+
+/**
+ * List the caches currently held warm in a gateway's near cache.
+ *
+ * Tolerant by design: a gateway with the near cache disabled (no near routes) or that is unreachable
+ * yields an empty list rather than throwing, so the management view degrades gracefully.
+ *
+ * @param gateway The gateway to query.
+ * @param kind    Regular caches or counter caches.
+ */
+export async function listWarmNearCaches(gateway: NearCacheGateway, kind: NearCacheKind): Promise<WarmCacheInfo[]> {
+    const url = nearApiBase(gateway) + warmListPath(kind);
+    logger.info("Listing warm near caches from " + url);
+    try {
+        const rawResponse = await fetch(url, {method: 'GET', headers, cache: "no-cache"});
+        if (!rawResponse.ok) {
+            logger.warn("Non-OK listing warm near caches from " + url + ": " + rawResponse.status);
+            return [];
+        }
+        const content = await rawResponse.json();
+        if (!Array.isArray(content)) {
+            return [];
+        }
+        return content.map((c) => ({cacheId: String(c.cacheId), itemCount: Number(c.itemCount ?? 0)}));
+    } catch (err) {
+        logger.warn("Error whilst listing warm near caches from " + url, err);
+        return [];
+    }
+}
+
+/**
+ * Prime a cache into a gateway's near cache: subscribe so the local copy is warmed up front. Idempotent -
+ * priming an already warm cache succeeds and reports {@code wasAlreadyWarm}.
+ *
+ * @param gateway The gateway whose near cache to prime.
+ * @param kind    Regular caches or counter caches.
+ * @param cacheId The cache to prime.
+ */
+export async function primeNearCache(gateway: NearCacheGateway, kind: NearCacheKind, cacheId: string): Promise<NearCacheOpResult> {
+    const trimmed = (cacheId ?? "").trim();
+    if (trimmed.length === 0) {
+        return {cacheId: trimmed, error: true, message: "Enter a cache ID to prime"};
+    }
+    const url = nearApiBase(gateway) + singleCachePath(kind, trimmed);
+    logger.info("Priming near cache via " + url);
+    try {
+        const rawResponse = await fetch(url, {method: 'POST', headers, cache: "no-cache"});
+        const content = await rawResponse.json().catch(() => null);
+        if (!rawResponse.ok || content?.operationStatus !== "SUCCESS") {
+            return {
+                cacheId: trimmed,
+                operationStatus: content?.operationStatus,
+                error: true,
+                message: "Failed to prime " + trimmed + (content?.operationStatus ? ": " + content.operationStatus : ""),
+            };
+        }
+        const wasAlreadyWarm = Boolean(content.wasAlreadyWarm);
+        return {
+            cacheId: trimmed,
+            operationStatus: content.operationStatus,
+            wasAlreadyWarm,
+            error: false,
+            message: wasAlreadyWarm ? trimmed + " was already warm" : "Priming " + trimmed + " started",
+        };
+    } catch (err) {
+        logger.error("Error whilst priming near cache via " + url, err);
+        return {cacheId: trimmed, error: true, message: "Error priming " + trimmed};
+    }
+}
+
+/**
+ * Stop near caching a cache on a gateway: drop the subscription and remove the local copy. Idempotent -
+ * stopping a cache that is not warm succeeds and reports {@code wasCached=false}.
+ *
+ * @param gateway The gateway whose near cache to stop.
+ * @param kind    Regular caches or counter caches.
+ * @param cacheId The cache to stop near caching.
+ */
+export async function stopNearCache(gateway: NearCacheGateway, kind: NearCacheKind, cacheId: string): Promise<NearCacheOpResult> {
+    const trimmed = (cacheId ?? "").trim();
+    const url = nearApiBase(gateway) + singleCachePath(kind, trimmed);
+    logger.info("Stopping near cache via " + url);
+    try {
+        const rawResponse = await fetch(url, {method: 'DELETE', headers, cache: "no-cache"});
+        const content = await rawResponse.json().catch(() => null);
+        if (!rawResponse.ok || content?.operationStatus !== "SUCCESS") {
+            return {
+                cacheId: trimmed,
+                operationStatus: content?.operationStatus,
+                error: true,
+                message: "Failed to stop " + trimmed + (content?.operationStatus ? ": " + content.operationStatus : ""),
+            };
+        }
+        const wasCached = Boolean(content.wasCached);
+        return {
+            cacheId: trimmed,
+            operationStatus: content.operationStatus,
+            wasCached,
+            error: false,
+            message: wasCached ? "Stopped near caching " + trimmed : trimmed + " was not warm",
+        };
+    } catch (err) {
+        logger.error("Error whilst stopping near cache via " + url, err);
+        return {cacheId: trimmed, error: true, message: "Error stopping " + trimmed};
+    }
 }
 
 export async function isUrlAccessible(url: string): Promise<boolean> {

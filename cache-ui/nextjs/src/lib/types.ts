@@ -11,6 +11,47 @@ export interface CacheInfo {
 }
 
 /**
+ * The gateway whose near cache is being managed. Each gateway keeps its own independent near cache,
+ * reachable over its own HTTP management port, so near cache operations are always scoped to one of
+ * these.
+ */
+export type NearCacheGateway = "http" | "ws" | "sse" | "aeron"
+
+/**
+ * Which flavour of near cache an operation targets: regular caches or counter caches. These map to the
+ * two families of near management endpoints on each gateway ({@code /near/cache...} vs
+ * {@code /near/counters...}).
+ */
+export type NearCacheKind = "caches" | "counters"
+
+/**
+ * A cache currently held warm in a gateway's near cache, with the number of items in the local copy.
+ */
+export interface WarmCacheInfo {
+    cacheId: string
+    itemCount: number
+}
+
+/**
+ * The outcome of a near cache management operation (prime or stop) as surfaced to the UI.
+ *
+ * @property cacheId        the cache the operation targeted.
+ * @property operationStatus the backend operation status (e.g. "SUCCESS"), when the request reached the gateway.
+ * @property wasAlreadyWarm  for a prime: whether the cache was already warm (no re-subscribe happened).
+ * @property wasCached       for a stop: whether a local copy existed and was removed.
+ * @property error           whether the request failed to send or the gateway reported a failure.
+ * @property message         a human readable description of the outcome, suitable for a toast.
+ */
+export interface NearCacheOpResult {
+    cacheId: string
+    operationStatus?: string
+    wasAlreadyWarm?: boolean
+    wasCached?: boolean
+    error: boolean
+    message: string
+}
+
+/**
  * Information about a specific counter cache instance.
  */
 export interface CounterCacheInfo {
