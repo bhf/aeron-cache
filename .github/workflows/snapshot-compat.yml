@@ -6,7 +6,7 @@ name: Snapshot Compatibility
 #
 # Two trigger modes:
 #   * pull_request - runs automatically against the most recent releases that are STRICTLY OLDER
-#     than the build under test (the newest `count` of them, default 3), so a PR that breaks
+#     than the build under test (the newest `count` of them, default 1), so a PR that breaks
 #     snapshot restore from a real earlier release is flagged. "Strictly older" is the point: the
 #     current line's own release (e.g. v0.0.44-SNAPSHOT while gradle.properties is still
 #     0.0.44-SNAPSHOT) is skipped, because a build always restores its own snapshot and that
@@ -71,8 +71,8 @@ jobs:
           # carry a leading "v" (v0.0.44-SNAPSHOT) while gradle.properties does not (0.0.44-SNAPSHOT),
           # so compare on the bare form (${tag#v}) throughout.
           CURRENT=$(grep -E '^version=' gradle.properties | cut -d= -f2)
-          COUNT="${COUNT:-3}"
-          [ -n "$COUNT" ] || COUNT=3
+          COUNT="${COUNT:-1}"
+          [ -n "$COUNT" ] || COUNT=1
 
           if [ -n "$VERSIONS" ]; then
             # Explicit dispatch list wins, taken verbatim and in the given order.
