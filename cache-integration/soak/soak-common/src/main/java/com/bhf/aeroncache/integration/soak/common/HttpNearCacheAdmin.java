@@ -8,7 +8,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 /**
@@ -32,6 +34,13 @@ public final class HttpNearCacheAdmin implements NearCacheAdmin {
     private final String baseUrl;
     private final String patchesMetricName;
     private final boolean patchMetricsExposed;
+    /**
+     * When non-null, {@link #patchCount(String)} reads the synthetic-patch counter from the Prometheus
+     * exposition text this supplies instead of scraping {@code baseUrl}'s own {@code /prometheus}. Used for
+     * the Aeron gateway, whose near counters are Aeron driver counters absent from its Micrometer scrape but
+     * served by a co-located clustertool reader of the gateway media driver's CnC file.
+     */
+    private final Supplier<String> patchMetricsSource;
     private final HttpClient http;
 
     /**
@@ -47,6 +56,31 @@ public final class HttpNearCacheAdmin implements NearCacheAdmin {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.patchesMetricName = patchesMetricName;
         this.patchMetricsExposed = patchMetricsExposed;
+        this.patchMetricsSource = null;
+        this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    }
+
+    /**
+     * Variant for an edge whose synthetic-patch counter is not carried on its own {@code /prometheus} but is
+     * readable from an external Prometheus exposition source co-located with it. This is how the Aeron gateway
+     * soak asserts the counter: near-cache management (prime/list/stop) still uses {@code baseUrl} (the
+     * gateway's HTTP port), but {@link #patchCount(String)} parses the text from {@code patchMetricsSource} -
+     * the clustertool's scrape of the gateway media driver's CnC file ({@code AeronCountersReader} +
+     * {@code AeronCountersPrometheusFormatter}, the same code the clustertool sidecar runs in production). With
+     * this constructor {@link #supportsPatchMetrics()} reports {@code true}, so the workload asserts per-outcome
+     * counts rather than only verifying the synthetic stream events.
+     *
+     * @param baseUrl            the edge's HTTP origin for near-cache management, e.g. {@code http://localhost:8123}.
+     * @param patchesMetricName  the synthetic-patch counter name as it appears in the external scrape
+     *                           ({@code aeron_gateway_near_patches_total} for the Aeron gateway).
+     * @param patchMetricsSource supplies the Prometheus exposition text carrying that counter; queried afresh
+     *                           on each read so a before/after delta around a round reflects live increments.
+     */
+    public HttpNearCacheAdmin(String baseUrl, String patchesMetricName, Supplier<String> patchMetricsSource) {
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        this.patchesMetricName = patchesMetricName;
+        this.patchMetricsExposed = true;
+        this.patchMetricsSource = Objects.requireNonNull(patchMetricsSource, "patchMetricsSource");
         this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     }
 
@@ -95,11 +129,17 @@ public final class HttpNearCacheAdmin implements NearCacheAdmin {
 
     @Override
     public long patchCount(String outcome) {
-        var resp = send("GET", PROMETHEUS_ENDPOINT);
-        if (resp.statusCode() != 200) {
-            throw new IllegalStateException("scrape /prometheus expected HTTP 200 but got " + resp.statusCode());
+        final String body;
+        if (patchMetricsSource != null) {
+            body = patchMetricsSource.get();
+        } else {
+            var resp = send("GET", PROMETHEUS_ENDPOINT);
+            if (resp.statusCode() != 200) {
+                throw new IllegalStateException("scrape /prometheus expected HTTP 200 but got " + resp.statusCode());
+            }
+            body = resp.body();
         }
-        return sumCounter(resp.body(), outcome);
+        return sumCounter(body, outcome);
     }
 
     // ---------------------------------------------------------------- parsing

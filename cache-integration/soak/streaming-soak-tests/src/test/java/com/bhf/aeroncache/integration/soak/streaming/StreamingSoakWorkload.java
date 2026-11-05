@@ -437,10 +437,11 @@ final class StreamingSoakWorkload implements SoakRun {
      * it so the warm local copy populates, then open a hydrating PATCH subscription served from the warm copy.
      * The subscription receives a full ADD_ITEM baseline per warm key on hydration, then one synthetic event
      * per live mutation - a PATCH_ITEM delta or a full ADD_ITEM fallback (unparseable value), and nothing for a
-     * no-op (suppressed) overwrite. These synthetic stream events are verified in order with no extras. (The
-     * gateway's {@code aeron_gateway_near_patches_total} counter is an Aeron driver counter, not carried on its
-     * Micrometer {@code /prometheus}, so the per-outcome count is not asserted here - the web edges, whose
-     * counter is HTTP-readable, assert it; see {@link NearCacheAdmin#supportsPatchMetrics()}.)
+     * no-op (suppressed) overwrite. These synthetic stream events are verified in order with no extras, and the
+     * per-outcome {@code aeron_gateway_near_patches_total} count is asserted too: the gateway records it as an
+     * Aeron driver counter (absent from its own Micrometer {@code /prometheus}), so the admin reads it in process
+     * from the gateway media driver's CnC file via the clustertool reader/formatter - the same path the
+     * clustertool sidecar serves in production; see {@link NearCacheAdmin#supportsPatchMetrics()}.
      */
     private void runWarmRound(Variant v) {
         var caches = createCaches(v);

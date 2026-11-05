@@ -15,6 +15,14 @@ dependencies {
     testImplementation(project(":cache-cluster"))
     testImplementation(project(":cache-aeron-gateway:aeron-gateway-server"))
 
+    // The clustertool's Aeron-counter reader/formatter: the gateway records its near-cache synthetic-patch
+    // counters as Aeron driver counters (absent from its own Micrometer /prometheus), so the soak reads them
+    // in-process from the gateway media driver's CnC file - the same code the clustertool sidecar serves in
+    // production - to assert aeron_gateway_near_patches_total. cache-messages-http carries the counter DTOs the
+    // reader/formatter exchange (http-clustertools depends on it as implementation, so name it directly here).
+    testImplementation(project(":cache-http:http-clustertools"))
+    testImplementation(project(":cache-messages-http"))
+
     // Cache SPI implementation so the gateway's ServiceLoader can find a CacheClientFactory.
     testRuntimeOnly(project(":cache-spi-impl:map-cache:map-cache-core"))
     testRuntimeOnly(libs.junit.platform.launcher)
