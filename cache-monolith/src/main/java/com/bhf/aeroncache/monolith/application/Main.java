@@ -40,19 +40,24 @@ public class Main {
         int httpInterfacePort = 0;
         int wsInterfacePort = 0;
         int sseInterfacePort = 0;
+        int gatewayInterfacePort = 0;
 
-        if (args.length == 4) {
+        if (args.length >= 4) {
             toolsPort = Integer.valueOf(args[0]);
             httpInterfacePort = Integer.valueOf(args[1]);
             wsInterfacePort = Integer.valueOf(args[2]);
             sseInterfacePort = Integer.valueOf(args[3]);
         }
 
+        if (args.length >= 5) {
+            gatewayInterfacePort = Integer.valueOf(args[4]);
+        }
+
         System.out.println("Launching Aeron Cache Monolith with the following configuration: aeronEnabled="
                 + aeronEnabled + ", websocketEnabled=" + websocketEnabled + ", sseEnabled=" + sseEnabled);
 
         System.out.println("Launching with CluserToolsPort: " + toolsPort + ", HttpPort: " + httpInterfacePort
-                + ", WSPort: " + wsInterfacePort + ", SSEPort:" + sseInterfacePort);
+                + ", WSPort: " + wsInterfacePort + ", SSEPort:" + sseInterfacePort + ", GatewayPort:" + gatewayInterfacePort);
 
         System.out.println(launchEmbeddedDriver
                 ? "Launching embedded Aeron media driver at " + aeronDirectory
@@ -96,27 +101,33 @@ public class Main {
                 System.out.println("SSE interface disabled");
             }
 
+            int aeronTransportGatewayHTTPPort = 0;
             if (aeronEnabled) {
                 TransportMedia gatewayMedia = TransportMedia.fromEnv();
                 System.out.println("Launching Aeron Gateway using " + gatewayMedia.media().toUpperCase()
                         + " transport (set " + TransportMedia.MEDIA_ENV + "=ipc|udp to change; default udp)");
-                int gatewayHealthPort = GatewayApplication.start(0);
-                System.out.println("Aeron Gateway HTTP health server bound to port " + gatewayHealthPort);
+                aeronTransportGatewayHTTPPort = GatewayApplication.start(gatewayInterfacePort);
+                System.out.println("Aeron Gateway HTTP health server bound to port " + aeronTransportGatewayHTTPPort);
             } else {
                 System.out.println("Aeron Gateway disabled");
             }
 
-            generateUIConfig(httpPort, clusterToolsPort, wsPort, ssePort);
+            generateUIConfig(httpPort, clusterToolsPort, wsPort, ssePort, aeronTransportGatewayHTTPPort);
             barrier.await();
         }
     }
 
 
-    private static void generateUIConfig(int httpPort, int clusterToolsPort, int wsPort, int ssePort) {
+    private static void generateUIConfig(int httpPort, int clusterToolsPort, int wsPort, int ssePort, int gatewayHealthPort) {
         String template =
                 "AERON_CACHE_API=http://localhost:" + httpPort + "/api/v1\n" +
                 "AERON_CACHE_WS_API=ws:localhost:" + wsPort + "\n" +
-                "AERON_CACHE_SSE_API=http://localhost:" + ssePort;
+                "AERON_CACHE_SSE_API=http://localhost:" + ssePort + "\n" +
+
+                "AERON_CACHE_HTTP_NEAR_API=http://localhost:" + httpPort + "/api/v1/near\n" +
+                "AERON_CACHE_WS_NEAR_API=http://localhost:" + wsPort + "/api/v1/near\n" +
+                "AERON_CACHE_SSE_NEAR_API=http://localhost:" + ssePort + "/api/v1/near\n" +
+                "AERON_CACHE_AERON_NEAR_API=http://localhost:" + gatewayHealthPort + "/api/v1/near";
 
         try {
             Files.write(Paths.get("aeron-cache-ui.env"), template.getBytes());
