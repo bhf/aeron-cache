@@ -39,7 +39,7 @@ on:
       count:
         description: 'Auto mode only: how many of the newest releases older than the current build to test against'
         required: false
-        default: '3'
+        default: '1'
 
 permissions:
   contents: read
