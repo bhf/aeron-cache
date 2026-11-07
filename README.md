@@ -165,6 +165,8 @@ make install-backend JAVAAGENT=true         # apps with the agent on
 
 ![img.png](docs/images/k9s-screenshot.png)
 
+![img.png](docs/near-enabled.png)
+
 [Top](#aeron-cache)
 
 ## API Specs
