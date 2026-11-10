@@ -9,11 +9,13 @@ on:
       - 'cache-common/**'
       - 'cache-spi/**'
       - 'cache-spi-impl/**'
+      - '.github/workflows/ui-ci.yaml'
   pull_request:
     branches: [ main ]
     paths:
       - 'cache-ui/nextjs/**'
       - 'cache-monolith/**'
+      - '.github/workflows/ui-ci.yaml'
 
 jobs:
   build-backend:
