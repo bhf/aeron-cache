@@ -2,13 +2,15 @@ package com.bhf.aeroncache.services.cache.subscription;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.models.consumer.IdentifiableConsumer;
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.events.CacheUpdateEvent;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.near.NearCache;
 import com.bhf.aeroncache.near.NearCacheManager;
-import com.bhf.aeroncache.near.patch.JsonMergePatch;
+import com.bhf.aeroncache.services.patch.MergePatchComputer;
+
+import java.util.ServiceLoader;
 import com.bhf.aeroncache.metrics.WebGatewayMetrics;
 import com.bhf.aeroncache.services.cache.CacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
@@ -45,6 +47,14 @@ import java.util.function.Consumer;
  */
 @Log4j2
 public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reusable, V extends Reusable> extends ObservingCacheRequestPublisher<I,K,V, String, String, String> implements CacheSubscriptions {
+
+    /**
+     * Stateless merge-patch computer resolved from the SPI implementation on the runtime classpath, used to
+     * turn whole-value near-cache updates into {@code PATCH_ITEM} deltas for patch subscribers.
+     */
+    private static final MergePatchComputer MERGE_PATCH_COMPUTER = ServiceLoader.load(MergePatchComputer.class)
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("No MergePatchComputer found."));
 
     private final Map<String, List<KeyFilteredConsumer>> cacheSubscriptions = new ConcurrentHashMap<>();
 
@@ -840,7 +850,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
             recordNearPatch("baseline");
             return;
         }
-        var result = JsonMergePatch.computeMergePatch(prevJson, newJson);
+        var result = MERGE_PATCH_COMPUTER.computeMergePatch(prevJson, newJson);
         if (result.isDelta()) {
             c.accept(new CacheUpdateEvent(cacheId, CacheUpdateEvent.EventType.PATCH_ITEM, key, result.delta(), requestId));
             recordNearPatch("delta");

@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.integration.streaming;
 
 import com.bhf.aeroncache.annotations.HappyPath;
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.events.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestLauncher;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.integration.config.StreamingTestEndpointsProvider;

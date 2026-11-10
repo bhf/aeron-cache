@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.ws.bidi;
 
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.events.CacheUpdateEvent;
 import com.bhf.aeroncache.metrics.WebGatewayMetrics;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;

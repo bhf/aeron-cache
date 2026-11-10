@@ -17,7 +17,7 @@ import com.bhf.aeroncache.http.responses.CacheDetails;
 import com.bhf.aeroncache.http.responses.PrimeNearCacheResponse;
 import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
-import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
+import com.bhf.aeroncache.near.NearCacheManagerFactory;
 import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.ReconnectingAeronCache;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
@@ -139,8 +139,8 @@ public class GatewayApplication {
 
         nearCacheEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false"));
         log.info("Near cache hydration enabled: {}", nearCacheEnabled);
-        nearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager<>() : null;
-        countersNearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager<>() : null;
+        nearCacheManager = nearCacheEnabled ? newNearCacheManager() : null;
+        countersNearCacheManager = nearCacheEnabled ? newNearCacheManager() : null;
 
         var app = startHTTPServer(httpPort);
 
@@ -266,6 +266,13 @@ public class GatewayApplication {
         ingressAgentRunner = new AgentRunner(GatewayIdleStrategies.ingressAgentIdleStrategy.get(),
                 new RethrowingErrorHandler(), null, ingressAgent);
         AgentRunner.startOnThread(ingressAgentRunner);
+    }
+
+    private static <V> NearCacheManager<V> newNearCacheManager() {
+        return ServiceLoader.load(NearCacheManagerFactory.class)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No NearCacheManagerFactory found."))
+                .createNearCacheManager();
     }
 
     private static CacheClientFactory getCacheClientFactory() {

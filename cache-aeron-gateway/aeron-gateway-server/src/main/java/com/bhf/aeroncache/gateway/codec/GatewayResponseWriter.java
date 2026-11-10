@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.gateway.codec;
 
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.events.CacheUpdateEvent;
 import com.bhf.aeroncache.gateway.messages.GatewayBulkResponseEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayCommandResponseEncoder;
 import com.bhf.aeroncache.gateway.messages.GatewayEntriesEncoder;

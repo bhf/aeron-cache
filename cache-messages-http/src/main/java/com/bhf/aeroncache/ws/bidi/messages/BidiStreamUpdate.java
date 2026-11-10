@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.ws.bidi.messages;
 
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.events.CacheUpdateEvent;
 
 /**
  * A streaming cache update pushed to a subscribed client.

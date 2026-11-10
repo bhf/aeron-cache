@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.gateway.application;
 
 import com.bhf.aeroncache.annotations.Flyweight;
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.events.CacheUpdateEvent;
 
 /**
  * A reusable, gateway-local carrier for a single streaming cache update, replacing the immutable

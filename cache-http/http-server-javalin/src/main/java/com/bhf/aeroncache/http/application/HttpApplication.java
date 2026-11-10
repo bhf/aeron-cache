@@ -24,7 +24,7 @@ import com.bhf.aeroncache.models.bulk.responses.BulkCacheOpsResponse;
 import com.bhf.aeroncache.models.results.BulkCacheOpsResult;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.metrics.WebGatewayMetrics;
-import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
+import com.bhf.aeroncache.near.NearCacheManagerFactory;
 import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.ReconnectingAeronCache;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
@@ -187,8 +187,8 @@ public class HttpApplication {
             // by the publisher's shared near cache API (primeNearCache / stopNearCaching / warmNearCaches),
             // keeping the HTTP gateway's near cache behaviour consistent with the ws/sse/gateway interfaces.
             if (nearCacheEnabled) {
-                nearCacheManager = new ConcurrentNearCacheManager<>();
-                countersNearCacheManager = new ConcurrentNearCacheManager<>();
+                nearCacheManager = newNearCacheManager();
+                countersNearCacheManager = newNearCacheManager();
             }
 
             if (PRE_ENCODE_CACHE_REQUESTS) {
@@ -315,6 +315,13 @@ public class HttpApplication {
         var httpPort = app.port();
         log.info("Started HTTP interface on port "+httpPort);
         return httpPort;
+    }
+
+    private static <V> NearCacheManager<V> newNearCacheManager() {
+        return ServiceLoader.load(NearCacheManagerFactory.class)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No NearCacheManagerFactory found."))
+                .createNearCacheManager();
     }
 
     private static CacheClientFactory getCacheClientFactory() {

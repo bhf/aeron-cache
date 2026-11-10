@@ -1,6 +1,6 @@
-package com.bhf.aeroncache.near;
+package com.bhf.aeroncache.services.near;
 
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent.EventType;
+import com.bhf.aeroncache.events.CacheUpdateEvent.EventType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

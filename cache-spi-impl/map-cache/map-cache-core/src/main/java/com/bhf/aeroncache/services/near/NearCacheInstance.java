@@ -1,5 +1,6 @@
-package com.bhf.aeroncache.near;
+package com.bhf.aeroncache.services.near;
 
+import com.bhf.aeroncache.near.NearCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 

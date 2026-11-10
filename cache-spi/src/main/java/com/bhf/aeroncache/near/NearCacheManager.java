@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.near;
 
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.events.CacheUpdateEvent;
 
 import java.util.Set;
 

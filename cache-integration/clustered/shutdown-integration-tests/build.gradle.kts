@@ -15,6 +15,7 @@ dependencies {
     testImplementation(libs.awaitility)
 
     testImplementation(project(":cache-cluster"))
+    testImplementation(project(":cache-spi"))
     testImplementation(project(":cache-messages-http"))
     testImplementation(project(":cache-http:http-server-javalin"))
     testImplementation(project(":cache-common"))

@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.integration.streaming;
 
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.events.CacheUpdateEvent;
 import com.bhf.aeroncache.integration.BackendTestResource;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.ws.bidi.messages.BidiClientMessage;

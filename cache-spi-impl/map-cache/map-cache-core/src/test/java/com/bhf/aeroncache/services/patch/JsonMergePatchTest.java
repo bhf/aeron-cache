@@ -1,8 +1,10 @@
-package com.bhf.aeroncache.near.patch;
+package com.bhf.aeroncache.services.patch;
 
-import com.bhf.aeroncache.near.patch.JsonMergePatch.MergePatchResult.Kind;
+import com.bhf.aeroncache.services.patch.MergePatchResult.Kind;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -74,5 +76,19 @@ class JsonMergePatchTest {
     @DisplayName("applying a patch with no prior value returns the patch as the whole value")
     void applyWithNoExistingReturnsPatch() {
         assertEquals("{\"a\":1}", JsonMergePatch.applyMergePatch(null, "{\"a\":1}"));
+    }
+
+    @Test
+    @DisplayName("checked apply returns the merged value on success")
+    void checkedApplyReturnsMergedValueOnSuccess() {
+        assertEquals(Optional.of("{\"a\":1,\"b\":3,\"c\":4}"),
+                JsonMergePatch.applyMergePatchChecked("{\"a\":1,\"b\":2}", "{\"b\":3,\"c\":4}"));
+    }
+
+    @Test
+    @DisplayName("checked apply reports empty when the merge cannot be performed")
+    void checkedApplyReportsEmptyOnFailure() {
+        assertEquals(Optional.empty(),
+                JsonMergePatch.applyMergePatchChecked("{\"a\":1}", "not json"));
     }
 }

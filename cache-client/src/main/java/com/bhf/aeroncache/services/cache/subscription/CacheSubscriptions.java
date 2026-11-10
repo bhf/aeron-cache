@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache.subscription;
 
 import com.bhf.aeroncache.AeronCache;
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.events.CacheUpdateEvent;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 
 import java.util.List;
