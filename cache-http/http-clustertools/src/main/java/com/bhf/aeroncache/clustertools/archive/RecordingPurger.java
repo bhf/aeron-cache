@@ -16,16 +16,6 @@ import java.util.List;
 /**
  * Reclaims disk by purging old segments of the cluster log recording up to a retained snapshot
  * position.
- *
- * <p>Aeron 1.50.0 exposes no {@code purge-segments} CLI command, so this connects an
- * {@link AeronArchive} client to the co-located node's archive (over its IPC local control channel)
- * and calls {@link AeronArchive#purgeSegments(long, long)}. The purge floor is the log position of
- * the Nth most recent snapshot (see {@link ClusterToolsConfig#getSnapshotRetentionCount()}), never
- * the latest, so lagging followers retain enough log to catch up and the previous snapshot stays
- * usable for {@code invalidate-latest-snapshot} rollback.
- *
- * <p>A fresh Archive connection is made per purge and closed afterwards, so a connection failure
- * never leaves the sidecar holding a dead client.
  */
 @Log4j2
 public class RecordingPurger {

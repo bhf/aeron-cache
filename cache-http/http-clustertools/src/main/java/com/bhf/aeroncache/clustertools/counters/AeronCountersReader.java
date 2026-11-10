@@ -15,18 +15,6 @@ import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Scrapes the Aeron media driver counters by mapping the driver's CnC file read-only, the same way
- * {@code aeron-stat} does, and exposing them as a JSON friendly snapshot.
- *
- * <p>This reads the media driver's own counters (publications, subscriptions, flow control, errors,
- * etc.), not the cache application counters. It deliberately does not connect as an Aeron client:
- * the CnC file is memory mapped read-only for the duration of a single scrape and unmapped again, so
- * scraping never registers a client with, or otherwise perturbs, the running driver.
- *
- * <p>The driver directory is taken from {@link ClusterToolsConfig#getAeronDirectoryName()} (env
- * {@code AERON_DIR}); when unset the Aeron default directory is used.
- */
 @Log4j2
 public class AeronCountersReader {
 

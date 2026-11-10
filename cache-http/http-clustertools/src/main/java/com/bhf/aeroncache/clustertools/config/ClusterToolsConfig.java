@@ -12,8 +12,6 @@ import java.util.Locale;
 /**
  * Environment driven configuration for the cluster tools sidecar.
  *
- * <p>All values are resolved from environment variables so the sidecar can be configured the same
- * way whether it runs as a k8s sidecar or embedded in the monolith launcher.
  */
 @Getter
 @Log4j2

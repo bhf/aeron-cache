@@ -9,9 +9,6 @@ import java.util.List;
 /**
  * Runs {@code io.aeron.cluster.ClusterTool} as a separate JVM process against a cluster directory.
  *
- * <p>Extracted so both the HTTP request handler and the scheduled snapshot task can trigger cluster
- * tool commands the same way. The spawned process inherits this JVM's classpath and system
- * properties so it resolves the cluster the same way the node does.
  */
 @Log4j2
 public class ClusterToolProcessRunner {
