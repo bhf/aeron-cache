@@ -3,8 +3,7 @@ package com.bhf.aeroncache.near;
 import java.util.Map;
 
 /**
- * A single named near (local) cache holding string keys mapped to values of type {@code V}
- * (for example {@code String} for regular caches, {@code Long} for counter caches).
+ * A single near (local) cache.
  */
 public interface NearCache<V> {
 
