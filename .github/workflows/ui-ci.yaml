@@ -35,7 +35,8 @@ jobs:
 
   ui-build-and-test:
     needs: build-backend
-    runs-on: ubuntu-latest
+    # Pinned: Playwright doesn't support ubuntu-latest (26.04) yet
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: cache-ui/nextjs
