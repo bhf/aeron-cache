@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.clustertools.schedule.check;
+package com.bhf.aeroncache.services.cache.snapshot;
 
 import com.bhf.aeroncache.http.responses.AeronCounter;
 import com.bhf.aeroncache.http.responses.AeronCountersResponse;

@@ -5,9 +5,9 @@ import com.bhf.aeroncache.clustertools.config.ClusterToolsConfig;
 import com.bhf.aeroncache.clustertools.counters.AeronCountersPrometheusFormatter;
 import com.bhf.aeroncache.clustertools.counters.AeronCountersReader;
 import com.bhf.aeroncache.clustertools.process.ClusterToolProcessRunner;
-import com.bhf.aeroncache.clustertools.schedule.SnapshotPurgeCheckFactory;
 import com.bhf.aeroncache.clustertools.schedule.SnapshotScheduler;
-import com.bhf.aeroncache.clustertools.schedule.check.SnapshotPurgeCheck;
+import com.bhf.aeroncache.http.snapshot.SnapshotPurgeCheckFactory;
+import com.bhf.aeroncache.services.cache.snapshot.SnapshotPurgeCheck;
 import com.bhf.aeroncache.clustertools.snapshot.SnapshotInfoReader;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
 import com.bhf.aeroncache.http.responses.ClusterToolsResponse;
@@ -32,6 +32,7 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
 import java.io.File;
+import java.util.ServiceLoader;
 import java.util.function.Consumer;
 
 @Log4j2
@@ -61,11 +62,31 @@ public class ClusterToolsHTTPApplication {
     /**
      * The strategy gating the scheduled snapshot + purge, selected by {@code SNAPSHOT_CHECK_STRATEGY}.
      */
-    private static final SnapshotPurgeCheck SNAPSHOT_PURGE_CHECK = SnapshotPurgeCheckFactory.create(
-            CONFIG,
-            COUNTERS_READER::read,
-            () -> SNAPSHOT_INFO_READER.read(clusterDir(), CONFIG.getArchiveDir(), lastPurgeResult),
-            () -> lastPurgeResult);
+    private static final SnapshotPurgeCheck SNAPSHOT_PURGE_CHECK = createSnapshotPurgeCheck();
+
+    /**
+     * Build the configured scheduled snapshot + purge check from the {@link SnapshotPurgeCheckFactory}
+     * SPI implementation on the runtime classpath (the cache implementation module), wiring it with this
+     * sidecar's readers. The concrete checks are not referenced at compile time - only the SPI is.
+     *
+     * @return the configured check.
+     */
+    private static SnapshotPurgeCheck createSnapshotPurgeCheck() {
+        final SnapshotPurgeCheckFactory factory = ServiceLoader.load(SnapshotPurgeCheckFactory.class)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "No SnapshotPurgeCheckFactory found on the classpath; is a cache implementation "
+                                + "module (e.g. map-cache-core) a runtime dependency?"));
+        return factory.create(
+                CONFIG.getSnapshotCheckStrategy(),
+                CONFIG.getSnapshotCheckPollInterval(),
+                CONFIG.getSnapshotInterval(),
+                CONFIG.getSnapshotCheckStateChangeThreshold(),
+                CONFIG.getSnapshotCheckArchiveGrowthBytes(),
+                COUNTERS_READER::read,
+                () -> SNAPSHOT_INFO_READER.read(clusterDir(), CONFIG.getArchiveDir(), lastPurgeResult),
+                () -> lastPurgeResult);
+    }
 
     private static final SnapshotScheduler SNAPSHOT_SCHEDULER = new SnapshotScheduler(
             CONFIG, TOOL_RUNNER, SNAPSHOT_INFO_READER, RECORDING_PURGER,

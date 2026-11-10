@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.clustertools.config;
 
-import com.bhf.aeroncache.clustertools.schedule.check.SnapshotCheckStrategy;
+import com.bhf.aeroncache.services.cache.snapshot.SnapshotCheckStrategy;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
