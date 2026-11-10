@@ -5,9 +5,9 @@ import com.bhf.aeroncache.clustertools.config.ClusterToolsConfig;
 import com.bhf.aeroncache.clustertools.counters.AeronCountersPrometheusFormatter;
 import com.bhf.aeroncache.clustertools.counters.AeronCountersReader;
 import com.bhf.aeroncache.clustertools.process.ClusterToolProcessRunner;
-import com.bhf.aeroncache.clustertools.schedule.SnapshotPurgeCheckFactory;
 import com.bhf.aeroncache.clustertools.schedule.SnapshotScheduler;
-import com.bhf.aeroncache.clustertools.schedule.check.SnapshotPurgeCheck;
+import com.bhf.aeroncache.http.snapshot.SnapshotPurgeCheckFactory;
+import com.bhf.aeroncache.services.cache.snapshot.SnapshotPurgeCheck;
 import com.bhf.aeroncache.clustertools.snapshot.SnapshotInfoReader;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
 import com.bhf.aeroncache.http.responses.ClusterToolsResponse;
@@ -32,6 +32,7 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
 import java.io.File;
+import java.util.ServiceLoader;
 import java.util.function.Consumer;
 
 @Log4j2
@@ -59,16 +60,33 @@ public class ClusterToolsHTTPApplication {
     private static volatile RecordingPurgeResponse lastPurgeResult;
 
     /**
-     * The strategy gating the scheduled snapshot + purge, selected by {@code SNAPSHOT_CHECK_STRATEGY}
-     * (defaults to always-proceed, preserving the original fixed-interval behaviour). Only the
-     * scheduled path is affected; the HTTP endpoint still runs
-     * {@link SnapshotScheduler#snapshotAndPurge()} unconditionally.
+     * The strategy gating the scheduled snapshot + purge, selected by {@code SNAPSHOT_CHECK_STRATEGY}.
      */
-    private static final SnapshotPurgeCheck SNAPSHOT_PURGE_CHECK = SnapshotPurgeCheckFactory.create(
-            CONFIG,
-            COUNTERS_READER::read,
-            () -> SNAPSHOT_INFO_READER.read(clusterDir(), CONFIG.getArchiveDir(), lastPurgeResult),
-            () -> lastPurgeResult);
+    private static final SnapshotPurgeCheck SNAPSHOT_PURGE_CHECK = createSnapshotPurgeCheck();
+
+    /**
+     * Build the configured scheduled snapshot + purge check from the {@link SnapshotPurgeCheckFactory}
+     * SPI implementation on the runtime classpath (the cache implementation module), wiring it with this
+     * sidecar's readers. The concrete checks are not referenced at compile time - only the SPI is.
+     *
+     * @return the configured check.
+     */
+    private static SnapshotPurgeCheck createSnapshotPurgeCheck() {
+        final SnapshotPurgeCheckFactory factory = ServiceLoader.load(SnapshotPurgeCheckFactory.class)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "No SnapshotPurgeCheckFactory found on the classpath; is a cache implementation "
+                                + "module (e.g. map-cache-core) a runtime dependency?"));
+        return factory.create(
+                CONFIG.getSnapshotCheckStrategy(),
+                CONFIG.getSnapshotCheckPollInterval(),
+                CONFIG.getSnapshotInterval(),
+                CONFIG.getSnapshotCheckStateChangeThreshold(),
+                CONFIG.getSnapshotCheckArchiveGrowthBytes(),
+                COUNTERS_READER::read,
+                () -> SNAPSHOT_INFO_READER.read(clusterDir(), CONFIG.getArchiveDir(), lastPurgeResult),
+                () -> lastPurgeResult);
+    }
 
     private static final SnapshotScheduler SNAPSHOT_SCHEDULER = new SnapshotScheduler(
             CONFIG, TOOL_RUNNER, SNAPSHOT_INFO_READER, RECORDING_PURGER,
@@ -173,15 +191,6 @@ public class ClusterToolsHTTPApplication {
     /**
      * Scrape the co-located Aeron media driver's counters and return them as JSON.
      *
-     * <p>These are the media driver's own counters, not the cache counters. The media driver
-     * directory is the configured {@code AERON_DIR} (falling back to the Aeron default), but can be
-     * overridden per request with a {@code ?dir=} query parameter - useful when the co-located node
-     * runs an embedded driver under a derived directory (for example
-     * {@code /dev/shm/aeron-root-0-driver}) rather than a fixed external driver directory.
-     *
-     * <p>A failure to read the driver's CnC file (for example because the driver is not running or
-     * the directory is wrong) is reported as a 503, since the upstream being scraped is unavailable.
-     *
      * @param ctx The Javalin context.
      */
     private static void handleGetCounters(Context ctx) {
@@ -200,14 +209,7 @@ public class ClusterToolsHTTPApplication {
     }
 
     /**
-     * Serve metrics in Prometheus text exposition format: the clustertools JVM metrics from the
-     * Micrometer registry, followed by a best-effort scrape of the co-located Aeron media driver's
-     * counters (publications, flow control, errors, plus the cache and gateway application counters).
-     *
-     * <p>Exposing both on one endpoint lets a single Prometheus target per pod capture everything the
-     * media driver publishes. If the driver cannot be read (for example it has not started yet) the
-     * JVM metrics are still served and the Aeron counters are simply omitted from this scrape, so the
-     * target never flaps between up and down just because the driver is briefly unavailable.
+     * Serve metrics in Prometheus text exposition format.
      *
      * @param ctx      The Javalin context.
      * @param registry The Micrometer registry holding the JVM metrics.

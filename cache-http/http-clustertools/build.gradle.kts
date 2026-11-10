@@ -18,6 +18,8 @@ dependencies {
     implementation(libs.aeron)
     implementation(project(":cache-common"))
     implementation(project(":cache-messages-http"))
+    implementation(project(":cache-spi"))
+    runtimeOnly(project(":cache-spi-impl:map-cache:map-cache-core"))
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit)

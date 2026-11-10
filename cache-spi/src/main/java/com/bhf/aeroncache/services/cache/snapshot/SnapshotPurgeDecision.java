@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.clustertools.schedule.check;
+package com.bhf.aeroncache.services.cache.snapshot;
 
 /**
  * The outcome of a {@link SnapshotPurgeCheck} evaluation: whether a scheduled snapshot + purge should

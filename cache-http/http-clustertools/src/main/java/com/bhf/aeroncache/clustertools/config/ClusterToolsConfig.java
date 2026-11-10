@@ -1,6 +1,6 @@
 package com.bhf.aeroncache.clustertools.config;
 
-import com.bhf.aeroncache.clustertools.schedule.check.SnapshotCheckStrategy;
+import com.bhf.aeroncache.services.cache.snapshot.SnapshotCheckStrategy;
 import com.bhf.aeroncache.utils.ClusterUtils;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
@@ -12,8 +12,6 @@ import java.util.Locale;
 /**
  * Environment driven configuration for the cluster tools sidecar.
  *
- * <p>All values are resolved from environment variables so the sidecar can be configured the same
- * way whether it runs as a k8s sidecar or embedded in the monolith launcher.
  */
 @Getter
 @Log4j2

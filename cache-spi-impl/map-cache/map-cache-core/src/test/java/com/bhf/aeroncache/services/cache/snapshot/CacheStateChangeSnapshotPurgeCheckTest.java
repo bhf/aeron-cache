@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.clustertools.schedule.check;
+package com.bhf.aeroncache.services.cache.snapshot;
 
 import com.bhf.aeroncache.http.responses.AeronCounter;
 import com.bhf.aeroncache.http.responses.AeronCountersResponse;
@@ -9,7 +9,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.bhf.aeroncache.clustertools.schedule.check.CacheStateChangeSnapshotPurgeCheck.CACHE_REQUEST_COUNTER_TYPE_ID;
+import static com.bhf.aeroncache.services.cache.snapshot.CacheStateChangeSnapshotPurgeCheck.CACHE_REQUEST_COUNTER_TYPE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
