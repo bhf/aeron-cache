@@ -1,7 +1,9 @@
-package com.bhf.aeroncache.near;
+package com.bhf.aeroncache.services.near;
 
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
-import com.bhf.aeroncache.near.patch.JsonMergePatch;
+import com.bhf.aeroncache.events.CacheUpdateEvent;
+import com.bhf.aeroncache.near.NearCache;
+import com.bhf.aeroncache.near.NearCacheManager;
+import com.bhf.aeroncache.services.patch.JsonMergePatch;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.Set;

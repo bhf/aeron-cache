@@ -2,14 +2,14 @@ package com.bhf.aeroncache.sse.application;
 
 import com.bhf.aeroncache.AeronCache;
 import com.bhf.aeroncache.http.responses.CacheDetails;
-import com.bhf.aeroncache.http.responses.CacheUpdateEvent;
+import com.bhf.aeroncache.events.CacheUpdateEvent;
 import com.bhf.aeroncache.http.responses.PrimeNearCacheResponse;
 import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.http.responses.SubscriptionAck;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
 import com.bhf.aeroncache.metrics.WebGatewayMetrics;
-import com.bhf.aeroncache.near.ConcurrentNearCacheManager;
+import com.bhf.aeroncache.near.NearCacheManagerFactory;
 import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.services.cache.AeronCacheClusterListener;
 import com.bhf.aeroncache.services.cache.ResponseChannelCacheConnector;
@@ -104,8 +104,8 @@ public class SSEApplication extends Jooby {
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
         nearCacheEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false"));
         System.out.println("Near cache hydration enabled: " + nearCacheEnabled);
-        nearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager<>() : null;
-        countersNearCacheManager = nearCacheEnabled ? new ConcurrentNearCacheManager<>() : null;
+        nearCacheManager = nearCacheEnabled ? newNearCacheManager() : null;
+        countersNearCacheManager = nearCacheEnabled ? newNearCacheManager() : null;
 
         var boundPort = startHTTPServer(args, port);
         setupCacheConnection();
@@ -695,6 +695,13 @@ public class SSEApplication extends Jooby {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static <V> NearCacheManager<V> newNearCacheManager() {
+        return ServiceLoader.load(NearCacheManagerFactory.class)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No NearCacheManagerFactory found."))
+                .createNearCacheManager();
     }
 
     private static CacheClientFactory getCacheClientFactory() {
