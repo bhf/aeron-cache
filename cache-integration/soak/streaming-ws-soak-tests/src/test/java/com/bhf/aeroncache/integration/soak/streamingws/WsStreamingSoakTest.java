@@ -7,8 +7,8 @@ import com.bhf.aeroncache.integration.soak.common.AbstractGatewaySoakTest;
 import com.bhf.aeroncache.integration.soak.common.HttpNearCacheAdmin;
 import com.bhf.aeroncache.integration.soak.common.SoakRecordingListener;
 import com.bhf.aeroncache.integration.soak.common.SoakRun;
-import com.bhf.aeroncache.integration.soak.common.UrlStreamingSoakConfig;
-import com.bhf.aeroncache.integration.soak.common.UrlStreamingSoakWorkload;
+import com.bhf.aeroncache.integration.soak.common.StreamingSoakConfig;
+import com.bhf.aeroncache.integration.soak.common.StreamingSoakWorkload;
 import com.bhf.aeroncache.ws.application.WebsocketApplication;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.DisplayName;
  * Streaming-WebSocket soak test: cycles the full subscription coverage matrix over the one-directional streaming
  * WS routes ({@code /api/ws/v1/...}) against a real in-process 3-node RAFT cluster. Mutations are applied over
  * the binary Aeron {@link GatewayClient} (via {@link AbstractGatewaySoakTest}); the subscription under test is
- * observed over actual websockets. The matrix engine is the shared {@link UrlStreamingSoakWorkload}; this class
+ * observed over actual websockets. The matrix engine is the shared {@link StreamingSoakWorkload}; this class
  * only stands up the backend (cluster + SBE gateway for mutations + WS server for subscriptions) and wires the
  * WS subscriber factory.
  *
@@ -51,8 +51,8 @@ class WsStreamingSoakTest extends AbstractGatewaySoakTest {
         // Priming and the synthetic-patch metric live on the WS server (the edge that serves the subscription
         // and holds the warm copy); mutations still flow over the SBE GatewayClient through the cluster.
         var nearAdmin = new HttpNearCacheAdmin("http://localhost:" + wsPort, "aeroncache_near_patches_total", true);
-        return new UrlStreamingSoakWorkload(client, listener, factory, nearAdmin,
-                UrlStreamingSoakConfig.fromSystemProperties(), COUNTER_STREAMS_TWICE, "soak-ws-strm-");
+        return new StreamingSoakWorkload(client, listener, factory, nearAdmin,
+                StreamingSoakConfig.fromSystemProperties(), COUNTER_STREAMS_TWICE, "soak-ws-strm-");
     }
 
     @Override

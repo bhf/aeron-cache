@@ -21,6 +21,15 @@ public interface SoakStreamSubscriber extends AutoCloseable {
     /** Whether the underlying connection is still healthy (no failure/unexpected close observed). */
     boolean isHealthy();
 
+    /**
+     * The live-unsubscribe-probe capability for transports that can unsubscribe while staying able to
+     * {@link #poll()} (the binary Aeron transport), enabling the "silent after unsubscribe" negative check;
+     * {@code null} for transports where closing the connection is the only way to unsubscribe (WS/SSE).
+     */
+    default LiveUnsubscribeProbe liveUnsubscribeProbe() {
+        return null;
+    }
+
     /** Closes the connection (i.e. unsubscribes). */
     @Override
     void close();

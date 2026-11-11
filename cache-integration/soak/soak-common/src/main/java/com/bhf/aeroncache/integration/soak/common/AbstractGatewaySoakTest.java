@@ -47,9 +47,6 @@ public abstract class AbstractGatewaySoakTest extends AbstractSoakTest {
 
     @Override
     protected void startClient() {
-        // The client uses its own dedicated media driver (its own Aeron directory) to avoid colliding with
-        // the gateway's, with the configured term length applied so the request publication matches the
-        // cluster/gateway drivers.
         final String clientAeronDir;
         try {
             clientAeronDir = Files.createTempDirectory("soak-client-aeron").toString();
@@ -77,7 +74,7 @@ public abstract class AbstractGatewaySoakTest extends AbstractSoakTest {
             client.getStats("connection-warmup");
             return client.isConnected();
         });
-        // Drain the warm-up probe responses so they do not accumulate in the listener.
+
         listener.commandResponses.clear();
         listener.entriesComplete.clear();
         listener.entriesStatus.clear();
@@ -89,6 +86,5 @@ public abstract class AbstractGatewaySoakTest extends AbstractSoakTest {
         CloseHelper.quietClose(clientRunner);
         CloseHelper.quietClose(clientAeron);
         CloseHelper.quietClose(clientMediaDriver);
-        // The in-process backend and gateway are torn down when the (forked) test JVM exits.
     }
 }
