@@ -57,17 +57,11 @@ class ClusteredNearGetItemTests extends GetItemTests<String> {
         var uri = getHttpUri(backend);
         var itemUri = endpoints.getItemEndpoint() + KNOWN_CACHE_ID + "/" + KNOWN_KEY;
 
-        // Act: first read of the cold cache is a near-cache miss that starts priming (no cluster read-through).
-        RestAssured.given().port(port).baseUri(uri)
-                .accept(ContentType.JSON)
-                .when().get(itemUri)
-
-                // Assert: a miss, not the value.
-                .then().assertThat()
-                .statusCode(404)
-                .body("operationStatus", Matchers.comparesEqualTo("UNKNOWN_KEY"));
-
-        // Assert: once the warming subscription has populated the local copy, the key is served locally.
+        // Act + Assert: reading a not-yet-warm key is a near-cache miss that kicks off priming (no cluster
+        // read-through); once the warming subscription has populated the local copy the key is served locally.
+        // The cache may already be warm from an earlier test, so we don't assert the initial miss here (the
+        // management tests cover the cold-read-is-a-miss behaviour) - only that the value is ultimately served
+        // from the near cache. Each miss inside the poll re-triggers priming.
         Awaitility.await().atMost(30, TimeUnit.SECONDS).untilAsserted(() ->
                 RestAssured.given().port(port).baseUri(uri)
                         .accept(ContentType.JSON)

@@ -5,11 +5,14 @@ replicaCount: 1
 clusterAddresses: "aeroncache-cluster-0.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local"
 cacheMode: "RAFT"
 
-# When true, the HTTP interface serves its reads transparently from a local near cache kept warm via
-# a cluster subscription (on the regular /api/v1/cache/ and /api/v1/counters/ read URIs), and exposes
-# the near cache management endpoints (/api/v1/near/caches, /api/v1/near/counters-caches, and their
-# DELETE stop routes). Sets NEAR_CACHE_ENABLED on the container.
-nearCacheEnabled: true
+# When true, the HTTP interface serves its reads from a local near cache kept warm via a cluster
+# subscription (on the regular /api/v1/cache/ and /api/v1/counters/ read URIs), and exposes the near
+# cache management endpoints (/api/v1/near/caches, /api/v1/near/counters-caches, and their DELETE stop
+# routes). Sets NEAR_CACHE_ENABLED on the container. Near caching is opt-in: a read of a not-yet-warm
+# key is a miss that starts priming rather than reading through to the cluster, so it is off by default
+# and enabled explicitly (NEAR_CACHE=true / the install-*-near targets). Kept consistent with the ws,
+# sse and gateway charts, which also default it off.
+nearCacheEnabled: false
 
 # Set the configmap to use for the cluster config
 aeroncacheHTTPConfigmap: aeroncache-http-config
