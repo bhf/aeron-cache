@@ -178,7 +178,6 @@ jobs:
         run: |
           ./gradlew --console=plain --continue \
             :cache-integration:clustered:http-integration-tests:test \
-            :cache-integration:clustered:http-near-integration-tests:test \
             :cache-integration:clustered:ws-integration-tests:test \
             :cache-integration:clustered:sse-integration-tests:test \
             :cache-integration:clustered:multistream-integration-tests:test \

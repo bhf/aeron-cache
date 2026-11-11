@@ -231,9 +231,9 @@ public class HttpApplication {
                 // near cache is request/response, so its near-subscriber gauges simply read zero.
                 subscriptionService.registerMetrics(metrics.registry(), "cache");
                 countersSubscriptionService.registerMetrics(metrics.registry(), "counters");
-                nearCacheHandlers = new NearCacheRouteHandlers(cachePublisher, nearCacheManager,
+                nearCacheHandlers = new NearCacheRouteHandlers(nearCacheManager,
                         subscriptionService, HttpApplication::getCache);
-                countersNearCacheHandlers = new CountersNearCacheRouteHandlers(countersPublisher, countersNearCacheManager,
+                countersNearCacheHandlers = new CountersNearCacheRouteHandlers(countersNearCacheManager,
                         countersSubscriptionService, HttpApplication::getCache);
                 client.setCacheResultsCallbacks(new GroupedResponseHandler(List.of(cachePublisher, subscriptionService)));
                 client.setCountersResultsCallbacks(new GroupedResponseHandler(List.of(countersPublisher, countersSubscriptionService)));

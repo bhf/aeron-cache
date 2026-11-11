@@ -11,9 +11,7 @@ import com.bhf.aeroncache.http.responses.RequestErrorResponse;
 import com.bhf.aeroncache.http.responses.StopNearCacheResponse;
 import com.bhf.aeroncache.models.ErrorMessages;
 import com.bhf.aeroncache.models.results.CacheOperationStatus;
-import com.bhf.aeroncache.near.NearCache;
 import com.bhf.aeroncache.near.NearCacheManager;
-import com.bhf.aeroncache.services.cache.impl.ObservingCacheRequestPublisher;
 import com.bhf.aeroncache.services.cache.subscription.CacheSubscriptionRequestPublisher;
 import com.bhf.aeroncache.types.ReusableString;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
@@ -22,8 +20,6 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 /**
@@ -44,23 +40,19 @@ import java.util.function.Supplier;
 @Log4j2
 public class NearCacheRouteHandlers {
 
-    private final ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString, String, String, String> publisher;
     private final NearCacheManager<Object> nearCacheManager;
     private final CacheSubscriptionRequestPublisher<ReusableString, ReusableString, ReusableString> subscriptionService;
     private final Supplier<AeronCache> clusterSupplier;
 
     /**
-     * @param publisher            the publisher used to fetch from the source cache over the cluster.
      * @param nearCacheManager     the local near cache store kept warm by subscription updates.
      * @param subscriptionService  the subscription service providing the shared near cache management API
      *                             (prime / stop / warm listing), backed by {@code nearCacheManager}.
      * @param clusterSupplier      supplies the current cluster connection for prime/stop requests.
      */
-    public NearCacheRouteHandlers(ObservingCacheRequestPublisher<ReusableString, ReusableString, ReusableString, String, String, String> publisher,
-                                  NearCacheManager<Object> nearCacheManager,
+    public NearCacheRouteHandlers(NearCacheManager<Object> nearCacheManager,
                                   CacheSubscriptionRequestPublisher<ReusableString, ReusableString, ReusableString> subscriptionService,
                                   Supplier<AeronCache> clusterSupplier) {
-        this.publisher = publisher;
         this.nearCacheManager = nearCacheManager;
         this.subscriptionService = subscriptionService;
         this.clusterSupplier = clusterSupplier;
@@ -150,13 +142,19 @@ public class NearCacheRouteHandlers {
             var key = ctx.pathParam("key");
             log.info("Got get item request on cacheId {}, key {}", cacheId, key);
 
-            // check if the item exists in the local cache, otherwise get it from the remote cache
             if (nearCacheManager.contains(cacheId)) {
                 var localCache = nearCacheManager.get(cacheId);
-                handleExistingLocalCache(ctx, localCache, key, cacheId);
-            } else {
-                handleNewNearCacheRequest(ctx, cacheId, key);
+                if (localCache.containsKey(key)) {
+                    var result = localCache.get(key);
+                    ctx.status(HTTPStatusUtils.OK);
+                    ctx.json(new GetItemResponse(cacheId, key, (String) result, CacheOperationStatus.SUCCESS));
+                    return;
+                }
             }
+
+            subscriptionService.primeNearCache(clusterSupplier.get(), cacheId);
+            ctx.status(HTTPStatusUtils.getHTTPCode(CacheOperationStatus.UNKNOWN_KEY));
+            ctx.json(new GetItemResponse(cacheId, key, "", CacheOperationStatus.UNKNOWN_KEY));
         } catch (Exception e) {
             var errorMsg = "Badly formed request to get item with key " + ctx.pathParam("key") + " from cache with Id: " + ctx.pathParam("cacheId");
             log.warn(errorMsg);
@@ -187,7 +185,9 @@ public class NearCacheRouteHandlers {
                 ctx.status(HTTPStatusUtils.getHTTPCode(CacheOperationStatus.SUCCESS));
                 ctx.json(response);
             } else {
-                handleNewFullNearCacheRequest(ctx, cacheId);
+                subscriptionService.primeNearCache(clusterSupplier.get(), cacheId);
+                ctx.status(HTTPStatusUtils.getHTTPCode(CacheOperationStatus.UNKNOWN_CACHE));
+                ctx.json(new GetCacheResponse(cacheId, CacheOperationStatus.UNKNOWN_CACHE, List.of()));
             }
         } catch (Exception e) {
             var errorMsg = "Badly formed request to get cache content for cache ID " + ctx.pathParam("cacheId");
@@ -198,84 +198,5 @@ public class NearCacheRouteHandlers {
             ctx.status(HTTPStatusUtils.BAD_REQUEST);
             ctx.json(badRequest);
         }
-    }
-
-    /**
-     * Get an item from the source cache and also prime the near cache for the cache.
-     *
-     * @param ctx     The context.
-     * @param cacheId The cache ID.
-     * @param key     The key.
-     */
-    private void handleNewNearCacheRequest(Context ctx, String cacheId, String key) throws InterruptedException, ExecutionException {
-        subscriptionService.primeNearCache(clusterSupplier.get(), cacheId);
-        CompletableFuture<GetItemResponse> future = getItemFromSourceCache(ctx, cacheId, key);
-        var response = future.get();
-
-        ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
-        ctx.json(response);
-    }
-
-    /**
-     * Handle a request where the local near cache already exists.
-     *
-     * @param ctx        The context.
-     * @param localCache The local near cache.
-     * @param key        The key.
-     * @param cacheId    The cache ID.
-     */
-    private void handleExistingLocalCache(Context ctx, NearCache<Object> localCache, String key, String cacheId) throws InterruptedException, ExecutionException {
-        if (localCache.containsKey(key)) {
-            var result = localCache.get(key);
-            ctx.status(HTTPStatusUtils.OK);
-            ctx.json(new GetItemResponse(cacheId, key, (String) result, CacheOperationStatus.SUCCESS));
-        } else {
-            returnItemFromSourceCache(ctx, key, cacheId);
-        }
-    }
-
-    /**
-     * Handle a new request for the full cache by fetching from source and priming the near cache.
-     *
-     * @param ctx     The context.
-     * @param cacheId The cache ID.
-     */
-    private void handleNewFullNearCacheRequest(Context ctx, String cacheId) throws InterruptedException, ExecutionException {
-        subscriptionService.primeNearCache(clusterSupplier.get(), cacheId);
-
-        var requestId = AbstractRouteHandlers.getRequestId(ctx);
-        CompletableFuture<GetCacheResponse> future = new CompletableFuture<>();
-        var consumer = HTTPConsumerUtils.getGetAllCacheEntriesResultConsumer(future);
-        CompletableFuture.runAsync(() -> publisher.getCacheEntries(requestId, cacheId, consumer));
-
-        var response = future.get();
-        ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
-        ctx.json(response);
-    }
-
-    /**
-     * Get an item from the source cache and update the local near cache.
-     *
-     * @param ctx     The context.
-     * @param key     The key.
-     * @param cacheId The cache ID.
-     */
-    private void returnItemFromSourceCache(Context ctx, String key, String cacheId) throws InterruptedException, ExecutionException {
-        CompletableFuture<GetItemResponse> future = getItemFromSourceCache(ctx, cacheId, key);
-        var response = future.get();
-
-        if (response.operationStatus() == CacheOperationStatus.SUCCESS) {
-            nearCacheManager.put(cacheId, key, response.value());
-        }
-        ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
-        ctx.json(response);
-    }
-
-    private CompletableFuture<GetItemResponse> getItemFromSourceCache(Context ctx, String cacheId, String key) {
-        var requestId = AbstractRouteHandlers.getRequestId(ctx);
-        CompletableFuture<GetItemResponse> future = new CompletableFuture<>();
-        var consumer = HTTPConsumerUtils.getGetCacheEntryResultConsumer(future);
-        CompletableFuture.runAsync(() -> publisher.getCacheEntry(requestId, cacheId, key, consumer));
-        return future;
     }
 }
