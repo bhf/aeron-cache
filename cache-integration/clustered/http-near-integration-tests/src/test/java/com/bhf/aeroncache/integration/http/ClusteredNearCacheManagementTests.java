@@ -61,14 +61,15 @@ class ClusteredNearCacheManagementTests {
         var uri = getHttpUri(backend);
         var port = getHttpPort(backend);
 
-        // Act: read the cache, served transparently from the near cache on the regular read URI, which
-        // subscribes to it and requests a snapshot; the local copy is populated asynchronously.
+        // Act: read the cold cache on the regular read URI. With near caching on this does not read through
+        // to the cluster - it is a miss that kicks off priming (subscribe + snapshot), populating the local
+        // copy asynchronously.
         RestAssured.given().port(port).baseUri(uri)
                 .accept(ContentType.JSON)
                 .when().get(endpoints.getItemEndpoint() + WARM_CACHE_ID)
                 .then().assertThat()
-                .statusCode(200)
-                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+                .statusCode(404)
+                .body("operationStatus", Matchers.comparesEqualTo("UNKNOWN_CACHE"));
 
         // Assert: once the snapshot has populated it, the cache shows up in the warm list with its items.
         Awaitility.await().atMost(30, TimeUnit.SECONDS).untilAsserted(() ->
@@ -173,8 +174,9 @@ class ClusteredNearCacheManagementTests {
     @DisplayName("Near warm caches gauge on /prometheus should match the warm cache listing and track stop")
     @HappyPath
     void shouldExposeWarmCacheCountAsNearWarmCachesMetric(BackendTestResource backend) {
-        // Arrange: a freshly seeded source cache, warmed into the near cache by a transparent read, and
-        // confirmed present on the authoritative warm cache listing.
+        // Arrange: a freshly seeded source cache, warmed into the near cache by a read (which, with near
+        // caching on, misses and kicks off priming rather than reading through), and confirmed present on the
+        // authoritative warm cache listing.
         var uri = getHttpUri(backend);
         var port = getHttpPort(backend);
         var cacheId = "NearMetricWarmCacheId";
@@ -182,7 +184,7 @@ class ClusteredNearCacheManagementTests {
         CacheTestUtils.addItem(cacheId, "Key1", "Value1", backend, endpoints);
         RestAssured.given().port(port).baseUri(uri).accept(ContentType.JSON)
                 .when().get(endpoints.getItemEndpoint() + cacheId)
-                .then().assertThat().statusCode(200);
+                .then().assertThat().statusCode(404);
         Awaitility.await().atMost(30, TimeUnit.SECONDS).untilAsserted(() ->
                 RestAssured.given().port(port).baseUri(uri).accept(ContentType.JSON)
                         .when().get(NEAR_CACHES_ENDPOINT)

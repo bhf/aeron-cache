@@ -55,14 +55,15 @@ class ClusteredNearCountersManagementTests {
         var uri = backend.getBaseHttpNearUri();
         var port = backend.getHttpNearPort();
 
-        // Reading the counter cache (served transparently from the near cache on the regular read URI)
-        // subscribes to it and requests a snapshot; the local copy is populated asynchronously.
+        // Reading the cold counter cache on the regular read URI does not read through to the cluster with
+        // near caching on - it is a miss that kicks off priming (subscribe + snapshot), populating the local
+        // copy asynchronously.
         RestAssured.given().port(port).baseUri(uri)
                 .accept(ContentType.JSON)
                 .when().get(endpoints.getItemEndpoint() + WARM_CACHE_ID)
                 .then().assertThat()
-                .statusCode(200)
-                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+                .statusCode(404)
+                .body("operationStatus", Matchers.comparesEqualTo("UNKNOWN_CACHE"));
 
         // The counter cache should eventually show up in the warm list once the snapshot has populated it.
         Awaitility.await().atMost(30, TimeUnit.SECONDS).untilAsserted(() ->
