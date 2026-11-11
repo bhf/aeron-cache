@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.clustertools.counters;
 
-import com.bhf.aeroncache.http.responses.AeronCounter;
-import com.bhf.aeroncache.http.responses.AeronCountersResponse;
+import com.bhf.aeroncache.models.counters.AeronCounter;
+import com.bhf.aeroncache.models.counters.AeronCountersResponse;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache.snapshot;
 
-import com.bhf.aeroncache.http.responses.AeronCounter;
-import com.bhf.aeroncache.http.responses.AeronCountersResponse;
+import com.bhf.aeroncache.models.counters.AeronCounter;
+import com.bhf.aeroncache.models.counters.AeronCountersResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

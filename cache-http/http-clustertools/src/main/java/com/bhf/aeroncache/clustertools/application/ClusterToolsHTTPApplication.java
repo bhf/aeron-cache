@@ -6,13 +6,13 @@ import com.bhf.aeroncache.clustertools.counters.AeronCountersPrometheusFormatter
 import com.bhf.aeroncache.clustertools.counters.AeronCountersReader;
 import com.bhf.aeroncache.clustertools.process.ClusterToolProcessRunner;
 import com.bhf.aeroncache.clustertools.schedule.SnapshotScheduler;
-import com.bhf.aeroncache.http.snapshot.SnapshotPurgeCheckFactory;
+import com.bhf.aeroncache.services.cache.snapshot.SnapshotPurgeCheckFactory;
 import com.bhf.aeroncache.services.cache.snapshot.SnapshotPurgeCheck;
 import com.bhf.aeroncache.clustertools.snapshot.SnapshotInfoReader;
 import com.bhf.aeroncache.http.requests.ClusterToolsRequest;
 import com.bhf.aeroncache.http.responses.ClusterToolsResponse;
-import com.bhf.aeroncache.http.responses.RecordingPurgeResponse;
-import com.bhf.aeroncache.http.responses.SnapshotInfoResponse;
+import com.bhf.aeroncache.models.snapshot.RecordingPurgeResponse;
+import com.bhf.aeroncache.models.snapshot.SnapshotInfoResponse;
 import com.bhf.aeroncache.utils.CorsUtils;
 import com.bhf.aeroncache.utils.HTTPStatusUtils;
 import io.javalin.Javalin;

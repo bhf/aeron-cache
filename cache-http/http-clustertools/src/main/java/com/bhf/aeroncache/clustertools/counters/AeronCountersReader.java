@@ -1,8 +1,8 @@
 package com.bhf.aeroncache.clustertools.counters;
 
 import com.bhf.aeroncache.clustertools.config.ClusterToolsConfig;
-import com.bhf.aeroncache.http.responses.AeronCounter;
-import com.bhf.aeroncache.http.responses.AeronCountersResponse;
+import com.bhf.aeroncache.models.counters.AeronCounter;
+import com.bhf.aeroncache.models.counters.AeronCountersResponse;
 import io.aeron.CncFileDescriptor;
 import io.aeron.CommonContext;
 import lombok.extern.log4j.Log4j2;

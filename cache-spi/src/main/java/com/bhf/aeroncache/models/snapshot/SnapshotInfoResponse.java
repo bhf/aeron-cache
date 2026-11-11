@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.http.responses;
+package com.bhf.aeroncache.models.snapshot;
 
 /**
  * Information about the latest cluster snapshot, surfaced over HTTP for display in the UI.
