@@ -59,7 +59,6 @@ tasks.test {
         "soak.durationSeconds",
         "soak.seed",
         "soak.mutationsPerRound",
-        "soak.hydrationEntries",
         "soak.wholeCacheKeys",
         "soak.opTimeoutSeconds",
         "soak.includeCounters",

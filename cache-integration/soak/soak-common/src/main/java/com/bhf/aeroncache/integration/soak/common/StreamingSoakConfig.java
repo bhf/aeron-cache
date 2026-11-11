@@ -4,12 +4,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Configuration for a URL-based streaming soak run (streaming WebSocket or SSE), resolved from {@code -Psoak.*}
- * system properties with defaults. Time-bounded: rounds cycle the full subscription coverage matrix (see
- * {@link UrlStreamingSoakWorkload}) until {@link #durationSeconds} elapses. Shared by both URL transports -
- * only the subscriber factory differs.
+ * Configuration for a streaming soak run, resolved from {@code -Psoak.*} system properties with defaults, and
+ * shared by every streaming soak transport (binary Aeron, streaming WebSocket and SSE) - only the subscriber
+ * factory differs. Time-bounded: rounds cycle the full subscription coverage matrix (see
+ * {@link StreamingSoakWorkload}) until {@link #durationSeconds} elapses.
  */
-public final class UrlStreamingSoakConfig {
+public final class StreamingSoakConfig {
 
     /** Total wall-clock duration to drive rounds for. */
     public final long durationSeconds;
@@ -26,8 +26,8 @@ public final class UrlStreamingSoakConfig {
     /** Whether to include the warm near-cache synthetic-patch-generation variants in the coverage matrix. */
     public final boolean includeSynthetic;
 
-    private UrlStreamingSoakConfig(long durationSeconds, long seed, int mutationsPerRound, int wholeCacheKeys,
-                                   int opTimeoutSeconds, boolean includeCounters, boolean includeSynthetic) {
+    private StreamingSoakConfig(long durationSeconds, long seed, int mutationsPerRound, int wholeCacheKeys,
+                               int opTimeoutSeconds, boolean includeCounters, boolean includeSynthetic) {
         this.durationSeconds = durationSeconds;
         this.seed = seed;
         this.mutationsPerRound = mutationsPerRound;
@@ -37,8 +37,8 @@ public final class UrlStreamingSoakConfig {
         this.includeSynthetic = includeSynthetic;
     }
 
-    public static UrlStreamingSoakConfig fromSystemProperties() {
-        return new UrlStreamingSoakConfig(
+    public static StreamingSoakConfig fromSystemProperties() {
+        return new StreamingSoakConfig(
                 SoakProps.longProp("soak.durationSeconds", 1800L),
                 SoakProps.seed("soak.seed"),
                 SoakProps.intProp("soak.mutationsPerRound", 8),
@@ -60,7 +60,7 @@ public final class UrlStreamingSoakConfig {
 
     @Override
     public String toString() {
-        return "UrlStreamingSoakConfig{durationSeconds=" + durationSeconds
+        return "StreamingSoakConfig{durationSeconds=" + durationSeconds
                 + ", seed=" + seed
                 + ", mutationsPerRound=" + mutationsPerRound
                 + ", wholeCacheKeys=" + wholeCacheKeys

@@ -3,7 +3,7 @@ package com.bhf.aeroncache.integration.soak.common;
 import java.util.List;
 
 /**
- * Describes one subscription the {@link UrlStreamingSoakWorkload} wants to open, in transport-neutral terms.
+ * Describes one subscription the {@link StreamingSoakWorkload} wants to open, in transport-neutral terms.
  * A {@link SoakStreamSubscriberFactory} turns it into a concrete connection (a websocket or an SSE stream),
  * encoding scope/mode/hydration/cardinality/flavour into the subscription URL.
  *
