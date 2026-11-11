@@ -7,6 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 
 @RequiredArgsConstructor
 @Log4j2
@@ -32,6 +33,12 @@ public class NearCacheInstance<V> implements NearCache<V> {
     public void put(String key, V value) {
         log.debug("Putting into near cache '{}' key '{}' with value '{}'", cacheName, key, value);
         localCache.put(key, value);
+    }
+
+    @Override
+    public V compute(String key, BiFunction<String, V, V> remappingFunction) {
+        log.debug("Computing new value in near cache '{}' for key '{}'", cacheName, key);
+        return localCache.compute(key, remappingFunction);
     }
 
     @Override

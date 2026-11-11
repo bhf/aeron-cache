@@ -39,13 +39,17 @@ public class ConcurrentNearCacheManager<V> implements NearCacheManager<V> {
             case PATCH_ITEM -> applyPatch(cacheId, itemKey, itemValue);
             case DELETE_CACHE -> nearCacheMap.remove(cacheId);
             case REMOVE_ITEM -> {
-                if(nearCacheMap.containsKey(cacheId)){
-                    nearCacheMap.get(cacheId).remove(itemKey);
+                // Resolve the instance once: a concurrent remove(cacheId) / DELETE_CACHE (e.g. an admin
+                // stopNearCaching on another thread) must not turn a containsKey/get pair into a null deref.
+                var instance = nearCacheMap.get(cacheId);
+                if (instance != null) {
+                    instance.remove(itemKey);
                 }
             }
             case CLEAR_CACHE -> {
-                if(nearCacheMap.containsKey(cacheId)){
-                    nearCacheMap.get(cacheId).clear();
+                var instance = nearCacheMap.get(cacheId);
+                if (instance != null) {
+                    instance.clear();
                 }
             }
             default -> log.warn("Unknown update action: {} for cacheId {} key {}", eventType, cacheId, itemKey);
@@ -66,12 +70,16 @@ public class ConcurrentNearCacheManager<V> implements NearCacheManager<V> {
     @SuppressWarnings("unchecked")
     private void applyPatch(String cacheId, String itemKey, V patch) {
         var instance = nearCacheMap.computeIfAbsent(cacheId, NearCacheInstance::new);
-        V existing = instance.get(itemKey);
-        if (existing instanceof String existingJson && patch instanceof String patchJson) {
-            instance.put(itemKey, (V) JsonMergePatch.applyMergePatch(existingJson, patchJson));
-        } else {
-            instance.put(itemKey, patch);
-        }
+        // Merge atomically against whatever value is held for the key at apply time. A plain get-then-put
+        // would let a concurrent put (e.g. an HTTP worker thread priming the key from the source cache) land
+        // between the read of the baseline and the write of the merged result, losing that update or merging
+        // the patch onto a stale baseline and leaving the near cache permanently diverged from the cluster.
+        instance.compute(itemKey, (key, existing) -> {
+            if (existing instanceof String existingJson && patch instanceof String patchJson) {
+                return (V) JsonMergePatch.applyMergePatch(existingJson, patchJson);
+            }
+            return patch;
+        });
     }
 
     @Override
