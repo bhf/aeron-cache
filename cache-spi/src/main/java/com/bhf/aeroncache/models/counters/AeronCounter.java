@@ -1,10 +1,10 @@
-package com.bhf.aeroncache.http.responses;
+package com.bhf.aeroncache.models.counters;
 
 /**
  * A single Aeron media driver counter scraped from the driver's CnC file.
  *
  * <p>These are the driver's own counters (publications, subscriptions, flow control, errors, etc.),
- * not the cache application counters surfaced by {@link GetCountersResponse}.
+ * not the cache application counters surfaced by {@code GetCountersResponse}.
  *
  * @param counterId the driver assigned counter id.
  * @param typeId    the counter type id identifying what the counter measures.

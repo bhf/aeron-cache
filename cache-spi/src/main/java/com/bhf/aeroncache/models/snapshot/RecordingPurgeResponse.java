@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.http.responses;
+package com.bhf.aeroncache.models.snapshot;
 
 /**
  * Result of purging old cluster log recording segments after a snapshot.

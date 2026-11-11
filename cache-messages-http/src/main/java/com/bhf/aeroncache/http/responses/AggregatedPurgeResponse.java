@@ -1,5 +1,7 @@
 package com.bhf.aeroncache.http.responses;
 
+import com.bhf.aeroncache.models.snapshot.RecordingPurgeResponse;
+
 import java.util.List;
 
 /**

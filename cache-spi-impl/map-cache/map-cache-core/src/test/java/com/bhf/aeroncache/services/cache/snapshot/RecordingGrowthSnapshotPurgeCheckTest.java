@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.services.cache.snapshot;
 
-import com.bhf.aeroncache.http.responses.RecordingPurgeResponse;
-import com.bhf.aeroncache.http.responses.SnapshotInfoResponse;
+import com.bhf.aeroncache.models.snapshot.RecordingPurgeResponse;
+import com.bhf.aeroncache.models.snapshot.SnapshotInfoResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

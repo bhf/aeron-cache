@@ -7,23 +7,11 @@ plugins {
 }
 
 dependencies {
-    // Shared soak harness (lifecycle, recording listener, report) + its api deps (junit, awaitility,
-    // aeron, log4j, cache-common, gateway-client).
     testImplementation(project(":cache-integration:soak:soak-common"))
-
-    // Backend the gateway runs against: the in-process RAFT cluster and the gateway server edge.
     testImplementation(project(":cache-cluster"))
     testImplementation(project(":cache-aeron-gateway:aeron-gateway-server"))
-
-    // The clustertool's Aeron-counter reader/formatter: the gateway records its near-cache synthetic-patch
-    // counters as Aeron driver counters (absent from its own Micrometer /prometheus), so the soak reads them
-    // in-process from the gateway media driver's CnC file - the same code the clustertool sidecar serves in
-    // production - to assert aeron_gateway_near_patches_total. cache-messages-http carries the counter DTOs the
-    // reader/formatter exchange (http-clustertools depends on it as implementation, so name it directly here).
     testImplementation(project(":cache-http:http-clustertools"))
-    testImplementation(project(":cache-messages-http"))
-
-    // Cache SPI implementation so the gateway's ServiceLoader can find a CacheClientFactory.
+    testImplementation(project(":cache-spi"))
     testRuntimeOnly(project(":cache-spi-impl:map-cache:map-cache-core"))
     testRuntimeOnly(libs.junit.platform.launcher)
 }
@@ -40,20 +28,14 @@ tasks.test {
     systemProperty("aeron.dir.delete.on.shutdown", "true")
     systemProperty("aeron.cluster.message.timeout", "30000000000")
 
-    // One in-process cluster + gateway + client bound to fixed endpoints with static singleton state;
-    // fork a fresh JVM for the suite so it cannot collide with anything else.
     setForkEvery(1)
 
-    // Everything runs in one JVM; size the heap for the smallest standard GitHub runner (8GB/2CPU) and
-    // let a genuine leak OOM sooner. Overridable via -Psoak.maxHeap. Heap dump -> the 14GB runner disk.
     val soakMaxHeap = (project.findProperty("soak.maxHeap") as String?)?.takeIf { it.isNotBlank() } ?: "2g"
     doFirst { layout.buildDirectory.dir("reports/soak").get().asFile.mkdirs() }
     jvmArgs("-Xmx$soakMaxHeap")
     jvmArgs("-XX:+HeapDumpOnOutOfMemoryError")
     jvmArgs("-XX:HeapDumpPath=build/reports/soak")
 
-    // Run parameters overridable via -Psoak.* so the manually triggered workflow can set the run duration
-    // and workload shape at dispatch time. Blank values are ignored so defaults in StreamingSoakConfig apply.
     fun soakProp(name: String) = (project.findProperty(name) as String?)?.takeIf { it.isNotBlank() }
     listOf(
         "soak.durationSeconds",

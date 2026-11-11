@@ -6,8 +6,8 @@ import com.bhf.aeroncache.clustertools.process.ClusterToolProcessRunner;
 import com.bhf.aeroncache.services.cache.snapshot.SnapshotPurgeCheck;
 import com.bhf.aeroncache.services.cache.snapshot.SnapshotPurgeDecision;
 import com.bhf.aeroncache.clustertools.snapshot.SnapshotInfoReader;
-import com.bhf.aeroncache.http.responses.RecordingPurgeResponse;
-import com.bhf.aeroncache.http.responses.SnapshotInfoResponse;
+import com.bhf.aeroncache.models.snapshot.RecordingPurgeResponse;
+import com.bhf.aeroncache.models.snapshot.SnapshotInfoResponse;
 import lombok.extern.log4j.Log4j2;
 
 import java.io.File;

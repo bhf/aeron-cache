@@ -1,4 +1,4 @@
-package com.bhf.aeroncache.http.responses;
+package com.bhf.aeroncache.models.counters;
 
 import java.util.List;
 

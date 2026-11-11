@@ -2,7 +2,7 @@ package com.bhf.aeroncache.clustertools.archive;
 
 import com.bhf.aeroncache.clustertools.config.ClusterToolsConfig;
 import com.bhf.aeroncache.clustertools.snapshot.SnapshotInfoReader;
-import com.bhf.aeroncache.http.responses.RecordingPurgeResponse;
+import com.bhf.aeroncache.models.snapshot.RecordingPurgeResponse;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.cluster.ConsensusModule;
 import io.aeron.cluster.RecordingLog;

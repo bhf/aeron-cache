@@ -14,7 +14,6 @@ dependencies {
 
     implementation(project(":cache-spi"))
     implementation(project(":cache-common"))
-    implementation(project(":cache-messages-http"))
     implementation(project(":cache-spi-impl:map-cache:map-cache-sbe"))
 
     testImplementation(platform(libs.junit.bom))

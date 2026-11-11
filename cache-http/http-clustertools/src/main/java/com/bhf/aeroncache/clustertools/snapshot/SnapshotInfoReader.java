@@ -1,7 +1,7 @@
 package com.bhf.aeroncache.clustertools.snapshot;
 
-import com.bhf.aeroncache.http.responses.RecordingPurgeResponse;
-import com.bhf.aeroncache.http.responses.SnapshotInfoResponse;
+import com.bhf.aeroncache.models.snapshot.RecordingPurgeResponse;
+import com.bhf.aeroncache.models.snapshot.SnapshotInfoResponse;
 import io.aeron.cluster.ConsensusModule;
 import io.aeron.cluster.RecordingLog;
 import lombok.extern.log4j.Log4j2;

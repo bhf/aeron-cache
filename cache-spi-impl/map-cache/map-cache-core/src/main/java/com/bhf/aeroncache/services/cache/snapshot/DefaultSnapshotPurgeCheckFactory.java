@@ -1,9 +1,9 @@
 package com.bhf.aeroncache.services.cache.snapshot;
 
-import com.bhf.aeroncache.http.responses.AeronCountersResponse;
-import com.bhf.aeroncache.http.responses.RecordingPurgeResponse;
-import com.bhf.aeroncache.http.responses.SnapshotInfoResponse;
-import com.bhf.aeroncache.http.snapshot.SnapshotPurgeCheckFactory;
+import com.bhf.aeroncache.models.counters.AeronCountersResponse;
+import com.bhf.aeroncache.models.snapshot.RecordingPurgeResponse;
+import com.bhf.aeroncache.models.snapshot.SnapshotInfoResponse;
+import com.bhf.aeroncache.services.cache.snapshot.SnapshotPurgeCheckFactory;
 import lombok.extern.log4j.Log4j2;
 
 import java.time.Duration;

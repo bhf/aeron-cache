@@ -1,10 +1,8 @@
-package com.bhf.aeroncache.http.snapshot;
+package com.bhf.aeroncache.services.cache.snapshot;
 
-import com.bhf.aeroncache.http.responses.AeronCountersResponse;
-import com.bhf.aeroncache.http.responses.RecordingPurgeResponse;
-import com.bhf.aeroncache.http.responses.SnapshotInfoResponse;
-import com.bhf.aeroncache.services.cache.snapshot.SnapshotCheckStrategy;
-import com.bhf.aeroncache.services.cache.snapshot.SnapshotPurgeCheck;
+import com.bhf.aeroncache.models.counters.AeronCountersResponse;
+import com.bhf.aeroncache.models.snapshot.RecordingPurgeResponse;
+import com.bhf.aeroncache.models.snapshot.SnapshotInfoResponse;
 
 import java.time.Duration;
 import java.util.function.Supplier;
@@ -17,9 +15,9 @@ import java.util.function.Supplier;
  * checks live in whichever cache implementation module is on the runtime classpath. This mirrors the
  * other SPI backends in the project (for example {@code CacheManagerFactory}).
  *
- * <p>This interface lives in {@code cache-messages-http} rather than {@code cache-spi} because the
- * data-reading strategies are wired from HTTP response DTOs (counters, snapshot info, purge results),
- * which are defined here. The checks themselves stay free of that dependency.
+ * <p>The data-reading strategies are wired from the counter and snapshot DTOs in
+ * {@link com.bhf.aeroncache.models.counters} and {@link com.bhf.aeroncache.models.snapshot}; the
+ * checks themselves stay free of any IO dependency.
  */
 public interface SnapshotPurgeCheckFactory {
 
