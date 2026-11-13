@@ -23,19 +23,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * Handlers for near cache reads. When the near cache is enabled via the {@code NEAR_CACHE_ENABLED}
- * environment variable, {@link HttpApplication} binds the regular cache read routes
- * ({@code GET /api/v1/cache/<cacheId>} and {@code GET /api/v1/cache/<cacheId>/<key>}) to these
- * handlers instead of the strong cluster-read handlers, so near caching is transparent to clients.
- * The near-specific management routes (list warm caches, prime, stop near caching) are also served here.
- *
- * <p>Reads are served from a local {@link NearCacheManager} that is kept warm by a cluster
- * subscription. Priming, stopping and listing the warm caches are delegated to the shared near cache
- * API on the {@link CacheSubscriptionRequestPublisher} ({@code primeNearCache} / {@code stopNearCaching}
- * / {@code warmNearCaches}), so the HTTP gateway behaves identically to the ws/sse/gateway interfaces:
- * priming is idempotent (an already-warm cache is not re-subscribed, avoiding a
- * {@code DUPLICATE_SUBSCRIPTION}) and a primed cache appears on the warm listing immediately, before its
- * snapshot has arrived.
+ * Handlers for near cache.
  */
 @Log4j2
 public class NearCacheRouteHandlers {

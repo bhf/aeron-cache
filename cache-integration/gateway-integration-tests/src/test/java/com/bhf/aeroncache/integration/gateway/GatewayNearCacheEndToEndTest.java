@@ -34,13 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 /**
  * Full-stack embedded end-to-end test for the Aeron gateway's near cache, backed by a real in-process
  * RAFT cluster and a real {@link GatewayClient} ({@code NEAR_CACHE_ENABLED=true} via {@code test.env}).
- * <p>
- * The near cache is transparent on the subscription path: a whole-cache hydrating subscribe is served
- * exactly as before, but the first such subscriber warms a local copy that keeps itself in sync with
- * live updates (so later subscribers hydrate locally without a per-subscriber cluster snapshot). This
- * exercises that it warms, stays in sync, is listed/dropped via the near cache HTTP management endpoints
- * on the gateway's health server, and that hydration remains correct throughout &mdash; the gateway
- * counterpart of {@code AbstractStreamingNearCacheTests} for the WS/SSE interfaces.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DisplayName("Gateway near cache embedded end-to-end")

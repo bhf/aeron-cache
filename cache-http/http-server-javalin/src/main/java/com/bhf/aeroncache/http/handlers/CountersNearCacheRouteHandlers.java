@@ -24,15 +24,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * Handlers for near counter cache reads and their management endpoints. The counter equivalent of
- * {@link NearCacheRouteHandlers}: when {@code NEAR_CACHE_ENABLED} is set, the regular counter read
- * routes ({@code GET /api/v1/counters/<cacheId>} and {@code GET /api/v1/counters/<cacheId>/<key>}) are
- * bound to these handlers, so near caching is transparent to clients. Reads are served from a local
- * {@link NearCacheManager} of {@code Long} values kept warm by a cluster subscription; a miss is not read
- * through to the source counter cache - it starts priming and returns a miss, so the warming subscription
- * populates the local copy in order. Priming, stopping and listing the warm caches are delegated to the
- * shared near cache API on the {@link CacheSubscriptionRequestPublisher}, so priming is idempotent and a
- * primed counter cache appears on the warm listing immediately.
+ * Handlers for near counter cache reads and their management endpoints.
  */
 @Log4j2
 public class CountersNearCacheRouteHandlers {
