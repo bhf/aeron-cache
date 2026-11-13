@@ -296,6 +296,63 @@ class GatewayNearCacheEndToEndTest {
     }
 
     @Test
+    @DisplayName("Should serve a key-filtered patch-mode subscription from the near cache - baseline then deltas for the subscribed key only")
+    void shouldServeKeyedPatchSubscriptionFromPrimedNearCache() {
+        var cacheId = uniqueCache("gateway-near-keyed-patch");
+        var key1Initial = "{\"a\":1,\"b\":2}";
+        var key1Updated = "{\"a\":1,\"b\":3}";
+        var key2Initial = "{\"x\":1}";
+        var key2Updated = "{\"x\":2}";
+
+        // Seed two JSON keys and prime the cache so the whole cache is warm before the subscription arrives.
+        // Key2 exists so a broken key filter would leak it into the hydration baseline or the live delta stream.
+        createCache(cacheId);
+        addEntry(cacheId, "Key1", key1Initial);
+        addEntry(cacheId, "Key2", key2Initial);
+
+        RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200);
+
+        await().atMost(60, SECONDS).untilAsserted(() ->
+                RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(2)));
+
+        // A PATCH-mode hydrating subscription filtered to Key1 only (keys=[Key1], patch=true, snapshot=true) is
+        // served from the warm copy: a full ADD_ITEM baseline for Key1, filtered to just that key.
+        var subCorr = correlationId();
+        client.subscribe(subCorr, List.of(cacheId), List.of("Key1"), true, true, false);
+        awaitSubscribeAck(subCorr);
+        await().atMost(60, SECONDS).until(() -> streamed(UpdateEventType.ADD_ITEM, cacheId, "Key1", key1Initial));
+
+        // Key2 was warm but not requested, so it is never delivered in the hydration baseline.
+        assertFalse(streamed(UpdateEventType.ADD_ITEM, cacheId, "Key2", key2Initial),
+                "key-filtered patch subscription should not receive the Key2 baseline");
+
+        // Overwrite Key2 first (the filter must drop it, generating no delta for this subscriber) and then
+        // Key1 (which the near cache turns into a merge-patch delta).
+        addEntry(cacheId, "Key2", key2Updated);
+        addEntry(cacheId, "Key1", key1Updated);
+        await().atMost(60, SECONDS).until(() -> streamed(UpdateEventType.PATCH_ITEM, cacheId, "Key1", "{\"b\":3}"));
+
+        // The Key2 live update must never reach this subscriber, as a delta or otherwise.
+        assertFalse(streamed(UpdateEventType.PATCH_ITEM, cacheId, "Key2", "{\"x\":2}"),
+                "key-filtered patch subscription should not receive a Key2 delta");
+        assertFalse(streamed(UpdateEventType.ADD_ITEM, cacheId, "Key2", key2Updated),
+                "key-filtered patch subscription should not receive the Key2 update");
+
+        // Clean up.
+        RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200);
+    }
+
+    @Test
     @DisplayName("Should fall back to a full ADD_ITEM for a patch-mode subscription when a valid merge patch cannot be generated")
     void shouldFallBackToFullValueWhenPatchGenerationFails() {
         var cacheId = uniqueCache("gateway-near-patch-fallback");
