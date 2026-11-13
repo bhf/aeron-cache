@@ -497,6 +497,113 @@ public abstract class AbstractStreamingNearCacheTests {
                 "aeroncache_near_patches_total", Map.of("domain", "cache", "outcome", outcome));
     }
 
+    /**
+     * Read the non-hydrating ride counter ({@code aeroncache_near_subscriptions_served_total}) for the cache
+     * domain and the given subscription type ({@code whole} / {@code keyed}) from {@code /prometheus}. The
+     * counter increments only when a non-hydrating subscription rode the warm near cache instead of opening a
+     * cluster subscription, so a delta of one across a subscribe proves the cluster subscribe was avoided.
+     */
+    private int nearSubscriptionsServed(BackendTestResource backend, String type) {
+        return (int) PrometheusMetrics.sampleValue(managementBaseUri(backend), managementPort(backend),
+                "aeroncache_near_subscriptions_served_total", Map.of("domain", "cache", "type", type));
+    }
+
+    @Test
+    @DisplayName("Should serve a non-hydrating whole-cache subscription from the warm near cache without a cluster subscribe")
+    @HappyPath
+    void shouldServeNonHydratingWholeCacheSubscriptionFromPrimedNearCache(BackendTestResource backend) {
+        // Arrange: seed a source cache and prime it so the whole cache is warm before the subscription arrives.
+        var cacheId = getCacheId() + "-nonhydrating-whole";
+        CacheTestUtils.createCache(cacheId, backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", "Value1", backend, httpEndpoints);
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat().statusCode(200)
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat().statusCode(200)
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(1)));
+        int servedBefore = nearSubscriptionsServed(backend, "whole");
+
+        // Act: open a non-hydrating whole-cache subscription (no snapshot requested) and, once it is
+        // established, push a single live update.
+        CompletableFuture<Void> ready = new CompletableFuture<>();
+        var eventsFuture = streamingHelper.getEvents(backend, cacheId, 1, ready);
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(ready::isDone);
+        CacheTestUtils.addItem(cacheId, "Key2", "Value2", backend, httpEndpoints);
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(eventsFuture::isDone);
+        var events = eventsFuture.join();
+
+        // Assert: the subscriber received only the live update - the warm copy's Key1 was NOT replayed (it did
+        // not ask to hydrate) - and the ride counter incremented by one, proving it rode the warm near cache
+        // rather than opening a cluster subscription.
+        MatcherAssert.assertThat(events, Matchers.hasSize(1));
+        MatcherAssert.assertThat(events.get(0).eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+        MatcherAssert.assertThat(events.get(0).itemKey(), Matchers.is("Key2"));
+        MatcherAssert.assertThat(events.get(0).itemValue(), Matchers.is("Value2"));
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                MatcherAssert.assertThat(nearSubscriptionsServed(backend, "whole"), Matchers.is(servedBefore + 1)));
+
+        // Clean up so repeated runs in this class instance start from a cold cache.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat().statusCode(200);
+    }
+
+    @Test
+    @DisplayName("Should serve a non-hydrating key-filtered subscription from the warm near cache without a cluster subscribe")
+    @HappyPath
+    void shouldServeNonHydratingKeyedSubscriptionFromPrimedNearCache(BackendTestResource backend) {
+        // Arrange: seed two keys and prime the cache so the whole cache is warm. Key2 exists so a broken key
+        // filter would leak it into the live stream.
+        var cacheId = getCacheId() + "-nonhydrating-keyed";
+        CacheTestUtils.createCache(cacheId, backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", "Value1", backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key2", "Value2", backend, httpEndpoints);
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat().statusCode(200)
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat().statusCode(200)
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(2)));
+        int servedBefore = nearSubscriptionsServed(backend, "keyed");
+
+        // Act: open a non-hydrating subscription filtered to Key1 only. Once established, update Key2 (which the
+        // filter must drop) then Key1 (which must be delivered as the one live event).
+        CompletableFuture<Void> ready = new CompletableFuture<>();
+        var eventsFuture = streamingHelper.getEventsForKeys(backend, cacheId, List.of("Key1"), 1, ready);
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(ready::isDone);
+        CacheTestUtils.addItem(cacheId, "Key2", "Value2-updated", backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", "Value1-updated", backend, httpEndpoints);
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(eventsFuture::isDone);
+        var events = eventsFuture.join();
+
+        // Assert: only the Key1 live update was delivered (no Key1 baseline replay, no Key2 leak), and the keyed
+        // ride counter incremented by one, proving it rode the warm near cache without a cluster subscribe.
+        MatcherAssert.assertThat(events, Matchers.hasSize(1));
+        MatcherAssert.assertThat(events.get(0).eventType(), Matchers.is(CacheUpdateEvent.EventType.ADD_ITEM));
+        MatcherAssert.assertThat(events.get(0).itemKey(), Matchers.is("Key1"));
+        MatcherAssert.assertThat(events.get(0).itemValue(), Matchers.is("Value1-updated"));
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                MatcherAssert.assertThat(nearSubscriptionsServed(backend, "keyed"), Matchers.is(servedBefore + 1)));
+
+        // Clean up so repeated runs in this class instance start from a cold cache.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat().statusCode(200);
+    }
+
     @Test
     @DisplayName("Should succeed with wasCached=false when stopping a cache that was never warm")
     void shouldReportNotCachedWhenStoppingUnwarmedCache(BackendTestResource backend) {

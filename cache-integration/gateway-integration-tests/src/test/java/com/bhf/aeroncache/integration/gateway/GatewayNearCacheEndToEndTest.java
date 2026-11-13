@@ -400,6 +400,52 @@ class GatewayNearCacheEndToEndTest {
     }
 
     @Test
+    @DisplayName("Should serve a non-hydrating subscription from the warm near cache without replaying the baseline, then stream live updates")
+    void shouldServeNonHydratingSubscriptionFromPrimedNearCache() {
+        var cacheId = uniqueCache("gateway-near-nonhydrating");
+
+        // Seed the source cache and prime it so the whole cache is warm before the subscription arrives.
+        createCache(cacheId);
+        addEntry(cacheId, "Key1", "Value1");
+
+        RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("wasAlreadyWarm", Matchers.equalTo(false));
+
+        await().atMost(60, SECONDS).untilAsserted(() ->
+                RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(1)));
+
+        // A non-hydrating whole-cache subscription (sendSnapshot=false) rides the warm near cache's existing
+        // shared cluster subscription. It did not ask to hydrate, so the warm Key1 is never replayed as a
+        // baseline.
+        var subCorr = correlationId();
+        client.subscribe(subCorr, List.of(cacheId), false, false);
+        awaitSubscribeAck(subCorr);
+        assertFalse(streamed(UpdateEventType.ADD_ITEM, cacheId, "Key1", "Value1"),
+                "non-hydrating subscription should not replay the warm baseline");
+
+        // A live mutation after subscribe is delivered through the shared subscription it rode.
+        addEntry(cacheId, "Key2", "Value2");
+        await().atMost(60, SECONDS).until(() -> streamed(UpdateEventType.ADD_ITEM, cacheId, "Key2", "Value2"));
+
+        // The baseline must still never have arrived - only the live update did.
+        assertFalse(streamed(UpdateEventType.ADD_ITEM, cacheId, "Key1", "Value1"),
+                "non-hydrating subscription should only receive live updates, not the warm baseline");
+
+        // Clean up.
+        RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200);
+    }
+
+    @Test
     @DisplayName("Should succeed with wasCached=false when stopping a cache that was never warm")
     void shouldReportNotCachedWhenStoppingUnwarmedCache() {
         RestAssured.given().port(gatewayHttpPort).accept(ContentType.JSON)

@@ -114,6 +114,18 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
     }
 
     /**
+     * Whether every one of the given caches currently holds a warm local copy, so a subscription can be
+     * served from the near cache instead of the cluster. An empty cache list is not considered warm.
+     *
+     * @param cacheIds the caches the subscription spans.
+     * @return true if the near cache is enabled and holds a local copy of every cache.
+     */
+    private boolean allCachesWarm(List<String> cacheIds) {
+        return isNearCacheEnabled() && !cacheIds.isEmpty()
+                && new LinkedHashSet<>(cacheIds).stream().allMatch(nearCacheManager::contains);
+    }
+
+    /**
      * Register this publisher's subscription gauges on a Micrometer registry so the web gateway's
      * {@code /prometheus} endpoint exposes the live subscriber and subscription counts. The gauges are
      * sampled from the subscription state at scrape time, so they are always consistent with it. The
@@ -257,6 +269,21 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
     }
 
     /**
+     * Record a non-hydrating subscription served from the near cache: one FULL subscription on one cache that
+     * rode the near cache session's existing shared cluster subscription instead of opening a redundant
+     * per-subscriber one. No snapshot is replayed; this counts the cluster subscribe that was avoided. A no-op
+     * when metrics are not wired.
+     *
+     * @param keyed {@code true} for a keyed subscription, {@code false} for a whole-cache one.
+     */
+    private void recordNearSubscriptionServed(boolean keyed) {
+        if (meterRegistry != null) {
+            meterRegistry.counter(WebGatewayMetrics.NEAR_SUBSCRIPTIONS_SERVED,
+                    "domain", metricsDomain, "type", keyed ? "keyed" : "whole").increment();
+        }
+    }
+
+    /**
      * Record one synthetic patch generation for a near-cache PATCH subscriber: a merge-patch {@code delta},
      * a full {@code baseline} (first-seen key, nothing to diff against), or a {@code suppressed} no-op delta.
      * A no-op when metrics are not wired.
@@ -364,6 +391,20 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         boolean nearEligible = isNearCacheEnabled() && sendSnapshot && !sessionId.equals(nearCacheSessionId);
 
         if (!nearEligible) {
+            // A non-hydrating FULL subscriber (whole-cache or keyed) on an already-warm cache can ride the near
+            // cache session's existing whole-cache cluster subscription - which already delivers every key's live
+            // updates - instead of opening a redundant per-subscriber cluster subscription. It receives no
+            // snapshot replay (it did not ask to hydrate), only live updates filtered to its keys. PATCH stays on
+            // the plain cluster path: a non-hydrating subscriber has no baseline for locally generated merge-patch
+            // deltas to apply onto, so it must receive the cluster's own PATCH stream.
+            if (isNearCacheEnabled() && effectiveMode == SubscriptionMode.FULL
+                    && !sessionId.equals(nearCacheSessionId) && allCachesWarm(cacheIds)) {
+                doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
+                        sessionId, requestId, false, false, false, consumer);
+                // Count the cluster subscribe avoided, per cache, mirroring the hydration-served hit signal.
+                new LinkedHashSet<>(cacheIds).forEach(c -> recordNearSubscriptionServed(!wholeCache));
+                return;
+            }
             doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
                     sessionId, requestId, true, sendSnapshot, false, consumer);
             return;

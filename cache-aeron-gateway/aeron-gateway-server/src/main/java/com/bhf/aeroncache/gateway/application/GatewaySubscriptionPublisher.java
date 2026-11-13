@@ -172,6 +172,18 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         return nearCacheManager != null;
     }
 
+    /**
+     * Whether every one of the given caches currently holds a warm local copy, so a subscription can be
+     * served from the near cache instead of the cluster. An empty cache list is not considered warm.
+     *
+     * @param cacheIds the caches the subscription spans.
+     * @return true if the near cache is enabled and holds a local copy of every cache.
+     */
+    private boolean allCachesWarm(List<String> cacheIds) {
+        return isNearCacheEnabled() && !cacheIds.isEmpty()
+                && new LinkedHashSet<>(cacheIds).stream().allMatch(nearCacheManager::contains);
+    }
+
     private static String clusterSubscriptionKey(String cacheId, String key, SubscriptionMode mode) {
         return cacheId + '\u0001' + (key == null ? "" : key) + '\u0001' + mode.name();
     }
@@ -241,6 +253,20 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
         boolean nearEligible = isNearCacheEnabled() && sendSnapshot && !sessionId.equals(nearCacheSessionId);
 
         if (!nearEligible) {
+            // A non-hydrating FULL subscriber (whole-cache or keyed) on an already-warm cache can ride the near
+            // cache session's existing whole-cache cluster subscription - which already delivers every key's live
+            // updates - instead of opening a redundant per-subscriber cluster subscription. It receives no
+            // snapshot replay (it did not ask to hydrate), only live updates filtered to its keys. PATCH stays on
+            // the plain cluster path: a non-hydrating subscriber has no baseline for locally generated merge-patch
+            // deltas to apply onto, so it must receive the cluster's own PATCH stream.
+            if (isNearCacheEnabled() && effectiveMode == SubscriptionMode.FULL
+                    && !sessionId.equals(nearCacheSessionId) && allCachesWarm(cacheIds)) {
+                doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
+                        sessionId, requestId, false, false, false, consumer);
+                // Count the cluster subscribe avoided, per cache, mirroring the hydration-served hit signal.
+                new LinkedHashSet<>(cacheIds).forEach(c -> metrics.onNearSubscriptionServed(metricsDomain, !wholeCache));
+                return;
+            }
             doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
                     sessionId, requestId, true, sendSnapshot, false, consumer);
             return;
