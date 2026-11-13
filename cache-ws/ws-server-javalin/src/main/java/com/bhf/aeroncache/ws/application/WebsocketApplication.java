@@ -414,7 +414,8 @@ public class WebsocketApplication {
      * @param app The Javalin instance.
      */
     private static void setupBidiWsRouteHandler(Javalin app) {
-        var handler = new BidiWsRouteHandler(subscriptionService, countersSubscriptionService, metrics);
+        var handler = new BidiWsRouteHandler(subscriptionService, countersSubscriptionService,
+                nearCacheManager, countersNearCacheManager, metrics);
         app.ws(BIDI_API, handler::handleBidi);
     }
 

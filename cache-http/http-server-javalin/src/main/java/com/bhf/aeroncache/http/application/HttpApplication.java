@@ -405,8 +405,6 @@ public class HttpApplication {
 
     private static void setupCacheCountersRouteHandlers(Javalin app) {
         var countersHandlers = new CountersRouteHandlers(countersPublisher);
-        // See setupCacheRouteHandlers: when the near cache is enabled, counter GET reads are served
-        // transparently from the near cache on the same URIs; otherwise they are strong cluster reads.
         Handler getItem = nearCacheEnabled ? countersNearCacheHandlers::handleGetItemRequest : countersHandlers::handleGetItemRequest;
         Handler getCache = nearCacheEnabled ? countersNearCacheHandlers::handleGetCacheRequest : countersHandlers::handleGetCacheRequest;
         app.post(COUNTERS_API_PREFIX, counted("createCounterCache", countersHandlers::handleCreateCacheRequest))
@@ -442,10 +440,6 @@ public class HttpApplication {
 
     private static void setupCacheRouteHandlers(Javalin app) {
         var handlers = new CacheRouteHandlers(cachePublisher);
-        // When the near cache is enabled on this interface, GET reads are served transparently from the
-        // local near cache (warm-on-first-read, falling back to the source cache on a miss) on the same
-        // URIs; otherwise they are strong reads straight from the cluster. All mutations always go to the
-        // cluster regardless, and the near cache picks them up through its own subscription.
         Handler getItem = nearCacheEnabled ? nearCacheHandlers::handleGetItemRequest : handlers::handleGetItemRequest;
         Handler getCache = nearCacheEnabled ? nearCacheHandlers::handleGetCacheRequest : handlers::handleGetCacheRequest;
         app.post(CACHE_API_PREFIX, counted("createCache", handlers::handleCreateCacheRequest))
@@ -464,11 +458,7 @@ public class HttpApplication {
     }
 
     /**
-     * Wire up the near cache management endpoints. Only invoked when the near cache is enabled via the
-     * {@code NEAR_CACHE_ENABLED} environment variable. Near cache <em>reads</em> are served transparently
-     * on the regular {@code /api/v1/cache/} read URIs (see {@link #setupCacheRouteHandlers(Javalin)}); the
-     * only near-specific surface is management: listing the warm caches and stopping near caching for a
-     * cache (which has no regular-endpoint equivalent).
+     * Wire up the near cache management endpoints.
      *
      * @param app The Javalin instance.
      */
@@ -489,10 +479,7 @@ public class HttpApplication {
     }
 
     /**
-     * Wire up the near counters management endpoints. Only invoked when the near cache is enabled.
-     * Mirrors {@link #setupNearCacheManagementRoutes(Javalin)} for counter caches: reads are served
-     * transparently on the regular {@code /api/v1/counters/} read URIs, leaving only the list-warm and
-     * stop-near-caching management operations here.
+     * Wire up the near counters management endpoints.
      *
      * @param app The Javalin instance.
      */

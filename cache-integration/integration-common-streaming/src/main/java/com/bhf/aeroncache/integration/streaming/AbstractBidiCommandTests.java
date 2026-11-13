@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +27,15 @@ import static org.hamcrest.Matchers.notNullValue;
  *
  * <p>Concrete subclasses supply the backend flavour via {@code @BackendTestConfig} (clustered vs
  * ephemeral) and a {@link #cacheIdPrefix()} that namespaces cache ids so the two runs never collide.</p>
+ *
+ * <p>Tagged {@code readYourWrites}: this suite issues synchronous commands and reads the result back over
+ * the socket. With the near cache enabled a read is served from the local copy (a miss primes it and
+ * returns {@code UNKNOWN_*} rather than reading through), so these read-your-writes assertions do not hold
+ * against a near-mode deployment. Runs that target a near backend (the K8s near workflow) exclude this tag,
+ * matching how the plain HTTP read-your-writes suite is skipped there; the near read path is covered by the
+ * near-aware suites instead.</p>
  */
+@Tag("readYourWrites")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(BackendTestLauncher.class)
 public abstract class AbstractBidiCommandTests {
