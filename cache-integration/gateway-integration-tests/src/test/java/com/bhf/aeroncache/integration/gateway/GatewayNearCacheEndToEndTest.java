@@ -71,9 +71,9 @@ class GatewayNearCacheEndToEndTest {
         // Start the in-process RAFT cluster (each node launches its own media driver).
         ClusterLauncher.launchTestCluster(CLUSTER_NODES, "gateway_near_e2e");
 
-        // Start the real gateway (0 => ephemeral HTTP health port). It reads NEAR_CACHE_ENABLED from the
-        // environment (set true by test.env), connects to the cluster and stands up the ingress.
-        gatewayHttpPort = GatewayApplication.start(0);
+        // Start the real gateway (0 => ephemeral HTTP health port) with the near cache forced on, connect to
+        // the cluster and stand up the ingress.
+        gatewayHttpPort = GatewayApplication.start(0, true, true);
 
         var clientAeronDir = Files.createTempDirectory("gw-near-client-aeron").toString();
         clientMediaDriver = MediaDriver.launchEmbedded(ClusterUtils.applyConfiguredTermLength(new MediaDriver.Context()

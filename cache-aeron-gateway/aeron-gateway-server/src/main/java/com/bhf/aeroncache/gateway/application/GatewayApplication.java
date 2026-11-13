@@ -125,19 +125,29 @@ public class GatewayApplication {
 
     /**
      * Start the gateway against either a RAFT cluster or an unclustered (ephemeral) cache.
-     * <p>
-     * Mirrors {@code HttpApplication.startHTTPInterface(int, boolean)}: when {@code useClusteredMode}
-     * is {@code false} the gateway connects directly to an ephemeral cache over the unclustered
-     * request/response Aeron channels instead of joining the cluster.
      *
      * @param httpPort         the HTTP health server port (0 to bind an ephemeral port).
      * @param useClusteredMode {@code true} to connect to a RAFT cluster, {@code false} for an ephemeral cache.
      * @return the bound HTTP health server port.
      */
     public static int start(int httpPort, boolean useClusteredMode) {
+        return start(httpPort, useClusteredMode,
+                Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false")));
+    }
+
+    /**
+     * Start the gateway with the near cache explicitly enabled or disabled, overriding the
+     * {@code NEAR_CACHE_ENABLED} environment variable.
+     *
+     * @param httpPort          the HTTP health server port (0 to bind an ephemeral port).
+     * @param useClusteredMode  {@code true} to connect to a RAFT cluster, {@code false} for an ephemeral cache.
+     * @param nearCacheEnabledOverride whether the near cache is enabled, regardless of {@code NEAR_CACHE_ENABLED}.
+     * @return the bound HTTP health server port.
+     */
+    public static int start(int httpPort, boolean useClusteredMode, boolean nearCacheEnabledOverride) {
         log.info("Starting Aeron gateway");
 
-        nearCacheEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false"));
+        nearCacheEnabled = nearCacheEnabledOverride;
         log.info("Near cache hydration enabled: {}", nearCacheEnabled);
         nearCacheManager = nearCacheEnabled ? newNearCacheManager() : null;
         countersNearCacheManager = nearCacheEnabled ? newNearCacheManager() : null;
