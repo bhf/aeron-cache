@@ -18,9 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *     <li>One {@code Requests-<type>} counter per {@link GatewayRequestType}.</li>
  *     <li>Per-domain subscription gauges ({@code Subscriptions-<domain>-whole/-keyed}, {@code Subscribers-<domain>}).</li>
  *     <li>Per-domain near cache gauges ({@code NearWarmCaches-<domain>}, {@code NearSubscribers-<domain>-whole/-keyed},
- *     {@code NearPatchSubscribers-<domain>}), hit counters ({@code NearHydrationsServed-<domain>-whole/-keyed})
- *     and synthetic patch counters ({@code NearPatches-<domain>-delta/-baseline/-suppressed}), registered only
- *     when the near cache is enabled.</li>
+ *     {@code NearPatchSubscribers-<domain>}), hit counters ({@code NearHydrationsServed-<domain>-whole/-keyed} and
+ *     {@code NearSubscriptionsServed-<domain>-whole/-keyed}) and synthetic patch counters
+ *     ({@code NearPatches-<domain>-delta/-baseline/-suppressed}), registered only when the near cache is enabled.</li>
  * </ul>
  * The session counters are updated from the Aeron conductor thread so use atomic updates. Request counters are
  * written only by the gateway ingress thread, and the update counter only by the cluster egress thread, so each
@@ -61,12 +61,15 @@ public class AeronCounterGatewayMetrics implements GatewayMetrics {
      * Per-domain near cache counters. {@code warmCaches} / {@code wholeSubscribers} / {@code keyedSubscribers}
      * / {@code patchSubscribers} are gauges set via {@link #setNearCache}; {@code wholeHydrations} /
      * {@code keyedHydrations} are monotonic hit counters incremented via {@link #onNearCacheHydrationServed};
+     * {@code wholeSubscriptionsServed} / {@code keyedSubscriptionsServed} are monotonic counters for
+     * non-hydrating subscriptions that rode a warm cache, incremented via {@link #onNearSubscriptionServed};
      * {@code patches} holds the synthetic patch counters indexed by {@link NearPatchOutcome#ordinal()},
      * incremented via {@link #onNearPatch}. All are registered together so the counters are allocated at
      * startup on the main thread, not lazily from the egress thread.
      */
     private record NearCacheGauges(Counter warmCaches, Counter wholeSubscribers, Counter keyedSubscribers,
                                    Counter patchSubscribers, Counter wholeHydrations, Counter keyedHydrations,
+                                   Counter wholeSubscriptionsServed, Counter keyedSubscriptionsServed,
                                    Counter[] patches) {
     }
 
@@ -143,6 +146,12 @@ public class AeronCounterGatewayMetrics implements GatewayMetrics {
     }
 
     @Override
+    public void onNearSubscriptionServed(String domain, boolean keyed) {
+        final NearCacheGauges gauges = nearCacheGauges.computeIfAbsent(domain, this::registerNearCacheGauges);
+        (keyed ? gauges.keyedSubscriptionsServed() : gauges.wholeSubscriptionsServed()).incrementOrdered();
+    }
+
+    @Override
     public void onNearPatch(String domain, NearPatchOutcome outcome) {
         final NearCacheGauges gauges = nearCacheGauges.computeIfAbsent(domain, this::registerNearCacheGauges);
         gauges.patches()[outcome.ordinal()].incrementOrdered();
@@ -155,6 +164,8 @@ public class AeronCounterGatewayMetrics implements GatewayMetrics {
         final Counter patchSubscribers = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "NearPatchSubscribers-" + domain + suffix);
         final Counter wholeHydrations = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "NearHydrationsServed-" + domain + "-whole" + suffix);
         final Counter keyedHydrations = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "NearHydrationsServed-" + domain + "-keyed" + suffix);
+        final Counter wholeSubscriptionsServed = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "NearSubscriptionsServed-" + domain + "-whole" + suffix);
+        final Counter keyedSubscriptionsServed = aeron.addCounter(COUNTER_TYPE_ID, LABEL_PREFIX + "NearSubscriptionsServed-" + domain + "-keyed" + suffix);
         final Counter[] patches = new Counter[NearPatchOutcome.values().length];
         for (final NearPatchOutcome outcome : NearPatchOutcome.values()) {
             patches[outcome.ordinal()] =
@@ -162,6 +173,6 @@ public class AeronCounterGatewayMetrics implements GatewayMetrics {
         }
         log.info("Registered gateway near cache gauges for {} domain", domain);
         return new NearCacheGauges(warmCaches, wholeSubscribers, keyedSubscribers, patchSubscribers, wholeHydrations,
-                keyedHydrations, patches);
+                keyedHydrations, wholeSubscriptionsServed, keyedSubscriptionsServed, patches);
     }
 }

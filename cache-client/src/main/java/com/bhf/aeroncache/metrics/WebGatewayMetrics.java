@@ -58,6 +58,15 @@ public final class WebGatewayMetrics {
     public static final String NEAR_HYDRATIONS_SERVED = "aeroncache.near.hydrations.served";
 
     /**
+     * Counter: non-hydrating subscriptions served from the local near cache (rode the near cache session's
+     * existing shared cluster subscription instead of opening a redundant per-subscriber one), tagged by
+     * {@code domain} and {@code type} (whole / keyed). Unlike {@value #NEAR_HYDRATIONS_SERVED} no snapshot is
+     * replayed; this counts the cluster subscribe that was avoided on the warm-ride path. A dedicated
+     * near-cache metric, present only when near caching is enabled.
+     */
+    public static final String NEAR_SUBSCRIPTIONS_SERVED = "aeroncache.near.subscriptions.served";
+
+    /**
      * Gauge: distinct client sessions holding a PATCH-mode subscription served from the near cache, tagged
      * by {@code domain}. These are the subscribers whose live updates are turned into synthetic merge-patch
      * deltas generated locally from the warm copy; a dedicated near-cache metric, present only when near

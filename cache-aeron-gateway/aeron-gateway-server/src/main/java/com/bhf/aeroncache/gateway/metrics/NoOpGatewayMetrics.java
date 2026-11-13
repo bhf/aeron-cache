@@ -41,6 +41,11 @@ public class NoOpGatewayMetrics implements GatewayMetrics {
     }
 
     @Override
+    public void onNearSubscriptionServed(String domain, boolean keyed) {
+
+    }
+
+    @Override
     public void onNearPatch(String domain, NearPatchOutcome outcome) {
 
     }

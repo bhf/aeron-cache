@@ -80,6 +80,18 @@ public interface GatewayMetrics {
     void onNearCacheHydrationServed(String domain, boolean keyed);
 
     /**
+     * Record a non-hydrating subscription served from the near cache: one FULL subscription on one cache
+     * that rode the near cache session's existing shared cluster subscription instead of opening a redundant
+     * per-subscriber one. Unlike {@link #onNearCacheHydrationServed} no snapshot is replayed (the subscriber
+     * did not ask to hydrate); this counts the cluster subscribe that was avoided. Called from the gateway
+     * ingress thread on the warm-ride path. Only meaningful when the near cache is enabled.
+     *
+     * @param domain the cache domain ({@code cache} or {@code counters}).
+     * @param keyed  {@code true} for a keyed subscription, {@code false} for a whole-cache one.
+     */
+    void onNearSubscriptionServed(String domain, boolean keyed);
+
+    /**
      * Record one synthetic patch generation for a near-cache PATCH subscriber. Called from the cluster
      * egress thread on the local patch-emission path, once per subscriber per update, so it increments only
      * when a patch was actually generated for a subscriber. Only meaningful when the near cache is enabled.
