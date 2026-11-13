@@ -11,6 +11,8 @@ import com.bhf.aeroncache.gateway.messages.GatewaySubscribeDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewayUnsubscribeDecoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.near.NearCache;
+import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
 import com.bhf.aeroncache.models.results.AddCacheEntryResult;
 import com.bhf.aeroncache.models.results.AllTimersResult;
@@ -81,6 +83,8 @@ public class GatewayIngressAgent implements Agent {
     private final AeronCache cluster;
     private final GatewaySubscriptionPublisher cacheSubs;
     private final GatewaySubscriptionPublisher countersSubs;
+    private final NearCacheManager<Object> cacheNearCache;
+    private final NearCacheManager<Object> countersNearCache;
     private final GatewayResponseWriter egressWriter;
     private final GatewayMetrics metrics;
 
@@ -108,6 +112,15 @@ public class GatewayIngressAgent implements Agent {
             new FlyweightList<>(GatewayResponseWriter.TimerEntry::new);
     private final Map<String, String> streamEntryItems = new HashMap<>();
 
+    // Near-cache reads are served synchronously on the ingress agent thread (not the egress thread), so they
+    // must not touch egressWriter / streamEntryItems, whose single buffer is owned by the egress thread. These
+    // two structures are the ingress thread's own: a dedicated response writer (with its own encode buffer)
+    // and an entries map, both only ever touched here on the ingress thread. The session response Publication
+    // is Aeron's concurrent variant, so the ingress and egress threads can each write to it with their own
+    // writer safely.
+    private final GatewayResponseWriter ingressWriter = new GatewayResponseWriter();
+    private final Map<String, String> ingressStreamEntryItems = new HashMap<>();
+
     private Subscription subscription;
 
     public GatewayIngressAgent(Aeron aeron,
@@ -119,6 +132,8 @@ public class GatewayIngressAgent implements Agent {
                                AeronCache cluster,
                                GatewaySubscriptionPublisher cacheSubs,
                                GatewaySubscriptionPublisher countersSubs,
+                               NearCacheManager<Object> cacheNearCache,
+                               NearCacheManager<Object> countersNearCache,
                                GatewayResponseWriter egressWriter,
                                GatewayMetrics metrics) {
         this.aeron = aeron;
@@ -126,6 +141,8 @@ public class GatewayIngressAgent implements Agent {
         this.cluster = cluster;
         this.cacheSubs = cacheSubs;
         this.countersSubs = countersSubs;
+        this.cacheNearCache = cacheNearCache;
+        this.countersNearCache = countersNearCache;
         this.egressWriter = egressWriter;
         this.metrics = metrics;
         this.requestUriBuilder = media.requestSubscription(requestEndpoint, responseControlEndpoint);
@@ -299,8 +316,14 @@ public class GatewayIngressAgent implements Agent {
                     (Consumer<AddCacheEntryResult>) o -> respondStatus(responsePublication, correlationId, ((AddCacheEntryResult) o).getStatus(), cacheId, key, null));
             case PATCH_CACHE_ENTRY_MSG_ID -> cacheSubs.patchValue(correlationId, cacheId, key, value,
                     (Consumer<PatchValueResult>) o -> respondStatus(responsePublication, correlationId, ((PatchValueResult) o).getStatus(), cacheId, key, null));
-            case GET_CACHE_ENTRY_MSG_ID -> cacheSubs.getCacheEntry(correlationId, cacheId, key,
-                    (Consumer<GetCacheEntryResult>) o -> respondEntry(responsePublication, correlationId, (GetCacheEntryResult) o));
+            case GET_CACHE_ENTRY_MSG_ID -> {
+                if (cacheNearCache != null) {
+                    nearGetEntry(responsePublication, correlationId, cacheNearCache, cacheSubs, cacheId, key);
+                } else {
+                    cacheSubs.getCacheEntry(correlationId, cacheId, key,
+                            (Consumer<GetCacheEntryResult>) o -> respondEntry(responsePublication, correlationId, (GetCacheEntryResult) o));
+                }
+            }
             case CLEAR_CACHE_MSG_ID -> cacheSubs.clearCache(correlationId, cacheId,
                     (Consumer<ClearCacheResult>) o -> respondStatus(responsePublication, correlationId, ((ClearCacheResult) o).getStatus(), cacheId));
             case DELETE_CACHE_MSG_ID -> cacheSubs.deleteCache(correlationId, cacheId,
@@ -309,8 +332,14 @@ public class GatewayIngressAgent implements Agent {
                     (Consumer<RemoveCacheEntryResult>) o -> respondStatus(responsePublication, correlationId, ((RemoveCacheEntryResult) o).getStatus(), cacheId, key, null));
             case CANCEL_CACHE_ITEM_REMOVAL_MSG_ID -> cacheSubs.cancelItemRemoval(correlationId, cacheId, key,
                     (Consumer<CancelItemRemovalResult>) o -> respondStatus(responsePublication, correlationId, ((CancelItemRemovalResult) o).getStatus(), cacheId, key, null));
-            case GET_CACHE_ENTRIES_MSG_ID -> cacheSubs.getCacheEntries(correlationId, cacheId,
-                    (Consumer<GetAllCacheEntriesResult>) o -> streamEntries(responsePublication, correlationId, (GetAllCacheEntriesResult) o));
+            case GET_CACHE_ENTRIES_MSG_ID -> {
+                if (cacheNearCache != null) {
+                    nearGetEntries(responsePublication, correlationId, cacheNearCache, cacheSubs, cacheId);
+                } else {
+                    cacheSubs.getCacheEntries(correlationId, cacheId,
+                            (Consumer<GetAllCacheEntriesResult>) o -> streamEntries(responsePublication, correlationId, (GetAllCacheEntriesResult) o));
+                }
+            }
             case GET_CACHE_STATS_MSG_ID -> cacheSubs.getAllCacheStats(correlationId,
                     (Consumer<CacheStatsResult>) o -> streamStats(responsePublication, correlationId, (CacheStatsResult) o));
             case GET_TIMERS_MSG_ID -> cacheSubs.getAllTimers(correlationId,
@@ -320,14 +349,26 @@ public class GatewayIngressAgent implements Agent {
                     (Consumer<CreateCacheResult>) o -> respondStatus(responsePublication, correlationId, ((CreateCacheResult) o).getStatus(), cacheId));
             case ADD_COUNTER_ENTRY_MSG_ID -> countersSubs.addCacheEntry(correlationId, cacheId, key, counterValue, ttl,
                     (Consumer<AddCacheEntryResult>) o -> respondStatus(responsePublication, correlationId, ((AddCacheEntryResult) o).getStatus(), cacheId, key, null));
-            case GET_COUNTER_ENTRY_MSG_ID -> countersSubs.getCacheEntry(correlationId, cacheId, key,
-                    (Consumer<GetCacheEntryResult>) o -> respondEntry(responsePublication, correlationId, (GetCacheEntryResult) o));
+            case GET_COUNTER_ENTRY_MSG_ID -> {
+                if (countersNearCache != null) {
+                    nearGetEntry(responsePublication, correlationId, countersNearCache, countersSubs, cacheId, key);
+                } else {
+                    countersSubs.getCacheEntry(correlationId, cacheId, key,
+                            (Consumer<GetCacheEntryResult>) o -> respondEntry(responsePublication, correlationId, (GetCacheEntryResult) o));
+                }
+            }
             case CLEAR_COUNTER_CACHE_MSG_ID -> countersSubs.clearCache(correlationId, cacheId,
                     (Consumer<ClearCacheResult>) o -> respondStatus(responsePublication, correlationId, ((ClearCacheResult) o).getStatus(), cacheId));
             case DELETE_COUNTER_CACHE_MSG_ID -> countersSubs.deleteCache(correlationId, cacheId,
                     (Consumer<DeleteCacheResult>) o -> respondStatus(responsePublication, correlationId, ((DeleteCacheResult) o).getStatus(), cacheId));
-            case GET_COUNTER_ENTRIES_MSG_ID -> countersSubs.getCacheEntries(correlationId, cacheId,
-                    (Consumer<GetAllCacheEntriesResult>) o -> streamEntries(responsePublication, correlationId, (GetAllCacheEntriesResult) o));
+            case GET_COUNTER_ENTRIES_MSG_ID -> {
+                if (countersNearCache != null) {
+                    nearGetEntries(responsePublication, correlationId, countersNearCache, countersSubs, cacheId);
+                } else {
+                    countersSubs.getCacheEntries(correlationId, cacheId,
+                            (Consumer<GetAllCacheEntriesResult>) o -> streamEntries(responsePublication, correlationId, (GetAllCacheEntriesResult) o));
+                }
+            }
             case GET_COUNTER_STATS_MSG_ID -> countersSubs.getAllCacheStats(correlationId,
                     (Consumer<CacheStatsResult>) o -> streamStats(responsePublication, correlationId, (CacheStatsResult) o));
             case REMOVE_COUNTER_ENTRY_MSG_ID -> countersSubs.removeCacheEntry(correlationId, cacheId, key,
@@ -499,6 +540,49 @@ public class GatewayIngressAgent implements Agent {
     private void respondCounter(Publication publication, String correlationId, CacheOperationStatus status,
                                 String cacheId, String key, long counterValue) {
         egressWriter.writeCommandResponse(publication, correlationId, status, cacheId, key, Long.toString(counterValue));
+    }
+
+    // ------------------------------------------------------------------ near cache reads
+
+    /**
+     * Serve a point read from the local near cache, mirroring the HTTP near cache's read semantics: when the
+     * cache is warm and the key is present the local value is returned with {@code SUCCESS}; otherwise the
+     * cache is primed (idempotently) and {@code UNKNOWN_KEY} is returned. The read never falls through to the
+     * cluster. Runs on the ingress thread, so it uses {@link #ingressWriter}, not {@link #egressWriter}.
+     */
+    private void nearGetEntry(Publication publication, String correlationId, NearCacheManager<Object> near,
+                              GatewaySubscriptionPublisher publisher, String cacheId, String key) {
+        if (near.contains(cacheId)) {
+            final NearCache<Object> local = near.get(cacheId);
+            if (local.containsKey(key)) {
+                final Object value = local.get(key);
+                ingressWriter.writeCommandResponse(publication, correlationId, CacheOperationStatus.SUCCESS,
+                        cacheId, key, value == null ? null : String.valueOf(value));
+                return;
+            }
+        }
+        publisher.primeNearCache(cluster, cacheId);
+        ingressWriter.writeCommandResponse(publication, correlationId, CacheOperationStatus.UNKNOWN_KEY, cacheId, key, "");
+    }
+
+    /**
+     * Serve a whole-cache read from the local near cache, mirroring the HTTP near cache's read semantics:
+     * when the cache is warm its local snapshot is written as a single end-of-batch entries frame with
+     * {@code SUCCESS}; otherwise the cache is primed (idempotently) and an empty {@code UNKNOWN_CACHE} frame
+     * is returned. The read never falls through to the cluster. Runs on the ingress thread, so it uses
+     * {@link #ingressWriter} and {@link #ingressStreamEntryItems}.
+     */
+    private void nearGetEntries(Publication publication, String correlationId, NearCacheManager<Object> near,
+                                GatewaySubscriptionPublisher publisher, String cacheId) {
+        ingressStreamEntryItems.clear();
+        if (near.contains(cacheId)) {
+            final NearCache<Object> local = near.get(cacheId);
+            local.snapshot().forEach((k, v) -> ingressStreamEntryItems.put(k, v == null ? null : String.valueOf(v)));
+            ingressWriter.writeEntries(publication, correlationId, CacheOperationStatus.SUCCESS, cacheId, ingressStreamEntryItems, true);
+            return;
+        }
+        publisher.primeNearCache(cluster, cacheId);
+        ingressWriter.writeEntries(publication, correlationId, CacheOperationStatus.UNKNOWN_CACHE, cacheId, ingressStreamEntryItems, true);
     }
 
     private static String requestId(String correlationId) {

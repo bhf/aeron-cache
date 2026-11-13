@@ -3,6 +3,8 @@ package com.bhf.aeroncache.ws.bidi;
 import com.bhf.aeroncache.events.CacheUpdateEvent;
 import com.bhf.aeroncache.metrics.WebGatewayMetrics;
 import com.bhf.aeroncache.models.Reusable;
+import com.bhf.aeroncache.near.NearCache;
+import com.bhf.aeroncache.near.NearCacheManager;
 import com.bhf.aeroncache.models.bulk.requests.BulkCacheOpsRequest;
 import com.bhf.aeroncache.models.bulk.responses.CacheOperationResponse;
 import com.bhf.aeroncache.models.requests.SubscriptionMode;
@@ -80,15 +82,21 @@ public class BidiWsRouteHandler {
 
     private final CacheSubscriptionRequestPublisher cacheSubs;
     private final CacheSubscriptionRequestPublisher countersSubs;
+    private final NearCacheManager<Object> cacheNearCache;
+    private final NearCacheManager<Object> countersNearCache;
     private final WebGatewayMetrics metrics;
     private final BidiMessageCodec codec = new BidiMessageCodec();
     private final Map<String, BidiSession> sessions = new ConcurrentHashMap<>();
 
     public BidiWsRouteHandler(CacheSubscriptionRequestPublisher cacheSubs,
                               CacheSubscriptionRequestPublisher countersSubs,
+                              NearCacheManager<Object> cacheNearCache,
+                              NearCacheManager<Object> countersNearCache,
                               WebGatewayMetrics metrics) {
         this.cacheSubs = cacheSubs;
         this.countersSubs = countersSubs;
+        this.cacheNearCache = cacheNearCache;
+        this.countersNearCache = countersNearCache;
         this.metrics = metrics;
     }
 
@@ -185,8 +193,14 @@ public class BidiWsRouteHandler {
                     (Consumer<AddCacheEntryResult>) o -> respondStatus(session, correlationId, ((AddCacheEntryResult) o).getStatus(), cacheId, key, null));
             case PATCH_CACHE_ENTRY -> cacheSubs.patchValue(correlationId, cacheId, key, value,
                     (Consumer<PatchValueResult>) o -> respondStatus(session, correlationId, ((PatchValueResult) o).getStatus(), cacheId, key, null));
-            case GET_CACHE_ENTRY -> cacheSubs.getCacheEntry(correlationId, cacheId, key,
-                    (Consumer<GetCacheEntryResult>) o -> respondEntry(session, correlationId, (GetCacheEntryResult) o));
+            case GET_CACHE_ENTRY -> {
+                if (cacheNearCache != null) {
+                    nearGetEntry(session, correlationId, cacheNearCache, cacheSubs, cacheId, key);
+                } else {
+                    cacheSubs.getCacheEntry(correlationId, cacheId, key,
+                            (Consumer<GetCacheEntryResult>) o -> respondEntry(session, correlationId, (GetCacheEntryResult) o));
+                }
+            }
             case CLEAR_CACHE -> cacheSubs.clearCache(correlationId, cacheId,
                     (Consumer<ClearCacheResult>) o -> respondStatus(session, correlationId, ((ClearCacheResult) o).getStatus(), cacheId));
             case DELETE_CACHE -> cacheSubs.deleteCache(correlationId, cacheId,
@@ -195,8 +209,14 @@ public class BidiWsRouteHandler {
                     (Consumer<RemoveCacheEntryResult>) o -> respondStatus(session, correlationId, ((RemoveCacheEntryResult) o).getStatus(), cacheId, key, null));
             case CANCEL_CACHE_ITEM_REMOVAL -> cacheSubs.cancelItemRemoval(correlationId, cacheId, key,
                     (Consumer<CancelItemRemovalResult>) o -> respondStatus(session, correlationId, ((CancelItemRemovalResult) o).getStatus(), cacheId, key, null));
-            case GET_CACHE_ENTRIES -> cacheSubs.getCacheEntries(correlationId, cacheId,
-                    (Consumer<GetAllCacheEntriesResult>) o -> streamEntries(session, correlationId, (GetAllCacheEntriesResult) o));
+            case GET_CACHE_ENTRIES -> {
+                if (cacheNearCache != null) {
+                    nearGetEntries(session, correlationId, cacheNearCache, cacheSubs, cacheId);
+                } else {
+                    cacheSubs.getCacheEntries(correlationId, cacheId,
+                            (Consumer<GetAllCacheEntriesResult>) o -> streamEntries(session, correlationId, (GetAllCacheEntriesResult) o));
+                }
+            }
             case GET_CACHE_STATS -> cacheSubs.getAllCacheStats(correlationId,
                     (Consumer<CacheStatsResult>) o -> streamStats(session, correlationId, (CacheStatsResult) o));
             case GET_TIMERS -> cacheSubs.getAllTimers(correlationId,
@@ -206,8 +226,14 @@ public class BidiWsRouteHandler {
                     (Consumer<CreateCacheResult>) o -> respondStatus(session, correlationId, ((CreateCacheResult) o).getStatus(), cacheId));
             case ADD_COUNTER_ENTRY -> countersSubs.addCacheEntry(correlationId, cacheId, key, counterValue, ttl,
                     (Consumer<AddCacheEntryResult>) o -> respondStatus(session, correlationId, ((AddCacheEntryResult) o).getStatus(), cacheId, key, null));
-            case GET_COUNTER_ENTRY -> countersSubs.getCacheEntry(correlationId, cacheId, key,
-                    (Consumer<GetCacheEntryResult>) o -> respondEntry(session, correlationId, (GetCacheEntryResult) o));
+            case GET_COUNTER_ENTRY -> {
+                if (countersNearCache != null) {
+                    nearGetEntry(session, correlationId, countersNearCache, countersSubs, cacheId, key);
+                } else {
+                    countersSubs.getCacheEntry(correlationId, cacheId, key,
+                            (Consumer<GetCacheEntryResult>) o -> respondEntry(session, correlationId, (GetCacheEntryResult) o));
+                }
+            }
             case CLEAR_COUNTER_CACHE -> countersSubs.clearCache(correlationId, cacheId,
                     (Consumer<ClearCacheResult>) o -> respondStatus(session, correlationId, ((ClearCacheResult) o).getStatus(), cacheId));
             case DELETE_COUNTER_CACHE -> countersSubs.deleteCache(correlationId, cacheId,
@@ -216,8 +242,14 @@ public class BidiWsRouteHandler {
                     (Consumer<RemoveCacheEntryResult>) o -> respondStatus(session, correlationId, ((RemoveCacheEntryResult) o).getStatus(), cacheId, key, null));
             case CANCEL_COUNTER_ITEM_REMOVAL -> countersSubs.cancelItemRemoval(correlationId, cacheId, key,
                     (Consumer<CancelItemRemovalResult>) o -> respondStatus(session, correlationId, ((CancelItemRemovalResult) o).getStatus(), cacheId, key, null));
-            case GET_COUNTER_ENTRIES -> countersSubs.getCacheEntries(correlationId, cacheId,
-                    (Consumer<GetAllCacheEntriesResult>) o -> streamEntries(session, correlationId, (GetAllCacheEntriesResult) o));
+            case GET_COUNTER_ENTRIES -> {
+                if (countersNearCache != null) {
+                    nearGetEntries(session, correlationId, countersNearCache, countersSubs, cacheId);
+                } else {
+                    countersSubs.getCacheEntries(correlationId, cacheId,
+                            (Consumer<GetAllCacheEntriesResult>) o -> streamEntries(session, correlationId, (GetAllCacheEntriesResult) o));
+                }
+            }
             case GET_COUNTER_STATS -> countersSubs.getAllCacheStats(correlationId,
                     (Consumer<CacheStatsResult>) o -> streamStats(session, correlationId, (CacheStatsResult) o));
             case INCREMENT_COUNTER_ENTRY -> countersSubs.incrementCounter(correlationId, cacheId, key, counterValue, ttl,
@@ -339,6 +371,48 @@ public class BidiWsRouteHandler {
     private void respondCounter(BidiSession session, String correlationId, CacheOperationStatus status,
                                 String cacheId, String key, long counterValue) {
         session.send(codec.write(BidiCommandResponse.of(correlationId, status, cacheId, key, Long.toString(counterValue))));
+    }
+
+    // ------------------------------------------------------------------ near cache reads
+
+    /**
+     * Serve a point read from the local near cache, mirroring the HTTP near cache's read semantics: when the
+     * cache is warm and the key is present the local value is returned with {@code SUCCESS}; otherwise the
+     * cache is primed (idempotently) and {@code UNKNOWN_KEY} is returned. The read never falls through to the
+     * cluster, so no HTTP-style read-through happens on this path.
+     */
+    private void nearGetEntry(BidiSession session, String correlationId, NearCacheManager<Object> near,
+                              CacheSubscriptionRequestPublisher publisher, String cacheId, String key) {
+        if (near.contains(cacheId)) {
+            NearCache<Object> local = near.get(cacheId);
+            if (local.containsKey(key)) {
+                var value = local.get(key);
+                session.send(codec.write(BidiCommandResponse.of(correlationId, CacheOperationStatus.SUCCESS,
+                        cacheId, key, value == null ? null : String.valueOf(value))));
+                return;
+            }
+        }
+        publisher.primeNearCache(WebsocketApplication.getCache(), cacheId);
+        session.send(codec.write(BidiCommandResponse.of(correlationId, CacheOperationStatus.UNKNOWN_KEY, cacheId, key, "")));
+    }
+
+    /**
+     * Serve a whole-cache read from the local near cache, mirroring the HTTP near cache's read semantics:
+     * when the cache is warm its local snapshot is streamed as a single end-of-batch entries frame with
+     * {@code SUCCESS}; otherwise the cache is primed (idempotently) and an empty {@code UNKNOWN_CACHE} frame
+     * is returned. The read never falls through to the cluster.
+     */
+    private void nearGetEntries(BidiSession session, String correlationId, NearCacheManager<Object> near,
+                                CacheSubscriptionRequestPublisher publisher, String cacheId) {
+        if (near.contains(cacheId)) {
+            NearCache<Object> local = near.get(cacheId);
+            final Map<String, String> items = new HashMap<>();
+            local.snapshot().forEach((k, v) -> items.put(k, v == null ? null : String.valueOf(v)));
+            session.send(codec.write(BidiEntries.of(correlationId, CacheOperationStatus.SUCCESS, cacheId, items, true)));
+            return;
+        }
+        publisher.primeNearCache(WebsocketApplication.getCache(), cacheId);
+        session.send(codec.write(BidiEntries.of(correlationId, CacheOperationStatus.UNKNOWN_CACHE, cacheId, Map.of(), true)));
     }
 
     /**

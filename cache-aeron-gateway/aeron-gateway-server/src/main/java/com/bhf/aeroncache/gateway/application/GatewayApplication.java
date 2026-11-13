@@ -254,7 +254,8 @@ public class GatewayApplication {
         cacheSubs.setMetrics(gatewayMetrics, "cache");
         countersSubs.setMetrics(gatewayMetrics, "counters");
         var ingressAgent = new GatewayIngressAgent(gatewayAeron, media, requestEndpoint, responseControlEndpoint,
-                REQUEST_STREAM_ID, RESPONSE_STREAM_ID, cache, cacheSubs, countersSubs, egressWriter,
+                REQUEST_STREAM_ID, RESPONSE_STREAM_ID, cache, cacheSubs, countersSubs,
+                nearCacheManager, countersNearCacheManager, egressWriter,
                 gatewayMetrics);
 
         if (media.isIpc()) {

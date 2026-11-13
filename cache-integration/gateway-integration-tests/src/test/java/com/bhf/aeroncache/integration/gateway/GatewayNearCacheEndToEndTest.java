@@ -497,6 +497,60 @@ class GatewayNearCacheEndToEndTest {
 
     // ------------------------------------------------------------------ helpers
 
+    @Test
+    @DisplayName("Should serve a point GET from the near cache once a miss has primed it, and UNKNOWN_KEY on an unknown cache")
+    void shouldServePointGetFromNearCache() {
+        var cacheId = uniqueCache("gateway-near-get-item");
+
+        // Arrange: seed the source cache over the gateway command surface.
+        createCache(cacheId);
+        addEntry(cacheId, "Key1", "Value1");
+
+        // Act + Assert: the first near read of the not-yet-warm key is a miss that kicks off priming (no
+        // cluster read-through); each poll re-issues the GET, and once the warming subscription has populated
+        // the local copy the key is served locally with its value.
+        await().atMost(60, SECONDS).untilAsserted(() -> {
+            var corr = correlationId();
+            client.getEntry(corr, cacheId, "Key1");
+            await().atMost(10, SECONDS).until(() -> listener.commandResponses.containsKey(corr));
+            var response = listener.commandResponses.get(corr);
+            assertEquals(OperationStatus.SUCCESS, response.status());
+            assertEquals("Value1", response.value());
+        });
+
+        // An unknown cache is a near-cache miss (UNKNOWN_KEY), never a cluster read-through unknown-cache.
+        var missCorr = correlationId();
+        client.getEntry(missCorr, uniqueCache("gateway-near-get-missing"), "nope");
+        await().atMost(30, SECONDS).until(() -> listener.commandResponses.containsKey(missCorr));
+        assertEquals(OperationStatus.UNKNOWN_KEY, listener.commandResponses.get(missCorr).status());
+    }
+
+    @Test
+    @DisplayName("Should serve a whole-cache GET from the near cache once warm, and UNKNOWN_CACHE on an unknown cache")
+    void shouldServeWholeCacheGetFromNearCache() {
+        var cacheId = uniqueCache("gateway-near-get-entries");
+
+        // Arrange: seed the source cache.
+        createCache(cacheId);
+        addEntry(cacheId, "Key1", "Value1");
+
+        // Act + Assert: the whole-cache near read warms on a miss and, once warm, returns a single
+        // end-of-batch SUCCESS entries frame carrying the local snapshot.
+        await().atMost(60, SECONDS).untilAsserted(() -> {
+            var corr = correlationId();
+            client.getEntries(corr, cacheId);
+            await().atMost(10, SECONDS).until(() -> Boolean.TRUE.equals(listener.entriesComplete.get(corr)));
+            assertEquals(OperationStatus.SUCCESS, listener.entriesStatus.get(corr));
+            assertEquals("Value1", listener.entriesAccumulated.get(corr).get("Key1"));
+        });
+
+        // An unknown cache is a near-cache miss (UNKNOWN_CACHE), never a cluster read-through.
+        var missCorr = correlationId();
+        client.getEntries(missCorr, uniqueCache("gateway-near-get-entries-missing"));
+        await().atMost(30, SECONDS).until(() -> Boolean.TRUE.equals(listener.entriesComplete.get(missCorr)));
+        assertEquals(OperationStatus.UNKNOWN_CACHE, listener.entriesStatus.get(missCorr));
+    }
+
     private boolean streamed(UpdateEventType eventType, String cacheId, String key, String value) {
         return listener.streamUpdates.stream()
                 .anyMatch(u -> u.eventType() == eventType

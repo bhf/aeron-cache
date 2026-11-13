@@ -16,6 +16,7 @@ dependencies {
     testImplementation(project(":cache-cluster"))
     testImplementation(project(":cache-http:http-server-javalin"))
     testImplementation(project(":cache-common"))
+    testImplementation(project(":cache-messages-http"))
     testImplementation(project(":cache-integration:integration-common"))
     testImplementation(project(":cache-integration:integration-common-streaming"))
 
