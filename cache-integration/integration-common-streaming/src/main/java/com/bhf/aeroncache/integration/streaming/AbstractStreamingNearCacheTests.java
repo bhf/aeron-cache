@@ -276,6 +276,81 @@ public abstract class AbstractStreamingNearCacheTests {
     }
 
     @Test
+    @DisplayName("Should serve a key-filtered patch-mode subscription from the near cache - baseline then deltas for the subscribed key only")
+    @HappyPath
+    void shouldServeKeyedPatchSubscriptionFromPrimedNearCache(BackendTestResource backend) {
+        // Arrange: seed two JSON keys and prime the cache so the whole cache is warm before the subscription
+        // arrives. Key2 exists so that a broken key filter would leak it into either the hydration baseline or
+        // the live delta stream.
+        var cacheId = getCacheId() + "-keyed-patch";
+        var key1Initial = "{\"a\":1,\"b\":2}";
+        var key1Updated = "{\"a\":1,\"b\":3}";
+        var key2Initial = "{\"x\":1}";
+        var key2Updated = "{\"x\":2}";
+        CacheTestUtils.createCache(cacheId, backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", key1Initial, backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key2", key2Initial, backend, httpEndpoints);
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().post(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200)
+                .body("operationStatus", Matchers.comparesEqualTo("SUCCESS"));
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                        .accept(ContentType.JSON)
+                        .when().get(NEAR_CACHES_ENDPOINT)
+                        .then().assertThat()
+                        .statusCode(200)
+                        .body("find { it.cacheId == '" + cacheId + "' }.itemCount", Matchers.equalTo(2)));
+
+        // Act: open a patch-mode subscription filtered to Key1 only (served from the warm copy). Once it is
+        // established, overwrite Key2 first (which the filter must drop) and then Key1 (which must produce the
+        // one delta that completes the subscription). The subscriber collects exactly two events: the Key1
+        // baseline and the Key1 delta.
+        int deltasBefore = nearPatches(backend, "delta");
+        CompletableFuture<Void> ready = new CompletableFuture<>();
+        var eventsFuture = streamingHelper.getPatchEventsForKeysWithHydration(backend, cacheId, List.of("Key1"), 2, ready);
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(ready::isDone);
+        CacheTestUtils.addItem(cacheId, "Key2", key2Updated, backend, httpEndpoints);
+        CacheTestUtils.addItem(cacheId, "Key1", key1Updated, backend, httpEndpoints);
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).until(eventsFuture::isDone);
+        var events = eventsFuture.join();
+
+        // Assert: every delivered event is for Key1 - the filter excluded Key2 from both the hydration baseline
+        // and the live patch stream even though Key2 was warm and was updated.
+        MatcherAssert.assertThat("key-filtered patch subscription should only receive Key1, got " + events,
+                events.stream().allMatch(e -> "Key1".equals(e.itemKey())), Matchers.is(true));
+
+        // Assert: Key1 arrives as a full ADD_ITEM baseline, then a single near-cache-generated PATCH_ITEM delta
+        // carrying only the changed field.
+        var baseline = events.stream()
+                .filter(e -> e.eventType() == CacheUpdateEvent.EventType.ADD_ITEM)
+                .findFirst().orElseThrow(() -> new AssertionError("expected a full ADD_ITEM baseline, got " + events));
+        MatcherAssert.assertThat(baseline.itemKey(), Matchers.is("Key1"));
+        MatcherAssert.assertThat(baseline.itemValue(), Matchers.is(key1Initial));
+
+        var patches = events.stream()
+                .filter(e -> e.eventType() == CacheUpdateEvent.EventType.PATCH_ITEM)
+                .collect(Collectors.toList());
+        MatcherAssert.assertThat(patches, Matchers.hasSize(1));
+        MatcherAssert.assertThat(patches.get(0).itemKey(), Matchers.is("Key1"));
+        MatcherAssert.assertThat(patches.get(0).itemValue(), Matchers.is("{\"b\":3}"));
+
+        // Assert: exactly one merge-patch delta was generated for this subscriber - the Key2 overwrite was
+        // filtered out before patch generation, so it produced no delta.
+        Awaitility.await().atMost(AWAIT_SECONDS, TimeUnit.SECONDS).untilAsserted(() ->
+                MatcherAssert.assertThat(nearPatches(backend, "delta"), Matchers.is(deltasBefore + 1)));
+
+        // Clean up so repeated runs in this class instance start from a cold cache.
+        RestAssured.given().port(managementPort(backend)).baseUri(managementBaseUri(backend))
+                .accept(ContentType.JSON)
+                .when().delete(NEAR_CACHE_PREFIX + cacheId)
+                .then().assertThat()
+                .statusCode(200);
+    }
+
+    @Test
     @DisplayName("Should fall back to a full ADD_ITEM for a patch subscriber when a valid merge patch cannot be generated")
     @HappyPath
     void shouldFallBackToFullValueWhenPatchGenerationFails(BackendTestResource backend) {
