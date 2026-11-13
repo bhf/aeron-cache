@@ -7,8 +7,9 @@ name: K8s Near Cache
 #     keeps its plain name (so service discovery is unaffected);
 #   - the near cache management endpoints are live on every interface;
 #   - the near cache actually warms (a hydrating HTTP read is served from, and listed by, the near cache).
-# It then reuses the existing clustered integration suites against the running deployment to confirm near
-# caching is transparent (clients see identical behaviour with it on).
+# It then runs the near-aware integration suites against the running deployment. Near caching is NOT
+# transparent: reads are served locally (a miss primes rather than reading through), so the read-your-writes
+# suites are excluded and the near read paths are covered by the near-aware suites instead (see the run step).
 #
 # Runs on demand, and on pushes/PRs that touch the near cache code paths or the Helm charts, so the heavy
 # kind deployment is only spent when it is relevant.
@@ -145,8 +146,9 @@ jobs:
 
       - name: Verify Near Cache Warms and Serves a Read (HTTP)
         run: |
-          # Near caching is transparent on the regular read URIs. Seed a cache over HTTP, then read it back:
-          # with near caching on the read does NOT read through to the cluster - the first read of a not-yet-warm
+          # The near cache is served on the regular read URIs, but it is NOT transparent. Seed a cache over
+          # HTTP, then read it back: with near caching on the read does NOT read through to the cluster - the
+          # first read of a not-yet-warm
           # key is a miss that kicks off priming, and the value is served once the warming subscription has
           # populated the local copy. Poll the read until it returns the value, then assert the cache is listed
           # as warm with the expected local item count - proving the read was served by the near cache.
@@ -177,20 +179,30 @@ jobs:
           echo "Near cache warm/serve check passed."
 
       - name: Run Integration Suite Against Near Deployment
-        # Run the near-aware HTTP suite plus the streaming suites against the running near-mode deployment.
-        # externalEnv=true makes BackendTestLauncher target the port-forwarded interfaces instead of starting
-        # TestContainers. The plain http-integration-tests are intentionally NOT run here: near caching is not
-        # transparent (a read of a not-yet-warm key is a miss that starts priming, not a read-through), so the
-        # plain suite's synchronous read-your-writes expectations do not hold against a near interface - the
-        # http-near suite covers the near HTTP read path (polling for the warm value) instead. The ws/sse
-        # suites are streaming subscriptions (no synchronous read-back), so they run unchanged.
+        # Run the near-aware suites plus the transparent streaming suites against the running near-mode
+        # deployment. externalEnv=true makes BackendTestLauncher target the port-forwarded interfaces instead
+        # of starting TestContainers.
+        #
+        # Near caching is NOT transparent: a read of a not-yet-warm key is a miss that starts priming rather
+        # than reading through, so any read-your-writes assertion fails against a near interface. The near read
+        # paths are therefore covered by the near-aware suites, and the read-your-writes suites are excluded:
+        #   - http-near-integration-tests covers the near HTTP read path (polling for the warm value); the
+        #     plain http-integration-tests are not run.
+        #   - streaming-near-integration-tests covers the near WS/SSE/bidi paths - near-backed subscription
+        #     hydration, the near cache management endpoints, and the bidi GET commands served from the near
+        #     cache (ClusteredBidiNearGetTests).
+        #   - ws-integration-tests runs with its read-your-writes bidi command suite excluded via
+        #     -PexcludeReadYourWrites, leaving its streaming subscription tests, which are transparent.
+        # The sse suite is streaming subscriptions only (no synchronous read-back), so it runs unchanged.
         timeout-minutes: 25
         run: |
           ./gradlew --console=plain --continue \
             :cache-integration:clustered:http-near-integration-tests:test \
+            :cache-integration:clustered:streaming-near-integration-tests:test \
             :cache-integration:clustered:ws-integration-tests:test \
             :cache-integration:clustered:sse-integration-tests:test \
             -PskipIntegrationTests=false \
+            -PexcludeReadYourWrites \
             -Daeroncache.integration.externalEnv=true
 
       - name: Upload Integration Test Reports

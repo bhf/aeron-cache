@@ -44,7 +44,11 @@ tasks.test {
     systemProperty("aeron.cluster.message.timeout", "30000000000")
 
     environment(loadTestEnv())
-    useJUnitPlatform()
+    useJUnitPlatform {
+        if (project.hasProperty("excludeReadYourWrites")) {
+            excludeTags("readYourWrites")
+        }
+    }
     finalizedBy("cleanTestNodes")
 }
 
