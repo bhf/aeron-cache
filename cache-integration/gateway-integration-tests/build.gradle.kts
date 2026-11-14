@@ -40,6 +40,7 @@ tasks.test {
     jvmArgs("--enable-preview")
     jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED")
     jvmArgs("--add-opens", "java.base/java.util.zip=ALL-UNNAMED")
+    jvmArgs("-XX:MaxDirectMemorySize=2g")
     systemProperty("aeron.dir.delete.on.shutdown", "true")
     systemProperty("aeron.cluster.message.timeout", "30000000000")
 
