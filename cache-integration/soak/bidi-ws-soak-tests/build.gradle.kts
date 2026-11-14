@@ -61,13 +61,16 @@ tasks.test {
         "soak.kvCacheCount",
         "soak.counterCacheCount",
         "soak.keySpace",
+        "soak.keySizeBytes",
         "soak.valueSizeBytes",
         "soak.verifyEvery",
         "soak.mutationsPerRound",
         "soak.wholeCacheKeys",
         "soak.includeCounters",
         "soak.includeSynthetic",
-        "soak.opTimeoutSeconds"
+        "soak.nearCacheEnabled",
+        "soak.opTimeoutSeconds",
+        "aeron.cache.term.length"
     ).forEach { prop -> soakProp(prop)?.let { systemProperty(prop, it) } }
 
     failOnNoDiscoveredTests = true

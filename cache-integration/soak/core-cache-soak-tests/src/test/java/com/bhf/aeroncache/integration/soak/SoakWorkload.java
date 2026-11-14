@@ -3,6 +3,7 @@ package com.bhf.aeroncache.integration.soak;
 import com.bhf.aeroncache.gateway.client.GatewayClient;
 import com.bhf.aeroncache.gateway.messages.OperationStatus;
 import com.bhf.aeroncache.integration.soak.common.SoakOracle;
+import com.bhf.aeroncache.integration.soak.common.SoakPayloads;
 import com.bhf.aeroncache.integration.soak.common.SoakRecordingListener;
 import com.bhf.aeroncache.integration.soak.common.SoakReport;
 import com.bhf.aeroncache.integration.soak.common.SoakRun;
@@ -53,13 +54,13 @@ final class SoakWorkload implements SoakRun {
     private static final long TTL_NONE = 0L;
     private static final long PARK_NANOS = 50_000L;
     private static final long PROGRESS_EVERY = 5_000L;
-    private static final char[] ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray();
 
     private final GatewayClient client;
     private final SoakRecordingListener listener;
     private final SoakConfig cfg;
     private final SoakReport report;
     private final SoakOracle oracle = new SoakOracle();
+    private final SoakPayloads payloads;
 
     private final Random rnd;
     private final long opTimeoutNanos;
@@ -76,6 +77,7 @@ final class SoakWorkload implements SoakRun {
         this.cfg = cfg;
         this.report = new SoakReport(cfg.seed, cfg.durationSeconds, cfg.toConfigMap());
         this.rnd = new Random(cfg.seed);
+        this.payloads = new SoakPayloads(cfg.keySizeBytes, cfg.valueSizeBytes);
         this.opTimeoutNanos = TimeUnit.SECONDS.toNanos(cfg.opTimeoutSeconds);
         this.opTable = buildOpTable(cfg);
     }
@@ -416,15 +418,11 @@ final class SoakWorkload implements SoakRun {
     }
 
     private String randomKey() {
-        return "k" + rnd.nextInt(cfg.keySpace);
+        return payloads.key(Integer.toString(rnd.nextInt(cfg.keySpace)));
     }
 
     private String randomValue() {
-        var chars = new char[cfg.valueSizeBytes];
-        for (int i = 0; i < chars.length; i++) {
-            chars[i] = ALPHABET[rnd.nextInt(ALPHABET.length)];
-        }
-        return new String(chars);
+        return payloads.randomValue(rnd);
     }
 
     private String nextCorr() {

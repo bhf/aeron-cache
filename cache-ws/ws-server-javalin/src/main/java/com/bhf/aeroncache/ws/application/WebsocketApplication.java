@@ -99,7 +99,8 @@ public class WebsocketApplication {
     public static int startWebsocketInterface(int port) {
         System.out.println("Starting Websocket interface");
         tracingServiceName = System.getenv("OTEL_SERVICE_NAME");
-        nearCacheEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false"));
+        nearCacheEnabled = Boolean.parseBoolean(System.getProperty("NEAR_CACHE_ENABLED",
+                System.getenv().getOrDefault("NEAR_CACHE_ENABLED", "false")));
         System.out.println("Near cache hydration enabled: " + nearCacheEnabled);
         nearCacheManager = nearCacheEnabled ? newNearCacheManager() : null;
         countersNearCacheManager = nearCacheEnabled ? newNearCacheManager() : null;

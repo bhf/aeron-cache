@@ -2,6 +2,7 @@ package com.bhf.aeroncache.integration.soak.bidi;
 
 import com.bhf.aeroncache.integration.soak.bidi.BidiSoakClient.CommandResponse;
 import com.bhf.aeroncache.integration.soak.common.SoakOracle;
+import com.bhf.aeroncache.integration.soak.common.SoakPayloads;
 import com.bhf.aeroncache.integration.soak.common.SoakReport;
 import com.bhf.aeroncache.ws.bidi.messages.WsOp;
 import org.apache.logging.log4j.LogManager;
@@ -38,7 +39,6 @@ final class BidiCommandSoakPhase {
     private static final long TTL_NONE = 0L;
     private static final long PARK_NANOS = 50_000L;
     private static final long PROGRESS_EVERY = 5_000L;
-    private static final char[] ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray();
     private static final String OK = "SUCCESS";
     private static final String UNKNOWN_KEY = "UNKNOWN_KEY";
 
@@ -46,6 +46,7 @@ final class BidiCommandSoakPhase {
     private final BidiSoakConfig cfg;
     private final SoakReport report;
     private final SoakOracle oracle = new SoakOracle();
+    private final SoakPayloads payloads;
     private final Random rnd;
     private final long opTimeoutNanos;
     private final OpType[] opTable;
@@ -60,6 +61,7 @@ final class BidiCommandSoakPhase {
         this.cfg = cfg;
         this.report = report;
         this.rnd = rnd;
+        this.payloads = new SoakPayloads(cfg.keySizeBytes, cfg.commandValueSizeBytes());
         this.opTimeoutNanos = TimeUnit.SECONDS.toNanos(cfg.opTimeoutSeconds);
         this.opTable = buildOpTable(cfg);
     }
@@ -367,15 +369,11 @@ final class BidiCommandSoakPhase {
     }
 
     private String randomKey() {
-        return "k" + rnd.nextInt(cfg.keySpace);
+        return payloads.key(Integer.toString(rnd.nextInt(cfg.keySpace)));
     }
 
     private String randomValue() {
-        var chars = new char[cfg.valueSizeBytes];
-        for (int i = 0; i < chars.length; i++) {
-            chars[i] = ALPHABET[rnd.nextInt(ALPHABET.length)];
-        }
-        return new String(chars);
+        return payloads.randomValue(rnd);
     }
 
     private String nextCorr() {

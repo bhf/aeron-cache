@@ -10,6 +10,7 @@ import com.bhf.aeroncache.gateway.messages.GatewayStreamUpdateDecoder;
 import com.bhf.aeroncache.gateway.messages.GatewaySubscribeAckDecoder;
 import com.bhf.aeroncache.gateway.messages.MessageHeaderDecoder;
 import com.bhf.aeroncache.models.CacheRequestMessageTypes;
+import com.bhf.aeroncache.utils.ClusterUtils;
 import com.bhf.aeroncache.transport.TransportMedia;
 import io.aeron.Aeron;
 import io.aeron.ChannelUriStringBuilder;
@@ -57,7 +58,9 @@ public class GatewayClient implements Agent, AutoCloseable {
     private static final int FRAGMENT_LIMIT = 10;
     private static final int COMMAND_LIMIT = 10;
     private static final int COMMAND_MSG_TYPE_ID = 1;
-    private static final int COMMAND_BUFFER_CAPACITY = 1 << 20;
+    private static final int TERM_SIZE_MULTIPLE = 4;
+    private static final int COMMAND_BUFFER_CAPACITY =
+            ClusterUtils.getConfiguredTermLength(16777216 * TERM_SIZE_MULTIPLE);
 
     private final Aeron aeron;
     private final int requestStreamId;

@@ -4,6 +4,7 @@ import com.bhf.aeroncache.integration.soak.bidi.BidiSoakClient.CommandResponse;
 import com.bhf.aeroncache.integration.soak.bidi.BidiSoakClient.Selector;
 import com.bhf.aeroncache.integration.soak.bidi.BidiSoakClient.StreamUpdate;
 import com.bhf.aeroncache.integration.soak.common.NearCacheAdmin;
+import com.bhf.aeroncache.integration.soak.common.SoakPayloads;
 import com.bhf.aeroncache.integration.soak.common.SoakReport;
 import com.bhf.aeroncache.ws.bidi.messages.WsOp;
 import org.apache.logging.log4j.LogManager;
@@ -91,14 +92,7 @@ final class BidiStreamingSoakPhase {
     private static final long PARK_NANOS = 50_000L;
     private static final long GRACE_NANOS = TimeUnit.MILLISECONDS.toNanos(300);
     private static final long PROGRESS_EVERY = 50L;
-    private static final String KEY_SUBSCRIBED = "k0";
-    private static final String KEY_OTHER = "k1";
 
-    // Dedicated keys for the deterministic patch-outcome tail (cold rounds) and the warm synthetic-patch
-    // rounds. Kept outside the k0..kN whole-cache key range so the random overwrite phase never touches them.
-    private static final String KEY_DELTA = "kd";
-    private static final String KEY_SUPPRESS = "ks";
-    private static final String KEY_FALLBACK = "kf";
     /** A value that is not parseable JSON, so no merge patch can be computed and the whole value is sent. */
     private static final String UNPARSEABLE_VALUE = "not json";
 
@@ -116,6 +110,16 @@ final class BidiStreamingSoakPhase {
     private final List<Variant> matrix;
     private final Map<String, Long> coverage = new TreeMap<>();
     private final Map<String, Long> nearPatchOutcomes = new TreeMap<>();
+    private final SoakPayloads payloads;
+
+    // Size-aware keys, derived once from the payload generator. The subscribed/other keys live inside the
+    // k0..kN whole-cache range; the delta/suppress/fallback keys are kept outside it so the random overwrite
+    // phase never touches them.
+    private final String keySubscribed;
+    private final String keyOther;
+    private final String keyDelta;
+    private final String keySuppress;
+    private final String keyFallback;
 
     private long corrSeq;
     private long cacheSeq;
@@ -132,6 +136,13 @@ final class BidiStreamingSoakPhase {
         this.opTimeoutNanos = TimeUnit.SECONDS.toNanos(cfg.opTimeoutSeconds);
         this.matrix = buildMatrix(cfg.includeCounters, cfg.includeSynthetic);
         Collections.shuffle(this.matrix, rnd);
+        // Streaming values are single-field JSON, so a 0 value size keeps the natural {"v":N} form.
+        this.payloads = new SoakPayloads(cfg.keySizeBytes, cfg.valueSizeBytes);
+        this.keySubscribed = payloads.key("0");
+        this.keyOther = payloads.key("1");
+        this.keyDelta = payloads.key("d");
+        this.keySuppress = payloads.key("s");
+        this.keyFallback = payloads.key("f");
     }
 
     void run(long deadlineNanos) {
@@ -313,7 +324,7 @@ final class BidiStreamingSoakPhase {
 
     private List<String> visibleKeys(Variant v) {
         if (v.scope() == Scope.KEY) {
-            return List.of(KEY_SUBSCRIBED);
+            return List.of(keySubscribed);
         }
         return keysFor(v);
     }
@@ -402,13 +413,13 @@ final class BidiStreamingSoakPhase {
                                         Map<String, List<ExpectedEvent>> expected) {
         for (var cache : caches) {
             if (v.scope() == Scope.WHOLE) {
-                addFirst(v, cache, KEY_SUPPRESS, model, expected);
-                overwriteSuppressed(cache, KEY_SUPPRESS, model);
-                addFirst(v, cache, KEY_FALLBACK, model, expected);
-                overwriteFallback(v, cache, KEY_FALLBACK, model, expected);
+                addFirst(v, cache, keySuppress, model, expected);
+                overwriteSuppressed(cache, keySuppress, model);
+                addFirst(v, cache, keyFallback, model, expected);
+                overwriteFallback(v, cache, keyFallback, model, expected);
             } else {
-                overwriteSuppressed(cache, KEY_SUBSCRIBED, model);
-                overwriteFallback(v, cache, KEY_SUBSCRIBED, model, expected);
+                overwriteSuppressed(cache, keySubscribed, model);
+                overwriteFallback(v, cache, keySubscribed, model, expected);
             }
         }
     }
@@ -462,13 +473,13 @@ final class BidiStreamingSoakPhase {
         var increments = new TreeMap<String, Long>();
         for (var cache : caches) {
             if (v.scope() == Scope.WHOLE) {
-                overwriteDelta(v, cache, KEY_DELTA, model, expected);
-                overwriteSuppressed(cache, KEY_SUPPRESS, model);
-                overwriteFallback(v, cache, KEY_FALLBACK, model, expected);
+                overwriteDelta(v, cache, keyDelta, model, expected);
+                overwriteSuppressed(cache, keySuppress, model);
+                overwriteFallback(v, cache, keyFallback, model, expected);
             } else {
-                overwriteDelta(v, cache, KEY_SUBSCRIBED, model, expected);
-                overwriteSuppressed(cache, KEY_SUBSCRIBED, model);
-                overwriteFallback(v, cache, KEY_SUBSCRIBED, model, expected);
+                overwriteDelta(v, cache, keySubscribed, model, expected);
+                overwriteSuppressed(cache, keySubscribed, model);
+                overwriteFallback(v, cache, keySubscribed, model, expected);
             }
             increments.merge(OUTCOME_DELTA, 1L, Long::sum);
             increments.merge(OUTCOME_SUPPRESSED, 1L, Long::sum);
@@ -499,9 +510,9 @@ final class BidiStreamingSoakPhase {
      * subscribed key in single-key scope (the only visible key). */
     private List<String> warmSeedKeys(Variant v) {
         if (v.scope() == Scope.KEY) {
-            return List.of(KEY_SUBSCRIBED);
+            return List.of(keySubscribed);
         }
-        return List.of(KEY_DELTA, KEY_SUPPRESS, KEY_FALLBACK);
+        return List.of(keyDelta, keySuppress, keyFallback);
     }
 
     private Map<String, Long> snapshotOutcomes() {
@@ -570,17 +581,17 @@ final class BidiStreamingSoakPhase {
 
     private List<String> keysFor(Variant v) {
         if (v.scope() == Scope.KEY) {
-            return List.of(KEY_SUBSCRIBED, KEY_OTHER);
+            return List.of(keySubscribed, keyOther);
         }
         var keys = new ArrayList<String>();
         for (int i = 0; i < cfg.wholeCacheKeys; i++) {
-            keys.add("k" + i);
+            keys.add(payloads.key(Integer.toString(i)));
         }
         return keys;
     }
 
     private boolean visible(Variant v, String key) {
-        return v.scope() == Scope.WHOLE || KEY_SUBSCRIBED.equals(key);
+        return v.scope() == Scope.WHOLE || keySubscribed.equals(key);
     }
 
     // ---------------------------------------------------------------- verification
@@ -680,7 +691,8 @@ final class BidiStreamingSoakPhase {
 
         // Issue a mutation that WOULD stream to this subscription if it were still live, then prove silence.
         var probeCache = active.get(0);
-        var probeKey = v.scope() == Scope.KEY ? KEY_SUBSCRIBED : "k0";
+        // Whole-cache scope: k0 is the first whole-cache key, which is the subscribed key.
+        var probeKey = keySubscribed;
         if (v.kind() == Kind.COUNTER) {
             mutate(WsOp.INCREMENT_COUNTER_ENTRY, probeCache, probeKey, null, 1L, "probe incrementCounter");
         } else {
@@ -747,7 +759,7 @@ final class BidiStreamingSoakPhase {
         var mode = v.mode() == Mode.PATCH ? "PATCH" : "FULL";
         var selectors = new ArrayList<Selector>();
         for (var cache : caches) {
-            var key = v.scope() == Scope.KEY ? KEY_SUBSCRIBED : null;
+            var key = v.scope() == Scope.KEY ? keySubscribed : null;
             selectors.add(new Selector(cache, key, mode));
         }
         subscriber.subscribe(corr, selectors, counters, snapshot);
@@ -820,11 +832,11 @@ final class BidiStreamingSoakPhase {
     }
 
     private String regularValue() {
-        return "{\"v\":" + rnd.nextInt(1_000_000) + "}";
+        return payloads.jsonValue(rnd);
     }
 
-    /** A {@code {"v":N}} value guaranteed to differ from {@code current}, so an overwrite always changes the
-     * value (an accidental repeat would be suppressed with no event and break the 1:1 expectation). */
+    /** A single-field {@code {"v":...}} value guaranteed to differ from {@code current}, so an overwrite always
+     * changes the value (an accidental repeat would be suppressed with no event and break the 1:1 expectation). */
     private String regularValueDiffering(String current) {
         String value;
         do {
