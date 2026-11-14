@@ -391,7 +391,7 @@ public class GatewaySubscriptionPublisher<I extends Reusable, K extends Reusable
      * @param consumer  The subscriber to hydrate.
      */
     private void replayNearCache(String cacheId, Set<String> keys, String requestId, Consumer<GatewayStreamUpdate> consumer) {
-        NearCache<Object> nearCache = nearCacheManager.get(cacheId);
+        NearCache<String, Object> nearCache = nearCacheManager.get(cacheId);
         if (nearCache == null) {
             return;
         }

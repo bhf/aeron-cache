@@ -520,7 +520,7 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
      * @param consumer  The subscriber to hydrate.
      */
     private void replayNearCache(String cacheId, Set<String> keys, String requestId, Consumer<CacheUpdateEvent> consumer) {
-        NearCache<Object> nearCache = nearCacheManager.get(cacheId);
+        NearCache<String, Object> nearCache = nearCacheManager.get(cacheId);
         if (nearCache == null) {
             return;
         }

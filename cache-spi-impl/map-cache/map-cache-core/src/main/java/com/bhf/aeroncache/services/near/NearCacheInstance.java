@@ -11,38 +11,38 @@ import java.util.function.BiFunction;
 
 @RequiredArgsConstructor
 @Log4j2
-public class NearCacheInstance<V> implements NearCache<V> {
+public class NearCacheInstance<K, V> implements NearCache<K, V> {
 
     private final String cacheName;
 
-    private final ConcurrentHashMap<String, V> localCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<K, V> localCache = new ConcurrentHashMap<>();
 
     @Override
-    public boolean containsKey(String key) {
+    public boolean containsKey(K key) {
         log.debug("Checking near cache '{}' for key '{}'", cacheName, key);
         return localCache.containsKey(key);
     }
 
     @Override
-    public V get(String key) {
+    public V get(K key) {
         log.debug("Getting from near cache '{}' for key '{}'", cacheName, key);
         return localCache.get(key);
     }
 
     @Override
-    public void put(String key, V value) {
+    public void put(K key, V value) {
         log.debug("Putting into near cache '{}' key '{}' with value '{}'", cacheName, key, value);
         localCache.put(key, value);
     }
 
     @Override
-    public V compute(String key, BiFunction<String, V, V> remappingFunction) {
+    public V compute(K key, BiFunction<K, V, V> remappingFunction) {
         log.debug("Computing new value in near cache '{}' for key '{}'", cacheName, key);
         return localCache.compute(key, remappingFunction);
     }
 
     @Override
-    public void remove(String key) {
+    public void remove(K key) {
         log.debug("Removing from near cache '{}' key '{}'", cacheName, key);
         localCache.remove(key);
     }
@@ -54,7 +54,7 @@ public class NearCacheInstance<V> implements NearCache<V> {
     }
 
     @Override
-    public Map<String, V> snapshot() {
+    public Map<K, V> snapshot() {
         return new LinkedHashMap<>(localCache);
     }
 

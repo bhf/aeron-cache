@@ -13,11 +13,11 @@ import java.util.concurrent.ConcurrentMap;
 @Log4j2
 public class ConcurrentNearCacheManager<V> implements NearCacheManager<V> {
 
-    private final ConcurrentMap<String, NearCacheInstance<V>> nearCacheMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, NearCacheInstance<String, V>> nearCacheMap = new ConcurrentHashMap<>();
 
     @Override
     public void put(String cacheId, String key, V value) {
-        nearCacheMap.computeIfAbsent(cacheId, NearCacheInstance::new).put(key, value);
+        nearCacheMap.computeIfAbsent(cacheId, id -> new NearCacheInstance<>(id)).put(key, value);
     }
 
     @Override
@@ -69,7 +69,7 @@ public class ConcurrentNearCacheManager<V> implements NearCacheManager<V> {
      */
     @SuppressWarnings("unchecked")
     private void applyPatch(String cacheId, String itemKey, V patch) {
-        var instance = nearCacheMap.computeIfAbsent(cacheId, NearCacheInstance::new);
+        var instance = nearCacheMap.computeIfAbsent(cacheId, id -> new NearCacheInstance<>(id));
         // Merge atomically against whatever value is held for the key at apply time. A plain get-then-put
         // would let a concurrent put (e.g. an HTTP worker thread priming the key from the source cache) land
         // between the read of the baseline and the write of the merged result, losing that update or merging
@@ -83,7 +83,7 @@ public class ConcurrentNearCacheManager<V> implements NearCacheManager<V> {
     }
 
     @Override
-    public NearCache<V> get(String cacheId) {
+    public NearCache<String, V> get(String cacheId) {
         return nearCacheMap.get(cacheId);
     }
 
