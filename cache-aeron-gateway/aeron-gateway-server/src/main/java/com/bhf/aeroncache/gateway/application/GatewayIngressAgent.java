@@ -553,7 +553,7 @@ public class GatewayIngressAgent implements Agent {
     private void nearGetEntry(Publication publication, String correlationId, NearCacheManager<Object> near,
                               GatewaySubscriptionPublisher publisher, String cacheId, String key) {
         if (near.contains(cacheId)) {
-            final NearCache<Object> local = near.get(cacheId);
+            final NearCache<String, Object> local = near.get(cacheId);
             if (local.containsKey(key)) {
                 final Object value = local.get(key);
                 ingressWriter.writeCommandResponse(publication, correlationId, CacheOperationStatus.SUCCESS,
@@ -576,7 +576,7 @@ public class GatewayIngressAgent implements Agent {
                                 GatewaySubscriptionPublisher publisher, String cacheId) {
         ingressStreamEntryItems.clear();
         if (near.contains(cacheId)) {
-            final NearCache<Object> local = near.get(cacheId);
+            final NearCache<String, Object> local = near.get(cacheId);
             local.snapshot().forEach((k, v) -> ingressStreamEntryItems.put(k, v == null ? null : String.valueOf(v)));
             ingressWriter.writeEntries(publication, correlationId, CacheOperationStatus.SUCCESS, cacheId, ingressStreamEntryItems, true);
             return;

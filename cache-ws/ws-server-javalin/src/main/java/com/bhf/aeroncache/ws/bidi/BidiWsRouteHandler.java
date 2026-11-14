@@ -384,7 +384,7 @@ public class BidiWsRouteHandler {
     private void nearGetEntry(BidiSession session, String correlationId, NearCacheManager<Object> near,
                               CacheSubscriptionRequestPublisher publisher, String cacheId, String key) {
         if (near.contains(cacheId)) {
-            NearCache<Object> local = near.get(cacheId);
+            NearCache<String, Object> local = near.get(cacheId);
             if (local.containsKey(key)) {
                 var value = local.get(key);
                 session.send(codec.write(BidiCommandResponse.of(correlationId, CacheOperationStatus.SUCCESS,
@@ -405,7 +405,7 @@ public class BidiWsRouteHandler {
     private void nearGetEntries(BidiSession session, String correlationId, NearCacheManager<Object> near,
                                 CacheSubscriptionRequestPublisher publisher, String cacheId) {
         if (near.contains(cacheId)) {
-            NearCache<Object> local = near.get(cacheId);
+            NearCache<String, Object> local = near.get(cacheId);
             final Map<String, String> items = new HashMap<>();
             local.snapshot().forEach((k, v) -> items.put(k, v == null ? null : String.valueOf(v)));
             session.send(codec.write(BidiEntries.of(correlationId, CacheOperationStatus.SUCCESS, cacheId, items, true)));

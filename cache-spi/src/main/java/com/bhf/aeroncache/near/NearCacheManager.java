@@ -14,7 +14,7 @@ public interface NearCacheManager<V> {
 
     boolean contains(String cacheId);
 
-    NearCache<V> get(String cacheId);
+    NearCache<String, V> get(String cacheId);
 
     void handleCacheUpdate(CacheUpdateEvent<V> cacheUpdateEvent);
 
