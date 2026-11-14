@@ -42,9 +42,12 @@ tasks.test {
         "soak.seed",
         "soak.mutationsPerRound",
         "soak.wholeCacheKeys",
+        "soak.keySizeBytes",
+        "soak.valueSizeBytes",
         "soak.opTimeoutSeconds",
         "soak.includeCounters",
-        "soak.includeSynthetic"
+        "soak.includeSynthetic",
+        "aeron.cache.term.length"
     ).forEach { prop -> soakProp(prop)?.let { systemProperty(prop, it) } }
 
     failOnNoDiscoveredTests = true

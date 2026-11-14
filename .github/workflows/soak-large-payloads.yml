@@ -1,0 +1,117 @@
+name: Soak Large Payloads
+
+# Manually triggered soak that drives the SAME proven soak workloads as the per-interface soak-*.yml
+# workflows, but with large key/value payloads, across every command and streaming interface in one dispatch:
+#   - core-cache   : Aeron gateway command/oracle
+#   - bidi-ws      : bidi websocket command + streaming phases
+#   - streaming    : Aeron streaming subscriptions
+#   - sse          : server-sent events streaming
+#   - streaming-ws : one-directional streaming websocket
+#
+# It is a configuration of the existing machinery, not a new test: soak.keySizeBytes / soak.valueSizeBytes feed
+# the shared SoakPayloads generator (keys are padded to size; command values are opaque bytes; streaming values
+# stay single-field {"v":"..."} so merge-patch verification is unaffected at any size). Large payloads need three
+# resources sized up together, so this workflow wires all three:
+#   1. Aeron term length - max Aeron message = term/8, and the cluster node term defaults to 64k (max msg 8k), so
+#      a large value would be rejected without bumping this. Applied to cluster nodes, servers and client.
+#   2. JVM heap - the default soak cap (2g) is deliberately tight to surface leaks; large payloads need headroom.
+#   3. /dev/shm - Aeron log buffers live there and scale ~3x the term length per publication, so the runner's
+#      shared-memory filesystem is enlarged.
+# Durations default short: big values grow the append-only Aeron archive (on the 14GB runner disk) fast.
+#
+# Deliberately NOT part of push/PR CI - runs only on demand.
+on:
+  workflow_dispatch:
+    inputs:
+      keySizeBytes:
+        description: 'Target key length in bytes (0 = natural "k"+index)'
+        type: string
+        default: '1024'
+      valueSizeBytes:
+        description: 'Target value length in bytes'
+        type: string
+        default: '65536'
+      termLength:
+        description: 'Aeron term buffer length (power of two 64k..1g; max Aeron message = term/8)'
+        type: string
+        default: '128m'
+      maxHeap:
+        description: 'JVM max heap for the soak JVM (-Xmx)'
+        type: string
+        default: '6g'
+      shmSizeGb:
+        description: '/dev/shm size in GiB (holds the Aeron log buffers)'
+        type: string
+        default: '8'
+      durationSeconds:
+        description: 'Wall-clock duration per suite (bidi splits this across its two phases)'
+        type: string
+        default: '600'
+      seed:
+        description: 'PRNG seed (blank = random; the resolved seed is recorded for reproduction)'
+        type: string
+        default: ''
+
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - { name: core-cache,   module: core-cache-soak-tests }
+          - { name: bidi-ws,      module: bidi-ws-soak-tests }
+          - { name: streaming,    module: streaming-soak-tests }
+          - { name: sse,          module: sse-soak-tests }
+          - { name: streaming-ws, module: streaming-ws-soak-tests }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: gradle
+
+      # Aeron log buffers live in /dev/shm and scale with the term length; the default runner size is too small
+      # for a 3-node in-process cluster plus servers at a large term.
+      - name: Enlarge /dev/shm
+        run: sudo mount -o remount,size=${{ inputs.shmSizeGb }}g /dev/shm
+
+      # No Docker/jib needed: the cluster, gateway/servers and clients all run in-process in the test JVM.
+      - name: Run large-payload soak (${{ matrix.suite.name }})
+        run: |
+          DURATION_ARGS="-Psoak.durationSeconds=${{ inputs.durationSeconds }}"
+          SUITE_ARGS=""
+          if [ "${{ matrix.suite.name }}" = "bidi-ws" ]; then
+            HALF=$(( ${{ inputs.durationSeconds }} / 2 ))
+            DURATION_ARGS="-Psoak.commandDurationSeconds=$HALF -Psoak.streamingDurationSeconds=$HALF"
+            # The bidi command/oracle phase reads through the near cache, which has no cluster read-through; at
+            # large value sizes the slower prime races the first read. Run with the near cache off so the command
+            # phase verifies the cluster directly. Synthetic-patch (warm) rounds need the near cache, so drop them
+            # (coerced off automatically, set here for clarity). Near-cache behaviour is covered at normal sizes.
+            SUITE_ARGS="-Psoak.nearCacheEnabled=false -Psoak.includeSynthetic=false"
+          fi
+          ./gradlew :cache-integration:soak:${{ matrix.suite.module }}:test \
+            -PskipIntegrationTests=false \
+            $DURATION_ARGS \
+            $SUITE_ARGS \
+            -Psoak.seed='${{ inputs.seed }}' \
+            -Psoak.keySizeBytes=${{ inputs.keySizeBytes }} \
+            -Psoak.valueSizeBytes=${{ inputs.valueSizeBytes }} \
+            -Psoak.maxHeap=${{ inputs.maxHeap }} \
+            -Paeron.cache.term.length=${{ inputs.termLength }}
+
+      - name: Upload soak report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-large-payloads-${{ matrix.suite.name }}-report
+          path: |
+            cache-integration/soak/${{ matrix.suite.module }}/build/reports/soak/
+            cache-integration/soak/${{ matrix.suite.module }}/build/reports/tests/
+            cache-integration/soak/${{ matrix.suite.module }}/build/test-results/
+          if-no-files-found: warn

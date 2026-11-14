@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that a bulk operations response larger than a single 100-entry batch is encoded as multiple
+ * Verifies that a bulk operations response larger than a single batch is encoded as multiple
  * frames, with {@code endOfBatch} set only on the final frame, and that decoding then accumulating those
  * frames reproduces every operation result in order. This is the encoder/decoder counterpart to the
  * end-of-batch accumulation the HTTP, WebSocket and gateway front-ends perform for bulk responses.
@@ -36,7 +36,7 @@ class BulkOpsResponseBatchingTest {
     @Test
     @DisplayName("Should split a large bulk response into multiple frames with end-of-batch only on the last")
     void shouldBatchBulkResponseAcrossFrames() {
-        // Arrange - a result with more operations than fit in a single 100-entry batch.
+        // Arrange - a result with more operations than fit in a single batch (well over any batch size).
         int opCount = 250;
         var requestId = "bulk-req";
         var result = new BulkCacheOpsResult<>(SupplierUtils.stringSupplier, SupplierUtils.stringSupplier, SupplierUtils.stringSupplier);
@@ -64,11 +64,13 @@ class BulkOpsResponseBatchingTest {
             }
         });
 
-        // Assert - three frames (100 + 100 + 50), end-of-batch only on the last, nothing dropped.
-        assertEquals(3, frameEndOfBatchFlags.size(), "expected the response to span three frames");
-        assertFalse(frameEndOfBatchFlags.get(0), "first frame must not be end-of-batch");
-        assertFalse(frameEndOfBatchFlags.get(1), "second frame must not be end-of-batch");
-        assertTrue(frameEndOfBatchFlags.get(2), "final frame must be end-of-batch");
+        // Assert - the response spans multiple frames, end-of-batch only on the last, nothing dropped.
+        int frameCount = frameEndOfBatchFlags.size();
+        assertTrue(frameCount > 1, "expected the response to span multiple frames");
+        for (int i = 0; i < frameCount - 1; i++) {
+            assertFalse(frameEndOfBatchFlags.get(i), "only the final frame may be end-of-batch (frame " + i + ")");
+        }
+        assertTrue(frameEndOfBatchFlags.get(frameCount - 1), "final frame must be end-of-batch");
 
         assertEquals(opCount, accumulatedKeys.size(), "expected every operation result across all frames");
         for (int i = 0; i < opCount; i++) {

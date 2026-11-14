@@ -25,6 +25,8 @@ final class SoakConfig {
     final int counterCacheCount;
     /** Size of the key space per cache; a small space forces overwrites, removes and collisions. */
     final int keySpace;
+    /** Target key length in bytes; {@code 0} leaves keys at their natural {@code "k"+index} length. */
+    final int keySizeBytes;
     /** Size in bytes of randomly generated values. */
     final int valueSizeBytes;
     /** Run a full oracle reconciliation sweep every N operations. */
@@ -33,12 +35,13 @@ final class SoakConfig {
     final int opTimeoutSeconds;
 
     private SoakConfig(long durationSeconds, long seed, int kvCacheCount, int counterCacheCount,
-                       int keySpace, int valueSizeBytes, int verifyEvery, int opTimeoutSeconds) {
+                       int keySpace, int keySizeBytes, int valueSizeBytes, int verifyEvery, int opTimeoutSeconds) {
         this.durationSeconds = durationSeconds;
         this.seed = seed;
         this.kvCacheCount = kvCacheCount;
         this.counterCacheCount = counterCacheCount;
         this.keySpace = keySpace;
+        this.keySizeBytes = keySizeBytes;
         this.valueSizeBytes = valueSizeBytes;
         this.verifyEvery = verifyEvery;
         this.opTimeoutSeconds = opTimeoutSeconds;
@@ -51,6 +54,7 @@ final class SoakConfig {
                 SoakProps.intProp("soak.kvCacheCount", 4),
                 SoakProps.intProp("soak.counterCacheCount", 4),
                 SoakProps.intProp("soak.keySpace", 500),
+                SoakProps.intProp("soak.keySizeBytes", 0),
                 SoakProps.intProp("soak.valueSizeBytes", 160),
                 SoakProps.intProp("soak.verifyEvery", 2000),
                 SoakProps.intProp("soak.opTimeoutSeconds", 30));
@@ -62,6 +66,7 @@ final class SoakConfig {
         map.put("kvCacheCount", kvCacheCount);
         map.put("counterCacheCount", counterCacheCount);
         map.put("keySpace", keySpace);
+        map.put("keySizeBytes", keySizeBytes);
         map.put("valueSizeBytes", valueSizeBytes);
         map.put("verifyEvery", verifyEvery);
         map.put("opTimeoutSeconds", opTimeoutSeconds);
@@ -75,6 +80,7 @@ final class SoakConfig {
                 + ", kvCacheCount=" + kvCacheCount
                 + ", counterCacheCount=" + counterCacheCount
                 + ", keySpace=" + keySpace
+                + ", keySizeBytes=" + keySizeBytes
                 + ", valueSizeBytes=" + valueSizeBytes
                 + ", verifyEvery=" + verifyEvery
                 + ", opTimeoutSeconds=" + opTimeoutSeconds + '}';

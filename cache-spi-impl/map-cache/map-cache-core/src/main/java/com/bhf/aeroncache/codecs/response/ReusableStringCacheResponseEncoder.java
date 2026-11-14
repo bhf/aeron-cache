@@ -15,7 +15,7 @@ import java.util.Map;
 
 public class ReusableStringCacheResponseEncoder implements CacheResponseEncoder<ReusableString, ReusableString, ReusableString> {
 
-    private static final int RESPONSE_BATCH_SIZE = 100;
+    private static final int RESPONSE_BATCH_SIZE = 10;
 
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final CacheCreatedEncoder cacheCreatedEncoder = new CacheCreatedEncoder();

@@ -19,6 +19,10 @@ public final class StreamingSoakConfig {
     public final int mutationsPerRound;
     /** Size of the key set used by whole-cache-scope rounds. */
     public final int wholeCacheKeys;
+    /** Target key length in bytes; {@code 0} leaves keys at their natural length. */
+    public final int keySizeBytes;
+    /** Target value length in bytes; {@code 0} leaves values as single-field {@code {"v":N}}. */
+    public final int valueSizeBytes;
     /** Per-operation / per-verification timeout; a breach means the cluster or a connection stalled. */
     public final int opTimeoutSeconds;
     /** Whether to include counter-cache subscription variants in the coverage matrix. */
@@ -27,11 +31,14 @@ public final class StreamingSoakConfig {
     public final boolean includeSynthetic;
 
     private StreamingSoakConfig(long durationSeconds, long seed, int mutationsPerRound, int wholeCacheKeys,
-                               int opTimeoutSeconds, boolean includeCounters, boolean includeSynthetic) {
+                               int keySizeBytes, int valueSizeBytes, int opTimeoutSeconds,
+                               boolean includeCounters, boolean includeSynthetic) {
         this.durationSeconds = durationSeconds;
         this.seed = seed;
         this.mutationsPerRound = mutationsPerRound;
         this.wholeCacheKeys = wholeCacheKeys;
+        this.keySizeBytes = keySizeBytes;
+        this.valueSizeBytes = valueSizeBytes;
         this.opTimeoutSeconds = opTimeoutSeconds;
         this.includeCounters = includeCounters;
         this.includeSynthetic = includeSynthetic;
@@ -43,6 +50,8 @@ public final class StreamingSoakConfig {
                 SoakProps.seed("soak.seed"),
                 SoakProps.intProp("soak.mutationsPerRound", 8),
                 SoakProps.intProp("soak.wholeCacheKeys", 5),
+                SoakProps.intProp("soak.keySizeBytes", 0),
+                SoakProps.intProp("soak.valueSizeBytes", 0),
                 SoakProps.intProp("soak.opTimeoutSeconds", 30),
                 SoakProps.boolProp("soak.includeCounters", true),
                 SoakProps.boolProp("soak.includeSynthetic", true));
@@ -52,6 +61,8 @@ public final class StreamingSoakConfig {
         var map = new LinkedHashMap<String, Object>();
         map.put("mutationsPerRound", mutationsPerRound);
         map.put("wholeCacheKeys", wholeCacheKeys);
+        map.put("keySizeBytes", keySizeBytes);
+        map.put("valueSizeBytes", valueSizeBytes);
         map.put("opTimeoutSeconds", opTimeoutSeconds);
         map.put("includeCounters", includeCounters);
         map.put("includeSynthetic", includeSynthetic);
@@ -64,6 +75,8 @@ public final class StreamingSoakConfig {
                 + ", seed=" + seed
                 + ", mutationsPerRound=" + mutationsPerRound
                 + ", wholeCacheKeys=" + wholeCacheKeys
+                + ", keySizeBytes=" + keySizeBytes
+                + ", valueSizeBytes=" + valueSizeBytes
                 + ", opTimeoutSeconds=" + opTimeoutSeconds
                 + ", includeCounters=" + includeCounters
                 + ", includeSynthetic=" + includeSynthetic + '}';

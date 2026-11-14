@@ -57,9 +57,11 @@ tasks.test {
         "soak.kvCacheCount",
         "soak.counterCacheCount",
         "soak.keySpace",
+        "soak.keySizeBytes",
         "soak.valueSizeBytes",
         "soak.verifyEvery",
-        "soak.opTimeoutSeconds"
+        "soak.opTimeoutSeconds",
+        "aeron.cache.term.length"
     ).forEach { prop -> soakProp(prop)?.let { systemProperty(prop, it) } }
 
     // Surface each test's outcome in the console/CI log, and fail loudly if none are discovered, so a

@@ -33,7 +33,8 @@ import static com.bhf.aeroncache.integration.soak.common.Variant.Scope;
  *
  * <p>The matrix is cycled round-robin in a seeded-shuffled order so the first full pass exercises every cell, and
  * the run fails if any cell was missed once a full pass completed, so a green run proves full coverage. Values
- * are single-field JSON {@code {"v":N}} so merge-patch == overwrite.
+ * are single-field JSON ({@code {"v":N}}, or {@code {"v":"<sized string>"}} when a value size is configured) so
+ * merge-patch == overwrite; keys and value size come from the shared {@link SoakPayloads} generator.
  *
  * <p><b>Patch semantics.</b> A PATCH-mode subscriber present for a key's first insert receives the whole value as
  * a full {@code ADD_ITEM} baseline; a changed overwrite streams a {@code PATCH_ITEM} delta; a no-op overwrite is
@@ -49,14 +50,7 @@ public final class StreamingSoakWorkload implements SoakRun, SoakFailures {
 
     private static final long PARK_NANOS = 50_000L;
     private static final long PROGRESS_EVERY = 50L;
-    private static final String KEY_SUBSCRIBED = "k0";
-    private static final String KEY_OTHER = "k1";
 
-    // Dedicated keys for the deterministic patch-outcome tail (cold rounds) and the warm synthetic-patch rounds.
-    // Kept outside the k0..kN whole-cache key range so the random overwrite phase never touches them.
-    private static final String KEY_DELTA = "kd";
-    private static final String KEY_SUPPRESS = "ks";
-    private static final String KEY_FALLBACK = "kf";
     /** A value that is not parseable JSON, so no merge patch can be computed and the whole value is sent. */
     private static final String UNPARSEABLE_VALUE = "not json";
 
@@ -75,7 +69,17 @@ public final class StreamingSoakWorkload implements SoakRun, SoakFailures {
     private final VariantMatrix matrix;
     private final GatewayCommandDriver driver;
     private final StreamVerifier verifier;
+    private final SoakPayloads payloads;
     private final Map<String, Long> nearPatchOutcomes = new TreeMap<>();
+
+    // Size-aware keys, derived once from the payload generator. The subscribed/other keys live inside the
+    // k0..kN whole-cache range; the delta/suppress/fallback keys are kept outside it so the random overwrite
+    // phase never touches them.
+    private final String keySubscribed;
+    private final String keyOther;
+    private final String keyDelta;
+    private final String keySuppress;
+    private final String keyFallback;
 
     private long cacheSeq;
     private String currentCell = "";
@@ -100,6 +104,12 @@ public final class StreamingSoakWorkload implements SoakRun, SoakFailures {
         this.matrix = new VariantMatrix(cfg.includeCounters, cfg.includeSynthetic, rnd);
         this.driver = new GatewayCommandDriver(client, listener, this, opTimeoutNanos, cfg.opTimeoutSeconds);
         this.verifier = new StreamVerifier(driver, this, report, opTimeoutNanos, cfg.opTimeoutSeconds);
+        this.payloads = new SoakPayloads(cfg.keySizeBytes, cfg.valueSizeBytes);
+        this.keySubscribed = payloads.key("0");
+        this.keyOther = payloads.key("1");
+        this.keyDelta = payloads.key("d");
+        this.keySuppress = payloads.key("s");
+        this.keyFallback = payloads.key("f");
     }
 
     @Override
@@ -269,7 +279,7 @@ public final class StreamingSoakWorkload implements SoakRun, SoakFailures {
 
     private List<String> visibleKeys(Variant v) {
         if (v.scope() == Scope.KEY) {
-            return List.of(KEY_SUBSCRIBED);
+            return List.of(keySubscribed);
         }
         return keysFor(v);
     }
@@ -354,13 +364,13 @@ public final class StreamingSoakWorkload implements SoakRun, SoakFailures {
     private void appendPatchOutcomeTail(Variant v, List<String> caches, RoundModel model, Expectations expected) {
         for (var cache : caches) {
             if (v.whole()) {
-                addFirst(v, cache, KEY_SUPPRESS, model, expected);
-                overwriteSuppressed(cache, KEY_SUPPRESS, model);
-                addFirst(v, cache, KEY_FALLBACK, model, expected);
-                overwriteFallback(v, cache, KEY_FALLBACK, model, expected);
+                addFirst(v, cache, keySuppress, model, expected);
+                overwriteSuppressed(cache, keySuppress, model);
+                addFirst(v, cache, keyFallback, model, expected);
+                overwriteFallback(v, cache, keyFallback, model, expected);
             } else {
-                overwriteSuppressed(cache, KEY_SUBSCRIBED, model);
-                overwriteFallback(v, cache, KEY_SUBSCRIBED, model, expected);
+                overwriteSuppressed(cache, keySubscribed, model);
+                overwriteFallback(v, cache, keySubscribed, model, expected);
             }
         }
     }
@@ -411,13 +421,13 @@ public final class StreamingSoakWorkload implements SoakRun, SoakFailures {
             var increments = new TreeMap<String, Long>();
             for (var cache : caches) {
                 if (v.whole()) {
-                    overwriteDelta(v, cache, KEY_DELTA, model, expected);
-                    overwriteSuppressed(cache, KEY_SUPPRESS, model);
-                    overwriteFallback(v, cache, KEY_FALLBACK, model, expected);
+                    overwriteDelta(v, cache, keyDelta, model, expected);
+                    overwriteSuppressed(cache, keySuppress, model);
+                    overwriteFallback(v, cache, keyFallback, model, expected);
                 } else {
-                    overwriteDelta(v, cache, KEY_SUBSCRIBED, model, expected);
-                    overwriteSuppressed(cache, KEY_SUBSCRIBED, model);
-                    overwriteFallback(v, cache, KEY_SUBSCRIBED, model, expected);
+                    overwriteDelta(v, cache, keySubscribed, model, expected);
+                    overwriteSuppressed(cache, keySubscribed, model);
+                    overwriteFallback(v, cache, keySubscribed, model, expected);
                 }
                 increments.merge(OUTCOME_DELTA, 1L, Long::sum);
                 increments.merge(OUTCOME_SUPPRESSED, 1L, Long::sum);
@@ -453,9 +463,9 @@ public final class StreamingSoakWorkload implements SoakRun, SoakFailures {
      * subscribed key in single-key scope (the only visible key). */
     private List<String> warmSeedKeys(Variant v) {
         if (v.scope() == Scope.KEY) {
-            return List.of(KEY_SUBSCRIBED);
+            return List.of(keySubscribed);
         }
-        return List.of(KEY_DELTA, KEY_SUPPRESS, KEY_FALLBACK);
+        return List.of(keyDelta, keySuppress, keyFallback);
     }
 
     private Map<String, Long> snapshotOutcomes() {
@@ -521,17 +531,17 @@ public final class StreamingSoakWorkload implements SoakRun, SoakFailures {
 
     private List<String> keysFor(Variant v) {
         if (v.scope() == Scope.KEY) {
-            return List.of(KEY_SUBSCRIBED, KEY_OTHER);
+            return List.of(keySubscribed, keyOther);
         }
         var keys = new ArrayList<String>();
         for (int i = 0; i < cfg.wholeCacheKeys; i++) {
-            keys.add("k" + i);
+            keys.add(payloads.key(Integer.toString(i)));
         }
         return keys;
     }
 
     private boolean visible(Variant v, String key) {
-        return v.whole() || KEY_SUBSCRIBED.equals(key);
+        return v.whole() || keySubscribed.equals(key);
     }
 
     // ---------------------------------------------------------------- subscription lifecycle
@@ -558,7 +568,7 @@ public final class StreamingSoakWorkload implements SoakRun, SoakFailures {
 
     private SubscriptionSpec toSpec(Variant v, List<String> caches) {
         boolean keyScoped = v.scope() == Scope.KEY;
-        return new SubscriptionSpec(List.copyOf(caches), keyScoped, keyScoped ? KEY_SUBSCRIBED : null,
+        return new SubscriptionSpec(List.copyOf(caches), keyScoped, keyScoped ? keySubscribed : null,
                 v.mode() == Mode.PATCH, v.hydrate(), v.counters());
     }
 
@@ -585,7 +595,8 @@ public final class StreamingSoakWorkload implements SoakRun, SoakFailures {
         probe.unsubscribe(active, v.counters());
 
         var probeCache = active.get(0);
-        var probeKey = v.scope() == Scope.KEY ? KEY_SUBSCRIBED : "k0";
+        // Whole-cache scope: k0 is the first whole-cache key, which is the subscribed key.
+        var probeKey = keySubscribed;
         if (v.counters()) {
             // Increment (not add) a pre-seeded key: a mutation that definitely streams if still subscribed.
             driver.incrementCounter(probeCache, probeKey, 1L);
@@ -606,11 +617,11 @@ public final class StreamingSoakWorkload implements SoakRun, SoakFailures {
     }
 
     private String regularValue() {
-        return "{\"v\":" + rnd.nextInt(1_000_000) + "}";
+        return payloads.jsonValue(rnd);
     }
 
-    /** A {@code {"v":N}} value guaranteed to differ from {@code current}, so an overwrite always changes the value
-     * (an accidental repeat would be suppressed with no event and break the 1:1 expectation). */
+    /** A single-field {@code {"v":...}} value guaranteed to differ from {@code current}, so an overwrite always
+     * changes the value (an accidental repeat would be suppressed with no event and break the 1:1 expectation). */
     private String regularValueDiffering(String current) {
         String value;
         do {

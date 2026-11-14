@@ -77,6 +77,7 @@ public class SSEApplication extends Jooby {
     private static final String LIVENESS = "/liveness/";
     private static final String READINESS = "/readiness/";
     private static final boolean PRE_ENCODE_CACHE_REQUESTS = false;
+    public static final int TERM_SIZE_MULTIPLE = 4;
     private static AeronCacheClusterListener client;
     private static CacheSubscriptionRequestPublisher subscriptionService;
     private static CacheSubscriptionRequestPublisher countersSubscriptionService;
@@ -595,7 +596,7 @@ public class SSEApplication extends Jooby {
 
     private static void setupCacheConnection() {
         try {
-            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(4096);
+            ManyToOneRingBuffer rb = RingBufferUtils.buildRingbuffer(ClusterUtils.getConfiguredTermLength(16777216 * TERM_SIZE_MULTIPLE));
             System.out.println("Starting AeronCache Cluster Interface");
 
             CacheClientFactory clientFactory = getCacheClientFactory();

@@ -3,6 +3,7 @@ package com.bhf.aeroncache.integration.soak.bidi;
 import com.bhf.aeroncache.application.ClusterLauncher;
 import com.bhf.aeroncache.integration.soak.common.AbstractSoakTest;
 import com.bhf.aeroncache.integration.soak.common.HttpNearCacheAdmin;
+import com.bhf.aeroncache.integration.soak.common.SoakProps;
 import com.bhf.aeroncache.integration.soak.common.SoakRun;
 import com.bhf.aeroncache.ws.application.WebsocketApplication;
 import com.bhf.aeroncache.ws.bidi.messages.WsOp;
@@ -41,6 +42,11 @@ class BidiSoakTest extends AbstractSoakTest {
     @Override
     protected void startBackend() throws Exception {
         ClusterLauncher.launchTestCluster(CLUSTER_NODES, "soak_bidi_ws");
+        // Near caching is on by default (the streaming phase's synthetic-patch rounds need it), but the
+        // command/oracle phase reads through the near cache which has no cluster read-through - so a run that
+        // sizes up values (where priming is slower) can race a fresh read against the async prime. Set it via
+        // -Psoak.nearCacheEnabled=false (with -Psoak.includeSynthetic=false) for a large-payload command run.
+        System.setProperty("NEAR_CACHE_ENABLED", Boolean.toString(SoakProps.boolProp("soak.nearCacheEnabled", true)));
         // The WS server connects to the cluster directly as its own client (CLUSTER_ADDRESSES / embedded
         // media driver), so no SBE GatewayApplication is required. Port 0 => an ephemeral bound port.
         wsPort = WebsocketApplication.startWebsocketInterface(0);
