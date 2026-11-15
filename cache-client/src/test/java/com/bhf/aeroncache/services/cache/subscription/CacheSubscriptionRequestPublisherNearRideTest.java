@@ -31,9 +31,10 @@ import static org.mockito.Mockito.when;
 
 /**
  * Covers the near-cache "warm ride" for non-hydrating subscriptions on the shared subscription publisher used
- * by the SSE and WS gateways: a non-hydrating FULL subscriber on an already-warm cache must ride the near
- * cache session's existing shared cluster subscription instead of opening a redundant per-subscriber one,
- * while cold caches, PATCH mode and the internal near-cache session still subscribe to the cluster.
+ * by the SSE and WS gateways: a non-hydrating subscriber (FULL or PATCH) on an already-warm cache must ride the
+ * near cache session's existing shared cluster subscription instead of opening a redundant per-subscriber one -
+ * a PATCH subscriber's deltas are generated locally from the warm copy - while cold caches and the internal
+ * near-cache session still subscribe to the cluster.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CacheSubscriptionRequestPublisher - non-hydrating near cache ride")
@@ -132,18 +133,53 @@ class CacheSubscriptionRequestPublisherNearRideTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    @DisplayName("Non-hydrating PATCH subscribe on a warm cache still subscribes to the cluster")
-    void nonHydratingPatchOnWarmCacheSubscribesToCluster() {
+    @DisplayName("Non-hydrating whole-cache PATCH subscribe on a warm cache rides the shared subscription")
+    void nonHydratingWholeCachePatchOnWarmCacheRidesSharedSubscription() {
         // Arrange
         var sut = newPublisherWithNearCache();
+        when(nearCacheManager.contains(CACHE)).thenReturn(true);
 
         // Act
         sut.subscribeToCache(cluster, failureHandler, () -> { }, List.of(CACHE), null,
                 SubscriptionMode.PATCH, CLIENT_SESSION, REQUEST_ID, false, consumer);
 
-        // Assert - PATCH has no local baseline to apply deltas onto, so it must take the cluster path
+        // Assert - the warm copy generates equivalent merge-patch deltas locally, so no cluster round-trip
+        verifyNoClusterSubscribe();
+        assertEquals(1d, subscriptionsServed("whole"), "warm PATCH ride should be counted");
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("Non-hydrating keyed PATCH subscribe on a warm cache rides the shared subscription")
+    void nonHydratingKeyedPatchOnWarmCacheRidesSharedSubscription() {
+        // Arrange
+        var sut = newPublisherWithNearCache();
+        when(nearCacheManager.contains(CACHE)).thenReturn(true);
+
+        // Act
+        sut.subscribeToCache(cluster, failureHandler, () -> { }, List.of(CACHE), List.of(KEY),
+                SubscriptionMode.PATCH, CLIENT_SESSION, REQUEST_ID, false, consumer);
+
+        // Assert
+        verifyNoClusterSubscribe();
+        assertEquals(1d, subscriptionsServed("keyed"), "warm keyed PATCH ride should be counted");
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("Non-hydrating PATCH subscribe on a cold cache subscribes to the cluster")
+    void nonHydratingPatchOnColdCacheSubscribesToCluster() {
+        // Arrange
+        var sut = newPublisherWithNearCache();
+        when(nearCacheManager.contains(CACHE)).thenReturn(false);
+
+        // Act
+        sut.subscribeToCache(cluster, failureHandler, () -> { }, List.of(CACHE), null,
+                SubscriptionMode.PATCH, CLIENT_SESSION, REQUEST_ID, false, consumer);
+
+        // Assert - a cold cache has no warm copy to diff against, so it must take the cluster path
         verify(rbPublisher).sendCacheSubscribe(anyString(), anyList(), anyList(), anyList(), eq(false));
-        assertEquals(0d, subscriptionsServed("whole"), "PATCH is not served from the near cache");
+        assertEquals(0d, subscriptionsServed("whole"), "a cold cache is not served from the near cache");
     }
 
     @SuppressWarnings("unchecked")
