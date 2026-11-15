@@ -380,8 +380,9 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
                                  String requestId, boolean sendSnapshot, Consumer<CacheUpdateEvent> consumer) {
         var effectiveMode = mode == null ? SubscriptionMode.FULL : mode;
 
-        // Near-cache-backed serving applies to hydrating client subscriptions, whole-cache or key-based, in
-        // FULL or PATCH mode; the internal near cache session itself always takes the plain path. Serving a
+        // Near-cache-backed serving applies to client subscriptions, whole-cache or key-based, in FULL or
+        // PATCH mode, whether or not they hydrate; the internal near cache session itself always takes the
+        // plain path. Serving a
         // subscription from the near cache requires the cache to already be warm (the one exception, below,
         // is a cold whole-cache FULL subscription, which warms it): a key snapshot carries only the requested
         // keys and a PATCH subscription has no full baseline to diff against, so neither can warm a full local
@@ -391,16 +392,19 @@ public class CacheSubscriptionRequestPublisher<I extends Reusable, K extends Reu
         boolean nearEligible = isNearCacheEnabled() && sendSnapshot && !sessionId.equals(nearCacheSessionId);
 
         if (!nearEligible) {
-            // A non-hydrating FULL subscriber (whole-cache or keyed) on an already-warm cache can ride the near
-            // cache session's existing whole-cache cluster subscription - which already delivers every key's live
-            // updates - instead of opening a redundant per-subscriber cluster subscription. It receives no
-            // snapshot replay (it did not ask to hydrate), only live updates filtered to its keys. PATCH stays on
-            // the plain cluster path: a non-hydrating subscriber has no baseline for locally generated merge-patch
-            // deltas to apply onto, so it must receive the cluster's own PATCH stream.
-            if (isNearCacheEnabled() && effectiveMode == SubscriptionMode.FULL
-                    && !sessionId.equals(nearCacheSessionId) && allCachesWarm(cacheIds)) {
+            // A non-hydrating subscriber (whole-cache or keyed, FULL or PATCH) on an already-warm cache can ride
+            // the near cache session's existing whole-cache cluster subscription - which already delivers every
+            // key's live updates - instead of opening a redundant per-subscriber cluster subscription. It receives
+            // no snapshot replay (it did not ask to hydrate), only live updates filtered to its keys. For a PATCH
+            // subscriber those updates are turned into merge-patch deltas computed from the warm copy (see
+            // handleCacheEntryUpdated). That is the same stream the cluster would send such a subscriber: the
+            // cluster gives a non-hydrating PATCH subscriber no snapshot either, and emits a delta per update off
+            // the cache's own prior value (a full ADD_ITEM only on a genuine first insert) - which the warm copy
+            // mirrors exactly - so riding locally is equivalent, with no per-subscriber baseline on either path.
+            if (isNearCacheEnabled() && !sessionId.equals(nearCacheSessionId) && allCachesWarm(cacheIds)) {
+                boolean generatePatch = (effectiveMode == SubscriptionMode.PATCH);
                 doSubscribe(cluster, subscriptionFailureHandler, subscriptionAckHandler, cacheIds, keys, effectiveMode,
-                        sessionId, requestId, false, false, false, consumer);
+                        sessionId, requestId, false, false, generatePatch, consumer);
                 // Count the cluster subscribe avoided, per cache, mirroring the hydration-served hit signal.
                 new LinkedHashSet<>(cacheIds).forEach(c -> recordNearSubscriptionServed(!wholeCache));
                 return;
