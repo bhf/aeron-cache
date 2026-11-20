@@ -15,6 +15,13 @@ nearCacheEnabled: false
 aeroncacheGatewayConfigmap: aeroncache-gateway-config
 requestPubHost: "aeroncache-gateway"
 
+# Ephemeral (SINGLE mode) cache response-channel endpoints the gateway connects to as a client. Left
+# blank in clustered (RAFT) mode; set by the install-ephemeral target to the ephemeral cache service's
+# request/response-control endpoints. Only the gateway's upstream cache connection changes between
+# modes; its downstream client-facing endpoints (below) are the same in both.
+ephemeralRequestEndpoint: ""
+ephemeralResponseControlEndpoint: ""
+
 # The Aeron client facing request endpoint and response control endpoint used for
 # response channels (control-mode=response). Both are the addresses the gateway BINDS locally, so
 # they must be a local interface, not a Service name: a pod cannot bind a Service ClusterIP (the

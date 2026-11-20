@@ -10,6 +10,11 @@ data:
   REQUEST_PUB_HOST: {{ tpl .Values.requestPubHost . | quote }}
   GATEWAY_REQUEST_ENDPOINT: {{ tpl .Values.gatewayRequestEndpoint . | quote }}
   GATEWAY_RESPONSE_CONTROL_ENDPOINT: {{ tpl .Values.gatewayResponseControlEndpoint . | quote }}
+  {{- if .Values.ephemeralRequestEndpoint }}
+  EPHEMERAL_REQUEST_ENDPOINT: {{ tpl .Values.ephemeralRequestEndpoint . | quote }}
+  EPHEMERAL_RESPONSE_CONTROL_ENDPOINT: {{ tpl .Values.ephemeralResponseControlEndpoint . | quote }}
+  AERON_IMAGE_LIVENESS_TIMEOUT_SECONDS: {{ .Values.aeronImageLivenessTimeoutSeconds | default "2" | quote }}
+  {{- end }}
   {{- if .Values.idleStrategy }}
   IDLE_STRATEGY: {{ tpl .Values.idleStrategy . | quote }}
   {{- end }}

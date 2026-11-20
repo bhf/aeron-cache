@@ -132,6 +132,31 @@ services:
       - CACHE_MODE=SINGLE
       - EPHEMERAL_REQUEST_ENDPOINT=node0:8075
       - EPHEMERAL_RESPONSE_CONTROL_ENDPOINT=node0:8076
+  cache-gateway-client:
+    shm_size: '1gb'
+    build:
+      context: cache-aeron-gateway/aeron-gateway-server
+      dockerfile: ./Dockerfile
+    depends_on:
+      - node0
+    networks:
+      internal_bus:
+        ipv4_address: 172.16.202.13
+    ports:
+      - 7073:7073
+      - 7075:7075/udp
+      - 7076:7076/udp
+    environment:
+      - OTEL_SERVICE_NAME=aeron-cache-gateway
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_JAVAAGENT_LOGGING=none
+      - CLUSTER_ADDRESSES=node0
+      - CACHE_MODE=SINGLE
+      - EPHEMERAL_REQUEST_ENDPOINT=node0:8075
+      - EPHEMERAL_RESPONSE_CONTROL_ENDPOINT=node0:8076
+      - GATEWAY_REQUEST_ENDPOINT=0.0.0.0:7075
+      - GATEWAY_RESPONSE_CONTROL_ENDPOINT=172.16.202.13:7076
+      - NEAR_CACHE_ENABLED=true
   cache-ui:
     build:
       context: cache-ui/nextjs
