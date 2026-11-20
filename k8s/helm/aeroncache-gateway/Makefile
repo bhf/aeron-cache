@@ -15,7 +15,7 @@ install:
 	helm install -n aeroncache aeroncache-gateway -f values.yaml . $(MEDIA_DRIVER_FLAG) $(NEAR_CACHE_FLAG) $(GHCR_FLAGS)
 
 install-ephemeral:
-	helm install -n aeroncache aeroncache-gateway -f values.yaml --set cacheMode=SINGLE --set clusterAddresses=aeroncache-ephemeral-0.aeroncache-ephemeral.aeroncache.svc.cluster.local . $(MEDIA_DRIVER_FLAG) $(NEAR_CACHE_FLAG) $(GHCR_FLAGS)
+	helm install -n aeroncache aeroncache-gateway -f values.yaml --set cacheMode=SINGLE --set clusterAddresses=aeroncache-ephemeral-0.aeroncache-ephemeral.aeroncache.svc.cluster.local --set ephemeralRequestEndpoint=aeroncache-ephemeral-0.aeroncache-ephemeral.aeroncache.svc.cluster.local:8075 --set ephemeralResponseControlEndpoint=aeroncache-ephemeral-0.aeroncache-ephemeral.aeroncache.svc.cluster.local:8076 . $(MEDIA_DRIVER_FLAG) $(NEAR_CACHE_FLAG) $(GHCR_FLAGS)
 
 upgrade:
 	helm upgrade -n aeroncache aeroncache-gateway -f values.yaml

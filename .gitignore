@@ -178,3 +178,4 @@ cache-ui/.idea
 aeron
 aeron-cache-ui.env
 node0
+**/bin/
