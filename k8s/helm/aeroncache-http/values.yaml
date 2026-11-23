@@ -14,8 +14,9 @@ cacheMode: "RAFT"
 # sse and gateway charts, which also default it off.
 nearCacheEnabled: false
 
-# Set the configmap to use for the cluster config
-aeroncacheHTTPConfigmap: aeroncache-http-config
+# ConfigMap name. Blank means "<fullname>-config" (derived from the release); set a value to pin a
+# specific name. Read by the ConfigMap and the Deployment via the configmapName helper.
+aeroncacheHTTPConfigmap: ""
 
 # Ephemeral (SINGLE mode) cache response-channel endpoints. Left blank in clustered (RAFT) mode; set
 # by the install-ephemeral target to the ephemeral cache service's request/response-control endpoints.

@@ -1,8 +1,9 @@
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 3
 
-# Set the configmap to use for the cluster config
-aeroncacheClusterConfigmap: aeroncache-cluster-config
+# ConfigMap name. Blank means "<fullname>-config" (derived from the release); set a value to pin a
+# specific name. Read by the ConfigMap, the Deployment and clustertools via the configmapName helper.
+aeroncacheClusterConfigmap: ""
 
 # Aeron term buffer length for the cache data channels. The maximum Aeron message size is
 # termLength / 8, so 128m is required to support values up to ~16MB (see LargeItemTests). Leave

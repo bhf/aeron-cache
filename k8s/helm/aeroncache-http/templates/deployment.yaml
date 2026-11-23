@@ -78,7 +78,7 @@ spec:
             {{- end }}
           envFrom:
             - configMapRef:
-                name: {{ .Values.aeroncacheHTTPConfigmap }}
+                name: {{ include "aeroncache-http.configmapName" . }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

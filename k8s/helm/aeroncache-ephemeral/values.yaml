@@ -1,8 +1,9 @@
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
 
-# Set the configmap to use for the cluster config
-aeroncacheClusterConfigmap: aeroncache-ephemeral-config
+# ConfigMap name. Blank means "<fullname>-config" (derived from the release); set a value to pin a
+# specific name. Read by the ConfigMap and the Deployment via the configmapName helper.
+aeroncacheClusterConfigmap: ""
 
 # This sets the cache mode for the cluster
 cacheMode: "SINGLE"

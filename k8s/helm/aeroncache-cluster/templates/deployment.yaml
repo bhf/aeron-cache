@@ -71,7 +71,7 @@ spec:
             {{- end }}
           envFrom:
             - configMapRef:
-                name: {{ .Values.aeroncacheClusterConfigmap }}
+                name: {{ include "aeroncache-cluster.configmapName" . }}
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
