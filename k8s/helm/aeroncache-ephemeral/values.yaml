@@ -1,8 +1,9 @@
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
 
-# Set the configmap to use for the cluster config
-aeroncacheClusterConfigmap: aeroncache-ephemeral-config
+# ConfigMap name. Blank means "<fullname>-config" (derived from the release); set a value to pin a
+# specific name. Read by the ConfigMap and the Deployment via the configmapName helper.
+aeroncacheClusterConfigmap: ""
 
 # This sets the cache mode for the cluster
 cacheMode: "SINGLE"
@@ -73,7 +74,10 @@ release-name: "aeroncache-ephemeral"
 imagePullSecrets: []
 # This is to override the chart name.
 nameOverride: ""
-fullnameOverride: "aeroncache-ephemeral"
+# Left blank so the resource names derive from the Helm release name, letting several
+# ephemeral releases coexist in one namespace. Installing with release name
+# "aeroncache-ephemeral" reproduces the previous fixed names; set this to pin a name.
+fullnameOverride: ""
 
 # This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
 serviceAccount:
@@ -85,7 +89,7 @@ serviceAccount:
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: "aeroncache-ephemeral"
+  name: ""
 
 # This is for setting Kubernetes Annotations to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/

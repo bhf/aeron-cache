@@ -1,9 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  # Name is driven by the same value the Deployment reads via envFrom, so producer and consumer
-  # stay in sync and one http gateway can be installed per cache instance in a single namespace.
-  name: {{ .Values.aeroncacheHTTPConfigmap }}
+  # Name comes from the shared configmapName helper (default "<fullname>-config"), which the
+  # Deployment also reads via envFrom, so producer and consumer stay in sync and one http gateway
+  # can be installed per cache instance in a single namespace.
+  name: {{ include "aeroncache-http.configmapName" . }}
   namespace: {{ .Release.namespace }}
 data:
   DNS_DELAY: "true"

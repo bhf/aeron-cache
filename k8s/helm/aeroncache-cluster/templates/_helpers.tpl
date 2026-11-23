@@ -24,6 +24,14 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
+ConfigMap name. Defaults to "<fullname>-config" so it tracks the release like the other resources;
+override aeroncacheClusterConfigmap to pin a name. Read by the ConfigMap, Deployment and clustertools.
+*/}}
+{{- define "aeroncache-cluster.configmapName" -}}
+{{- .Values.aeroncacheClusterConfigmap | default (printf "%s-config" (include "aeroncache-cluster.fullname" .)) -}}
+{{- end }}
+
+{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "aeroncache-cluster.chart" -}}
@@ -120,7 +128,7 @@ Clustertools container
     {{- end }}
   envFrom:
     - configMapRef:
-        name: {{ .Values.aeroncacheClusterConfigmap }}
+        name: {{ include "aeroncache-cluster.configmapName" . }}
   {{- with .Values.clustertools.livenessProbe }}
   livenessProbe:
     {{- toYaml . | nindent 4 }}
