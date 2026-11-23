@@ -1,12 +1,22 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aeroncache-cluster-config
+  # Name is driven by the same value the Deployment reads via envFrom, so producer and consumer
+  # stay in sync and several cluster releases can coexist in one namespace, each owning its config.
+  name: {{ .Values.aeroncacheClusterConfigmap }}
   namespace: {{ .Release.Namespace }}
 data:
   DNS_DELAY: "true"
   CACHE_MODE: {{ .Values.cacheMode | quote }}
-  CLUSTER_ADDRESSES: "aeroncache-cluster-0.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-1.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local,aeroncache-cluster-2.aeroncache-cluster.{{ .Release.Namespace }}.svc.cluster.local"
+  # The RAFT peer list is derived from this release's own headless Service (the chart fullname)
+  # and replicaCount, so the node count is honoured and each release resolves its own peers.
+  {{- $fullname := include "aeroncache-cluster.fullname" . -}}
+  {{- $ns := .Release.Namespace -}}
+  {{- $addrs := list -}}
+  {{- range $i := until (int .Values.replicaCount) -}}
+  {{- $addrs = append $addrs (printf "%s-%d.%s.%s.svc.cluster.local" $fullname $i $fullname $ns) -}}
+  {{- end }}
+  CLUSTER_ADDRESSES: {{ $addrs | join "," | quote }}
   {{- if .Values.idleStrategy }}
   IDLE_STRATEGY: {{ tpl .Values.idleStrategy . | quote }}
   {{- end }}
