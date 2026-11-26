@@ -10,16 +10,11 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import lombok.RequiredArgsConstructor;
 import org.hamcrest.Matchers;
-import org.json.JSONObject;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import java.util.stream.Stream;
 
 @ExtendWith(BackendTestLauncher.class)
 @RequiredArgsConstructor
@@ -36,15 +31,12 @@ abstract class CreateCacheTests {
         var cacheId = "12";
         CacheTestUtils.deleteCache(cacheId, backend, endpointsProvider);
 
-        JSONObject requestBody = new JSONObject().put("cacheId", cacheId);
-
         RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
-                .body(requestBody.toString())
 
                 // Act
-                .when().post(CREATE_ENDPOINT)
+                .when().put(CREATE_ENDPOINT + cacheId)
 
                 // Assert
                 .then().assertThat()
@@ -53,40 +45,34 @@ abstract class CreateCacheTests {
     }
 
     @ParameterizedTest
-    @DisplayName("Should return status 400 for badly formed requests to create a cache")
-    @MethodSource("provideBadParamsToCreateCache")
-    void shouldReturn400ForBadlyFormedCreateCacheRequest(String field, Object value, BackendTestResource backend) {
-        var requestBody = new JSONObject().put(field, value);
-
+    @DisplayName("Should return status 400 for cache ids containing special characters")
+    @ValueSource(strings = {"bad.id", "bad@id", "bad+id"})
+    void shouldReturn400ForCacheIdWithSpecialCharacters(String invalidCacheId, BackendTestResource backend) {
         RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
-                .body(requestBody.toString())
 
                 // Act
-                .when().post(CREATE_ENDPOINT)
+                .when().put(CREATE_ENDPOINT + invalidCacheId)
 
                 // Assert
                 .then().assertThat()
                 .statusCode(400)
-                .body("errorMsg", Matchers.notNullValue())
-                .body("helpMsg", Matchers.notNullValue())
-                .body("operationStatus", Matchers.notNullValue());
+                .body("errorMsg", Matchers.comparesEqualTo("Cache ID shouldn't contain special characters"))
+                .body("helpMsg", Matchers.comparesEqualTo(ErrorMessages.CACHE_ID_NO_SPECIAL_CHARACTERS))
+                .body("operationStatus", Matchers.comparesEqualTo("ERROR"));
     }
 
     @ParameterizedTest
     @DisplayName("Should return status 400 for invalid cache names")
     @ValueSource(strings = {"bulkops", "timed"})
     void shouldReturn400ForInvalidCacheNames(String invalidCacheId, BackendTestResource backend) {
-        JSONObject requestBody = new JSONObject().put("cacheId", invalidCacheId);
-
         RestAssured.given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
-                .body(requestBody.toString())
 
                 // Act
-                .when().post(CREATE_ENDPOINT)
+                .when().put(CREATE_ENDPOINT + invalidCacheId)
 
                 // Assert
                 .then().assertThat()
@@ -94,11 +80,6 @@ abstract class CreateCacheTests {
                 .body("errorMsg", Matchers.comparesEqualTo("Cache ID shouldn't be a reserved name"))
                 .body("helpMsg", Matchers.comparesEqualTo(ErrorMessages.CACHE_ID_NO_RESERVED_NAMES))
                 .body("operationStatus", Matchers.comparesEqualTo("ERROR"));
-    }
-
-    public static Stream<Arguments> provideBadParamsToCreateCache() {
-        return Stream.of(
-                Arguments.of("wrongFieldName", 1));
     }
 
 }

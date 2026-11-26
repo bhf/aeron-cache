@@ -15,32 +15,6 @@ servers:
   - url: http://localhost:7070
     description: Dev server
 paths:
-  /api/v1/cache:
-    post:
-      tags:
-        - CreateCache
-      summary: Create a new cache
-      description: Create a cache by specifying the cache Id in the request body
-      operationId: createCache
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/CreateResponse'
-        '400':
-          description: Bad Request
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/cache/bulkops:
     post:
       tags:
@@ -68,6 +42,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   /api/v1/cache/{cacheId}:
+    put:
+      tags:
+        - CreateCache
+      summary: Create a new cache
+      description: Create a cache with the Id specified in the URL path
+      operationId: createCache
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the cache to create
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CreateResponse'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     get:
       tags:
         - GetCache
