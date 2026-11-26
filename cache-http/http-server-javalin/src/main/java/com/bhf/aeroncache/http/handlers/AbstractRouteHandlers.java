@@ -135,8 +135,9 @@ public abstract class AbstractRouteHandlers<V extends Reusable, BV> {
      */
     public void handleCreateCacheRequest(Context ctx) {
         try {
-            var request = ctx.bodyAsClass(CreateCacheRequest.class);
-            log.info("Got create cache request on cacheId {}", request.cacheId());
+            var cacheId = ctx.pathParam("cacheId");
+            var request = new CreateCacheRequest(cacheId);
+            log.info("Got create cache request on cacheId {}", cacheId);
 
             if (!isCreateRequestValid(request, ctx)) {
                 return;
@@ -146,7 +147,7 @@ public abstract class AbstractRouteHandlers<V extends Reusable, BV> {
 
             CompletableFuture<CreateCacheResponse> future = new CompletableFuture<>();
             Consumer<CreateCacheResult<ReusableString>> consumer = HTTPConsumerUtils.getCreateCacheResultConsumer(future);
-            CompletableFuture.runAsync(() -> publisher.sendCreateCache(requestId, request.cacheId(), consumer));
+            CompletableFuture.runAsync(() -> publisher.sendCreateCache(requestId, cacheId, consumer));
 
             var response = future.get();
 
@@ -157,7 +158,7 @@ public abstract class AbstractRouteHandlers<V extends Reusable, BV> {
             ctx.status(HTTPStatusUtils.getHTTPCode(response.operationStatus()));
             ctx.json(response);
         } catch (Exception e) {
-            var errorMsg = "Badly formed request to create cache from request: " + ctx.body();
+            var errorMsg = "Badly formed request to create cache with Id: " + ctx.pathParam("cacheId");
             log.warn(errorMsg);
             HttpApplication.statsTracker.getTotalErrors().incrementAndGet();
             var badRequest = new RequestErrorResponse(errorMsg, ErrorMessages.CHECK_ALL_VALUES, CacheOperationStatus.ERROR);

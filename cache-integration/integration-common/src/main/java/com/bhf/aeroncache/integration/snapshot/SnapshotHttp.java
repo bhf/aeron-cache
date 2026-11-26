@@ -45,8 +45,7 @@ public final class SnapshotHttp {
     }
 
     public void createCache(String cacheId) {
-        var body = new JSONObject().put("cacheId", cacheId).toString();
-        var res = send(post(base + CACHE_API, body));
+        var res = send(put(base + CACHE_API + cacheId));
         expect2xx("create cache " + cacheId, res);
     }
 
@@ -67,8 +66,7 @@ public final class SnapshotHttp {
     }
 
     public void createCounterCache(String cacheId) {
-        var body = new JSONObject().put("cacheId", cacheId).toString();
-        var res = send(post(base + COUNTERS_API, body));
+        var res = send(put(base + COUNTERS_API + cacheId));
         expect2xx("create counter cache " + cacheId, res);
     }
 
@@ -161,6 +159,12 @@ public final class SnapshotHttp {
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body));
+    }
+
+    private HttpRequest.Builder put(String uri) {
+        return HttpRequest.newBuilder(URI.create(uri))
+                .header("Accept", "application/json")
+                .PUT(HttpRequest.BodyPublishers.noBody());
     }
 
     private HttpResponse<String> send(HttpRequest.Builder builder) {

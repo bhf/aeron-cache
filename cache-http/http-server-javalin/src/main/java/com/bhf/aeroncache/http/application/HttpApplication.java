@@ -407,7 +407,7 @@ public class HttpApplication {
         var countersHandlers = new CountersRouteHandlers(countersPublisher);
         Handler getItem = nearCacheEnabled ? countersNearCacheHandlers::handleGetItemRequest : countersHandlers::handleGetItemRequest;
         Handler getCache = nearCacheEnabled ? countersNearCacheHandlers::handleGetCacheRequest : countersHandlers::handleGetCacheRequest;
-        app.post(COUNTERS_API_PREFIX, counted("createCounterCache", countersHandlers::handleCreateCacheRequest))
+        app.put(COUNTERS_API_PREFIX + "<cacheId>", counted("createCounterCache", countersHandlers::handleCreateCacheRequest))
                 .get(COUNTERS_API_PREFIX + "<cacheId>/<key>", counted("getCounter", getItem))
                 .get(COUNTERS_API_PREFIX + "<cacheId>", counted("getCounterCache", getCache))
                 .post(COUNTERS_API_PREFIX + "timed/<cacheId>", counted("putTimedCounter", countersHandlers::handlePutTimedItemRequest))
@@ -442,7 +442,7 @@ public class HttpApplication {
         var handlers = new CacheRouteHandlers(cachePublisher);
         Handler getItem = nearCacheEnabled ? nearCacheHandlers::handleGetItemRequest : handlers::handleGetItemRequest;
         Handler getCache = nearCacheEnabled ? nearCacheHandlers::handleGetCacheRequest : handlers::handleGetCacheRequest;
-        app.post(CACHE_API_PREFIX, counted("createCache", handlers::handleCreateCacheRequest))
+        app.put(CACHE_API_PREFIX + "<cacheId>", counted("createCache", handlers::handleCreateCacheRequest))
                 .get(CACHE_API_PREFIX + "<cacheId>/<key>", counted("getItem", getItem))
                 .get(CACHE_API_PREFIX + "<cacheId>", counted("getCache", getCache))
                 .post(CACHE_API_PREFIX + "timed/<cacheId>", counted("putTimedItem", handlers::handlePutTimedItemRequest))

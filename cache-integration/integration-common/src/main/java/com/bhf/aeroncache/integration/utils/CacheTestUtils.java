@@ -21,12 +21,10 @@ public class CacheTestUtils {
      * @param cacheId The ID of the cache to create.
      */
     public static void createCache(String cacheId, BackendTestResource backend, TestEndpointsProvider endpointsProvider) {
-        JSONObject jsonObj = new JSONObject().put("cacheId", cacheId);
         given().port(backend.getHttpPort()).baseUri(backend.getBaseHttpUri())
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
-                .body(jsonObj.toString())
-                .request(Method.POST, endpointsProvider.getCreateEndpointCache());
+                .request(Method.PUT, endpointsProvider.getCreateEndpointCache() + cacheId);
     }
 
     /**

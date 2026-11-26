@@ -15,19 +15,20 @@ servers:
   - url: http://localhost:7070
     description: Dev server
 paths:
-  /api/v1/counters/:
-    post:
+  /api/v1/counters/{cacheId}:
+    put:
       tags:
         - CreateCounterCache
       summary: Create a new counter cache
-      description: Create a counter cache by specifying the cache Id in the request body
+      description: Create a counter cache with the Id specified in the URL path
       operationId: createCounterCache
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateRequest'
-        required: true
+      parameters:
+        - name: cacheId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the counter cache to create
       responses:
         '200':
           description: OK
@@ -41,7 +42,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/counters/{cacheId}:
     get:
       tags:
         - GetCounterCache
