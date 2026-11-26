@@ -228,10 +228,9 @@ export async function createCacheRequest(currentState: { message: string, error:
 
     logger.info("Creating cache request with id", cacheId)
     try {
-        const rawResponse = await fetch(AERON_CACHE_API + '/cache/', {
-            method: 'POST',
+        const rawResponse = await fetch(AERON_CACHE_API + '/cache/' + cacheId, {
+            method: 'PUT',
             headers,
-            body: JSON.stringify({cacheId}),
             cache: "no-cache"
         })
         const content = await rawResponse.json();
@@ -388,10 +387,9 @@ export async function createCounterCacheRequest(currentState: { message: string,
 
     logger.info("Creating counter cache request with id", cacheId)
     try {
-        const rawResponse = await fetch(AERON_CACHE_API + '/counters/', {
-            method: 'POST',
+        const rawResponse = await fetch(AERON_CACHE_API + '/counters/' + cacheId, {
+            method: 'PUT',
             headers,
-            body: JSON.stringify({cacheId}),
             cache: "no-cache"
         })
         const content = await rawResponse.json();
