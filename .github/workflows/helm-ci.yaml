@@ -123,9 +123,7 @@ jobs:
           curl --fail --retry 5 --retry-delay 3 --retry-connrefused http://localhost:7070/readiness/ || exit 1
 
           echo -e "\nCreating cache..."
-          curl -s --fail -X POST http://localhost:7070/api/v1/cache \
-            -H 'Content-Type: application/json' \
-            -d '{"cacheId": "smoke-test-cache"}' || exit 1
+          curl -s --fail -X PUT http://localhost:7070/api/v1/cache/smoke-test-cache || exit 1
 
           echo -e "\nPutting item into cache..."
           curl -s --fail -X POST http://localhost:7070/api/v1/cache/smoke-test-cache \

@@ -155,8 +155,7 @@ jobs:
           set -e
           CID="near-ci-$(date +%s)"
           echo "Creating cache $CID ..."
-          curl -s --fail -X POST http://localhost:7070/api/v1/cache/ \
-            -H 'Content-Type: application/json' -d "{\"cacheId\":\"$CID\"}" >/dev/null
+          curl -s --fail -X PUT "http://localhost:7070/api/v1/cache/$CID" >/dev/null
           echo "Adding item ..."
           curl -s --fail -X POST "http://localhost:7070/api/v1/cache/$CID" \
             -H 'Content-Type: application/json' -d '{"key":"k1","value":"v1"}' >/dev/null
