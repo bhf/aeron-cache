@@ -98,7 +98,10 @@ image:
 imagePullSecrets: []
 # This is to override the chart name.
 nameOverride: ""
-fullnameOverride: "aeroncache-ws"
+# Left blank so the resource names derive from the Helm release name, letting several
+# ws gateways coexist in one namespace. Installing with release name "aeroncache-ws"
+# reproduces the previous fixed names; set this to pin a name.
+fullnameOverride: ""
 
 # This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
 serviceAccount:
@@ -109,8 +112,8 @@ serviceAccount:
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: "aeroncache-ws"
+  # If not set and create is true, a name is generated using the fullname template (release-aware).
+  name: ""
 
 # This is for setting Kubernetes Annotations to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
