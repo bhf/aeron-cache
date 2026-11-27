@@ -1,8 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aeroncache-sse-config
-  namespace: {{ .Release.namespace }}
+  # Name comes from the shared configmapName helper (default "<fullname>-config"), which the
+  # Deployment also reads via envFrom, so producer and consumer stay in sync and one sse gateway
+  # can be installed per cache instance in a single namespace.
+  name: {{ include "aeroncache-sse.configmapName" . }}
+  namespace: {{ .Release.Namespace }}
 data:
   DNS_DELAY: "true"
   CACHE_MODE: {{ tpl .Values.cacheMode . | quote }}

@@ -11,8 +11,9 @@ cacheMode: "RAFT"
 # the container.
 nearCacheEnabled: false
 
-# Set the configmap to use for the cluster config
-aeroncacheGatewayConfigmap: aeroncache-gateway-config
+# ConfigMap name. Blank means "<fullname>-config" (derived from the release); set a value to pin a
+# specific name. Read by the ConfigMap and the Deployment via the configmapName helper.
+aeroncacheGatewayConfigmap: ""
 requestPubHost: "aeroncache-gateway"
 
 # Ephemeral (SINGLE mode) cache response-channel endpoints the gateway connects to as a client. Left

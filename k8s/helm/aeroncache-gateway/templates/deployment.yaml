@@ -65,7 +65,7 @@ spec:
               value: {{ .Values.externalMediaDriver.aeronDir | quote }}
           envFrom:
             - configMapRef:
-                name: {{ .Values.aeroncacheGatewayConfigmap }}
+                name: {{ include "aeroncache-gateway.configmapName" . }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

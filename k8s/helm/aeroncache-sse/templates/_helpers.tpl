@@ -24,6 +24,14 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
+ConfigMap name. Defaults to "<fullname>-config" so it tracks the release like the other resources;
+override aeroncacheSSEConfigmap to pin a name. Read by the ConfigMap and the Deployment.
+*/}}
+{{- define "aeroncache-sse.configmapName" -}}
+{{- .Values.aeroncacheSSEConfigmap | default (printf "%s-config" (include "aeroncache-sse.fullname" .)) -}}
+{{- end }}
+
+{{/*
 Workload (StatefulSet) name. When near caching is enabled we suffix it with "-near" so the near
 caching variant is visible in the pod name (StatefulSet pods are "<workload>-<ordinal>"). Only the
 workload's own name changes; the Service, its selector labels and the governing serviceName keep using
