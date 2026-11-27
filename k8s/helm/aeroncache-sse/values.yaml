@@ -10,8 +10,9 @@ cacheMode: "RAFT"
 # snapshot. Also exposes the near cache management endpoints. Sets NEAR_CACHE_ENABLED on the container.
 nearCacheEnabled: false
 
-# Set the configmap to use for the cluster config
-aeroncacheWSConfigmap: aeroncache-sse-config
+# ConfigMap name. Blank means "<fullname>-config" (derived from the release); set a value to pin a
+# specific name. Read by the ConfigMap and the Deployment via the configmapName helper.
+aeroncacheSSEConfigmap: ""
 
 # Ephemeral (SINGLE mode) cache response-channel endpoints. Left blank in clustered (RAFT) mode; set
 # by the install-ephemeral target to the ephemeral cache service's request/response-control endpoints.
