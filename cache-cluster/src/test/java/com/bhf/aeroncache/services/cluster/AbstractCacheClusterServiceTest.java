@@ -152,10 +152,20 @@ class AbstractCacheClusterServiceTest {
                 null, null, ReusableLong::new, cacheTimerService, cacheCountersTimerService);
     }
 
+    private static int bulkOpsPublishBatchSize() throws Exception {
+        Field field = AbstractCacheClusterService.class.getDeclaredField("BULK_OPS_PUBLISH_BATCH_SIZE");
+        field.setAccessible(true);
+        return field.getInt(null);
+    }
+
     @Test
     @DisplayName("Should publish a bulk ops response in chunks, end-of-batch only on the final chunk")
-    void shouldPublishBulkOpsResponseInChunks() {
-        // Arrange - a bulk request with more operations than the publish batch size (50): 120 -> 50, 50, 20.
+    void shouldPublishBulkOpsResponseInChunks() throws Exception {
+        // Arrange - a bulk request with more operations than the configured publish batch size, sized so the
+        // response spans three chunks with a partial final chunk regardless of how the batch size is tuned.
+        int batchSize = bulkOpsPublishBatchSize();
+        int opCount = batchSize * 2 + 1;
+
         var createCacheResult = new CreateCacheResult<>(new ReusableString());
         createCacheResult.setStatus(CacheOperationStatus.SUCCESS);
         when(cacheManager.createCache(any())).thenReturn(createCacheResult);
@@ -163,7 +173,6 @@ class AbstractCacheClusterServiceTest {
         var request = new BulkCacheOpsRequestDetails<>((Supplier<ReusableString>) ReusableString::new,
                 (Supplier<ReusableString>) ReusableString::new, (Supplier<ReusableString>) ReusableString::new);
         request.setRequestId("bulk-chunked");
-        int opCount = 120;
         for (int i = 0; i < opCount; i++) {
             request.addOperation(BulkOperationType.CREATE_CACHE, 0, 0, "op-" + i, ReusableString.build("cache-" + i), ReusableString.build(""), ReusableString.build(""));
         }
@@ -172,12 +181,17 @@ class AbstractCacheClusterServiceTest {
         // Act
         invokeBulkOps();
 
-        // Assert - three chunks published; sizes bounded by the batch size; end-of-batch only on the last.
-        assertEquals(List.of(50, 50, 20), sut.bulkPublishChunkSizes, "response should be published in bounded chunks");
-        int chunks = sut.bulkPublishEobFlags.size();
+        // Assert - every full chunk is bounded by the batch size, nothing is dropped, and only the final
+        // chunk carries the end-of-batch marker.
+        var chunkSizes = sut.bulkPublishChunkSizes;
+        int chunks = chunkSizes.size();
+        assertTrue(chunks > 1, "response should be published across multiple chunks");
+        assertEquals(opCount, chunkSizes.stream().mapToInt(Integer::intValue).sum(), "every operation result must be published exactly once");
         for (int i = 0; i < chunks - 1; i++) {
+            assertEquals(batchSize, chunkSizes.get(i), "intermediate chunk " + i + " should be a full batch");
             assertFalse(sut.bulkPublishEobFlags.get(i), "intermediate chunk " + i + " must not be end-of-batch");
         }
+        assertTrue(chunkSizes.get(chunks - 1) <= batchSize, "final chunk must not exceed the batch size");
         assertTrue(sut.bulkPublishEobFlags.get(chunks - 1), "final chunk must be end-of-batch");
     }
 
