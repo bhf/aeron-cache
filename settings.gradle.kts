@@ -11,6 +11,7 @@ include("cache-client")
 include("cache-messages-http")
 
 include("cache-http:http-server-javalin")
+include("cache-http:http-fanout")
 include("cache-ws:ws-server-javalin")
 include("cache-sse:sse-server-jooby")
 include("cache-aeron-gateway:aeron-gateway-server")

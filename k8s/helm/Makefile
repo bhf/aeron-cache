@@ -89,6 +89,15 @@ install-http-ephemeral:
 uninstall-http:
 	$(MAKE) -C aeroncache-http uninstall
 
+# The HTTP fan-out aggregator sits in front of several http gateways (one per cache cluster) and
+# scatter-gathers the admin/observability endpoints into a single cluster-wide view. Point its
+# gatewayAddresses value at the http gateway Services it should aggregate.
+install-http-fanout:
+	$(MAKE) -C aeroncache-http-fanout install
+
+uninstall-http-fanout:
+	$(MAKE) -C aeroncache-http-fanout uninstall
+
 install-ws:
 	$(MAKE) -C aeroncache-ws install
 
