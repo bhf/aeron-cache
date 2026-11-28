@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "aeroncache-http-fanout.workloadName" . }}
+  labels:
+    {{- include "aeroncache-http-fanout.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  podManagementPolicy: Parallel
+  serviceName: {{ include "aeroncache-http-fanout.fullname" . }}
+  selector:
+    matchLabels:
+      {{- include "aeroncache-http-fanout.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- if or .Values.podAnnotations .Values.javaagent.enabled .Values.appMetrics.enabled }}
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.javaagent.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.javaagent.metricsPort | quote }}
+        prometheus.io/path: {{ .Values.javaagent.metricsPath | quote }}
+        {{- end }}
+        {{- if .Values.appMetrics.enabled }}
+        aeroncache.io/app-metrics-scrape: "true"
+        aeroncache.io/app-metrics-port: {{ .Values.service.port | quote }}
+        aeroncache.io/app-metrics-path: {{ .Values.appMetrics.path | quote }}
+        {{- end }}
+      {{- end }}
+      labels:
+        {{- include "aeroncache-http-fanout.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "aeroncache-http-fanout.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            {{- if .Values.javaagent.enabled }}
+            {{- include "aeroncache-http-fanout.javaagentEnv" . | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "aeroncache-http-fanout.configmapName" . }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+            {{- if .Values.javaagent.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.javaagent.metricsPort }}
+              protocol: TCP
+            {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

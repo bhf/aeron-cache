@@ -1,0 +1,130 @@
+# The HTTP fan-out aggregator is stateless, so one replica is usually enough; it can be scaled
+# horizontally (every replica fans the same request out to all gateways).
+replicaCount: 1
+
+# Comma separated list of downstream http gateway base URLs the aggregator fans requests out to.
+# Each gateway fronts its own (disjoint) cache cluster. Mirrors how the http gateway itself reads
+# CLUSTER_ADDRESSES. Templated so it can reference the release namespace. Point this at the per-cache
+# http gateway Services in this namespace, e.g. one entry per cache's aeroncache-http release.
+gatewayAddresses: "http://aeroncache-http-a.{{ .Release.Namespace }}.svc.cluster.local:7070,http://aeroncache-http-b.{{ .Release.Namespace }}.svc.cluster.local:7070"
+
+# Per-gateway request timeout (ms) for a single fan-out call. Blank falls back to the app default.
+requestTimeoutMs: ""
+
+# ConfigMap name. Blank means "<fullname>-config" (derived from the release); set a value to pin a
+# specific name. Read by the ConfigMap and the Deployment via the configmapName helper.
+aeroncacheFanoutConfigmap: ""
+
+# Comma separated list of allowed CORS origins for the web facing interface. Leave blank to fall
+# back to the application default (localhost dev origins).
+corsAllowedOrigins: "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost"
+
+# OpenTelemetry Java agent metrics (optional). The agent jar is baked into the image by Jib at
+# agentPath but is inert unless enabled here: when enabled, it is activated via JAVA_TOOL_OPTIONS and
+# exposes a Prometheus scrape endpoint on metricsPort/metricsPath, and the pod is annotated with
+# prometheus.io/scrape so the aeroncache-observability Prometheus auto-discovers it. When disabled
+# (the default) no -javaagent flag is set, so the app is never instrumented. Toggle from the
+# Makefiles with JAVAAGENT=true.
+javaagent:
+  enabled: false
+  # Path to the agent jar in the image (see cache-http/http-fanout/build.gradle.kts).
+  agentPath: /app/agent/opentelemetry-javaagent.jar
+  # Port and path the agent's Prometheus exporter serves metrics on.
+  metricsPort: 9464
+  metricsPath: /metrics
+  # OTEL_SERVICE_NAME; defaults to the chart fullname when left blank.
+  serviceName: ""
+  # Non-metric signal exporters; left off so enabling metrics does not also emit traces/logs.
+  tracesExporter: none
+  logsExporter: none
+  # Extra OTEL_*/agent env, e.g. [{name: OTEL_METRIC_EXPORT_INTERVAL, value: "5000"}].
+  extraEnv: []
+
+# The application's own Micrometer metrics, served on the HTTP service port at appMetrics.path
+# (per-operation counters and JVM metrics). Enabled by default: the pod is annotated with
+# aeroncache.io/app-metrics-scrape so the aeroncache-observability Prometheus scrapes this endpoint.
+appMetrics:
+  enabled: true
+  path: /prometheus
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  repository: aeroncache-http-fanout
+  # This sets the pull policy for images.
+  pullPolicy: Never
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+# This is for the secrets for pulling an image from a private repository.
+imagePullSecrets: []
+# This is to override the chart name.
+nameOverride: ""
+# Left blank so the resource names derive from the Helm release name, letting several fan-out
+# aggregators coexist in one namespace. Set this to pin a name.
+fullnameOverride: ""
+
+# This section builds out the service account.
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# This is for setting Kubernetes Annotations to a Pod.
+podAnnotations: {}
+# This is for setting Kubernetes Labels to a Pod.
+podLabels: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+# This is for setting up a service.
+service:
+  # LoadBalancer in clustered deployments; ClusterIP is fine for in-cluster-only access.
+  type: LoadBalancer
+  # The aggregator's HTTP port (distinct from the http gateway's 7070).
+  port: 7071
+
+# This block is for setting up the ingress.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+resources: {}
+
+# Liveness and readiness probes. The aggregator is live/ready as soon as its HTTP interface is up; it
+# holds no cluster connection.
+livenessProbe:
+  httpGet:
+    path: /liveness/
+    port: 7071
+readinessProbe:
+  httpGet:
+    path: /readiness/
+    port: 7071
+
+# This section is for setting up autoscaling.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

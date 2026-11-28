@@ -8,6 +8,7 @@ name: Publish Images to GHCR
 #   ghcr.io/<owner>/aeroncache-monolith
 #   ghcr.io/<owner>/aeroncache-cluster
 #   ghcr.io/<owner>/aeroncache-http
+#   ghcr.io/<owner>/aeroncache-http-fanout
 #   ghcr.io/<owner>/aeroncache-http-clustertools
 #   ghcr.io/<owner>/aeroncache-ws
 #   ghcr.io/<owner>/aeroncache-sse
@@ -80,6 +81,7 @@ jobs:
             :cache-monolith:jib \
             :cache-cluster:jib \
             :cache-http:http-server-javalin:jib \
+            :cache-http:http-fanout:jib \
             :cache-http:http-clustertools:jib \
             :cache-ws:ws-server-javalin:jib \
             :cache-sse:sse-server-jooby:jib \
