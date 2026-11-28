@@ -4,7 +4,7 @@ import {Button} from "@/components/ui/button";
 import {CameraIcon, RefreshCwIcon, ServerIcon, Trash2Icon} from "lucide-react";
 import {toast} from "sonner";
 import {snapshotAndPurgeRequest, snapshotCacheRequest} from "@/lib/actions";
-import {NodePurgeResult} from "@/lib/types";
+import {BackendSnapshotResult, NodePurgeResult} from "@/lib/types";
 import {useRouter} from "next/navigation";
 import {useState} from "react";
 
@@ -31,6 +31,7 @@ export default function TriggerSnapshot() {
     const router = useRouter();
     const [pending, setPending] = useState<null | "snapshot" | "purge">(null);
     const [nodeResults, setNodeResults] = useState<NodePurgeResult[] | null>(null);
+    const [snapshotBackends, setSnapshotBackends] = useState<BackendSnapshotResult[] | null>(null);
 
     const refreshAfterDelay = () => {
         setTimeout(() => {
@@ -42,7 +43,10 @@ export default function TriggerSnapshot() {
     const handleSnapshot = async () => {
         setPending("snapshot");
         setNodeResults(null);
+        setSnapshotBackends(null);
         const result = await snapshotCacheRequest();
+        // Present only when the UI fronts multiple backends (the /multi/snapshot fan-out).
+        setSnapshotBackends(result.backends ?? null);
 
         if (result.error) {
             toast("Snapshot Request Error", {
@@ -63,6 +67,7 @@ export default function TriggerSnapshot() {
     const handleSnapshotAndPurge = async () => {
         setPending("purge");
         setNodeResults(null);
+        setSnapshotBackends(null);
         const result = await snapshotAndPurgeRequest();
         setNodeResults(result.nodes ?? null);
 
@@ -109,6 +114,36 @@ export default function TriggerSnapshot() {
                     <RefreshCwIcon/>Refresh
                 </Button>
             </div>
+
+            {snapshotBackends && snapshotBackends.length > 0 && (
+                <div className="border-t pt-3" data-testid="snapshot-backend-breakdown">
+                    <div className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
+                        <ServerIcon className="size-3"/>
+                        Per-backend snapshot results
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        {snapshotBackends.map((backend, index) => {
+                            const label = backend.gateway ?? `Backend ${index + 1}`;
+                            return (
+                                <div
+                                    key={label}
+                                    className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+                                    data-testid={`snapshot-backend-${label}`}>
+                                    <span className="truncate font-medium" title={label}>{label}</span>
+                                    <span
+                                        className={backend.ok
+                                            ? "text-xs font-medium text-green-600 dark:text-green-500"
+                                            : "text-xs font-medium text-destructive"}
+                                        title={backend.error ?? undefined}
+                                        data-testid={`snapshot-backend-status-${label}`}>
+                                        {backend.ok ? "OK" : (backend.error ?? "Failed")}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {nodeResults && nodeResults.length > 0 && (
                 <div className="border-t pt-3" data-testid="purge-node-breakdown">

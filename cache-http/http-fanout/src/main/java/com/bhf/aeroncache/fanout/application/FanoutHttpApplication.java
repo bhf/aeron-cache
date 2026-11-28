@@ -101,8 +101,11 @@ public class FanoutHttpApplication {
                 .get("/api/v1/counters-stats", counted("getCounterStats", handlers::handleGetCounterStats))
                 .get("/api/v1/timers", counted("getTimers", handlers::handleGetTimers))
                 .get("/api/v1/snapshot-info", counted("getSnapshotInfo", handlers::handleGetSnapshotInfo))
+                .get("/api/v1/multi/snapshot-info",
+                        counted("getSnapshotInfoMulti", handlers::handleGetSnapshotInfoMulti))
                 .get("/api/v1/aeron-counters", counted("getAeronCounters", handlers::handleGetAeronCounters))
                 .post("/api/v1/snapshot", counted("takeSnapshot", handlers::handleSnapshot))
+                .post("/api/v1/multi/snapshot", counted("takeSnapshotMulti", handlers::handleSnapshotMulti))
                 .post("/api/v1/snapshot-and-purge", counted("snapshotAndPurge", handlers::handleSnapshotAndPurge))
                 .post("/api/v1/shutdown", counted("shutdownCluster", handlers::handleShutdown));
     }
