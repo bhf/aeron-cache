@@ -5,6 +5,7 @@ import com.bhf.aeroncache.codecs.request.CacheRequestDecoder;
 import com.bhf.aeroncache.codecs.response.CacheResponseEncoder;
 import com.bhf.aeroncache.models.Reusable;
 import com.bhf.aeroncache.models.ReusableLong;
+import com.bhf.aeroncache.models.bulk.requests.BulkOperationType;
 import com.bhf.aeroncache.models.requests.*;
 import com.bhf.aeroncache.models.results.*;
 import com.bhf.aeroncache.services.CacheTimerService;
@@ -29,8 +30,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -141,6 +147,71 @@ class AbstractCacheClusterServiceTest {
         verify(cacheManager).loadSnapshot(snapshotImage);
     }
 
+    private void invokeBulkOps() {
+        sut.handleBulkOpsRequest(null, null, 0, cacheManager, countersCacheManager, null, null,
+                null, null, ReusableLong::new, cacheTimerService, cacheCountersTimerService);
+    }
+
+    private static int bulkOpsPublishBatchSize() throws Exception {
+        Field field = AbstractCacheClusterService.class.getDeclaredField("BULK_OPS_PUBLISH_BATCH_SIZE");
+        field.setAccessible(true);
+        return field.getInt(null);
+    }
+
+    @Test
+    @DisplayName("Should publish a bulk ops response in chunks, end-of-batch only on the final chunk")
+    void shouldPublishBulkOpsResponseInChunks() throws Exception {
+        // Arrange - a bulk request with more operations than the configured publish batch size, sized so the
+        // response spans three chunks with a partial final chunk regardless of how the batch size is tuned.
+        int batchSize = bulkOpsPublishBatchSize();
+        int opCount = batchSize * 2 + 1;
+
+        var createCacheResult = new CreateCacheResult<>(new ReusableString());
+        createCacheResult.setStatus(CacheOperationStatus.SUCCESS);
+        when(cacheManager.createCache(any())).thenReturn(createCacheResult);
+
+        var request = new BulkCacheOpsRequestDetails<>((Supplier<ReusableString>) ReusableString::new,
+                (Supplier<ReusableString>) ReusableString::new, (Supplier<ReusableString>) ReusableString::new);
+        request.setRequestId("bulk-chunked");
+        for (int i = 0; i < opCount; i++) {
+            request.addOperation(BulkOperationType.CREATE_CACHE, 0, 0, "op-" + i, ReusableString.build("cache-" + i), ReusableString.build(""), ReusableString.build(""));
+        }
+        sut.bulkRequestToReturn = request;
+
+        // Act
+        invokeBulkOps();
+
+        // Assert - every full chunk is bounded by the batch size, nothing is dropped, and only the final
+        // chunk carries the end-of-batch marker.
+        var chunkSizes = sut.bulkPublishChunkSizes;
+        int chunks = chunkSizes.size();
+        assertTrue(chunks > 1, "response should be published across multiple chunks");
+        assertEquals(opCount, chunkSizes.stream().mapToInt(Integer::intValue).sum(), "every operation result must be published exactly once");
+        for (int i = 0; i < chunks - 1; i++) {
+            assertEquals(batchSize, chunkSizes.get(i), "intermediate chunk " + i + " should be a full batch");
+            assertFalse(sut.bulkPublishEobFlags.get(i), "intermediate chunk " + i + " must not be end-of-batch");
+        }
+        assertTrue(chunkSizes.get(chunks - 1) <= batchSize, "final chunk must not exceed the batch size");
+        assertTrue(sut.bulkPublishEobFlags.get(chunks - 1), "final chunk must be end-of-batch");
+    }
+
+    @Test
+    @DisplayName("Should publish a single end-of-batch chunk for an empty bulk ops request")
+    void shouldPublishSingleChunkForEmptyBulkOps() {
+        // Arrange - a bulk request with no operations.
+        var request = new BulkCacheOpsRequestDetails<>((Supplier<ReusableString>) ReusableString::new,
+                (Supplier<ReusableString>) ReusableString::new, (Supplier<ReusableString>) ReusableString::new);
+        request.setRequestId("bulk-empty");
+        sut.bulkRequestToReturn = request;
+
+        // Act
+        invokeBulkOps();
+
+        // Assert - exactly one (empty) chunk, flagged end-of-batch, so the client still gets a terminating frame.
+        assertEquals(List.of(0), sut.bulkPublishChunkSizes);
+        assertEquals(List.of(true), sut.bulkPublishEobFlags);
+    }
+
     /**
      * Concrete implementation for this test.
      */
@@ -190,7 +261,18 @@ class AbstractCacheClusterServiceTest {
 
 
         @Override protected <VT extends Reusable> AddCacheEntryRequestDetails<ReusableString, ReusableString, VT> getAddCacheEntryRequestDetails(ClientSession s, DirectBuffer b, int o, CacheRequestDecoder<ReusableString,ReusableString,VT> decoder, AddCacheEntryRequestDetails<ReusableString, ReusableString, VT> addCacheEntryRequestDetails) { return null; }
-        @Override protected <VT extends Reusable> BulkCacheOpsRequestDetails<ReusableString, ReusableString, VT> getBulkOpsRequest(ClientSession s, DirectBuffer b, int o, BulkCacheOpsRequestDetails<ReusableString, ReusableString, VT> bulkCacheOpsRequestDetails_) { return null; }
+        /** Request details to hand back from {@link #getBulkOpsRequest}, set by bulk ops tests. */
+        BulkCacheOpsRequestDetails<ReusableString, ReusableString, ReusableString> bulkRequestToReturn;
+        /** End-of-batch flag captured from each bulk ops chunk published, in publish order. */
+        final List<Boolean> bulkPublishEobFlags = new ArrayList<>();
+        /** Operation count captured from each bulk ops chunk published, in publish order. */
+        final List<Integer> bulkPublishChunkSizes = new ArrayList<>();
+
+        @Override
+        @SuppressWarnings("unchecked")
+        protected <VT extends Reusable> BulkCacheOpsRequestDetails<ReusableString, ReusableString, VT> getBulkOpsRequest(ClientSession s, DirectBuffer b, int o, BulkCacheOpsRequestDetails<ReusableString, ReusableString, VT> bulkCacheOpsRequestDetails_) {
+            return (BulkCacheOpsRequestDetails<ReusableString, ReusableString, VT>) (Object) bulkRequestToReturn;
+        }
         @Override protected <VT extends Reusable> void handlePostCreateCache(ReusableString cacheId, CreateCacheResult<ReusableString> cacheCreationResult, ClientSession session, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder) {}
         @Override protected <VT extends Reusable> void handlePostAddCacheEntry(ReusableString cacheId, ReusableString key, VT value, AddCacheEntryResult<ReusableString, ReusableString> addCacheEntryResult, ClientSession session, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder, CacheSubscriptionService<ReusableString, ReusableString, VT> subscriptionService, CacheSubscriptionService<ReusableString, ReusableString, VT> patchSubscriptionService, PatchValueResult<ReusableString, ReusableString, VT> mergePatchResult) {}
         @Override protected <VT extends Reusable> void handlePostGetCacheEntry(ReusableString cacheId, ReusableString key, GetCacheEntryResult<ReusableString, ReusableString, VT> getCacheEntryResult, ClientSession session, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder) {}
@@ -202,6 +284,11 @@ class AbstractCacheClusterServiceTest {
         @Override protected <VT extends Reusable> void handlePostGetCacheStats(CacheStatsResult<ReusableString> r, ClientSession s, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder) {}
         @Override protected <VT extends Reusable> void handlePostCacheSubscriptionRequest(CacheSubscriptionResult<ReusableString, ReusableString, VT> subscriptionRequestResult, ClientSession session, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder) {}
         @Override protected <VT extends Reusable> void handlePostCacheUnsubscribeRequest(CacheUnsubscribeResult<ReusableString> r, ClientSession s, CacheResponseEncoder<ReusableString, ReusableString, VT> encoder) {}
-        @Override protected void handlePostBulkOpsRequest(BulkCacheOpsResult<ReusableString, ReusableString, ReusableString> r, ClientSession s, CacheResponseEncoder<ReusableString, ReusableString, ReusableString> encoder) {}
+        @Override protected void handlePostBulkOpsRequest(BulkCacheOpsResult<ReusableString, ReusableString, ReusableString> r, ClientSession s, CacheResponseEncoder<ReusableString, ReusableString, ReusableString> encoder) {
+            // Capture the state of each published chunk synchronously: the shared result flyweight is
+            // recycled immediately after this call returns.
+            bulkPublishEobFlags.add(r.isEndOfBatch());
+            bulkPublishChunkSizes.add(r.getOperations().size());
+        }
     }
 }

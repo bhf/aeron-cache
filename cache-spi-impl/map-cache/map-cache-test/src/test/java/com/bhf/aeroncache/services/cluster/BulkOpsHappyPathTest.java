@@ -18,6 +18,7 @@ import com.bhf.aeroncache.utils.SupplierUtils;
 import io.aeron.cluster.service.ClientSession;
 import io.aeron.logbuffer.Header;
 import org.agrona.AbstractMutableDirectBuffer;
+import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -68,7 +70,8 @@ class BulkOpsHappyPathTest {
     @HappyPath
     void shouldHandleBulkOperation() {
         // Arrange
-        ClientSession session = TestUtils.getMockedSession(responseBuffer);
+        List<DirectBuffer> responseFrames = new ArrayList<>();
+        ClientSession session = TestUtils.getFrameCapturingSession(responseFrames);
 
         var requestId = UUID.randomUUID().toString();
         List<CacheOperationRequest> ops = List.of(
@@ -87,8 +90,8 @@ class BulkOpsHappyPathTest {
 
         // Act
         sut.onSessionMessage(session, System.currentTimeMillis(), requestBuffer, 0, length, header);
-        cacheResponseDecoder.decodeBulkCacheOpsResult(responseBuffer, 0, result);
-        var opResults = result.getOperations();
+        // The response may be published across several batches; accumulate every frame's results in order.
+        var opResults = TestUtils.decodeBulkOpsFrames(responseFrames, cacheResponseDecoder, result);
 
         // Assert
         assertEquals(requestId, result.getRequestId());
