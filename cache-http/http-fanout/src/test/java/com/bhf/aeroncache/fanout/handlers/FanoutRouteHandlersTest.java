@@ -2,6 +2,7 @@ package com.bhf.aeroncache.fanout.handlers;
 
 import com.bhf.aeroncache.fanout.client.GatewayFanoutClient;
 import com.bhf.aeroncache.fanout.client.GatewayResult;
+import com.bhf.aeroncache.http.responses.AggregatedPurgeResponse;
 import com.bhf.aeroncache.http.responses.ClusterToolsResponse;
 import com.bhf.aeroncache.models.snapshot.SnapshotInfoResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -65,6 +66,30 @@ class FanoutRouteHandlersTest {
         // Assert - both backends' results are served individually, so a failed backend stays visible.
         var captor = org.mockito.ArgumentCaptor.forClass(Object.class);
         verify(ctx).json(captor.capture());
+        assertEquals(perBackend, captor.getValue());
+    }
+
+    @Test
+    void multiSnapshotAndPurgeServesPerBackendPurgeResponsesRatherThanMerged() {
+        // Arrange - two gateways each returning their own aggregated purge response.
+        var client = mock(GatewayFanoutClient.class);
+        var ctx = mock(Context.class);
+        var a = new AggregatedPurgeResponse(true, 1024L, "reclaimed on a", List.of());
+        var b = new AggregatedPurgeResponse(true, 2048L, "reclaimed on b", List.of());
+        List<GatewayResult<AggregatedPurgeResponse>> perBackend = List.of(
+                GatewayResult.ok("http://cache-a:7070", a),
+                GatewayResult.ok("http://cache-b:7070", b));
+        when(client.postAll(eq("/api/v1/snapshot-and-purge"), eq(""), any(TypeReference.class)))
+                .thenReturn((List) perBackend);
+        var handlers = new FanoutRouteHandlers(client);
+
+        // Act
+        handlers.handleSnapshotAndPurgeMulti(ctx);
+
+        // Assert - each backend's purge response is served separately, not summed into one.
+        var captor = org.mockito.ArgumentCaptor.forClass(Object.class);
+        verify(ctx).json(captor.capture());
+        assertInstanceOf(List.class, captor.getValue());
         assertEquals(perBackend, captor.getValue());
     }
 }

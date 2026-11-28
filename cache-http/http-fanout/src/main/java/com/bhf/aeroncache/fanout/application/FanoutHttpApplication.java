@@ -107,6 +107,8 @@ public class FanoutHttpApplication {
                 .post("/api/v1/snapshot", counted("takeSnapshot", handlers::handleSnapshot))
                 .post("/api/v1/multi/snapshot", counted("takeSnapshotMulti", handlers::handleSnapshotMulti))
                 .post("/api/v1/snapshot-and-purge", counted("snapshotAndPurge", handlers::handleSnapshotAndPurge))
+                .post("/api/v1/multi/snapshot-and-purge",
+                        counted("snapshotAndPurgeMulti", handlers::handleSnapshotAndPurgeMulti))
                 .post("/api/v1/shutdown", counted("shutdownCluster", handlers::handleShutdown));
     }
 
