@@ -505,7 +505,7 @@ public abstract class AbstractBidiCommandTests {
     }
 
     @Test
-    @DisplayName("Should apply a mixed batch of cache and counter operations in one bulk frame")
+    @DisplayName("Should apply a mixed batch of cache and counter operations across bulk response batches")
     protected void shouldApplyMixedBulkOperationsOverSocket() {
         // Arrange: a single bulk frame mixing regular-cache and counter operations, each with its own
         // requestId (echoed on the matching response entry; results also come back in request order).
@@ -525,11 +525,16 @@ public abstract class AbstractBidiCommandTests {
         // Act
         helper.bulk(bulkId, operations);
 
-        // Assert: a single bulk response with one result per operation, in request order, all successful.
+        // Assert: the response may be streamed across one or more batches, with only the final batch flagged
+        // end-of-batch. Await the end-of-batch frame, then accumulate the per-operation results across every
+        // batch (in receive order) to reconstruct the full response - one result per operation, all successful.
         await().atMost(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                .until(() -> helper.firstFrame(bulkId, "bulkResponse").isPresent());
-        var response = helper.firstFrame(bulkId, "bulkResponse").orElseThrow();
-        var opResponses = response.get("operationResponses");
+                .until(() -> bulkResponseBatches(bulkId).stream().anyMatch(f -> f.path("endOfBatch").asBoolean()));
+        var opResponses = new java.util.ArrayList<JsonNode>();
+        for (var batch : bulkResponseBatches(bulkId)) {
+            batch.get("operationResponses").forEach(opResponses::add);
+        }
+
         assertThat(opResponses.size(), is(operations.size()));
         for (var opResponse : opResponses) {
             assertThat("bulk op " + opResponse.path("requestId").asText() + " did not succeed",
@@ -543,6 +548,21 @@ public abstract class AbstractBidiCommandTests {
         // ...and the bulk GET_COUNTER reflects the batch's add (5) then increment (+3), the numeric
         // counter value marshalled back as a string-encoded number.
         assertThat(opResponses.get(6).get("value").asText(), is("8"));
+    }
+
+    /**
+     * The bulk-response batch frames received so far for the given correlation id, in receive order. A bulk
+     * response is streamed as one or more batches (only the last flagged {@code endOfBatch}); callers
+     * accumulate their {@code operationResponses} to reconstruct the full response.
+     */
+    private java.util.List<JsonNode> bulkResponseBatches(String correlationId) {
+        var batches = new java.util.ArrayList<JsonNode>();
+        for (var frame : helper.framesFor(correlationId)) {
+            if ("bulkResponse".equals(frame.path("type").asText(null))) {
+                batches.add(frame);
+            }
+        }
+        return batches;
     }
 
     private JsonNode awaitCommandResponse(String correlationId) {
