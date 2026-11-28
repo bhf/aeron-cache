@@ -118,4 +118,15 @@ public class FanoutRouteHandlers {
         ctx.json(Aggregators.mergeSnapshotAndPurge(
                 client.postAll("/api/v1/snapshot-and-purge", "", AGGREGATED_PURGE)));
     }
+
+    /**
+     * POST /api/v1/multi/snapshot-and-purge - snapshot-and-purge every gateway's cluster and return
+     * each backend's own aggregated purge response as a per-backend list,
+     * {@code [{gateway, ok, value, error}, ...]}, rather than the single merged result collapsed by
+     * {@link #handleSnapshotAndPurge}, so a multi-cache client can see each backend's reclaimed bytes
+     * and node breakdown separately.
+     */
+    public void handleSnapshotAndPurgeMulti(Context ctx) {
+        ctx.json(client.postAll("/api/v1/snapshot-and-purge", "", AGGREGATED_PURGE));
+    }
 }
