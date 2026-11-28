@@ -55,6 +55,8 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
     private static final int TIMER_DETAILS_POOL_INITIAL_SIZE = 128;
 
+    private static final int BULK_OPS_PUBLISH_BATCH_SIZE = 5;
+
     private String nodeId;
     private final Supplier<I> indexSupplier;
     private final CacheSchemaDetailsProvider schemaDetails;
@@ -966,29 +968,34 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
         tracingService.startBulkOpsRequest(requestDetails);
         var requestId = requestDetails.getRequestId();
         log.info("Got bulk operations request with Id: {}", requestId);
-        BulkCacheOpsResult<I,K,V> res = processBulkOperations(requestDetails, cacheManager, countersCacheManager_, encoder, countersEncoder, subscriptionService, countersSubscriptionService_, counterCacheValueSupplier, cacheTimerService_, cacheCountersTimerService_);
-        res.setRequestId(requestId);
-        res.setEndOfBatch(true);
-
-        handlePostBulkOpsRequest(res, session, encoder);
+        processBulkOperations(session, requestId, requestDetails, cacheManager, countersCacheManager_, encoder, countersEncoder, subscriptionService, countersSubscriptionService_, counterCacheValueSupplier, cacheTimerService_, cacheCountersTimerService_);
 
         tracingService.endBulkOpsRequest(requestDetails);
 
         requestDetails.recycle();
     }
 
-    private BulkCacheOpsResult<I,K,V> processBulkOperations(BulkCacheOpsRequestDetails<I,K,V> requestDetails,
-                                                            CacheManager<I, K, V> cacheManager, CountersCacheManager<I, K, ReusableLong> countersCacheManager,
-                                                            CacheResponseEncoder<I, K, V> encoder_,
-                                                            CacheResponseEncoder<I, K, ReusableLong> countersEncoder,
-                                                            CacheSubscriptionService<I, K, V> subscriptionService,
-                                                            CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService,
-                                                            Supplier<ReusableLong> counterCacheValueSupplier,
-                                                            CacheTimerService<I, K> cacheTimerService_, CacheTimerService<I, K> cacheCountersTimerService_) {
+    /**
+     * Process every operation in a bulk request, publishing the response in chunks.
+     */
+    private void processBulkOperations(ClientSession session, String requestId, BulkCacheOpsRequestDetails<I,K,V> requestDetails,
+                                       CacheManager<I, K, V> cacheManager, CountersCacheManager<I, K, ReusableLong> countersCacheManager,
+                                       CacheResponseEncoder<I, K, V> encoder_,
+                                       CacheResponseEncoder<I, K, ReusableLong> countersEncoder,
+                                       CacheSubscriptionService<I, K, V> subscriptionService,
+                                       CacheSubscriptionService<I, K, ReusableLong> countersSubscriptionService,
+                                       Supplier<ReusableLong> counterCacheValueSupplier,
+                                       CacheTimerService<I, K> cacheTimerService_, CacheTimerService<I, K> cacheCountersTimerService_) {
 
         bulkOpsResult.clear();
+        bulkOpsResult.setRequestId(requestId);
 
-        for (var op : requestDetails.getOperations()) {
+        var operations = requestDetails.getOperations();
+        int total = operations.size();
+        int sinceFlush = 0;
+
+        for (int idx = 0; idx < total; idx++) {
+            var op = operations.get(idx);
             switch (op.getOperationType()) {
                 case CREATE_CACHE -> handleBulkOpCreateCache(op, bulkOpsResult, cacheManager);
                 case ADD_ITEM -> handleBulkOpAddItem(op, bulkOpsResult, op.getValue(), cacheManager, encoder_, subscriptionService, patchSubscriptionService, addMergePatchResult, cacheTimerService_);
@@ -1013,9 +1020,26 @@ public class AbstractCacheClusterService<I extends Reusable, K extends Reusable,
 
                 case NONE -> log.warn("Ignoring bulk operation with type NONE for request {}", op.getRequestId());
             }
+            sinceFlush++;
+
+            boolean isLastOp = idx == total - 1;
+            if (!isLastOp && sinceFlush >= BULK_OPS_PUBLISH_BATCH_SIZE) {
+                publishBulkOpsChunk(session, encoder_, false);
+                sinceFlush = 0;
+            }
         }
 
-        return bulkOpsResult;
+        // Always publish a final chunk carrying the eob marker.
+        publishBulkOpsChunk(session, encoder_, true);
+    }
+
+    /**
+     * Encode and send the operation results accumulated so far.
+     */
+    private void publishBulkOpsChunk(ClientSession session, CacheResponseEncoder<I, K, V> encoder, boolean endOfBatch) {
+        bulkOpsResult.setEndOfBatch(endOfBatch);
+        handlePostBulkOpsRequest(bulkOpsResult, session, encoder);
+        bulkOpsResult.clearOperations();
     }
 
     private void handleBulkOpDecrementCounter(CacheOperationRequestDetails<I, K, V> op, BulkCacheOpsResult<I, K, V> bulkOpsResult, CountersCacheManager<I, K, ReusableLong> countersCacheManager) {

@@ -66,6 +66,16 @@ public class BulkCacheOpsResult <I extends Reusable, K extends Reusable, V exten
         operations.clear();
     }
 
+    /**
+     * Recycle the accumulated operation results back to the pool and clear the operations list, while
+     * leaving the request id and end-of-batch flag untouched. Used when a bulk response is published in
+     * chunks: each chunk is encoded and sent, then the gathered results are released so the flyweight can
+     * accumulate the next chunk without re-sending earlier operations.
+     */
+    public void clearOperations() {
+        recycle();
+    }
+
     @Override
     public void copyFrom(BulkCacheOpsResult<I, K, V> source) {
         this.requestId.copyFrom(source.requestId);
