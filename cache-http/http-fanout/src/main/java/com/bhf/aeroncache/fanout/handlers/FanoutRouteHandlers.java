@@ -77,6 +77,15 @@ public class FanoutRouteHandlers {
         ctx.json(Aggregators.representativeSnapshotInfo(client.getAll("/api/v1/snapshot-info", SNAPSHOT_INFO)));
     }
 
+    /**
+     * GET /api/v1/multi/snapshot-info - each gateway's own snapshot-info as a per-backend list,
+     * {@code [{gateway, ok, value, error}, ...]}, rather than the single representative picked by
+     * {@link #handleGetSnapshotInfo}. Lets a multi-cache client show every backend's snapshot state.
+     */
+    public void handleGetSnapshotInfoMulti(Context ctx) {
+        ctx.json(client.getAll("/api/v1/snapshot-info", SNAPSHOT_INFO));
+    }
+
     /** GET /api/v1/aeron-counters - every gateway's per-node driver counters, flattened. */
     public void handleGetAeronCounters(Context ctx) {
         ctx.json(Aggregators.mergeAeronCounters(client.getAll("/api/v1/aeron-counters", AERON_COUNTERS)));
@@ -86,6 +95,16 @@ public class FanoutRouteHandlers {
     public void handleSnapshot(Context ctx) {
         ctx.json(Aggregators.representativeClusterTools(
                 client.postAll("/api/v1/snapshot", "", CLUSTER_TOOLS), "snapshot", null));
+    }
+
+    /**
+     * POST /api/v1/multi/snapshot - trigger a snapshot on every gateway's cluster and return the
+     * per-backend clustertools results as a list, {@code [{gateway, ok, value, error}, ...]}, rather
+     * than the single representative collapsed by {@link #handleSnapshot}, so a multi-cache client can
+     * see which backend failed to snapshot.
+     */
+    public void handleSnapshotMulti(Context ctx) {
+        ctx.json(client.postAll("/api/v1/snapshot", "", CLUSTER_TOOLS));
     }
 
     /** POST /api/v1/shutdown - shut down every gateway's cluster. */

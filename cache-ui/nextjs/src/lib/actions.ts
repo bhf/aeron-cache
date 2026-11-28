@@ -2,7 +2,16 @@
 
 import {getLogger} from "@/lib/loggingUtil";
 import {revalidatePath, updateTag} from "next/cache";
-import type {NearCacheGateway, NearCacheKind, NearCacheOpResult, NodePurgeResult, WarmCacheInfo} from "@/lib/types";
+import type {
+    BackendSnapshotResult,
+    NearCacheGateway,
+    NearCacheKind,
+    NearCacheOpResult,
+    NodePurgeResult,
+    PerBackend,
+    SnapshotInfo,
+    WarmCacheInfo
+} from "@/lib/types";
 
 /**
  * React server actions.
@@ -19,6 +28,18 @@ const AERON_CACHE_API = process.env.AERON_CACHE_API ? process.env.AERON_CACHE_AP
 
 export async function getCacheAPIURI() {
     return AERON_CACHE_API
+}
+
+/**
+ * Whether the UI is pointed at the HTTP fan-out aggregator fronting several cache backends, rather
+ * than a single gateway. When true, snapshot views use the {@code /api/v1/multi/...} endpoints that
+ * return one entry per backend instead of a single representative/aggregated result.
+ *
+ * Driven by the {@code AERON_CACHE_MULTI} env var (a plain gateway does not serve the {@code /multi/}
+ * routes, so the topology has to be known at deploy time); defaults to single-backend behaviour.
+ */
+export async function isMultiBackend(): Promise<boolean> {
+    return process.env.AERON_CACHE_MULTI === "true"
 }
 
 export async function getJaegerURL() {
@@ -615,10 +636,85 @@ export async function cancelTimerRequest(props: { timerType: string, cacheId: st
 }
 
 /**
- * Request a snapshot.
+ * Fetch the latest cluster snapshot info, normalised to a per-backend list so the snapshot view can
+ * render single-gateway and multi-backend deployments through one code path.
+ *
+ * In multi-backend mode the fan-out aggregator's {@code /api/v1/multi/snapshot-info} returns one
+ * {@code {gateway, ok, value, error}} entry per backend. In single mode the single object from
+ * {@code /api/v1/snapshot-info} is wrapped as a single synthetic backend with a null gateway.
+ *
+ * Tolerant by design: an unreachable API or non-OK response yields an empty list rather than throwing.
  */
-export async function snapshotCacheRequest() {
+export async function getSnapshotInfoPerBackend(): Promise<PerBackend<SnapshotInfo>[]> {
+    const multi = await isMultiBackend()
+    const url = AERON_CACHE_API + (multi ? '/multi/snapshot-info' : '/snapshot-info')
+    logger.info("Getting snapshot info from " + url)
+    try {
+        const rawResponse = await fetch(url, {method: 'GET', headers, cache: "no-cache"})
+        if (!rawResponse.ok) {
+            logger.warn("Non-OK getting snapshot info from " + url + ": " + rawResponse.status)
+            return []
+        }
+        const content = await rawResponse.json()
+        if (multi) {
+            if (!Array.isArray(content)) {
+                return []
+            }
+            return content.map((r) => ({
+                gateway: r.gateway ?? null,
+                ok: Boolean(r.ok),
+                value: (r.value ?? null) as SnapshotInfo | null,
+                error: r.error ?? null,
+            }))
+        }
+        return [{gateway: null, ok: true, value: content as SnapshotInfo, error: null}]
+    } catch (err) {
+        logger.warn("Error whilst getting snapshot info from " + url, err)
+        return []
+    }
+}
+
+/**
+ * Request a snapshot. In multi-backend mode this fans out to every cache backend via the aggregator's
+ * {@code /api/v1/multi/snapshot} and reports the per-backend outcome; in single mode it posts to the
+ * single gateway's {@code /snapshot} as before.
+ */
+export async function snapshotCacheRequest(): Promise<{
+    message: string,
+    error: boolean,
+    backends?: BackendSnapshotResult[]
+}> {
     logger.info("Snapshot request")
+    if (await isMultiBackend()) {
+        try {
+            const rawResponse = await fetch(AERON_CACHE_API + '/multi/snapshot', {
+                method: 'POST',
+                headers,
+                cache: "no-cache"
+            });
+            const content = await rawResponse.json().catch(() => null);
+            const backends: BackendSnapshotResult[] = (Array.isArray(content) ? content : []).map((r) => ({
+                gateway: r.gateway ?? null,
+                ok: Boolean(r.ok) && r.value?.exitCode === 0,
+                exitCode: r.value?.exitCode ?? null,
+                error: r.error ?? null,
+            }));
+            const failed = backends.filter((b) => !b.ok).length;
+            if (!rawResponse.ok || backends.length === 0 || failed > 0) {
+                return {
+                    message: backends.length === 0
+                        ? "Problem requesting snapshot"
+                        : `Snapshot failed on ${failed} of ${backends.length} backend(s)`,
+                    error: true,
+                    backends
+                };
+            }
+            return {message: `Snapshot requested on ${backends.length} backend(s)`, error: false, backends};
+        } catch (err) {
+            logger.error("Error whilst requesting snapshot ", err);
+            return {message: "Error requesting snapshot", error: true};
+        }
+    }
     try {
         const rawResponse = await fetch(AERON_CACHE_API + '/snapshot', {
             method: 'POST',

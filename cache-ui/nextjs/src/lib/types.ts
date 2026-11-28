@@ -156,3 +156,38 @@ export interface SnapshotInfo {
     archiveDirBytes: number
     lastPurge: RecordingPurge | null
 }
+
+/**
+ * One backend's contribution to a per-backend fan-out response from the HTTP fan-out aggregator's
+ * {@code /api/v1/multi/...} endpoints (the raw {@code GatewayResult} shape it serialises).
+ *
+ * In single-backend mode the UI synthesises a single entry with a {@code null} gateway, so components
+ * can render the single-gateway and multi-backend shapes through one code path.
+ *
+ * @property gateway the backend gateway base URL, or null when the UI is pointed at a single gateway.
+ * @property ok      whether that backend responded and parsed successfully.
+ * @property value   the backend's payload, or null when it failed.
+ * @property error   the failure reason, or null when ok.
+ */
+export interface PerBackend<T> {
+    gateway: string | null
+    ok: boolean
+    value: T | null
+    error: string | null
+}
+
+/**
+ * The outcome of triggering a snapshot on one backend, surfaced in the snapshot trigger breakdown
+ * when running against multiple cache backends.
+ *
+ * @property gateway  the backend gateway base URL, or null in single-backend mode.
+ * @property ok       whether the snapshot succeeded on this backend (reachable and exit code 0).
+ * @property exitCode the clustertools exit code reported by this backend, or null when unreachable.
+ * @property error    the failure reason when the backend could not be reached, else null.
+ */
+export interface BackendSnapshotResult {
+    gateway: string | null
+    ok: boolean
+    exitCode: number | null
+    error: string | null
+}

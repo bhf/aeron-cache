@@ -1,7 +1,7 @@
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
 import {Status, StatusIndicator, StatusLabel} from "@/components/ui/shadcn-io/status"
 import {SnapshotInfo as SnapshotInfoType} from "@/lib/types"
-import {ArchiveIcon, CameraIcon, HardDriveIcon, Trash2Icon} from "lucide-react"
+import {ArchiveIcon, CameraIcon, HardDriveIcon, ServerIcon, Trash2Icon} from "lucide-react"
 import {JSX} from "react"
 
 /**
@@ -47,14 +47,21 @@ function Field(props: { label: string, value: string | number, icon?: JSX.Elemen
  * Read-only dashboard card showing the latest cluster snapshot and archive disk usage, plus the
  * result of the most recent recording purge. Mirrors {@link DashboardStats} for styling.
  */
-export function SnapshotInfo(props: SnapshotInfoType) {
+export function SnapshotInfo(props: SnapshotInfoType & {backendLabel?: string}) {
     const present = props.snapshotPresent
     const purge = props.lastPurge
 
     return (
         <Card className="@container/card" data-testid="snapshot-info">
             <CardHeader className="relative">
-                <CardDescription>Cluster Snapshot</CardDescription>
+                <CardDescription>
+                    Cluster Snapshot
+                    {props.backendLabel && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-xs" data-testid="snapshot-backend">
+                            <ServerIcon className="size-3"/>{props.backendLabel}
+                        </span>
+                    )}
+                </CardDescription>
                 <CardTitle className="flex items-center gap-2 text-2xl font-semibold">
                     <CameraIcon className="size-5"/>
                     {present ? "Snapshot present" : "No snapshot"}
